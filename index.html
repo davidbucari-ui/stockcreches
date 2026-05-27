@@ -3130,7 +3130,7 @@ function importBackup(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.articles || !Array.isArray(data.articles)) {
@@ -3138,24 +3138,61 @@ function importBackup(event) {
       }
       const dateStr = data.exportedAt
         ? new Date(data.exportedAt).toLocaleDateString('fr-FR') : '?';
-      const msg = `Restaurer la sauvegarde "${data.creche||'?'}" du ${dateStr} ?\n\n`
+      const msg = `Restaurer la sauvegarde du ${dateStr} ?\n\n`
         + `${data.articles.length} articles · ${(data.commandes||[]).length} commandes `
         + `· ${(data.fournisseurs||[]).length} fournisseurs\n\n⚠ Les données actuelles seront remplacées.`;
       if (!confirm(msg)) { event.target.value = ''; return; }
+
+      // Stop polling during restore
+      stopPolling();
 
       ARTICLES.splice(0,     ARTICLES.length,     ...(data.articles     || []));
       COMMANDES.splice(0,    COMMANDES.length,    ...(data.commandes    || []));
       FOURNISSEURS.splice(0, FOURNISSEURS.length, ...(data.fournisseurs || []));
       HISTORIQUE.splice(0,   HISTORIQUE.length,   ...(data.historique   || []));
+      if (data.univers)   UNIVERS.splice(0,   UNIVERS.length,   ...data.univers);
+      if (data.souscats)  SOUSCATS.splice(0,  SOUSCATS.length,  ...data.souscats);
 
-      if (data.creche) {
-        localStorage.setItem(LS_NAME_KEY, data.creche);
-        applyNomCreche(data.creche);
-      }
       saveData();
       renderTable(); renderStats(); renderCommandes();
       renderFournisseurs(); renderHistorique(); updateCounts();
-      showNotif(`✅ Restauration réussie — ${data.articles.length} articles chargés`);
+      showNotif(`⏳ Restauration locale OK — synchronisation Supabase en cours…`);
+
+      // Push to Supabase if connected
+      if (!IS_LOCAL) {
+        try {
+          setIndicator('⏳ Envoi vers Supabase…', 'var(--amber)');
+          // Clear existing data in Supabase then re-insert
+          await Promise.all([
+            sbDelete('articles', 'all').catch(()=>{}),
+            sbDelete('commandes', 'all').catch(()=>{}),
+            sbDelete('fournisseurs', 'all').catch(()=>{}),
+          ]);
+          // Insert all articles
+          for (const a of ARTICLES) {
+            await saveArticleDB(a, true).catch(()=>{});
+          }
+          // Insert all commandes
+          for (const c of COMMANDES) {
+            await saveCommandeDB(c).catch(()=>{});
+          }
+          // Insert all fournisseurs
+          for (const f of FOURNISSEURS) {
+            await saveFournisseurDB(f).catch(()=>{});
+          }
+          setIndicator('☁️ Sync cloud réussi', 'var(--green)');
+          showNotif(`✅ ${data.articles.length} articles restaurés et synchronisés`);
+        } catch(syncErr) {
+          console.warn('Sync after restore failed:', syncErr);
+          showNotif(`✅ Restauré localement — sync cloud partielle`);
+        }
+      } else {
+        showNotif(`✅ Restauration réussie — ${data.articles.length} articles chargés`);
+      }
+
+      // Resume polling
+      startPolling(30);
+
     } catch(err) {
       showNotif('⚠ Erreur de lecture : ' + err.message);
     }
@@ -3539,7 +3576,10 @@ async function sbUpdate(table, id, data) {
 }
 
 async function sbDelete(table, id) {
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
+  const url = id === 'all'
+    ? `${SUPA_URL}/rest/v1/${table}?id=neq.0`
+    : `${SUPA_URL}/rest/v1/${table}?id=eq.${id}`;
+  const r = await fetch(url, {
     method: 'DELETE',
     headers: SUPA_HEADERS,
   });
