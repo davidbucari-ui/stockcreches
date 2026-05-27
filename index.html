@@ -3468,7 +3468,7 @@ async function syncFromCloud() {
     if (Array.isArray(histos)) HISTORIQUE.splice(0,   HISTORIQUE.length,   ...histos);
     if (Array.isArray(univs)) {
       // Map Supabase column 'description' back to 'desc' used in app
-      const mapped = univs.map(u => ({ ...u, desc: u.desc || u.description || '' }));
+      const mapped = univs.map(u => ({ ...u, desc: u.description || u.desc || '' }));
       UNIVERS.splice(0, UNIVERS.length, ...mapped);
     }
     saveData();
@@ -3624,7 +3624,7 @@ async function loadData() {
       HISTORIQUE.splice(0, HISTORIQUE.length, ...histos.map(rowToHisto));
     }
     if (Array.isArray(univs) && univs.length > 0) {
-      const mapped = univs.map(u => ({ ...u, desc: u.desc || u.description || '' }));
+      const mapped = univs.map(u => ({ ...u, desc: u.description || u.desc || '' }));
       UNIVERS.splice(0, UNIVERS.length, ...mapped);
     }
 
@@ -3693,18 +3693,27 @@ async function saveUniversDB(u, isNew) {
   if (IS_LOCAL) return;
   try {
     const row = {
-      id: u.id, nom: u.nom, creche: u.creche, cat: u.cat,
-      description: u.desc||null, conseils: u.conseils||null,
-      articles: typeof u.articles === 'string' ? u.articles : JSON.stringify(u.articles||[]),
-      photo: u.photo||null, souscat: u.souscat||null,
-      created_at: u.created_at || new Date().toISOString(),
+      id:          u.id,
+      nom:         u.nom || '',
+      creche:      u.creche || '',
+      cat:         u.cat || '',
+      description: u.desc || u.description || null,
+      conseils:    u.conseils || null,
+      articles:    typeof u.articles === 'string' ? u.articles : JSON.stringify(u.articles||[]),
+      photo:       u.photo || null,
     };
-    if (isNew) await sbInsert('univers', row);
-    else await sbUpdate('univers', u.id, row);
+    console.log('[Supabase] Saving univers:', JSON.stringify(row).substring(0, 200));
+    if (isNew) {
+      const res = await sbInsert('univers', row);
+      console.log('[Supabase] Insert result:', res);
+    } else {
+      await sbUpdate('univers', u.id, row);
+    }
     setSaved();
+    showNotif('✅ Univers sauvegardé dans le cloud');
   } catch(e) {
-    console.error('[Supabase] Univers save:', e);
-    showNotif('⚠ Erreur Supabase : ' + e.message);
+    console.error('[Supabase] Univers save error:', e);
+    showNotif('⚠ Erreur sauvegarde : ' + e.message);
   }
 }
 
