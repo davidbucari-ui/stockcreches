@@ -3158,27 +3158,22 @@ function importBackup(event) {
       renderFournisseurs(); renderHistorique(); updateCounts();
       showNotif(`⏳ Restauration locale OK — synchronisation Supabase en cours…`);
 
-      // Push to Supabase if connected
+      // Push articles to Supabase if connected
       if (!IS_LOCAL) {
         try {
           setIndicator('⏳ Envoi vers Supabase…', 'var(--amber)');
-          // Clear existing data in Supabase then re-insert
-          await Promise.all([
-            sbDelete('articles', 'all').catch(()=>{}),
-            sbDelete('commandes', 'all').catch(()=>{}),
-            sbDelete('fournisseurs', 'all').catch(()=>{}),
-          ]);
-          // Insert all articles
+          // Delete all existing data then re-insert
+          await sbDelete('articles', 'all').catch(()=>{});
+          await sbDelete('commandes', 'all').catch(()=>{});
+          await sbDelete('fournisseurs', 'all').catch(()=>{});
           for (const a of ARTICLES) {
-            await saveArticleDB(a, true).catch(()=>{});
+            await saveArticleDB(a, true).catch(e => console.warn('article:', e.message));
           }
-          // Insert all commandes
           for (const c of COMMANDES) {
-            await saveCommandeDB(c).catch(()=>{});
+            await sbInsert('commandes', commandeToRow(c)).catch(e => console.warn('commande:', e.message));
           }
-          // Insert all fournisseurs
           for (const f of FOURNISSEURS) {
-            await saveFournisseurDB(f).catch(()=>{});
+            await sbInsert('fournisseurs', fournisseurToRow(f)).catch(e => console.warn('fourn:', e.message));
           }
           setIndicator('☁️ Sync cloud réussi', 'var(--green)');
           showNotif(`✅ ${data.articles.length} articles restaurés et synchronisés`);
@@ -3600,9 +3595,10 @@ function rowToArticle(r) {
            photo: r.photo||null, photoName: r.photo_name||null };
 }
 function commandeToRow(c) {
-  return { fourn: c.fourn, creche: c.creche, date: c.date, livraison: c.livraison,
-           montant: c.montant, bc: c.bc, status: c.status,
-           articles: c.articles, notes: c.notes, url: c.url||'' };
+  return { id: c.id, fourn: c.fourn, creche: c.creche, date: c.date,
+           livraison: c.livraison||null, montant: c.montant||0,
+           bc: c.bc, status: c.status||'en-cours',
+           articles: c.articles||'', notes: c.notes||'', url: c.url||'' };
 }
 function rowToCommande(r) {
   return { id: r.id, fourn: r.fourn, creche: r.creche, date: r.date,
@@ -3611,8 +3607,9 @@ function rowToCommande(r) {
            notes: r.notes||'', url: r.url||'' };
 }
 function fournisseurToRow(f) {
-  return { nom: f.nom, contact: f.contact, tel: f.tel, email: f.email,
-           web: f.web, delai: f.delai, spec: f.spec, notes: f.notes };
+  return { id: f.id, nom: f.nom, contact: f.contact||'—', tel: f.tel||'—',
+           email: f.email||'', web: f.web||'', delai: f.delai||'',
+           spec: f.spec||'', notes: f.notes||'' };
 }
 function rowToFournisseur(r) {
   return { id: r.id, nom: r.nom, contact: r.contact||'—', tel: r.tel||'—',
