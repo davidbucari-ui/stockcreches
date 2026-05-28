@@ -77,9 +77,62 @@ body {
 }
 
 .sidebar-logo {
-  padding: 24px 20px 20px;
+  padding: 20px 20px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
+
+.sidebar-company-logo {
+  width: 100%;
+  height: 64px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px dashed rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  overflow: hidden;
+  position: relative;
+}
+.sidebar-company-logo:hover {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.4);
+}
+.sidebar-company-logo img {
+  max-width: 100%;
+  max-height: 60px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.sidebar-company-logo .logo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255,255,255,0.35);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.sidebar-company-logo .logo-placeholder span { font-size: 20px; }
+.sidebar-company-logo .logo-remove {
+  position: absolute;
+  top: 4px; right: 4px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 18px; height: 18px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.sidebar-company-logo:hover .logo-remove { opacity: 1; }
 
 .sidebar-logo h1 {
   font-family: 'Syne', sans-serif;
@@ -734,6 +787,7 @@ textarea { resize: vertical; min-height: 72px; }
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
 </head>
 <body>
 
@@ -755,6 +809,16 @@ textarea { resize: vertical; min-height: 72px; }
 <!-- ── SIDEBAR ── -->
 <aside class="sidebar">
   <div class="sidebar-logo">
+    <!-- Zone logo entreprise -->
+    <div class="sidebar-company-logo" id="logoZone" onclick="triggerLogoUpload()" title="Cliquez pour ajouter votre logo">
+      <div class="logo-placeholder" id="logoPlaceholder">
+        <span>🏢</span>
+        <div>Votre logo</div>
+      </div>
+      <img id="logoImg" style="display:none" alt="Logo entreprise">
+      <button class="logo-remove" id="logoRemoveBtn" style="display:none" onclick="removeLogo(event)" title="Supprimer le logo">✕</button>
+    </div>
+    <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
     <h1>Stocks Pédagogiques</h1>
     <span style="font-size:12px;opacity:0.7;letter-spacing:0.5px">Réseau Micro-Crèches</span>
     <span id="creche-name-display" onclick="editCrecheName()" style="display:none" 
@@ -832,6 +896,9 @@ textarea { resize: vertical; min-height: 72px; }
   <div class="sidebar-creches">
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="openModal('add')">
       + Ajouter un article
+    </button>
+    <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="openScanner()">
+      📷 Scanner un code-barres
     </button>
   </div>
 </aside>
@@ -1335,6 +1402,127 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 </div>
 
+<!-- ── MODAL SCANNER ── -->
+<div class="modal-overlay" id="modal-scanner" onclick="closeModalClick(event,'modal-scanner')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>📷 Scanner un code-barres</h2>
+      <button class="modal-close" onclick="closeScanner()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <!-- Viewfinder -->
+      <div style="position:relative;background:#000;border-radius:0;overflow:hidden;min-height:280px;display:flex;align-items:center;justify-content:center">
+        <video id="scanner-video" style="width:100%;max-height:320px;display:block" playsinline autoplay muted></video>
+        <!-- Viseur -->
+        <div style="position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center">
+          <div style="width:220px;height:140px;border:2px solid rgba(99,102,241,0.8);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,0.35)">
+            <div style="position:absolute;top:0;left:0;width:24px;height:24px;border-top:3px solid #6366F1;border-left:3px solid #6366F1;border-radius:4px 0 0 0;transform:translate(-1px,-1px)"></div>
+            <div style="position:absolute;top:0;right:0;width:24px;height:24px;border-top:3px solid #6366F1;border-right:3px solid #6366F1;border-radius:0 4px 0 0;transform:translate(1px,-1px)"></div>
+            <div style="position:absolute;bottom:0;left:0;width:24px;height:24px;border-bottom:3px solid #6366F1;border-left:3px solid #6366F1;border-radius:0 0 0 4px;transform:translate(-1px,1px)"></div>
+            <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-bottom:3px solid #6366F1;border-right:3px solid #6366F1;border-radius:0 0 4px 0;transform:translate(1px,1px)"></div>
+            <!-- Ligne de scan animée -->
+            <div id="scan-line" style="position:absolute;left:4px;right:4px;height:2px;background:linear-gradient(90deg,transparent,#6366F1,transparent);border-radius:1px;animation:scanLine 1.8s ease-in-out infinite"></div>
+          </div>
+        </div>
+        <div id="scanner-status" style="position:absolute;bottom:12px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:500;text-shadow:0 1px 4px rgba(0,0,0,0.8)">
+          Pointez la caméra vers un code-barres…
+        </div>
+      </div>
+      <!-- Saisie manuelle -->
+      <div style="padding:16px 20px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--ink3);margin-bottom:8px;font-weight:500">Ou saisir le code manuellement :</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="scanner-manual-input" placeholder="Ex : 3017620422003" 
+                 style="flex:1;font-family:'Instrument Sans',sans-serif"
+                 onkeydown="if(event.key==='Enter') processManualBarcode()">
+          <button class="btn btn-primary" onclick="processManualBarcode()">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL RÉSULTAT SCAN ── -->
+<div class="modal-overlay" id="modal-scan-result" onclick="closeModalClick(event,'modal-scan-result')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 id="scan-result-title">Article trouvé</h2>
+      <button class="modal-close" onclick="closeModal('modal-scan-result')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Article existant : ajustement rapide -->
+      <div id="scan-existing" style="display:none">
+        <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px">
+          <img id="scan-existing-photo" style="width:72px;height:72px;object-fit:contain;border-radius:10px;background:var(--bg);border:1px solid var(--border)" src="" alt="">
+          <div>
+            <div id="scan-existing-name" style="font-weight:700;font-size:16px;margin-bottom:4px"></div>
+            <div id="scan-existing-meta" style="font-size:12px;color:var(--ink3)"></div>
+            <div style="margin-top:6px;font-size:13px">Stock actuel : <strong id="scan-existing-stock" style="color:var(--accent)"></strong></div>
+          </div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius);padding:16px;text-align:center">
+          <div style="font-size:12px;color:var(--ink3);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Ajustement rapide</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+            <button onclick="quickScanAdjust(-1)" style="width:44px;height:44px;border-radius:50%;border:2px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+            <div style="text-align:center">
+              <input type="number" id="scan-qty-input" value="1" min="1" 
+                     style="width:64px;text-align:center;font-size:20px;font-weight:700;font-family:'Syne',sans-serif;border:2px solid var(--border);border-radius:8px;padding:6px">
+              <div style="font-size:10px;color:var(--ink3);margin-top:2px">quantité</div>
+            </div>
+            <button onclick="quickScanAdjust(+1)" style="width:44px;height:44px;border-radius:50%;border:2px solid #16A34A;background:#F0FDF4;color:#16A34A;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-scan-result');showDetail(scanResultArticleId)">📋 Fiche complète</button>
+            <button class="btn btn-primary" style="flex:1" onclick="confirmScanAdjust()">✅ Valider</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Article inconnu : création rapide -->
+      <div id="scan-new" style="display:none">
+        <div id="scan-new-product-info" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:var(--radius)">
+          <img id="scan-new-photo" style="width:56px;height:56px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid var(--border)" src="" alt="">
+          <div>
+            <div id="scan-new-name" style="font-weight:600;font-size:14px"></div>
+            <div id="scan-new-barcode-display" style="font-size:11px;color:var(--ink3);font-family:monospace;margin-top:2px"></div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Nom de l'article *</label>
+            <input type="text" id="scan-new-nom">
+          </div>
+          <div class="form-group">
+            <label>Catégorie</label>
+            <select id="scan-new-cat"></select>
+          </div>
+          <div class="form-group">
+            <label>Structure</label>
+            <select id="scan-new-creche"></select>
+          </div>
+          <div class="form-group">
+            <label>Stock initial</label>
+            <input type="number" id="scan-new-stock" value="1" min="0">
+          </div>
+          <div class="form-group">
+            <label>Prix unitaire (€)</label>
+            <input type="number" id="scan-new-prix" value="0" min="0" step="0.01">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="scan-result-footer"></div>
+  </div>
+</div>
+
+<style>
+@keyframes scanLine {
+  0%   { top: 8px; opacity: 1; }
+  50%  { top: calc(100% - 10px); opacity: 0.7; }
+  100% { top: 8px; opacity: 1; }
+}
+</style>
+
 <!-- ── MODAL TRANSFERT ── -->
 <div class="modal-overlay" id="modal-transfert" onclick="closeModalClick(event,'modal-transfert')">
   <div class="modal" style="max-width:480px">
@@ -1570,6 +1758,281 @@ let editingId = null;
 // ═══════════════════════════════════════════════════════════════
 // ── NOUVELLES FONCTIONNALITÉS v7 ────────────────────────────────
 // ═══════════════════════════════════════════════════════════════
+
+// ── LOGO ENTREPRISE ──────────────────────────────────────────────
+function triggerLogoUpload() {
+  document.getElementById('logoFileInput').click();
+}
+
+function handleLogoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = ev.target.result;
+    localStorage.setItem('companyLogo', data);
+    applyLogo(data);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function applyLogo(data) {
+  const img = document.getElementById('logoImg');
+  const placeholder = document.getElementById('logoPlaceholder');
+  const removeBtn = document.getElementById('logoRemoveBtn');
+  if (data) {
+    img.src = data;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+    removeBtn.style.display = 'flex';
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = 'flex';
+    removeBtn.style.display = 'none';
+  }
+}
+
+function removeLogo(e) {
+  e.stopPropagation();
+  localStorage.removeItem('companyLogo');
+  applyLogo(null);
+}
+
+// Charger le logo au démarrage
+(function() {
+  const saved = localStorage.getItem('companyLogo');
+  if (saved) applyLogo(saved);
+})();
+
+// ── FIN LOGO ─────────────────────────────────────────────────────
+
+// ── SCANNER CODE-BARRES ──────────────────────────────────────────
+let scannerCodeReader = null;
+let scannerActive = false;
+let scanResultArticleId = null;
+let lastScannedCode = null;
+
+function openScanner() {
+  document.getElementById('modal-scanner').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('scanner-manual-input').value = '';
+  document.getElementById('scanner-status').textContent = 'Pointez la caméra vers un code-barres…';
+  startCameraScanner();
+}
+
+function closeScanner() {
+  stopCameraScanner();
+  closeModal('modal-scanner');
+}
+
+async function startCameraScanner() {
+  if (!window.ZXing) {
+    document.getElementById('scanner-status').textContent = '⚠ Bibliothèque en cours de chargement…';
+    setTimeout(startCameraScanner, 800);
+    return;
+  }
+  try {
+    scannerCodeReader = new ZXing.BrowserMultiFormatReader();
+    scannerActive = true;
+    const videoEl = document.getElementById('scanner-video');
+    document.getElementById('scanner-status').textContent = 'Caméra en cours d\'activation…';
+
+    const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+    // Préférer la caméra arrière sur mobile
+    const backCamera = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[devices.length - 1];
+    const deviceId = backCamera ? backCamera.deviceId : undefined;
+
+    await scannerCodeReader.decodeFromVideoDevice(deviceId, videoEl, (result, err) => {
+      if (!scannerActive) return;
+      if (result) {
+        const code = result.getText();
+        if (code === lastScannedCode) return;
+        lastScannedCode = code;
+        navigator.vibrate && navigator.vibrate(80);
+        document.getElementById('scanner-status').innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
+        setTimeout(() => {
+          stopCameraScanner();
+          closeModal('modal-scanner');
+          processBarcode(code);
+        }, 400);
+      }
+    });
+    document.getElementById('scanner-status').textContent = 'Pointez la caméra vers un code-barres…';
+  } catch(e) {
+    console.warn('[Scanner]', e);
+    document.getElementById('scanner-status').textContent = '⚠ Caméra non disponible — utilisez la saisie manuelle';
+  }
+}
+
+function stopCameraScanner() {
+  scannerActive = false;
+  lastScannedCode = null;
+  if (scannerCodeReader) {
+    try { scannerCodeReader.reset(); } catch(e) {}
+    scannerCodeReader = null;
+  }
+}
+
+function processManualBarcode() {
+  const code = document.getElementById('scanner-manual-input').value.trim();
+  if (!code) return;
+  closeScanner();
+  processBarcode(code);
+}
+
+async function processBarcode(code) {
+  // 1. Chercher dans le stock existant (par ref ou barcode)
+  const existing = ARTICLES.find(a =>
+    a.ref === code || a.barcode === code ||
+    a.ref.toLowerCase() === code.toLowerCase()
+  );
+
+  if (existing) {
+    showScanExisting(existing);
+    return;
+  }
+
+  // 2. Article inconnu → lookup Open Food Facts
+  showNotif('🔍 Recherche du produit en ligne…');
+  const info = await lookupBarcode(code);
+  showScanNew(code, info);
+}
+
+async function lookupBarcode(code) {
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+    const data = await res.json();
+    if (data.status === 1 && data.product) {
+      const p = data.product;
+      return {
+        nom: p.product_name_fr || p.product_name || p.generic_name || '',
+        photo: p.image_front_small_url || p.image_url || '',
+        marque: p.brands || '',
+        found: true
+      };
+    }
+  } catch(e) { /* silencieux */ }
+  return { nom: '', photo: '', marque: '', found: false };
+}
+
+function showScanExisting(article) {
+  scanResultArticleId = article.id;
+  document.getElementById('scan-result-title').textContent = '📦 Article trouvé';
+  document.getElementById('scan-existing').style.display = 'block';
+  document.getElementById('scan-new').style.display = 'none';
+
+  const photo = document.getElementById('scan-existing-photo');
+  if (article.photo) { photo.src = article.photo; photo.style.display = 'block'; }
+  else { photo.style.display = 'none'; }
+
+  document.getElementById('scan-existing-name').textContent = article.nom;
+  document.getElementById('scan-existing-meta').textContent = `${article.cat} · ${article.creche}`;
+  document.getElementById('scan-existing-stock').textContent = article.stock;
+  document.getElementById('scan-qty-input').value = 1;
+
+  document.getElementById('scan-result-footer').innerHTML = '';
+  document.getElementById('modal-scan-result').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function quickScanAdjust(dir) {
+  const input = document.getElementById('scan-qty-input');
+  const v = parseInt(input.value) || 1;
+  input.value = Math.max(1, v + dir);
+}
+
+function confirmScanAdjust() {
+  const article = ARTICLES.find(a => a.id === scanResultArticleId);
+  if (!article) return;
+  const qty = parseInt(document.getElementById('scan-qty-input').value) || 1;
+
+  // Demander entrée ou sortie
+  const action = confirm(`Ajouter ${qty} au stock (OK) ou retirer ${qty} du stock (Annuler) ?`);
+  const delta = action ? qty : -qty;
+  const newStock = Math.max(0, article.stock + delta);
+  article.stock = newStock;
+
+  const type = delta > 0 ? 'entrée' : 'sortie';
+  addHisto(type, article.nom, delta, article.creche, 'Vous', 'Scan code-barres');
+  saveData();
+  saveArticleDB(article, false);
+  renderTable(); renderStats();
+  closeModal('modal-scan-result');
+  showNotif(`${delta > 0 ? '📥' : '📤'} Stock mis à jour : ${article.nom} → ${newStock}`);
+}
+
+function showScanNew(code, info) {
+  document.getElementById('scan-result-title').textContent = info.found ? '✨ Produit identifié' : '❓ Produit inconnu';
+  document.getElementById('scan-existing').style.display = 'none';
+  document.getElementById('scan-new').style.display = 'block';
+
+  // Infos produit
+  const photo = document.getElementById('scan-new-photo');
+  if (info.photo) { photo.src = info.photo; photo.style.display = 'block'; }
+  else { photo.style.display = 'none'; }
+
+  document.getElementById('scan-new-name').textContent = info.found
+    ? `${info.nom}${info.marque ? ' — ' + info.marque : ''}`
+    : 'Produit non trouvé dans la base';
+  document.getElementById('scan-new-barcode-display').textContent = `Code : ${code}`;
+
+  // Pré-remplir le formulaire
+  document.getElementById('scan-new-nom').value = info.nom || '';
+  document.getElementById('scan-new-stock').value = 1;
+  document.getElementById('scan-new-prix').value = 0;
+
+  // Remplir les selects
+  const catSel = document.getElementById('scan-new-cat');
+  catSel.innerHTML = CATS.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  const crecheSel = document.getElementById('scan-new-creche');
+  crecheSel.innerHTML = CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (currentCreche && currentCreche !== 'all') crecheSel.value = currentCreche;
+
+  document.getElementById('scan-result-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal('modal-scan-result')">Annuler</button>
+    <button class="btn btn-primary" onclick="createFromScan('${code}', '${(info.photo||'').replace(/'/g,"\\'")}')">➕ Créer l'article</button>`;
+
+  document.getElementById('modal-scan-result').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+async function createFromScan(code, photoUrl) {
+  const nom = document.getElementById('scan-new-nom').value.trim();
+  if (!nom) { showNotif('⚠ Saisissez un nom pour l\'article'); return; }
+
+  const cat    = document.getElementById('scan-new-cat').value;
+  const creche = document.getElementById('scan-new-creche').value;
+  const stock  = parseInt(document.getElementById('scan-new-stock').value) || 0;
+  const prix   = parseFloat(document.getElementById('scan-new-prix').value) || 0;
+
+  // Charger la photo si disponible
+  let photoData = null;
+  if (photoUrl) {
+    try {
+      const res = await fetch(photoUrl);
+      const blob = await res.blob();
+      photoData = await new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(blob); });
+    } catch(e) { /* photo optionnelle */ }
+  }
+
+  const newArticle = {
+    id: Date.now(), nom, ref: code, barcode: code, cat, creche,
+    stock, min: 0, prix, fourn: '', notes: '', url: '', expiry: '',
+    photo: photoData, photoName: nom
+  };
+
+  ARTICLES.push(newArticle);
+  addHisto('entrée', nom, stock, creche, 'Vous', `Création via scan (${code})`);
+  saveData();
+  await saveArticleDB(newArticle, true);
+  renderTable(); renderStats();
+  closeModal('modal-scan-result');
+  showNotif(`✅ Article "${nom}" créé avec ${stock} en stock`);
+}
+
+// ── FIN SCANNER ───────────────────────────────────────────────────
 
 // ── 1. UTILITAIRES DATE DE PÉREMPTION ───────────────────────────
 function expiryColor(dateStr) {
@@ -4060,12 +4523,14 @@ function articleToRow(a) {
   return { id: a.id, nom: a.nom, ref: a.ref, cat: a.cat, creche: a.creche,
            stock: a.stock, min: a.min, prix: a.prix, fourn: a.fourn,
            notes: a.notes||'', url: a.url||'', expiry: a.expiry||'',
+           barcode: a.barcode||'',
            photo: a.photo||null, photo_name: a.photoName||null };
 }
 function rowToArticle(r) {
   return { id: r.id, nom: r.nom, ref: r.ref, cat: r.cat, creche: r.creche,
            stock: r.stock, min: r.min, prix: parseFloat(r.prix)||0,
            fourn: r.fourn||'', notes: r.notes||'', url: r.url||'', expiry: r.expiry||'',
+           barcode: r.barcode||'',
            photo: r.photo||null, photoName: r.photo_name||null };
 }
 function commandeToRow(c) {
