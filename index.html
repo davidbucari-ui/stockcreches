@@ -2176,35 +2176,38 @@ async function createFromScan(code, photoUrl) {
     } catch(e) {}
   }
 
-  const newArticle = {
-    id: Date.now(), nom, ref: code, barcode: code, cat, creche,
-    stock, min: 0, prix, fourn: '', notes: '', url: '', expiry: '',
-    photo: photoData, photoName: nom
-  };
+  // Stopper le polling pendant la création pour éviter les conflits
+  if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
 
-  ARTICLES.push(newArticle);
-  addHisto('entrée', nom, stock, creche, 'Vous', `Création via scan (${code})`);
-  saveData();
-
-  // Sauvegarder dans Supabase et récupérer le vrai id
   try {
-    const rows = await sbInsert('articles', articleToRow(newArticle));
+    // Insérer directement dans Supabase et récupérer l'id réel
+    const row = {
+      nom, ref: code, barcode: code, cat, creche,
+      stock, min: 0, prix: prix, fourn: '', notes: '', url: '', expiry: '',
+      photo: photoData || null, photo_name: nom
+    };
+    const rows = await sbInsert('articles', row);
     if (rows && rows[0]) {
-      // Mettre à jour l'id local avec l'id Supabase
-      const oldId = newArticle.id;
-      newArticle.id = rows[0].id;
-      // Forcer barcode dans Supabase avec le bon id
-      await sbUpdate('articles', newArticle.id, { barcode: code, ref: code });
-      // Mettre à jour l'id dans ARTICLES
-      const idx = ARTICLES.findIndex(a => a.id === oldId);
-      if (idx >= 0) ARTICLES[idx].id = newArticle.id;
+      const realId = rows[0].id;
+      // Forcer barcode avec le bon id
+      await sbUpdate('articles', realId, { barcode: code, ref: code });
+      // Ajouter dans ARTICLES local avec le vrai id Supabase
+      const newArticle = { id: realId, nom, ref: code, barcode: code, cat, creche, stock, min: 0, prix, fourn: '', notes: '', url: '', expiry: '', photo: photoData, photoName: nom };
+      ARTICLES.push(newArticle);
+      addHisto('entrée', nom, stock, creche, 'Vous', `Création via scan (${code})`);
+      saveData();
     }
-  } catch(e) { console.error('[createFromScan]', e); }
+  } catch(e) {
+    console.error('[createFromScan]', e);
+    showNotif('⚠ Erreur lors de la création');
+  }
 
-  saveData();
   renderTable(); renderStats();
   closeModal('modal-scan-result');
   showNotif(`✅ Article "${nom}" créé — code-barres enregistré !`);
+
+  // Relancer le polling après 3 secondes
+  setTimeout(() => startPolling(30), 3000);
 }
 
 let scanForFormMode = false;
