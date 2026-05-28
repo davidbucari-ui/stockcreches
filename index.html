@@ -2094,7 +2094,8 @@ function openScanner() {
 
 function closeScanner() {
   stopCameraScanner();
-  closeModal('modal-scanner');
+  document.getElementById('modal-scanner').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 async function startCameraScanner() {
@@ -2125,7 +2126,8 @@ async function startCameraScanner() {
               statusEl.innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
               setTimeout(() => {
                 stopCameraScanner();
-                closeModal('modal-scanner');
+                document.getElementById('modal-scanner').classList.remove('open');
+                document.body.style.overflow = '';
                 processBarcode(code);
               }, 400);
               return;
@@ -2136,7 +2138,6 @@ async function startCameraScanner() {
       };
       requestAnimationFrame(scanLoop);
     } else {
-      // Fallback : ZXing si disponible
       if (window.ZXing) {
         scannerCodeReader = new ZXing.BrowserMultiFormatReader();
         scannerCodeReader.decodeFromStream(stream, videoEl, (result, err) => {
@@ -2149,7 +2150,8 @@ async function startCameraScanner() {
             statusEl.innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
             setTimeout(() => {
               stopCameraScanner();
-              closeModal('modal-scanner');
+              document.getElementById('modal-scanner').classList.remove('open');
+              document.body.style.overflow = '';
               processBarcode(code);
             }, 400);
           }
@@ -2203,10 +2205,10 @@ async function processBarcode(code) {
   }
 
   // Mode normal — chercher dans le stock
+  const codeTrim = code.trim().toLowerCase();
   const existing = ARTICLES.find(a =>
-    a.barcode === code ||
-    a.ref === code ||
-    (a.ref && a.ref.toLowerCase() === code.toLowerCase())
+    (a.barcode && a.barcode.trim().toLowerCase() === codeTrim) ||
+    (a.ref && a.ref.trim().toLowerCase() === codeTrim)
   );
 
   if (existing) {
