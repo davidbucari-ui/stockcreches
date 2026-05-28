@@ -3745,12 +3745,13 @@ async function sbDelete(table, id) {
 function articleToRow(a) {
   return { id: a.id, nom: a.nom, ref: a.ref, cat: a.cat, creche: a.creche,
            stock: a.stock, min: a.min, prix: a.prix, fourn: a.fourn,
-           notes: a.notes||'', photo: a.photo||null, photo_name: a.photoName||null };
+           notes: a.notes||'', url: a.url||'', expiry: a.expiry||'',
+           photo: a.photo||null, photo_name: a.photoName||null };
 }
 function rowToArticle(r) {
   return { id: r.id, nom: r.nom, ref: r.ref, cat: r.cat, creche: r.creche,
            stock: r.stock, min: r.min, prix: parseFloat(r.prix)||0,
-           fourn: r.fourn||'', notes: r.notes||'',
+           fourn: r.fourn||'', notes: r.notes||'', url: r.url||'', expiry: r.expiry||'',
            photo: r.photo||null, photoName: r.photo_name||null };
 }
 function commandeToRow(c) {
