@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stocks-creches-v1';
+const CACHE_NAME = 'stocks-creches-v2';
 const ASSETS = ['./'];
 
 self.addEventListener('install', e => {
