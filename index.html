@@ -2130,7 +2130,10 @@ async function startCameraScanner() {
               statusEl.innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
               setTimeout(() => {
                 closeScanner();
-                processBarcode(code);
+                setTimeout(async () => {
+                  try { await processBarcode(code); }
+                  catch(e) { console.error('[scan]', e); showNotif('⚠ Erreur : ' + e.message); }
+                }, 300);
               }, 400);
               return;
             }
@@ -2152,7 +2155,10 @@ async function startCameraScanner() {
             statusEl.innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
             setTimeout(() => {
               closeScanner();
-              processBarcode(code);
+              setTimeout(async () => {
+                try { await processBarcode(code); }
+                catch(e) { console.error('[scan]', e); showNotif('⚠ Erreur : ' + e.message); }
+              }, 300);
             }, 400);
           }
         });
@@ -2186,7 +2192,10 @@ function processManualBarcode() {
   const code = document.getElementById('scanner-manual-input').value.trim();
   if (!code) return;
   closeScanner();
-  processBarcode(code);
+  setTimeout(async () => {
+    try { await processBarcode(code); }
+    catch(e) { showNotif('⚠ Erreur : ' + e.message); }
+  }, 300);
 }
 
 async function processBarcode(code) {
