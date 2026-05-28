@@ -2752,6 +2752,7 @@ async function partagerBordereau() {
 // ─── UNIVERS LUDIQUES ────────────────────────────────────────────────────
 
 let UNIVERS = [];
+let SOUSCATS = [];
 let editingUniversId = null;
 let currentUniversCatFilter = 'all';
 
@@ -4243,6 +4244,9 @@ async function genererSuggestionsIA() {
     return `- ${nom} (catégorie: ${a.cat}, stock: ${a.stock})`;
   }).join('\n');
 
+  // Store suggestions globally accessible
+  window._iaSuggestions = [];
+
   const prompt = `Tu es un expert en pédagogie de la petite enfance spécialisé dans les micro-crèches.
 
 Voici le matériel disponible en stock à la crèche "${creche}"${cat ? ` (catégorie ${cat})` : ''} :
@@ -4251,85 +4255,93 @@ ${materiel}
 
 ${consignes ? `Consignes supplémentaires : ${consignes}` : ''}
 
-Génère 3 propositions d'activités ludiques et pédagogiques adaptées à des enfants de 0-3 ans, en utilisant uniquement ce matériel disponible.
+Génère 3 propositions d'activités ludiques et pédagogiques adaptées à des enfants de 0-3 ans.
 
-Pour chaque activité, donne :
-- Un titre accrocheur avec emoji
-- La tranche d'âge recommandée
-- Les objectifs pédagogiques (2-3 points)
-- Le matériel utilisé (parmi la liste)
-- Le déroulement en 3-4 étapes simples
-- Un conseil de mise en scène
-
-Réponds en français, de façon chaleureuse et pratique pour des professionnels de la petite enfance.`;
+Réponds UNIQUEMENT en JSON valide, sans texte avant ou après, avec ce format :
+{"suggestions":[{"titre":"emoji Titre","cat":"Sensoriel","description":"Objectifs et déroulement.","conseils":"Mise en scène.","articles":["nom article 1","nom article 2"]}]}`;
 
   try {
     const response = await fetch('https://claude-proxy.david-bucari.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 1500,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }] })
     });
-
     const data = await response.json();
-    console.log('[IA] Response:', JSON.stringify(data).substring(0, 200));
-    const texte = data?.content?.[0]?.text || data?.error?.message || 'Aucune suggestion générée.';
+    const texte = data?.content?.[0]?.text || data?.error?.message || '';
 
-    // Formater le résultat
-    const html = texte
-      .split('\n')
-      .map(line => {
-        if (line.startsWith('# ') || line.match(/^##+ /)) {
-          return `<h3 style="font-size:15px;font-weight:700;color:var(--ink);margin:16px 0 6px">${line.replace(/^#+\s*/,'')}</h3>`;
-        }
-        if (line.startsWith('- ') || line.startsWith('• ')) {
-          return `<div style="padding:3px 0 3px 16px;font-size:13px;color:var(--ink2);position:relative">
-            <span style="position:absolute;left:4px">•</span>${line.replace(/^[-•]\s*/,'')}</div>`;
-        }
-        if (line.match(/^\*\*.*\*\*$/)) {
-          return `<div style="font-weight:700;font-size:13px;color:var(--ink);margin-top:8px">${line.replace(/\*\*/g,'')}</div>`;
-        }
-        if (line.trim() === '') return '<div style="height:8px"></div>';
-        return `<div style="font-size:13px;color:var(--ink2);line-height:1.6">${line}</div>`;
-      })
-      .join('');
+    let suggestions = [];
+    try {
+      const clean = texte.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      suggestions = parsed.suggestions || [];
+      window._iaSuggestions = suggestions;
+    } catch(e) {
+      resultDiv.innerHTML = `<div style="padding:16px;color:var(--red)">⚠ Erreur parsing JSON : ${e.message}</div>`;
+      btnGen.disabled = false; btnGen.textContent = '✨ Générer les suggestions'; return;
+    }
+
+    const html = suggestions.map((s, i) => `
+      <div style="background:white;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px">${s.titre}</div>
+        <span style="font-size:11px;background:var(--accent-lt);color:var(--accent);padding:2px 8px;border-radius:20px">${s.cat}</span>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.6;margin:8px 0">${s.description}</div>
+        ${s.conseils ? `<div style="font-size:12px;background:#FEF9C3;border-radius:6px;padding:8px;color:#92400E;margin-bottom:8px">💡 ${s.conseils}</div>` : ''}
+        <div style="font-size:12px;color:var(--ink3);margin-bottom:10px">📦 ${(s.articles||[]).join(', ')}</div>
+        <button class="btn btn-primary btn-sm" onclick="creerUniversDepuisIASuggestion(${i})" style="width:100%">+ Créer cet univers</button>
+      </div>`).join('');
 
     resultDiv.innerHTML = `
-      <div style="margin-bottom:16px;padding:12px 16px;background:var(--accent-lt);border-radius:8px;font-size:12px;color:var(--accent)">
-        ✨ ${articles.length} articles analysés pour la crèche ${creche}
-      </div>
-      ${html}
-      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="creerUniversDepuisIA()">+ Créer un univers à partir de ces suggestions</button>
-        <button class="btn btn-secondary btn-sm" onclick="genererSuggestionsIA()">🔄 Nouvelles suggestions</button>
-      </div>`;
+      <div style="margin-bottom:12px;padding:10px 14px;background:var(--accent-lt);border-radius:8px;font-size:12px;color:var(--accent)">
+        ✨ ${articles.length} articles analysés — ${suggestions.length} activités suggérées pour ${creche}
+      </div>${html}
+      <button class="btn btn-secondary btn-sm" onclick="genererSuggestionsIA()" style="width:100%;margin-top:4px">🔄 Nouvelles suggestions</button>`;
 
   } catch(e) {
     resultDiv.innerHTML = `<div style="color:var(--red);padding:20px;font-size:13px">⚠ Erreur : ${e.message}</div>`;
   }
-
   btnGen.disabled = false;
   btnGen.textContent = '✨ Générer les suggestions';
 }
 
-function creerUniversDepuisIA() {
+function creerUniversDepuisIASuggestion(index) {
+  const s = (window._iaSuggestions || [])[index];
+  if (!s) return;
+  const creche = document.getElementById('ia-creche')?.value || CRECHES[0];
   closeModal('modal-ia');
   openModal('univers');
-  // Pré-sélectionner la crèche
+  setTimeout(() => {
+    const el = (id) => document.getElementById(id);
+    if (el('u-nom'))     el('u-nom').value     = s.titre || '';
+    if (el('u-cat'))     el('u-cat').value     = s.cat || 'Sensoriel';
+    if (el('u-desc'))    el('u-desc').value    = s.description || '';
+    if (el('u-conseils'))el('u-conseils').value = s.conseils || '';
+    if (el('u-creche'))  el('u-creche').value  = creche;
+    buildArticlePicker(creche, []);
+    setTimeout(() => {
+      const noms = (s.articles || []).map(n => n.toLowerCase().trim());
+      ARTICLES.filter(a => a.creche === creche).forEach(a => {
+        const nom = a.nom.replace(/\s*\(.*?\)/g,'').replace(/\s*\{.*?\}/g,'').trim().toLowerCase();
+        if (noms.some(n => nom.includes(n.substring(0,6)) || n.includes(nom.substring(0,6)))) {
+          const cb = el('pick-' + a.id);
+          if (cb) cb.checked = true;
+        }
+      });
+      showNotif('✅ Formulaire pré-rempli — vérifiez les articles cochés');
+    }, 300);
+  }, 200);
+}
+
+function creerUniversDepuisIA() {
+  closeModal('modal-ia'); openModal('univers');
   const iaCreche = document.getElementById('ia-creche')?.value;
   const uCreche = document.getElementById('u-creche');
   if (uCreche && iaCreche) uCreche.value = iaCreche;
-  showNotif('💡 Créez votre univers en vous inspirant des suggestions !');
 }
-
 function exportCommandesExcel() { showNotif('Utilisez le bouton ⬇ Excel sur chaque commande'); }
 
 // ─── SOUS-CATÉGORIES ─────────────────────────────────────────────────────
 
-let SOUSCATS = [];
 let editingSouscatId = null;
 
 function renderSouscats() {
