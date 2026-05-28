@@ -4264,7 +4264,7 @@ Pour chaque activité, donne :
 Réponds en français, de façon chaleureuse et pratique pour des professionnels de la petite enfance.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://claude-proxy.david-bucari.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
