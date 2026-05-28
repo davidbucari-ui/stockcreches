@@ -2176,41 +2176,43 @@ async function createFromScan(code, photoUrl) {
     } catch(e) {}
   }
 
-  // Stopper le polling pendant la création pour éviter les conflits
+  // Stopper le polling pendant la création
   if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
 
   try {
-    // Insérer directement dans Supabase et récupérer l'id réel
     const row = {
       nom, ref: code, barcode: code, cat, creche,
       stock, min: 0, prix: prix, fourn: '', notes: '', url: '', expiry: '',
       photo: photoData || null, photo_name: nom
     };
-    console.log('[createFromScan] INSERT row:', JSON.stringify({...row, photo: row.photo ? '(photo)' : null}));
+
+    // 1. Insérer dans Supabase
     const rows = await sbInsert('articles', row);
-    console.log('[createFromScan] Supabase response:', JSON.stringify(rows));
-    if (rows && rows[0]) {
-      const realId = rows[0].id;
-      console.log('[createFromScan] Real ID from Supabase:', realId, 'barcode:', rows[0].barcode);
-      // Forcer barcode avec le bon id
-      await sbUpdate('articles', realId, { barcode: code, ref: code });
-      // Ajouter dans ARTICLES local avec le vrai id Supabase
-      const newArticle = { id: realId, nom, ref: code, barcode: code, cat, creche, stock, min: 0, prix, fourn: '', notes: '', url: '', expiry: '', photo: photoData, photoName: nom };
-      ARTICLES.push(newArticle);
-      addHisto('entrée', nom, stock, creche, 'Vous', `Création via scan (${code})`);
+    if (!rows || !rows[0]) throw new Error('Pas de retour Supabase');
+    const realId = rows[0].id;
+
+    // 2. Forcer barcode explicitement (double sécurité)
+    await sbUpdate('articles', realId, { barcode: code });
+
+    // 3. Attendre 1s puis recharger TOUS les articles depuis Supabase
+    await new Promise(r => setTimeout(r, 1000));
+    const arts = await sbGet('articles');
+    if (Array.isArray(arts)) {
+      ARTICLES.splice(0, ARTICLES.length, ...arts.map(rowToArticle));
       saveData();
     }
+
+    renderTable(); renderStats();
+    closeModal('modal-scan-result');
+    showNotif(`✅ "${nom}" créé et synchronisé !`);
+
   } catch(e) {
     console.error('[createFromScan]', e);
-    showNotif('⚠ Erreur lors de la création');
+    showNotif('⚠ Erreur lors de la création — réessayez');
   }
 
-  renderTable(); renderStats();
-  closeModal('modal-scan-result');
-  showNotif(`✅ Article "${nom}" créé — code-barres enregistré !`);
-
-  // Relancer le polling après 3 secondes
-  setTimeout(() => startPolling(30), 3000);
+  // Relancer le polling après 2s
+  setTimeout(() => startPolling(30), 2000);
 }
 
 let scanForFormMode = false;
@@ -4634,7 +4636,6 @@ async function syncFromCloud() {
       sbGet('univers', 'order=id.desc').catch(() => []),
     ]);
     if (Array.isArray(arts)) {
-      console.log('[syncFromCloud] articles reçus:', arts.length, 'barcodes:', arts.filter(a=>a.barcode).map(a=>({id:a.id,nom:a.nom,barcode:a.barcode})));
       // Garder url/expiry/barcode locaux si Supabase a NULL
       const localById = {};
       ARTICLES.forEach(a => { localById[a.id] = a; });
