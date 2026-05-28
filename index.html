@@ -2018,7 +2018,7 @@ async function processBarcode(code) {
   showNotif('🔍 Code non reconnu — recherche en ligne…');
   const info = await lookupBarcode(code);
   showScanNew(code, info);
-}}
+}
 
 async function lookupBarcode(code) {
   try {
