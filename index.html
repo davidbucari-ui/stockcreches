@@ -2198,6 +2198,7 @@ function processManualBarcode() {
 }
 
 async function processBarcode(code) {
+  alert('processBarcode appelé avec : ' + code + '\nARTICLES : ' + ARTICLES.length);
   // Mode "associer au formulaire"
   if (scanForFormMode) {
     scanForFormMode = false;
