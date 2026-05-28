@@ -1413,7 +1413,7 @@ textarea { resize: vertical; min-height: 72px; }
 </div>
 
 <!-- ── MODAL SCANNER ── -->
-<div class="modal-overlay" id="modal-scanner" onclick="closeModalClick(event,'modal-scanner')">
+<div class="modal-overlay" id="modal-scanner" onclick="if(event.target===this)closeScanner()">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
       <h2>📷 Scanner un code-barres</h2>
@@ -2094,8 +2094,12 @@ function openScanner() {
 
 function closeScanner() {
   stopCameraScanner();
-  document.getElementById('modal-scanner').classList.remove('open');
+  const modal = document.getElementById('modal-scanner');
+  modal.classList.remove('open');
+  modal.style.display = 'none';
+  setTimeout(() => { modal.style.display = ''; }, 100);
   document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
 }
 
 async function startCameraScanner() {
@@ -2125,9 +2129,7 @@ async function startCameraScanner() {
               navigator.vibrate && navigator.vibrate(80);
               statusEl.innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
               setTimeout(() => {
-                stopCameraScanner();
-                document.getElementById('modal-scanner').classList.remove('open');
-                document.body.style.overflow = '';
+                closeScanner();
                 processBarcode(code);
               }, 400);
               return;
@@ -2149,9 +2151,7 @@ async function startCameraScanner() {
             navigator.vibrate && navigator.vibrate(80);
             statusEl.innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
             setTimeout(() => {
-              stopCameraScanner();
-              document.getElementById('modal-scanner').classList.remove('open');
-              document.body.style.overflow = '';
+              closeScanner();
               processBarcode(code);
             }, 400);
           }
