@@ -1453,43 +1453,56 @@ textarea { resize: vertical; min-height: 72px; }
 
 <!-- ── MODAL RÉSULTAT SCAN ── -->
 <div class="modal-overlay" id="modal-scan-result" onclick="closeModalClick(event,'modal-scan-result')">
-  <div class="modal" style="max-width:440px">
-    <div class="modal-header">
-      <h2 id="scan-result-title">Article trouvé</h2>
+  <div class="modal" style="max-width:480px;width:calc(100% - 24px);margin:12px auto;border-radius:20px">
+    <div class="modal-header" style="border-radius:20px 20px 0 0;padding:16px 20px">
+      <h2 id="scan-result-title" style="font-size:17px">Article trouvé</h2>
       <button class="modal-close" onclick="closeModal('modal-scan-result')">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" style="padding:16px 20px">
+
       <!-- Article existant : ajustement rapide -->
       <div id="scan-existing" style="display:none">
-        <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px">
-          <img id="scan-existing-photo" style="width:72px;height:72px;object-fit:contain;border-radius:10px;background:var(--bg);border:1px solid var(--border)" src="" alt="">
-          <div>
-            <div id="scan-existing-name" style="font-weight:700;font-size:16px;margin-bottom:4px"></div>
+        <!-- Infos article -->
+        <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;padding:14px;background:var(--bg);border-radius:14px">
+          <img id="scan-existing-photo" style="width:64px;height:64px;object-fit:contain;border-radius:10px;background:#fff;border:1px solid var(--border);flex-shrink:0" src="" alt="">
+          <div style="min-width:0">
+            <div id="scan-existing-name" style="font-weight:700;font-size:17px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
             <div id="scan-existing-meta" style="font-size:12px;color:var(--ink3)"></div>
-            <div style="margin-top:6px;font-size:13px">Stock actuel : <strong id="scan-existing-stock" style="color:var(--accent)"></strong></div>
+            <div style="margin-top:5px;font-size:14px">Stock : <strong id="scan-existing-stock" style="color:var(--accent);font-size:18px;font-family:'Syne',sans-serif"></strong></div>
           </div>
         </div>
-        <div style="background:var(--bg);border-radius:var(--radius);padding:16px;text-align:center">
-          <div style="font-size:12px;color:var(--ink3);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Ajustement rapide</div>
-          <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-            <button onclick="quickScanAdjust(-1)" style="width:44px;height:44px;border-radius:50%;border:2px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+
+        <!-- Ajustement rapide -->
+        <div style="background:var(--bg);border-radius:14px;padding:20px;text-align:center;margin-bottom:14px">
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Ajustement rapide</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:16px">
+            <button onclick="quickScanAdjust(-1)" style="width:56px;height:56px;border-radius:50%;border:2.5px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:28px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">−</button>
             <div style="text-align:center">
-              <input type="number" id="scan-qty-input" value="1" min="1" 
-                     style="width:64px;text-align:center;font-size:20px;font-weight:700;font-family:'Syne',sans-serif;border:2px solid var(--border);border-radius:8px;padding:6px">
-              <div style="font-size:10px;color:var(--ink3);margin-top:2px">quantité</div>
+              <input type="number" id="scan-qty-input" value="1" min="1"
+                     style="width:72px;text-align:center;font-size:24px;font-weight:700;font-family:'Syne',sans-serif;border:2px solid var(--border);border-radius:10px;padding:8px 4px">
+              <div style="font-size:11px;color:var(--ink3);margin-top:3px">quantité</div>
             </div>
-            <button onclick="quickScanAdjust(+1)" style="width:44px;height:44px;border-radius:50%;border:2px solid #16A34A;background:#F0FDF4;color:#16A34A;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+            <button onclick="quickScanAdjust(+1)" style="width:56px;height:56px;border-radius:50%;border:2.5px solid #16A34A;background:#F0FDF4;color:#16A34A;font-size:28px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">+</button>
           </div>
-          <div style="display:flex;gap:8px;margin-top:16px">
-            <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-scan-result');showDetail(scanResultArticleId)">📋 Fiche complète</button>
-            <button class="btn btn-primary" style="flex:1" onclick="confirmScanAdjust()">✅ Valider</button>
+          <!-- Boutons entrée/sortie directs -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0">
+            <button onclick="confirmScanAdjust('sortie')" style="padding:14px;border-radius:12px;border:2px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:15px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">
+              📤 Sortie
+            </button>
+            <button onclick="confirmScanAdjust('entrée')" style="padding:14px;border-radius:12px;border:2px solid #16A34A;background:#F0FDF4;color:#16A34A;font-size:15px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">
+              📥 Entrée
+            </button>
           </div>
         </div>
+
+        <button style="width:100%;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);color:var(--ink2);font-size:14px;cursor:pointer;font-family:'Instrument Sans',sans-serif" onclick="closeModal('modal-scan-result');showDetail(scanResultArticleId)">
+          📋 Voir la fiche complète
+        </button>
       </div>
 
       <!-- Article inconnu : création rapide -->
       <div id="scan-new" style="display:none">
-        <div id="scan-new-product-info" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:var(--radius)">
+        <div id="scan-new-product-info" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:12px">
           <img id="scan-new-photo" style="width:56px;height:56px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid var(--border)" src="" alt="">
           <div>
             <div id="scan-new-name" style="font-weight:600;font-size:14px"></div>
@@ -1519,8 +1532,9 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
         </div>
       </div>
+
     </div>
-    <div class="modal-footer" id="scan-result-footer"></div>
+    <div class="modal-footer" id="scan-result-footer" style="border-radius:0 0 20px 20px;padding:12px 20px"></div>
   </div>
 </div>
 
@@ -2078,24 +2092,31 @@ function quickScanAdjust(dir) {
   input.value = Math.max(1, v + dir);
 }
 
-function confirmScanAdjust() {
+function confirmScanAdjust(forceType) {
   const article = ARTICLES.find(a => a.id === scanResultArticleId);
   if (!article) return;
   const qty = parseInt(document.getElementById('scan-qty-input').value) || 1;
 
-  // Demander entrée ou sortie
-  const action = confirm(`Ajouter ${qty} au stock (OK) ou retirer ${qty} du stock (Annuler) ?`);
-  const delta = action ? qty : -qty;
+  let delta;
+  if (forceType === 'entrée') {
+    delta = qty;
+  } else if (forceType === 'sortie') {
+    delta = -qty;
+  } else {
+    // Fallback : demander
+    const action = confirm(`Ajouter ${qty} (OK) ou retirer ${qty} (Annuler) ?`);
+    delta = action ? qty : -qty;
+  }
+
   const newStock = Math.max(0, article.stock + delta);
   article.stock = newStock;
-
   const type = delta > 0 ? 'entrée' : 'sortie';
   addHisto(type, article.nom, delta, article.creche, 'Vous', 'Scan code-barres');
   saveData();
   saveArticleDB(article, false);
   renderTable(); renderStats();
   closeModal('modal-scan-result');
-  showNotif(`${delta > 0 ? '📥' : '📤'} Stock mis à jour : ${article.nom} → ${newStock}`);
+  showNotif(`${delta > 0 ? '📥' : '📤'} ${article.nom} → stock : ${newStock}`);
 }
 
 function showScanNew(code, info) {
