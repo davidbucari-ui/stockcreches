@@ -733,6 +733,7 @@ textarea { resize: vertical; min-height: 72px; }
   .content { padding: 16px; }
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -771,8 +772,12 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 
   <div class="sidebar-section-title">Navigation</div>
+  <button class="nav-item" onclick="showPage('dashboard', this)">
+    <span class="nav-icon">📊</span> Tableau de bord
+  </button>
   <button class="nav-item active" onclick="showPage('inventaire', this)">
     <span class="nav-icon">📦</span> Inventaire
+    <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
   <button class="nav-item" onclick="showPage('commandes', this)">
     <span class="nav-icon">🛒</span> Commandes
@@ -846,7 +851,8 @@ textarea { resize: vertical; min-height: 72px; }
       </div>
       <button class="btn btn-secondary" onclick="triggerImport()">⬆ Importer Excel</button>
       <input type="file" id="importInput" accept=".xlsx" style="display:none" onchange="importExcel(event)">
-      <button class="btn btn-secondary" onclick="exportCSV()">⬇ Exporter</button>
+      <button class="btn btn-secondary" onclick="exportCSV()">⬇ CSV</button>
+      <button class="btn btn-secondary" onclick="exportInventairePDF()" title="Exporter l'inventaire en PDF imprimable">🖨 PDF</button>
       <button class="btn btn-secondary" onclick="exportBackup()" title="Sauvegarder toutes les données (JSON)">💾 Sauvegarder</button>
       <button class="btn btn-secondary" onclick="document.getElementById('restoreInput').click()" title="Restaurer une sauvegarde">📂 Restaurer</button>
       <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importBackup(event)">
@@ -857,6 +863,35 @@ textarea { resize: vertical; min-height: 72px; }
 
   <!-- CONTENT -->
   <div class="content">
+
+    <!-- ── PAGE DASHBOARD ── -->
+    <div id="page-dashboard" style="display:none">
+
+      <!-- KPI row -->
+      <div class="stats-grid" id="dash-kpi" style="margin-bottom:8px"></div>
+
+      <!-- Alert panel -->
+      <div id="dash-alerts-panel" style="margin:0 20px 20px"></div>
+
+      <!-- Charts row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 20px 20px">
+        <!-- Stock par structure -->
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)">
+          <div style="font-weight:700;font-size:14px;margin-bottom:16px">📦 Stock par structure</div>
+          <canvas id="chart-creches" height="200"></canvas>
+        </div>
+        <!-- Répartition par catégorie -->
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)">
+          <div style="font-weight:700;font-size:14px;margin-bottom:16px">🏷 Valeur par catégorie</div>
+          <canvas id="chart-cats" height="200"></canvas>
+        </div>
+        <!-- Alertes stock bas timeline -->
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);grid-column:1/-1">
+          <div style="font-weight:700;font-size:14px;margin-bottom:16px">📉 Niveaux de stock (articles critiques)</div>
+          <canvas id="chart-critical" height="120"></canvas>
+        </div>
+      </div>
+    </div>
 
     <!-- ── PAGE INVENTAIRE ── -->
     <div id="page-inventaire">
@@ -1282,6 +1317,10 @@ textarea { resize: vertical; min-height: 72px; }
             </div>
           </div>
         </div>
+        <div class="form-group">
+          <label>📅 Date de péremption</label>
+          <input type="date" id="f-expiry" placeholder="">
+        </div>
         <div class="form-group full">
           <label>🔗 Lien internet (fiche produit, catalogue...)</label>
           <input type="url" id="f-url" placeholder="https://www.fournisseur.fr/produit...">
@@ -1292,6 +1331,48 @@ textarea { resize: vertical; min-height: 72px; }
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-add')">Annuler</button>
       <button class="btn btn-primary" onclick="onSaveArticle()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL TRANSFERT ── -->
+<div class="modal-overlay" id="modal-transfert" onclick="closeModalClick(event,'modal-transfert')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>🔄 Transférer vers une autre crèche</h2>
+      <button class="modal-close" onclick="closeModal('modal-transfert')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Article</label>
+          <div id="transfert-article-name" style="font-weight:600;font-size:15px;color:var(--ink);padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm)"></div>
+        </div>
+        <div class="form-group">
+          <label>De la crèche</label>
+          <div id="transfert-from" style="font-weight:600;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm)"></div>
+        </div>
+        <div class="form-group">
+          <label>Vers la crèche *</label>
+          <select id="transfert-to"></select>
+        </div>
+        <div class="form-group">
+          <label>Quantité à transférer *</label>
+          <input type="number" id="transfert-qty" min="1" placeholder="1">
+        </div>
+        <div class="form-group">
+          <label>Stock disponible</label>
+          <div id="transfert-stock-dispo" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent);padding:6px 0"></div>
+        </div>
+        <div class="form-group full">
+          <label>Note (optionnel)</label>
+          <input type="text" id="transfert-note" placeholder="Ex : Prêt temporaire, besoin urgent…">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-transfert')">Annuler</button>
+      <button class="btn btn-primary" onclick="doTransfert()">🔄 Confirmer le transfert</button>
     </div>
   </div>
 </div>
@@ -1552,6 +1633,7 @@ function renderTable() {
       <td style="font-weight:500">${a.prix > 0 ? a.prix.toFixed(2)+' €' : '—'}</td>
       <td style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent)">
         ${montant > 0 ? montant.toFixed(2)+' €' : '—'}
+        ${a.expiry ? `<div style="font-size:10px;font-weight:600;margin-top:2px;color:${expiryColor(a.expiry)}">${formatExpiry(a.expiry)}</div>` : ''}
       </td>
       <td style="color:var(--ink2);font-size:12px">${a.fourn || '—'}</td>
       <td onclick="event.stopPropagation()">
@@ -1825,6 +1907,7 @@ function openModal(type) {
     ['f-min','f-notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     ['f-cat','f-creche','f-fourn'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-url').value = '';
+    const fExpiry = document.getElementById('f-expiry'); if (fExpiry) fExpiry.value = '';
     resetPhotoUpload();
   }
   document.getElementById(`modal-${type}`).classList.add('open');
@@ -1844,6 +1927,8 @@ function editArticle(id) {
   document.getElementById('f-prix').value = a.prix;
   document.getElementById('f-fourn').value = a.fourn;
   document.getElementById('f-url').value = a.url || '';
+  const fExpiry = document.getElementById('f-expiry');
+  if (fExpiry) fExpiry.value = a.expiry || '';
   // f-min et f-notes supprimés — utiliser les champs cachés si présents
   const fMin = document.getElementById('f-min');
   if (fMin) fMin.value = a.min || 0;
@@ -1892,6 +1977,7 @@ async function saveArticle() {
     fourn: document.getElementById('f-fourn').value,
     notes: ((document.getElementById('f-notes')||{}).value||'').trim(),
     url:   document.getElementById('f-url').value.trim(),
+    expiry: (document.getElementById('f-expiry')||{}).value || '',
     photo: currentPhotoData || (editingId ? (ARTICLES.find(a=>a.id===editingId)||{}).photo : null),
     photoName: currentPhotoName || null,
   };
@@ -2350,6 +2436,7 @@ function showDetail(id) {
           <tr><td style="color:var(--ink3);padding:3px 0">Fournisseur</td><td style="font-weight:500">${a.fourn || '—'}</td></tr>
           <tr><td style="color:var(--ink3);padding:3px 0">Valeur stock</td><td style="font-weight:600;color:var(--accent)">${(a.stock*a.prix).toFixed(2)} €</td></tr>
           ${a.url ? `<tr><td style="color:var(--ink3);padding:3px 0">Lien</td><td><a href="${a.url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px">🔗 Voir</a></td></tr>` : ''}
+          ${a.expiry ? `<tr><td style="color:var(--ink3);padding:3px 0">Péremption</td><td style="font-weight:600;color:${expiryColor(a.expiry)}">${formatExpiry(a.expiry)}</td></tr>` : ''}
         </table>
       </div>
     </div>
@@ -2365,6 +2452,7 @@ function showDetail(id) {
 
   document.getElementById('detail-footer').innerHTML = `
     <button class="btn btn-secondary" onclick="closeModal('modal-detail')">Fermer</button>
+    <button class="btn btn-secondary" onclick="openTransfert(${a.id})">🔄 Transférer</button>
     <button class="btn btn-secondary" onclick="editArticleFromDetail(${a.id})">✏️ Modifier</button>
     <button class="btn btn-primary" onclick="closeModal('modal-detail');commanderArticle(${a.id})">🛒 Commander</button>`;
 
@@ -2412,17 +2500,18 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  ['inventaire','commandes','fournisseurs','historique','univers'].forEach(p => {
+  ['dashboard','inventaire','commandes','fournisseurs','historique','univers'].forEach(p => {
     document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const titles = { inventaire:'Inventaire', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', univers:'Univers ludiques' };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', univers:'Univers ludiques' };
   document.getElementById('pageTitle').textContent = titles[page];
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
   if (page === 'univers') { renderUnivers(); if(typeof updateSouscatFilters==='function') updateSouscatFilters(); }
   if (page === 'fournisseurs') { renderFournisseurs(); }
+  if (page === 'dashboard') { renderDashboard(); }
   if (page === 'historique') { renderHistorique(); }
   if (page === 'inventaire') { renderTable(); renderStats(); }
 }
@@ -4548,5 +4637,315 @@ function showImportResult(type, html) {
   </div>
 </div>
 
+<script>
+// ═══════════════════════════════════════════════════════════════
+// ── NOUVELLES FONCTIONNALITÉS v7 ────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+
+// ── 1. UTILITAIRES DATE DE PÉREMPTION ───────────────────────────
+function expiryColor(dateStr) {
+  if (!dateStr) return 'var(--ink3)';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(dateStr); exp.setHours(0,0,0,0);
+  const diff = Math.round((exp - today) / 86400000);
+  if (diff < 0) return '#DC2626';   // expiré → rouge
+  if (diff <= 30) return '#D97706'; // < 30j → orange
+  if (diff <= 90) return '#CA8A04'; // < 90j → jaune
+  return '#16A34A';                  // OK → vert
+}
+
+function formatExpiry(dateStr) {
+  if (!dateStr) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(dateStr); exp.setHours(0,0,0,0);
+  const diff = Math.round((exp - today) / 86400000);
+  const fmt = new Date(dateStr).toLocaleDateString('fr-FR');
+  if (diff < 0) return `⚠ Expiré le ${fmt}`;
+  if (diff === 0) return `⚠ Expire aujourd'hui`;
+  if (diff <= 7) return `⚠ Expire dans ${diff}j (${fmt})`;
+  if (diff <= 30) return `📅 Dans ${diff}j (${fmt})`;
+  return `📅 ${fmt}`;
+}
+
+function getExpiryAlerts() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return ARTICLES.filter(a => {
+    if (!a.expiry) return false;
+    const exp = new Date(a.expiry); exp.setHours(0,0,0,0);
+    return Math.round((exp - today) / 86400000) <= 30;
+  }).sort((a,b) => new Date(a.expiry) - new Date(b.expiry));
+}
+
+// ── 2. ALERTES STOCK BAS + BADGE NAV ─────────────────────────────
+function getLowStockArticles() {
+  return ARTICLES.filter(a => a.stock <= a.min && a.min > 0);
+}
+
+function updateAlertBadge() {
+  const low = getLowStockArticles();
+  const exp = getExpiryAlerts();
+  const total = low.length + exp.length;
+  const badge = document.getElementById('nav-alert-badge');
+  if (!badge) return;
+  if (total > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = total;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── 3. TRANSFERT ENTRE CRÈCHES ───────────────────────────────────
+let transfertArticleId = null;
+
+function openTransfert(id) {
+  const a = ARTICLES.find(x => x.id === id);
+  if (!a) return;
+  transfertArticleId = id;
+  document.getElementById('transfert-article-name').textContent = a.nom;
+  document.getElementById('transfert-from').textContent = a.creche;
+  document.getElementById('transfert-stock-dispo').textContent = a.stock;
+  document.getElementById('transfert-qty').value = 1;
+  document.getElementById('transfert-note').value = '';
+
+  const sel = document.getElementById('transfert-to');
+  sel.innerHTML = CRECHES
+    .filter(c => c !== a.creche)
+    .map(c => `<option value="${c}">${c}</option>`)
+    .join('');
+
+  closeModal('modal-detail');
+  document.getElementById('modal-transfert').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function doTransfert() {
+  const a = ARTICLES.find(x => x.id === transfertArticleId);
+  if (!a) return;
+  const qty = parseInt(document.getElementById('transfert-qty').value) || 0;
+  const to = document.getElementById('transfert-to').value;
+  const note = document.getElementById('transfert-note').value.trim();
+
+  if (qty <= 0) { showNotif('⚠ Quantité invalide'); return; }
+  if (qty > a.stock) { showNotif(`⚠ Stock insuffisant (${a.stock} disponibles)`); return; }
+
+  // Réduire le stock source
+  a.stock -= qty;
+  addHisto('sortie', a.nom, -qty, a.creche, 'Vous', `Transfert vers ${to}${note ? ' — '+note : ''}`);
+
+  // Chercher ou créer un article identique dans la crèche cible
+  let target = ARTICLES.find(x => x.nom === a.nom && x.creche === to);
+  if (target) {
+    target.stock += qty;
+    addHisto('entrée', target.nom, qty, to, 'Vous', `Transfert depuis ${a.creche}${note ? ' — '+note : ''}`);
+  } else {
+    target = { ...a, id: Date.now(), creche: to, stock: qty };
+    ARTICLES.push(target);
+    addHisto('entrée', target.nom, qty, to, 'Vous', `Transfert depuis ${a.creche} (nouvel article créé)${note ? ' — '+note : ''}`);
+  }
+
+  saveData();
+  renderTable(); renderHistorique(); updateAlertBadge();
+  closeModal('modal-transfert');
+  showNotif(`🔄 ${qty} × "${a.nom}" transféré(s) vers ${to}`);
+}
+
+// ── 4. EXPORT PDF INVENTAIRE ─────────────────────────────────────
+function exportInventairePDF() {
+  const today = new Date().toLocaleDateString('fr-FR');
+  const filtered = (() => {
+    const q = (document.getElementById('searchInput')||{}).value?.toLowerCase() || '';
+    return ARTICLES.filter(a => {
+      const matchCat = currentCat === 'all' || a.cat === currentCat;
+      const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
+      const matchQ = !q || a.nom.toLowerCase().includes(q) || a.ref.toLowerCase().includes(q);
+      return matchCat && matchCreche && matchQ;
+    });
+  })();
+
+  const totalVal = filtered.reduce((s,a) => s+a.stock*a.prix, 0);
+  const alertes = filtered.filter(a => a.stock <= a.min && a.min > 0);
+
+  const rows = filtered.map(a => {
+    const st = a.stock === 0 ? 'color:#DC2626;font-weight:700' :
+               a.stock <= a.min ? 'color:#D97706;font-weight:700' : '';
+    const exp = a.expiry ? `<br><small style="color:${expiryColor(a.expiry)}">${formatExpiry(a.expiry)}</small>` : '';
+    return `<tr>
+      <td>${a.ref}</td>
+      <td>${a.nom}${exp}</td>
+      <td>${a.cat}</td>
+      <td>${a.creche}</td>
+      <td style="${st}">${a.stock}</td>
+      <td>${a.min}</td>
+      <td>${a.prix > 0 ? a.prix.toFixed(2)+' €' : '—'}</td>
+      <td>${(a.stock*a.prix).toFixed(2)} €</td>
+      <td style="font-size:11px">${a.fourn || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <title>Inventaire — ${today}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 20px; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .meta { color: #888; font-size: 11px; margin-bottom: 16px; }
+    .kpi { display: flex; gap: 24px; margin-bottom: 20px; }
+    .kpi-box { background: #f5f5f5; border-radius: 8px; padding: 12px 20px; }
+    .kpi-box strong { display: block; font-size: 20px; }
+    .alert-box { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1C1917; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; letter-spacing: 0.5px; }
+    td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafafa; }
+    tfoot td { background: #f0f0f0; font-weight: 700; }
+    @media print { @page { margin: 1.5cm; } body { padding: 0; } }
+  </style></head><body>
+  <h1>📦 Inventaire Pédagogique</h1>
+  <div class="meta">Généré le ${today} · ${filtered.length} articles · Filtre : ${currentCreche === 'all' ? 'Toutes les crèches' : currentCreche}</div>
+  <div class="kpi">
+    <div class="kpi-box"><strong>${filtered.length}</strong> Articles</div>
+    <div class="kpi-box"><strong>${totalVal.toFixed(2)} €</strong> Valeur totale</div>
+    <div class="kpi-box"><strong style="color:#DC2626">${alertes.length}</strong> Alertes stock bas</div>
+  </div>
+  ${alertes.length > 0 ? `<div class="alert-box">⚠ Articles en alerte : ${alertes.map(a=>a.nom).join(', ')}</div>` : ''}
+  <table>
+    <thead><tr>
+      <th>Réf.</th><th>Article</th><th>Catégorie</th><th>Structure</th>
+      <th>Stock</th><th>Min.</th><th>Prix unit.</th><th>Valeur</th><th>Fournisseur</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="7" style="text-align:right">Total général :</td>
+      <td colspan="2">${totalVal.toFixed(2)} €</td>
+    </tr></tfoot>
+  </table>
+  <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+// ── 5. DASHBOARD ─────────────────────────────────────────────────
+let dashCharts = {};
+
+function renderDashboard() {
+  // KPI
+  const low = getLowStockArticles();
+  const exp = getExpiryAlerts();
+  const totalVal = ARTICLES.reduce((s,a) => s+a.stock*a.prix, 0);
+  const totalArt = ARTICLES.length;
+
+  document.getElementById('dash-kpi').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Articles total</div>
+      <div class="stat-value">${totalArt}</div>
+      <div class="stat-sub">dans toutes les crèches</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Valeur du stock</div>
+      <div class="stat-value">${totalVal.toFixed(0)} €</div>
+      <div class="stat-sub">prix × quantité</div>
+    </div>
+    <div class="stat-card" style="${low.length > 0 ? 'border-left:3px solid #DC2626' : ''}">
+      <div class="stat-label">🔴 Stock bas</div>
+      <div class="stat-value" style="color:#DC2626">${low.length}</div>
+      <div class="stat-sub">articles sous le minimum</div>
+    </div>
+    <div class="stat-card" style="${exp.length > 0 ? 'border-left:3px solid #D97706' : ''}">
+      <div class="stat-label">⏰ Péremptions proches</div>
+      <div class="stat-value" style="color:#D97706">${exp.length}</div>
+      <div class="stat-sub">dans moins de 30 jours</div>
+    </div>`;
+
+  // Alerts panel
+  const alerts = [
+    ...low.map(a => ({ color:'#FEF2F2', border:'#FECACA', icon:'🔴', msg: `Stock bas — <strong>${a.nom}</strong> (${a.creche}) : ${a.stock} / min ${a.min}`, id: a.id })),
+    ...exp.map(a => ({ color:'#FFFBEB', border:'#FDE68A', icon:'⏰', msg: `Péremption — <strong>${a.nom}</strong> : ${formatExpiry(a.expiry)}`, id: a.id }))
+  ];
+  document.getElementById('dash-alerts-panel').innerHTML = alerts.length === 0
+    ? `<div style="text-align:center;padding:20px;color:var(--ink3);font-size:13px">✅ Aucune alerte — tout est en ordre !</div>`
+    : `<div style="font-weight:700;font-size:13px;margin-bottom:8px;padding-left:4px">⚠ Alertes actives (${alerts.length})</div>
+       ${alerts.map(al => `<div onclick="showDetail(${al.id})" style="background:${al.color};border:1px solid ${al.border};border-radius:8px;padding:10px 14px;margin-bottom:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px">
+         <span style="font-size:16px">${al.icon}</span><span>${al.msg}</span>
+         <span style="margin-left:auto;font-size:11px;color:var(--ink3)">Voir →</span>
+       </div>`).join('')}`;
+
+  // Charts
+  setTimeout(() => {
+    renderChartCreches();
+    renderChartCats();
+    renderChartCritical();
+  }, 50);
+}
+
+function renderChartCreches() {
+  const ctx = document.getElementById('chart-creches');
+  if (!ctx) return;
+  if (dashCharts.creches) { dashCharts.creches.destroy(); }
+  const labels = CRECHES.filter(c => ARTICLES.some(a => a.creche === c));
+  const vals = labels.map(c => ARTICLES.filter(a => a.creche === c).reduce((s,a) => s+a.stock*a.prix, 0));
+  const colors = labels.map(c => CRECHE_COLORS[c] || '#6366F1');
+  dashCharts.creches = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label:'Valeur (€)', data: vals, backgroundColor: colors.map(c=>c+'CC'), borderColor: colors, borderWidth: 2, borderRadius: 6 }] },
+    options: { responsive:true, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true, ticks:{callback:v=>v+'€'} } } }
+  });
+}
+
+function renderChartCats() {
+  const ctx = document.getElementById('chart-cats');
+  if (!ctx) return;
+  if (dashCharts.cats) { dashCharts.cats.destroy(); }
+  const cats = [...new Set(ARTICLES.map(a=>a.cat))].filter(Boolean);
+  const vals = cats.map(c => ARTICLES.filter(a=>a.cat===c).reduce((s,a)=>s+a.stock*a.prix,0));
+  const palette = ['#2563EB','#16A34A','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#65A30D','#EA580C','#0284C7'];
+  dashCharts.cats = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: cats, datasets: [{ data: vals, backgroundColor: palette, borderWidth: 2 }] },
+    options: { responsive:true, plugins:{ legend:{ position:'right', labels:{font:{size:11}, boxWidth:12} } } }
+  });
+}
+
+function renderChartCritical() {
+  const ctx = document.getElementById('chart-critical');
+  if (!ctx) return;
+  if (dashCharts.critical) { dashCharts.critical.destroy(); }
+  const critical = ARTICLES
+    .filter(a => a.min > 0)
+    .sort((a,b) => (a.stock/Math.max(a.min,1)) - (b.stock/Math.max(b.min,1)))
+    .slice(0, 12);
+  const labels = critical.map(a => a.nom.length > 22 ? a.nom.slice(0,20)+'…' : a.nom);
+  const stocks = critical.map(a => a.stock);
+  const mins = critical.map(a => a.min);
+  const bgColors = critical.map(a => a.stock === 0 ? '#FEE2E2' : a.stock <= a.min ? '#FEF3C7' : '#DCFCE7');
+  const bdColors = critical.map(a => a.stock === 0 ? '#DC2626' : a.stock <= a.min ? '#D97706' : '#16A34A');
+  dashCharts.critical = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Stock actuel', data: stocks, backgroundColor: bgColors, borderColor: bdColors, borderWidth: 2, borderRadius: 4 },
+        { label:'Stock min.', data: mins, type:'line', borderColor:'#94A3B8', borderDash:[4,4], pointRadius:3, fill:false }
+      ]
+    },
+    options: { responsive:true, indexAxis:'y', plugins:{ legend:{position:'top'} }, scales:{ x:{beginAtZero:true} } }
+  });
+}
+
+// ── 6. HOOK DANS RENDERTABLE & INIT ──────────────────────────────
+const _origRenderTable = renderTable;
+function renderTable() {
+  _origRenderTable();
+  updateAlertBadge();
+}
+
+// Appel initial
+document.addEventListener('DOMContentLoaded', () => {
+  updateAlertBadge();
+});
+
+</script>
 </body>
 </html>
