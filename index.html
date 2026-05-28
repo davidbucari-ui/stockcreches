@@ -2014,11 +2014,11 @@ async function processBarcode(code) {
     return;
   }
 
-  // 2. Article inconnu → lookup Open Food Facts
-  showNotif('🔍 Recherche du produit en ligne…');
+  // 2. Article inconnu → proposer association ou création
+  showNotif('🔍 Code non reconnu — recherche en ligne…');
   const info = await lookupBarcode(code);
   showScanNew(code, info);
-}
+}}
 
 async function lookupBarcode(code) {
   try {
@@ -2084,7 +2084,7 @@ function confirmScanAdjust() {
 }
 
 function showScanNew(code, info) {
-  document.getElementById('scan-result-title').textContent = info.found ? '✨ Produit identifié' : '❓ Produit inconnu';
+  document.getElementById('scan-result-title').textContent = info.found ? '✨ Produit identifié' : '❓ Code non reconnu';
   document.getElementById('scan-existing').style.display = 'none';
   document.getElementById('scan-new').style.display = 'block';
 
@@ -2095,15 +2095,14 @@ function showScanNew(code, info) {
 
   document.getElementById('scan-new-name').textContent = info.found
     ? `${info.nom}${info.marque ? ' — ' + info.marque : ''}`
-    : 'Produit non trouvé dans la base';
+    : 'Produit non trouvé dans la base en ligne';
   document.getElementById('scan-new-barcode-display').textContent = `Code : ${code}`;
 
-  // Pré-remplir le formulaire
+  // Pré-remplir le formulaire création
   document.getElementById('scan-new-nom').value = info.nom || '';
   document.getElementById('scan-new-stock').value = 1;
   document.getElementById('scan-new-prix').value = 0;
 
-  // Remplir les selects
   const catSel = document.getElementById('scan-new-cat');
   catSel.innerHTML = CATS.map(c => `<option value="${c}">${c}</option>`).join('');
 
@@ -2111,12 +2110,52 @@ function showScanNew(code, info) {
   crecheSel.innerHTML = CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
   if (currentCreche && currentCreche !== 'all') crecheSel.value = currentCreche;
 
+  // Sélecteur "associer à un article existant"
+  const sorted = [...ARTICLES].sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
+  const assocSel = `
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--ink3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">
+        Ou associer ce code à un article existant
+      </div>
+      <div style="display:flex;gap:8px">
+        <select id="scan-assoc-select" style="flex:1;font-size:13px">
+          <option value="">— Choisir un article —</option>
+          ${sorted.map(a => `<option value="${a.id}">${a.nom} (${a.creche})</option>`).join('')}
+        </select>
+        <button class="btn btn-primary" onclick="associateBarcode('${code}')">Associer</button>
+      </div>
+    </div>`;
+
+  // Injecter le sélecteur sous le form-grid dans scan-new
+  const scanNew = document.getElementById('scan-new');
+  const existing = scanNew.querySelector('#scan-assoc-wrapper');
+  if (existing) existing.remove();
+  const wrapper = document.createElement('div');
+  wrapper.id = 'scan-assoc-wrapper';
+  wrapper.innerHTML = assocSel;
+  scanNew.appendChild(wrapper);
+
   document.getElementById('scan-result-footer').innerHTML = `
     <button class="btn btn-secondary" onclick="closeModal('modal-scan-result')">Annuler</button>
     <button class="btn btn-primary" onclick="createFromScan('${code}', '${(info.photo||'').replace(/'/g,"\\'")}')">➕ Créer l'article</button>`;
 
   document.getElementById('modal-scan-result').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+async function associateBarcode(code) {
+  const sel = document.getElementById('scan-assoc-select');
+  const id = parseInt(sel.value);
+  if (!id) { showNotif('⚠ Choisissez un article dans la liste'); return; }
+
+  const article = ARTICLES.find(a => a.id === id);
+  if (!article) return;
+
+  article.barcode = code;
+  saveData();
+  await saveArticleDB(article, false);
+  closeModal('modal-scan-result');
+  showNotif(`✅ Code-barres associé à "${article.nom}" — prochaine fois il sera reconnu automatiquement !`);
 }
 
 async function createFromScan(code, photoUrl) {
@@ -2128,14 +2167,13 @@ async function createFromScan(code, photoUrl) {
   const stock  = parseInt(document.getElementById('scan-new-stock').value) || 0;
   const prix   = parseFloat(document.getElementById('scan-new-prix').value) || 0;
 
-  // Charger la photo si disponible
   let photoData = null;
   if (photoUrl) {
     try {
       const res = await fetch(photoUrl);
       const blob = await res.blob();
       photoData = await new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(blob); });
-    } catch(e) { /* photo optionnelle */ }
+    } catch(e) {}
   }
 
   const newArticle = {
@@ -2147,13 +2185,28 @@ async function createFromScan(code, photoUrl) {
   ARTICLES.push(newArticle);
   addHisto('entrée', nom, stock, creche, 'Vous', `Création via scan (${code})`);
   saveData();
-  await saveArticleDB(newArticle, true);
+
+  // Sauvegarder dans Supabase et récupérer le vrai id
+  try {
+    const rows = await sbInsert('articles', articleToRow(newArticle));
+    if (rows && rows[0]) {
+      // Mettre à jour l'id local avec l'id Supabase
+      const oldId = newArticle.id;
+      newArticle.id = rows[0].id;
+      // Forcer barcode dans Supabase avec le bon id
+      await sbUpdate('articles', newArticle.id, { barcode: code, ref: code });
+      // Mettre à jour l'id dans ARTICLES
+      const idx = ARTICLES.findIndex(a => a.id === oldId);
+      if (idx >= 0) ARTICLES[idx].id = newArticle.id;
+    }
+  } catch(e) { console.error('[createFromScan]', e); }
+
+  saveData();
   renderTable(); renderStats();
   closeModal('modal-scan-result');
-  showNotif(`✅ Article "${nom}" créé avec ${stock} en stock`);
+  showNotif(`✅ Article "${nom}" créé — code-barres enregistré !`);
 }
 
-// ── SCAN POUR ASSOCIER À UN ARTICLE ─────────────────────────────
 let scanForFormMode = false;
 
 function scanBarcodeForForm() {
