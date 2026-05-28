@@ -5267,15 +5267,12 @@ function clearData() {
 
 // ─── PWA ────────────────────────────────────────────────────────────────────
 
-// Service Worker : uniquement sur HTTPS (Netlify, pas en local ni dans Claude)
-if ('serviceWorker' in navigator &&
-    location.protocol === 'https:' &&
-    !location.hostname.includes('claudeusercontent')) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(r => console.log('SW registered:', r.scope))
-      .catch(e => console.log('SW error:', e));
+// Service Worker désactivé — dés-enregistrement du cache existant
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
   });
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
 }
 
 let deferredPrompt = null;
