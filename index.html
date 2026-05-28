@@ -2809,6 +2809,7 @@ function renderUnivers() {
           <div class="univers-card-meta">
             <span class="creche-tag" style="background:${crecheColor}22;color:${crecheColor}">● ${u.creche||'—'}</span>
             <span style="background:var(--accent-lt);color:var(--accent);padding:1px 6px;border-radius:10px;font-size:10px">${u.cat}</span>
+            ${u.ia_generated ? '<span style="background:#F3E8FF;color:#7C3AED;padding:1px 6px;border-radius:10px;font-size:10px">✨ IA</span>' : ''}
           </div>
         </div>
       </div>
@@ -2962,6 +2963,7 @@ async function saveUnivers() {
     articles: JSON.stringify(getSelectedArticleIds()),
     souscat:  parseInt(document.getElementById('u-souscat')?.value) || null,
     photo:    _universPhotoData,
+    ia_generated: window._iaGenerating || false,
     created_at: new Date().toISOString(),
   };
 
@@ -2982,12 +2984,14 @@ async function saveUnivers() {
   closeModal('modal-univers');
   // Si on venait des suggestions IA, rouvrir le modal IA
   const btnRetour = document.getElementById('btn-retour-ia');
+  window._iaGenerating = false;
   if (btnRetour) {
     btnRetour.remove();
     document.getElementById('modal-ia').classList.add('open');
     document.body.style.overflow = 'hidden';
     showNotif('✅ Univers créé ! Choisissez la prochaine suggestion.');
   } else {
+    window._iaGenerating = false;
     showNotif(editingUniversId ? '✅ Univers mis à jour' : '✨ Univers créé !');
   }
   renderUnivers();
@@ -3143,7 +3147,7 @@ function printUnivers(id) {
       <tbody>${rowsHTML}</tbody></table>
     </div>
     ${u.conseils ? `<div class="section"><h3>💡 Mise en scène</h3><div class="conseils-box">${u.conseils}</div></div>` : ''}
-    <div class="footer">Fiche générée le ${new Date().toLocaleDateString('fr-FR')} — ${nom}</div>
+    <div class="footer">Fiche générée le ${new Date().toLocaleDateString('fr-FR')} — ${u.creche}${u.ia_generated ? ' · ✨ Activité suggérée par Claude (IA)' : ''}</div>
     </body></html>`;
 
   const blob = new Blob([html], { type:'text/html;charset=utf-8' });
@@ -4318,6 +4322,7 @@ function creerUniversDepuisIASuggestion(index) {
   const s = (window._iaSuggestions || [])[index];
   if (!s) return;
   const creche = document.getElementById('ia-creche')?.value || CRECHES[0];
+  window._iaGenerating = true;
   closeModal('modal-ia');
   openModal('univers');
 
