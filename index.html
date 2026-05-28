@@ -4111,7 +4111,18 @@ async function loadData() {
     ]);
 
     if (arts.length > 0) {
-      ARTICLES.splice(0, ARTICLES.length, ...arts.map(rowToArticle));
+      // Fusionner : garder url/expiry du localStorage si Supabase a NULL
+      const localById = {};
+      ARTICLES.forEach(a => { localById[a.id] = a; });
+      ARTICLES.splice(0, ARTICLES.length, ...arts.map(r => {
+        const fromCloud = rowToArticle(r);
+        const local = localById[fromCloud.id];
+        if (local) {
+          if (!fromCloud.url && local.url)     fromCloud.url = local.url;
+          if (!fromCloud.expiry && local.expiry) fromCloud.expiry = local.expiry;
+        }
+        return fromCloud;
+      }));
     }
     if (cmds.length > 0) {
       COMMANDES.splice(0, COMMANDES.length, ...cmds.map(rowToCommande));
@@ -4129,6 +4140,14 @@ async function loadData() {
 
     const now = new Date();
     setIndicator('☁️ Sync cloud — ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}), 'var(--green)');
+
+    // Remonter les url/expiry du localStorage vers Supabase si Supabase avait NULL
+    const toSync = ARTICLES.filter(a => a.url || a.expiry);
+    for (const a of toSync) {
+      try { await sbUpdate('articles', a.id, { url: a.url||'', expiry: a.expiry||'' }); }
+      catch(e) { /* silencieux */ }
+    }
+
     return true;
   } catch(e) {
     setIndicator('⚠️ Hors ligne — données locales', 'var(--amber)');
