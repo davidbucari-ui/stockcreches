@@ -2582,7 +2582,7 @@ function renderTable() {
   if (oldFootEarly && oldFootEarly.parentNode) oldFootEarly.parentNode.removeChild(oldFootEarly);
 
   if (data.length === 0) {
-    tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink3)">Aucun article trouvé</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink3)">Aucun article trouvé</td></tr>`;
     return;
   }
 
@@ -2604,6 +2604,7 @@ function renderTable() {
           </div>
         </div>
       </td>
+      <td><span class="badge badge-blue">${a.creche}</span></td>
       <td><span class="badge badge-blue">${a.cat}</span></td>
       <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px">${a.stock}</td>
       <td style="font-weight:500">${a.prix > 0 ? a.prix.toFixed(2)+' €' : '—'}</td>
@@ -2637,7 +2638,7 @@ function renderTable() {
   tfoot.id = 'tableFooter';
   tfoot.innerHTML = `
     <tr style="background:var(--bg);border-top:2px solid var(--border)">
-      <td colspan="2" style="padding:14px 16px">
+      <td colspan="3" style="padding:14px 16px">
         <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
           <span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink3)">Coût par structure</span>
           ${totauxParStructure.map(({c, total, count}) => `
