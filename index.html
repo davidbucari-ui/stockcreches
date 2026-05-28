@@ -1898,7 +1898,7 @@ function renderTable() {
     const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
     const matchQ = !q || a.nom.toLowerCase().includes(q) || a.ref.toLowerCase().includes(q) || a.fourn.toLowerCase().includes(q);
     return matchCat && matchCreche && matchQ;
-  });
+  }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
 
   const tb = document.getElementById('tableBody');
 
