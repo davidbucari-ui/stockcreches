@@ -4628,15 +4628,16 @@ async function syncFromCloud() {
       sbGet('univers', 'order=id.desc').catch(() => []),
     ]);
     if (Array.isArray(arts)) {
-      // Garder url/expiry locaux si Supabase a NULL
+      // Garder url/expiry/barcode locaux si Supabase a NULL
       const localById = {};
       ARTICLES.forEach(a => { localById[a.id] = a; });
       ARTICLES.splice(0, ARTICLES.length, ...arts.map(r => {
         const fromCloud = rowToArticle(r);
         const local = localById[fromCloud.id];
         if (local) {
-          if (!fromCloud.url    && local.url)    fromCloud.url    = local.url;
-          if (!fromCloud.expiry && local.expiry) fromCloud.expiry = local.expiry;
+          if (!fromCloud.url     && local.url)     fromCloud.url     = local.url;
+          if (!fromCloud.expiry  && local.expiry)  fromCloud.expiry  = local.expiry;
+          if (!fromCloud.barcode && local.barcode) fromCloud.barcode = local.barcode;
         }
         return fromCloud;
       }));
@@ -4797,15 +4798,16 @@ async function loadData() {
     ]);
 
     if (arts.length > 0) {
-      // Fusionner : garder url/expiry du localStorage si Supabase a NULL
+      // Fusionner : garder url/expiry/barcode du localStorage si Supabase a NULL
       const localById = {};
       ARTICLES.forEach(a => { localById[a.id] = a; });
       ARTICLES.splice(0, ARTICLES.length, ...arts.map(r => {
         const fromCloud = rowToArticle(r);
         const local = localById[fromCloud.id];
         if (local) {
-          if (!fromCloud.url && local.url)     fromCloud.url = local.url;
-          if (!fromCloud.expiry && local.expiry) fromCloud.expiry = local.expiry;
+          if (!fromCloud.url     && local.url)     fromCloud.url     = local.url;
+          if (!fromCloud.expiry  && local.expiry)  fromCloud.expiry  = local.expiry;
+          if (!fromCloud.barcode && local.barcode) fromCloud.barcode = local.barcode;
         }
         return fromCloud;
       }));
@@ -4827,10 +4829,10 @@ async function loadData() {
     const now = new Date();
     setIndicator('☁️ Sync cloud — ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}), 'var(--green)');
 
-    // Remonter les url/expiry du localStorage vers Supabase si Supabase avait NULL
-    const toSync = ARTICLES.filter(a => a.url || a.expiry);
+    // Remonter les url/expiry/barcode du localStorage vers Supabase si Supabase avait NULL
+    const toSync = ARTICLES.filter(a => a.url || a.expiry || a.barcode);
     for (const a of toSync) {
-      try { await sbUpdate('articles', a.id, { url: a.url||'', expiry: a.expiry||'' }); }
+      try { await sbUpdate('articles', a.id, { url: a.url||'', expiry: a.expiry||'', barcode: a.barcode||'' }); }
       catch(e) { /* silencieux */ }
     }
 
