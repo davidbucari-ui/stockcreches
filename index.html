@@ -2980,9 +2980,16 @@ async function saveUnivers() {
   }
   saveData();
   closeModal('modal-univers');
-  // Nettoyer le bouton retour IA si présent
+  // Si on venait des suggestions IA, rouvrir le modal IA
   const btnRetour = document.getElementById('btn-retour-ia');
-  if (btnRetour) btnRetour.remove();
+  if (btnRetour) {
+    btnRetour.remove();
+    document.getElementById('modal-ia').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    showNotif('✅ Univers créé ! Choisissez la prochaine suggestion.');
+  } else {
+    showNotif(editingUniversId ? '✅ Univers mis à jour' : '✨ Univers créé !');
+  }
   renderUnivers();
   updateCounts();
 }
