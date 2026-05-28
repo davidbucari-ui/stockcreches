@@ -1888,9 +1888,10 @@ function openEtiquettes() {
   crecheSel.innerHTML = '<option value="all">Toutes</option>' +
     CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
 
+  const cats = [...new Set(ARTICLES.map(a => a.cat).filter(Boolean))].sort();
   const catSel = document.getElementById('etiq-cat');
   catSel.innerHTML = '<option value="all">Toutes</option>' +
-    CATS.map(c => `<option value="${c}">${c}</option>`).join('');
+    cats.map(c => `<option value="${c}">${c}</option>`).join('');
 
   // Événements filtres
   crecheSel.onchange = renderEtiqList;
@@ -2322,7 +2323,8 @@ function showScanNew(code, info) {
   document.getElementById('scan-new-prix').value = 0;
 
   const catSel = document.getElementById('scan-new-cat');
-  catSel.innerHTML = CATS.map(c => `<option value="${c}">${c}</option>`).join('');
+  const allCats = [...new Set(ARTICLES.map(a => a.cat).filter(Boolean))].sort();
+  catSel.innerHTML = allCats.map(c => `<option value="${c}">${c}</option>`).join('');
 
   const crecheSel = document.getElementById('scan-new-creche');
   crecheSel.innerHTML = CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
