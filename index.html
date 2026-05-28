@@ -4275,7 +4275,8 @@ Réponds en français, de façon chaleureuse et pratique pour des professionnels
     });
 
     const data = await response.json();
-    const texte = data.content?.[0]?.text || 'Aucune suggestion générée.';
+    console.log('[IA] Response:', JSON.stringify(data).substring(0, 200));
+    const texte = data?.content?.[0]?.text || data?.error?.message || 'Aucune suggestion générée.';
 
     // Formater le résultat
     const html = texte
