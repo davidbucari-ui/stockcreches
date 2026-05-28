@@ -2096,10 +2096,9 @@ function closeScanner() {
   stopCameraScanner();
   const modal = document.getElementById('modal-scanner');
   modal.classList.remove('open');
-  modal.style.display = 'none';
-  setTimeout(() => { modal.style.display = ''; }, 100);
   document.body.style.overflow = '';
   document.documentElement.style.overflow = '';
+  document.body.style.position = '';
 }
 
 async function startCameraScanner() {
@@ -3128,7 +3127,12 @@ function editArticle(id) {
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
-  document.body.style.overflow = '';
+  // Vérifier s'il reste des modals ouverts
+  const anyOpen = document.querySelectorAll('.modal-overlay.open').length > 0;
+  if (!anyOpen) {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  }
 }
 
 function closeModalClick(e, id) {
