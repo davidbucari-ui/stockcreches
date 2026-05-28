@@ -2186,9 +2186,12 @@ async function createFromScan(code, photoUrl) {
       stock, min: 0, prix: prix, fourn: '', notes: '', url: '', expiry: '',
       photo: photoData || null, photo_name: nom
     };
+    console.log('[createFromScan] INSERT row:', JSON.stringify({...row, photo: row.photo ? '(photo)' : null}));
     const rows = await sbInsert('articles', row);
+    console.log('[createFromScan] Supabase response:', JSON.stringify(rows));
     if (rows && rows[0]) {
       const realId = rows[0].id;
+      console.log('[createFromScan] Real ID from Supabase:', realId, 'barcode:', rows[0].barcode);
       // Forcer barcode avec le bon id
       await sbUpdate('articles', realId, { barcode: code, ref: code });
       // Ajouter dans ARTICLES local avec le vrai id Supabase
@@ -4631,6 +4634,7 @@ async function syncFromCloud() {
       sbGet('univers', 'order=id.desc').catch(() => []),
     ]);
     if (Array.isArray(arts)) {
+      console.log('[syncFromCloud] articles reçus:', arts.length, 'barcodes:', arts.filter(a=>a.barcode).map(a=>({id:a.id,nom:a.nom,barcode:a.barcode})));
       // Garder url/expiry/barcode locaux si Supabase a NULL
       const localById = {};
       ARTICLES.forEach(a => { localById[a.id] = a; });
