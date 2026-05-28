@@ -1687,6 +1687,7 @@ function renderTable() {
 }
 
 function renderStats() {
+  updateAlertBadge();
   const data = (typeof currentCreche !== 'undefined' && currentCreche !== 'all') ? ARTICLES.filter(a => a.creche === currentCreche) : ARTICLES;
   const el = document.getElementById('stat-total');
   if (el) el.textContent = data.length;
@@ -4935,14 +4936,6 @@ function renderChartCritical() {
   });
 }
 
-// ── 6. HOOK DANS RENDERTABLE & INIT ──────────────────────────────
-const _origRenderTable = renderTable;
-function renderTable() {
-  _origRenderTable();
-  updateAlertBadge();
-}
-
-// Appel initial
 document.addEventListener('DOMContentLoaded', () => {
   updateAlertBadge();
 });
