@@ -922,6 +922,7 @@ textarea { resize: vertical; min-height: 72px; }
       <input type="file" id="importInput" accept=".xlsx" style="display:none" onchange="importExcel(event)">
       <button class="btn btn-secondary" onclick="exportCSV()">⬇ CSV</button>
       <button class="btn btn-secondary" onclick="exportInventairePDF()" title="Exporter l'inventaire en PDF imprimable">🖨 PDF</button>
+      <button class="btn btn-secondary" onclick="openEtiquettes()" title="Imprimer des étiquettes QR code">🏷 Étiquettes</button>
       <button class="btn btn-secondary" onclick="exportBackup()" title="Sauvegarder toutes les données (JSON)">💾 Sauvegarder</button>
       <button class="btn btn-secondary" onclick="document.getElementById('restoreInput').click()" title="Restaurer une sauvegarde">📂 Restaurer</button>
       <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importBackup(event)">
@@ -1546,6 +1547,54 @@ textarea { resize: vertical; min-height: 72px; }
 }
 </style>
 
+<!-- ── MODAL ÉTIQUETTES ── -->
+<div class="modal-overlay" id="modal-etiquettes" onclick="closeModalClick(event,'modal-etiquettes')">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h2>🏷 Imprimer des étiquettes QR code</h2>
+      <button class="modal-close" onclick="closeModal('modal-etiquettes')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Filtres -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div class="form-group" style="margin:0">
+          <label>Structure</label>
+          <select id="etiq-creche">
+            <option value="all">Toutes</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Catégorie</label>
+          <select id="etiq-cat">
+            <option value="all">Toutes</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Format</label>
+          <select id="etiq-format">
+            <option value="3x5">3 × 5 par page (petit)</option>
+            <option value="2x4" selected>2 × 4 par page (moyen)</option>
+            <option value="2x2">2 × 2 par page (grand)</option>
+          </select>
+        </div>
+      </div>
+      <!-- Liste sélectable -->
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <span id="etiq-count">0 article(s) sélectionné(s)</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="etiqSelectAll()">Tout sélectionner</button>
+          <button class="btn btn-secondary btn-sm" onclick="etiqSelectNone()">Tout désélectionner</button>
+        </div>
+      </div>
+      <div id="etiq-list" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-etiquettes')">Annuler</button>
+      <button class="btn btn-primary" onclick="printEtiquettes()">🖨 Imprimer les étiquettes</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAL TRANSFERT ── -->
 <div class="modal-overlay" id="modal-transfert" onclick="closeModalClick(event,'modal-transfert')">
   <div class="modal" style="max-width:480px">
@@ -1831,7 +1880,148 @@ function removeLogo(e) {
 // ── FIN LOGO ─────────────────────────────────────────────────────
 
 // ── ÉTIQUETTES QR CODE ───────────────────────────────────────────
-function printArticleLabel(id) {
+let etiqSelected = new Set();
+
+function openEtiquettes() {
+  // Remplir les filtres
+  const crecheSel = document.getElementById('etiq-creche');
+  crecheSel.innerHTML = '<option value="all">Toutes</option>' +
+    CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  const catSel = document.getElementById('etiq-cat');
+  catSel.innerHTML = '<option value="all">Toutes</option>' +
+    CATS.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  // Événements filtres
+  crecheSel.onchange = renderEtiqList;
+  catSel.onchange = renderEtiqList;
+
+  etiqSelected = new Set(ARTICLES.map(a => a.id));
+  renderEtiqList();
+  document.getElementById('modal-etiquettes').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function renderEtiqList() {
+  const creche = document.getElementById('etiq-creche').value;
+  const cat = document.getElementById('etiq-cat').value;
+  const filtered = ARTICLES.filter(a =>
+    (creche === 'all' || a.creche === creche) &&
+    (cat === 'all' || a.cat === cat)
+  ).sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
+
+  const list = document.getElementById('etiq-list');
+  list.innerHTML = filtered.map(a => `
+    <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;${etiqSelected.has(a.id)?'background:var(--surface2)':''}">
+      <input type="checkbox" ${etiqSelected.has(a.id)?'checked':''} onchange="etiqToggle(${a.id}, this.checked)" style="width:16px;height:16px;flex-shrink:0">
+      ${a.photo ? `<img src="${a.photo}" style="width:36px;height:36px;object-fit:contain;border-radius:6px;flex-shrink:0">` : '<div style="width:36px;height:36px;border-radius:6px;background:var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>'}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nom}</div>
+        <div style="font-size:11px;color:var(--ink3)">${a.creche} · ${a.cat}</div>
+      </div>
+      <div style="font-family:monospace;font-size:10px;color:var(--ink3);flex-shrink:0">${a.barcode || a.ref || a.id}</div>
+    </label>`).join('');
+
+  updateEtiqCount();
+}
+
+function etiqToggle(id, checked) {
+  if (checked) etiqSelected.add(id);
+  else etiqSelected.delete(id);
+  updateEtiqCount();
+}
+
+function etiqSelectAll() {
+  const creche = document.getElementById('etiq-creche').value;
+  const cat = document.getElementById('etiq-cat').value;
+  ARTICLES.filter(a =>
+    (creche === 'all' || a.creche === creche) &&
+    (cat === 'all' || a.cat === cat)
+  ).forEach(a => etiqSelected.add(a.id));
+  renderEtiqList();
+}
+
+function etiqSelectNone() {
+  etiqSelected.clear();
+  renderEtiqList();
+}
+
+function updateEtiqCount() {
+  document.getElementById('etiq-count').textContent = `${etiqSelected.size} article(s) sélectionné(s)`;
+}
+
+function printEtiquettes() {
+  if (etiqSelected.size === 0) { showNotif('⚠ Sélectionnez au moins un article'); return; }
+
+  const format = document.getElementById('etiq-format').value;
+  const cols = parseInt(format.split('x')[0]);
+  const rows = parseInt(format.split('x')[1]);
+  const perPage = cols * rows;
+
+  const articles = ARTICLES.filter(a => etiqSelected.has(a.id))
+    .sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
+
+  const labelW = format === '3x5' ? 62 : format === '2x4' ? 95 : 130;
+  const labelH = format === '3x5' ? 50 : format === '2x4' ? 70 : 110;
+  const qrSize = format === '3x5' ? 40 : format === '2x4' ? 56 : 90;
+  const fontSize = format === '3x5' ? 7 : format === '2x4' ? 9 : 11;
+
+  const labelsHtml = articles.map(a => {
+    const code = a.barcode || a.ref || String(a.id);
+    const nom = a.nom.length > (format === '3x5' ? 22 : 30) ? a.nom.slice(0, format === '3x5' ? 22 : 30)+'…' : a.nom;
+    return `
+    <div class="label">
+      <div class="label-qr" id="qr-${a.id}"></div>
+      <div class="label-info">
+        <div class="label-nom">${nom}</div>
+        <div class="label-meta">${a.creche}</div>
+        <div class="label-code">${code}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <title>Étiquettes QR code</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; background:#fff; }
+    .page { display:grid; grid-template-columns:repeat(${cols}, ${labelW}mm); gap:3mm; padding:10mm; }
+    .label { width:${labelW}mm; height:${labelH}mm; border:0.5px solid #ccc; border-radius:3mm; padding:2mm; display:flex; flex-direction:row; align-items:center; gap:2mm; overflow:hidden; page-break-inside:avoid; }
+    .label-qr { flex-shrink:0; }
+    .label-qr canvas, .label-qr img { width:${qrSize}px !important; height:${qrSize}px !important; }
+    .label-info { flex:1; min-width:0; }
+    .label-nom { font-size:${fontSize}pt; font-weight:700; line-height:1.2; margin-bottom:1mm; word-break:break-word; }
+    .label-meta { font-size:${fontSize-1}pt; color:#666; margin-bottom:1mm; }
+    .label-code { font-family:monospace; font-size:${fontSize-1}pt; color:#999; }
+    @media print {
+      body { margin:0; }
+      .no-print { display:none !important; }
+      @page { margin:0; size:A4; }
+    }
+  </style>
+</head><body>
+  <div class="no-print" style="padding:16px;text-align:center;border-bottom:1px solid #eee;margin-bottom:8px">
+    <strong>${articles.length} étiquettes</strong> · Format ${format.replace('x',' × ')} par page
+    <button onclick="window.print()" style="margin-left:16px;background:#1C1917;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer">🖨 Imprimer</button>
+  </div>
+  <div class="page">${labelsHtml}</div>
+  <script>
+    window.onload = function() {
+      ${articles.map(a => {
+        const code = (a.barcode || a.ref || String(a.id)).replace(/'/g, "\\'");
+        return `try { new QRCode(document.getElementById('qr-${a.id}'), { text:'${code}', width:${qrSize}, height:${qrSize}, colorDark:'#1C1917', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}`;
+      }).join('\n      ')}
+    };
+  <\/script>
+</body></html>`;
+
+  closeModal('modal-etiquettes');
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+// ── FIN ÉTIQUETTES ────────────────────────────────────────────────
   const a = ARTICLES.find(x => x.id === id);
   if (!a) return;
 
