@@ -2980,6 +2980,9 @@ async function saveUnivers() {
   }
   saveData();
   closeModal('modal-univers');
+  // Nettoyer le bouton retour IA si présent
+  const btnRetour = document.getElementById('btn-retour-ia');
+  if (btnRetour) btnRetour.remove();
   renderUnivers();
   updateCounts();
 }
@@ -4310,13 +4313,34 @@ function creerUniversDepuisIASuggestion(index) {
   const creche = document.getElementById('ia-creche')?.value || CRECHES[0];
   closeModal('modal-ia');
   openModal('univers');
+
+  // Add "← Retour aux suggestions" button
+  setTimeout(() => {
+    const footer = document.querySelector('#modal-univers .modal-footer');
+    // Remove existing retour button if any
+    const existing = document.getElementById('btn-retour-ia');
+    if (existing) existing.remove();
+    if (footer) {
+      const btn = document.createElement('button');
+      btn.id = 'btn-retour-ia';
+      btn.className = 'btn btn-secondary';
+      btn.textContent = '← Retour aux suggestions';
+      btn.onclick = () => {
+        closeModal('modal-univers');
+        document.getElementById('modal-ia').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      };
+      footer.insertBefore(btn, footer.firstChild);
+    }
+  }, 100);
+
   setTimeout(() => {
     const el = (id) => document.getElementById(id);
-    if (el('u-nom'))     el('u-nom').value     = s.titre || '';
-    if (el('u-cat'))     el('u-cat').value     = s.cat || 'Sensoriel';
-    if (el('u-desc'))    el('u-desc').value    = s.description || '';
-    if (el('u-conseils'))el('u-conseils').value = s.conseils || '';
-    if (el('u-creche'))  el('u-creche').value  = creche;
+    if (el('u-nom'))     el('u-nom').value      = s.titre || '';
+    if (el('u-cat'))     el('u-cat').value      = s.cat || 'Sensoriel';
+    if (el('u-desc'))    el('u-desc').value     = s.description || '';
+    if (el('u-conseils'))el('u-conseils').value  = s.conseils || '';
+    if (el('u-creche'))  el('u-creche').value   = creche;
     buildArticlePicker(creche, []);
     setTimeout(() => {
       const noms = (s.articles || []).map(n => n.toLowerCase().trim());
@@ -4327,7 +4351,7 @@ function creerUniversDepuisIASuggestion(index) {
           if (cb) cb.checked = true;
         }
       });
-      showNotif('✅ Formulaire pré-rempli — vérifiez les articles cochés');
+      showNotif('✅ Formulaire pré-rempli — cliquez ← Retour pour créer les autres univers');
     }, 300);
   }, 200);
 }
