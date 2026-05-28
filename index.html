@@ -2003,10 +2003,25 @@ function processManualBarcode() {
 }
 
 async function processBarcode(code) {
-  // 1. Chercher dans le stock existant (par ref ou barcode)
+  // Mode "associer au formulaire"
+  if (scanForFormMode) {
+    scanForFormMode = false;
+    const fBarcode = document.getElementById('f-barcode');
+    if (fBarcode) {
+      fBarcode.value = code;
+      if (!document.getElementById('modal-add').classList.contains('open')) {
+        document.getElementById('modal-add').classList.add('open');
+      }
+      showNotif(`✅ Code-barres associé : ${code}`);
+    }
+    return;
+  }
+
+  // Mode normal — chercher dans le stock
   const existing = ARTICLES.find(a =>
-    a.ref === code || a.barcode === code ||
-    a.ref.toLowerCase() === code.toLowerCase()
+    a.barcode === code ||
+    a.ref === code ||
+    (a.ref && a.ref.toLowerCase() === code.toLowerCase())
   );
 
   if (existing) {
@@ -2014,7 +2029,7 @@ async function processBarcode(code) {
     return;
   }
 
-  // 2. Article inconnu → proposer association ou création
+  // Article inconnu → proposer association ou création
   showNotif('🔍 Code non reconnu — recherche en ligne…');
   const info = await lookupBarcode(code);
   showScanNew(code, info);
@@ -2224,25 +2239,6 @@ function scanBarcodeForForm() {
   document.getElementById('scanner-manual-input').value = '';
   document.getElementById('scanner-status').textContent = 'Scannez le code-barres du produit…';
   startCameraScanner();
-}
-
-// Surcharge de processBarcode pour gérer le mode "associer"
-const _origProcessBarcode = processBarcode;
-function processBarcode(code) {
-  if (scanForFormMode) {
-    scanForFormMode = false;
-    const fBarcode = document.getElementById('f-barcode');
-    if (fBarcode) {
-      fBarcode.value = code;
-      // Rouvrir le modal article si fermé
-      if (!document.getElementById('modal-add').classList.contains('open')) {
-        document.getElementById('modal-add').classList.add('open');
-      }
-      showNotif(`✅ Code-barres associé : ${code}`);
-    }
-    return;
-  }
-  _origProcessBarcode(code);
 }
 // ── FIN SCAN FORMULAIRE ───────────────────────────────────────────
 
