@@ -2126,15 +2126,21 @@ async function startCameraScanner() {
             const code = barcodes[0].rawValue;
             if (code !== lastScannedCode) {
               lastScannedCode = code;
-              navigator.vibrate && navigator.vibrate(80);
+              // Arrêter immédiatement le stream sur Android
+              scannerActive = false;
+              if (videoEl.srcObject) {
+                videoEl.srcObject.getTracks().forEach(t => t.stop());
+                videoEl.srcObject = null;
+              }
               statusEl.innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
+              navigator.vibrate && navigator.vibrate(80);
               setTimeout(() => {
                 closeScanner();
                 setTimeout(async () => {
                   try { await processBarcode(code); }
-                  catch(e) { console.error('[scan]', e); showNotif('⚠ Erreur : ' + e.message); }
+                  catch(e) { showNotif('⚠ Erreur : ' + e.message); }
                 }, 300);
-              }, 400);
+              }, 500);
               return;
             }
           }
