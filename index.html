@@ -2007,9 +2007,7 @@ function printEtiquettes() {
     <button onclick="window.print()" style="margin-left:16px;background:#1C1917;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer">🖨 Imprimer</button>
   </div>
   <div class="page">${labelsHtml}</div>
-  <script>
-    window.onload = function() {
-      ${articles.map(a => {
+  <script>window.onload=function(){${articles.map(a => {
         const code = (a.barcode || a.ref || String(a.id)).replace(/'/g, "\\'");
         return `try { new QRCode(document.getElementById('qr-${a.id}'), { text:'${code}', width:${qrSize}, height:${qrSize}, colorDark:'#1C1917', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}`;
       }).join('\n      ')}
@@ -2073,7 +2071,6 @@ function printArticleLabel(id) {
   <script>
     window.onload=function(){
       new QRCode(document.getElementById('qr-container'),{text:'${code}',width:100,height:100,colorDark:'#1C1917',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
-      setTimeout(()=>window.print(),800);
     };
   <\/script>
 </body></html>`;
