@@ -2097,9 +2097,18 @@ function closeScanner() {
   stopCameraScanner();
   const modal = document.getElementById('modal-scanner');
   modal.classList.remove('open');
+  modal.style.display = 'none';
+  modal.style.visibility = 'hidden';
+  modal.style.pointerEvents = 'none';
   document.body.style.overflow = '';
   document.documentElement.style.overflow = '';
   document.body.style.position = '';
+  // Remettre display après un tick pour ne pas casser le CSS
+  requestAnimationFrame(() => {
+    modal.style.display = '';
+    modal.style.visibility = '';
+    modal.style.pointerEvents = '';
+  });
 }
 
 async function startCameraScanner() {
