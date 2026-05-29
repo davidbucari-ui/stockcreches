@@ -845,6 +845,12 @@ textarea { resize: vertical; min-height: 72px; }
     <span class="nav-icon">📊</span> Statistiques
     <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
+  <button class="nav-item" onclick="showPage('inventaire', this)">
+    <span class="nav-icon">📦</span> Stocks pédagogiques
+  </button>
+  <button class="nav-item" onclick="showPage('entretien', this)">
+    <span class="nav-icon">🧹</span> Stocks entretien
+  </button>
 
   <div class="sidebar-section-title">Structures</div>
   <div class="creche-badge active" onclick="filterCreche('all', this)">
@@ -1030,6 +1036,45 @@ textarea { resize: vertical; min-height: 72px; }
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PAGE ENTRETIEN ── -->
+    <div id="page-entretien" style="display:none">
+      <div style="padding:20px 20px 8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="font-size:18px;font-weight:800;font-family:'Syne',sans-serif">🧹 Stocks Entretien</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="exportEntretienCSV()">⬇ CSV</button>
+          <button class="btn btn-primary" onclick="openAddEntretien()">+ Ajouter</button>
+        </div>
+      </div>
+
+      <!-- Barre de recherche -->
+      <div style="padding:0 20px 12px">
+        <div style="position:relative">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink3)">🔍</span>
+          <input type="text" id="searchEntretien" placeholder="Rechercher un article d'entretien…"
+            style="width:100%;padding:10px 10px 10px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Instrument Sans',sans-serif;font-size:14px;background:var(--surface2)"
+            oninput="renderEntretien()">
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div style="padding:0 20px 20px;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Article</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Structure</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Catégorie</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Stock</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Prix unit.</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Fournisseur</th>
+              <th style="padding:10px 12px;border-bottom:1px solid var(--border)"></th>
+            </tr>
+          </thead>
+          <tbody id="entretienBody"></tbody>
         </table>
       </div>
     </div>
@@ -1415,6 +1460,7 @@ textarea { resize: vertical; min-height: 72px; }
           <input type="url" id="f-url" placeholder="https://www.fournisseur.fr/produit...">
         </div>
         <input type="hidden" id="f-notes" value="">
+        <input type="hidden" id="f-type-hidden" value="pedagogique">
       </div>
     </div>
     <div class="modal-footer">
@@ -2767,7 +2813,91 @@ function exportInventairePDF() {
   w.document.close();
 }
 
-// ── HUB TABLEAU DE BORD ──────────────────────────────────────────
+// ── STOCKS ENTRETIEN ─────────────────────────────────────────────
+const CATS_ENTRETIEN = ['Nettoyage', 'Désinfection', 'Hygiène', 'Consommables', 'Matériel', 'Autre'];
+
+function renderEntretien() {
+  const q = (document.getElementById('searchEntretien')?.value || '').toLowerCase();
+  const data = ARTICLES.filter(a => {
+    const matchType = a.type === 'entretien';
+    const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
+    const matchQ = !q || a.nom.toLowerCase().includes(q) || (a.ref||'').toLowerCase().includes(q);
+    return matchType && matchCreche && matchQ;
+  }).sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
+
+  const tb = document.getElementById('entretienBody');
+  if (data.length === 0) {
+    tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink3)">Aucun article d'entretien — cliquez sur + Ajouter</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = data.map(a => {
+    const stockColor = a.stock === 0 ? '#DC2626' : a.min > 0 && a.stock <= a.min ? '#D97706' : 'var(--ink)';
+    return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="showDetail(${a.id})">
+      <td style="padding:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${a.photo ? `<img src="${a.photo}" style="width:36px;height:36px;object-fit:contain;border-radius:6px;background:var(--bg)">` : '<div style="width:36px;height:36px;border-radius:6px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px">🧹</div>'}
+          <div>
+            <div style="font-weight:600;font-size:13px">${a.nom}</div>
+            <div style="font-size:11px;color:var(--ink3)">${a.ref||'—'}</div>
+          </div>
+        </div>
+      </td>
+      <td style="padding:12px"><span class="badge badge-blue">${a.creche}</span></td>
+      <td style="padding:12px"><span class="badge badge-blue">${a.cat||'—'}</span></td>
+      <td style="padding:12px;font-weight:700;color:${stockColor}">${a.stock}</td>
+      <td style="padding:12px">${a.prix > 0 ? a.prix.toFixed(2)+' €' : '—'}</td>
+      <td style="padding:12px;font-size:12px;color:var(--ink3)">${a.fourn||'—'}</td>
+      <td style="padding:12px;white-space:nowrap">
+        <button onclick="event.stopPropagation();editArticle(${a.id})" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--ink3);font-size:16px" title="Modifier">✏️</button>
+        <button onclick="event.stopPropagation();deleteArticle(${a.id})" style="background:none;border:none;cursor:pointer;padding:4px;color:#DC2626;font-size:16px" title="Supprimer">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddEntretien() {
+  // Ouvrir le modal d'ajout en mode entretien
+  editingId = null;
+  currentPhotoData = null; currentPhotoName = null;
+  document.getElementById('modalAddTitle').textContent = '🧹 Ajouter un article d\'entretien';
+  document.getElementById('f-nom').value = '';
+  document.getElementById('f-ref').value = '';
+  document.getElementById('f-stock').value = 1;
+  document.getElementById('f-prix').value = 0;
+  document.getElementById('f-fourn').value = '';
+  document.getElementById('f-url').value = '';
+  const fExpiry = document.getElementById('f-expiry'); if (fExpiry) fExpiry.value = '';
+  const fBarcode = document.getElementById('f-barcode'); if (fBarcode) fBarcode.value = '';
+
+  // Remplir catégories entretien
+  const catSel = document.getElementById('f-cat');
+  catSel.innerHTML = CATS_ENTRETIEN.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  // Remplir crèches
+  const crecheSel = document.getElementById('f-creche');
+  crecheSel.innerHTML = CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (currentCreche !== 'all') crecheSel.value = currentCreche;
+
+  // Marquer comme entretien
+  document.getElementById('f-type-hidden').value = 'entretien';
+
+  document.getElementById('modal-add').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function exportEntretienCSV() {
+  const data = ARTICLES.filter(a => a.type === 'entretien');
+  if (data.length === 0) { showNotif('Aucun article d\'entretien à exporter'); return; }
+  const rows = [['Nom','Réf','Catégorie','Structure','Stock','Min','Prix','Fournisseur']];
+  data.forEach(a => rows.push([a.nom, a.ref, a.cat, a.creche, a.stock, a.min, a.prix, a.fourn]));
+  const csv = rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = 'stocks-entretien.csv';
+  a.click();
+}
+// ── FIN ENTRETIEN ─────────────────────────────────────────────────
 function renderHub() {
   const low = getLowStockArticles();
   const exp = getExpiryAlerts();
@@ -2943,10 +3073,11 @@ function init() {
 function renderTable() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   let data = ARTICLES.filter(a => {
+    const matchType = !a.type || a.type === 'pedagogique';
     const matchCat = currentCat === 'all' || a.cat === currentCat;
     const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
     const matchQ = !q || a.nom.toLowerCase().includes(q) || a.ref.toLowerCase().includes(q) || a.fourn.toLowerCase().includes(q);
-    return matchCat && matchCreche && matchQ;
+    return matchType && matchCat && matchCreche && matchQ;
   }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
 
   const tb = document.getElementById('tableBody');
@@ -3261,6 +3392,7 @@ function openModal(type) {
     document.getElementById('f-url').value = '';
     const fExpiry = document.getElementById('f-expiry'); if (fExpiry) fExpiry.value = '';
     const fBarcode = document.getElementById('f-barcode'); if (fBarcode) fBarcode.value = '';
+    const fType = document.getElementById('f-type-hidden'); if (fType) fType.value = 'pedagogique';
     resetPhotoUpload();
   }
   document.getElementById(`modal-${type}`).classList.add('open');
@@ -3271,7 +3403,18 @@ function editArticle(id) {
   const a = ARTICLES.find(x => x.id === id);
   if (!a) return;
   editingId = id;
-  document.getElementById('modalAddTitle').textContent = 'Modifier l\'article';
+  const isEntretien = a.type === 'entretien';
+  document.getElementById('modalAddTitle').textContent = isEntretien ? '🧹 Modifier l\'article d\'entretien' : 'Modifier l\'article';
+
+  // Remplir les catégories selon le type
+  const catSel = document.getElementById('f-cat');
+  if (isEntretien) {
+    catSel.innerHTML = CATS_ENTRETIEN.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  const fType = document.getElementById('f-type-hidden');
+  if (fType) fType.value = a.type || 'pedagogique';
+
   document.getElementById('f-nom').value = a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').replace(/\s*\{.*?\}\s*/g,'').trim();
   document.getElementById('f-ref').value = a.ref;
   document.getElementById('f-cat').value = a.cat;
@@ -3339,6 +3482,7 @@ async function saveArticle() {
     url:   document.getElementById('f-url').value.trim(),
     expiry: (document.getElementById('f-expiry')||{}).value || '',
     barcode: ((document.getElementById('f-barcode')||{}).value||'').trim(),
+    type: (document.getElementById('f-type-hidden')||{}).value || 'pedagogique',
     photo: currentPhotoData || (editingId ? (ARTICLES.find(a=>a.id===editingId)||{}).photo : null),
     photoName: currentPhotoName || null,
   };
@@ -3362,7 +3506,11 @@ async function saveArticle() {
   currentPhotoName = null;
   resetPhotoUpload();
   closeModal('modal-add');
-  renderTable();
+  if (article.type === 'entretien') {
+    renderEntretien();
+  } else {
+    renderTable();
+  }
   renderHistorique();
   updateCounts();
 }
@@ -3862,13 +4010,13 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  ['dashboard','inventaire','commandes','fournisseurs','historique','statistiques','univers'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques' };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques' };
   document.getElementById('pageTitle').textContent = titles[page];
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -3876,6 +4024,7 @@ function showPage(page, btn) {
   if (page === 'fournisseurs') { renderFournisseurs(); }
   if (page === 'statistiques') { renderDashboard(); }
   if (page === 'dashboard') { renderHub(); }
+  if (page === 'entretien') { renderEntretien(); }
   if (page === 'historique') { renderHistorique(); }
   if (page === 'inventaire') { renderTable(); renderStats(); }
 }
@@ -5123,14 +5272,14 @@ function articleToRow(a) {
   return { id: a.id, nom: a.nom, ref: a.ref, cat: a.cat, creche: a.creche,
            stock: a.stock, min: a.min, prix: a.prix, fourn: a.fourn,
            notes: a.notes||'', url: a.url||'', expiry: a.expiry||'',
-           barcode: a.barcode||'',
+           barcode: a.barcode||'', type: a.type||'pedagogique',
            photo: a.photo||null, photo_name: a.photoName||null };
 }
 function rowToArticle(r) {
   return { id: r.id, nom: r.nom, ref: r.ref, cat: r.cat, creche: r.creche,
            stock: r.stock, min: r.min, prix: parseFloat(r.prix)||0,
            fourn: r.fourn||'', notes: r.notes||'', url: r.url||'', expiry: r.expiry||'',
-           barcode: r.barcode||'',
+           barcode: r.barcode||'', type: r.type||'pedagogique',
            photo: r.photo||null, photoName: r.photo_name||null };
 }
 function commandeToRow(c) {
