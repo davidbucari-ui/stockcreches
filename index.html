@@ -2086,12 +2086,124 @@ let scanResultArticleId = null;
 let lastScannedCode = null;
 
 function openScanner() {
+  // Sauvegarder l'état actuel
+  localStorage.setItem('scannerReturn', 'true');
+  // Ouvrir une page scanner dédiée
+  const scanPage = window.open('', '_blank');
+  if (!scanPage) {
+    // Popup bloqué — utiliser le modal inline
+    openScannerModal();
+    return;
+  }
+  scanPage.document.write(buildScannerPage());
+  scanPage.document.close();
+}
+
+function openScannerModal() {
   document.getElementById('modal-scanner').classList.add('open');
   document.body.style.overflow = 'hidden';
   document.getElementById('scanner-manual-input').value = '';
   document.getElementById('scanner-status').textContent = 'Pointez la caméra vers un code-barres…';
   startCameraScanner();
 }
+
+function buildScannerPage() {
+  return `<!DOCTYPE html><html lang="fr"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Scanner</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#000;font-family:Arial,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    #video{width:100%;flex:1;object-fit:cover}
+    .overlay{position:fixed;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+    .frame{width:240px;height:160px;border:3px solid #6366F1;border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,0.5)}
+    .scanline{position:absolute;left:10px;right:10px;height:2px;background:linear-gradient(90deg,transparent,#6366F1,transparent);animation:scan 1.8s ease-in-out infinite}
+    @keyframes scan{0%{top:20%}50%{top:75%}100%{top:20%}}
+    .status{position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.8);color:#fff;text-align:center;padding:16px;font-size:14px}
+    .manual{display:flex;gap:8px;padding:12px;background:#111}
+    .manual input{flex:1;padding:10px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-size:16px}
+    .manual button{padding:10px 16px;background:#6366F1;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+    .close-btn{position:fixed;top:16px;right:16px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;z-index:10}
+  </style>
+</head><body>
+  <video id="video" playsinline autoplay muted></video>
+  <div class="overlay"><div class="frame"><div class="scanline"></div></div></div>
+  <button class="close-btn" onclick="window.close()">✕</button>
+  <div class="manual">
+    <input type="text" id="manualCode" placeholder="Saisir code manuellement…" inputmode="text">
+    <button onclick="sendCode(document.getElementById('manualCode').value)">→</button>
+  </div>
+  <div class="status" id="status">Pointez vers un code-barres…</div>
+  <script>
+    async function init() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        await video.play();
+        if ('BarcodeDetector' in window) {
+          const detector = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});
+          let detected = false;
+          const loop = async () => {
+            if (detected) return;
+            try {
+              const codes = await detector.detect(video);
+              if (codes.length > 0) {
+                detected = true;
+                const code = codes[0].rawValue;
+                document.getElementById('status').textContent = '✅ Détecté : ' + code;
+                stream.getTracks().forEach(t => t.stop());
+                navigator.vibrate && navigator.vibrate(80);
+                setTimeout(() => sendCode(code), 500);
+                return;
+              }
+            } catch(e){}
+            requestAnimationFrame(loop);
+          };
+          requestAnimationFrame(loop);
+        } else {
+          document.getElementById('status').textContent = '⚠ Saisie manuelle uniquement';
+        }
+      } catch(e) {
+        document.getElementById('status').textContent = '⚠ Caméra non disponible — saisie manuelle';
+      }
+    }
+    function sendCode(code) {
+      code = (code||'').trim();
+      if (!code) return;
+      // Envoyer le code à la fenêtre parente
+      if (window.opener && window.opener.receiveScanCode) {
+        window.opener.receiveScanCode(code);
+        window.close();
+      } else {
+        // Fallback : localStorage
+        localStorage.setItem('lastScanCode', code);
+        localStorage.setItem('lastScanTime', Date.now());
+        window.close();
+      }
+    }
+    init();
+  <\/script>
+</body></html>`;
+}
+
+// Réception du code depuis la page scanner
+window.receiveScanCode = async function(code) {
+  try { await processBarcode(code); }
+  catch(e) { showNotif('⚠ ' + e.message); }
+};
+
+// Vérifier si un code a été scanné (fallback localStorage)
+setInterval(() => {
+  const code = localStorage.getItem('lastScanCode');
+  const time = parseInt(localStorage.getItem('lastScanTime') || '0');
+  if (code && Date.now() - time < 5000) {
+    localStorage.removeItem('lastScanCode');
+    localStorage.removeItem('lastScanTime');
+    processBarcode(code).catch(e => showNotif('⚠ ' + e.message));
+  }
+}, 500);
 
 function closeScanner() {
   stopCameraScanner();
