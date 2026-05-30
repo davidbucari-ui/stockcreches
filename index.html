@@ -1172,6 +1172,9 @@ textarea { resize: vertical; min-height: 72px; }
           <button class="btn btn-primary" onclick="openModal('univers')">+ Créer un univers</button>
           <button class="btn btn-secondary" onclick="syncUniversVersSupabase()" title="Envoyer tous les univers locaux vers Supabase">☁️ Sync univers</button>
         </div>
+
+        <!-- Compteurs par catégorie -->
+        <div id="univers-counters" style="display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 16px"></div>
         <!-- Filtres crèches (internes à l'onglet) -->
         <div style="padding:0 20px 8px;display:flex;flex-wrap:wrap;gap:6px" id="univers-creche-filters">
           <div class="filter-chip active" onclick="filterUniversCreche('all', this)">Toutes les crèches</div>
@@ -4427,6 +4430,24 @@ const CAT_UNIVERS_ICONS = {
 function renderUnivers() {
   const list = document.getElementById('univers-list');
   if (!list) return;
+
+  // ── Compteurs par catégorie ──
+  const countersEl = document.getElementById('univers-counters');
+  if (countersEl) {
+    const total = UNIVERS.length;
+    const cats = Object.keys(CAT_UNIVERS_ICONS);
+    let html = `<div style="background:var(--accent);color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">
+      🌟 <span>${total}</span> <span style="font-weight:400;opacity:0.8">au total</span></div>`;
+    cats.forEach(cat => {
+      const nb = UNIVERS.filter(u => u.cat === cat).length;
+      if (nb === 0) return;
+      const icon = CAT_UNIVERS_ICONS[cat] || '🌟';
+      html += `<div onclick="filterUnivers('${cat}', null)" style="background:var(--surface);border:1px solid var(--border);padding:8px 14px;border-radius:10px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background 0.15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface)'">
+        ${icon} <span style="font-weight:600">${nb}</span> <span style="color:var(--ink3)">${cat}</span></div>`;
+    });
+    countersEl.innerHTML = html;
+  }
+
   let data = UNIVERS;
   // Filtre par crèche — uniquement via les filtres internes de l'onglet
   if (typeof _universCrecheFilter !== 'undefined' && _universCrecheFilter !== 'all') {
