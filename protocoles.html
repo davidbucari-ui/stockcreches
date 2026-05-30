@@ -85,7 +85,17 @@
       📄 Importer Word / PDF
     </button>
     <input type="file" id="import-file-input" accept=".docx,.pdf" style="display:none" onchange="importerFichier(event)" multiple>
-    <button class="btn-primary" onclick="ouvrirFormulaire()">+ Ajouter un document</button>
+    <button class="btn-secondary" onclick="document.getElementById('import-file-input').click()" style="display:flex;align-items:center;gap:6px">
+      📄 Importer Word / PDF
+    </button>
+    <input type="file" id="import-file-input" accept=".docx,.pdf" style="display:none" onchange="importerFichier(event)" multiple>
+    <span id="btn-upload-doc-wrap">
+      <button class="btn-secondary" onclick="document.getElementById('upload-doc-input').click()" style="display:flex;align-items:center;gap:6px" id="btn-upload-doc">
+        📎 Ajouter un fichier
+      </button>
+      <input type="file" id="upload-doc-input" accept=".pdf,.docx,.doc,.xlsx,.png,.jpg" style="display:none" onchange="uploaderDocument(event)">
+    </span>
+    <button class="btn-primary" onclick="ouvrirFormulaire()">+ Créer un document</button>
   </div>
 </div>
 
@@ -345,7 +355,41 @@ function render() {
     if (!doc) { vue = "liste"; render(); return; }
     const cat = getCat(doc.categorie);
     const stat = getStat(doc.statut);
-    const etapesHtml = formatEtapes(doc.etapes, cat.color);
+    const isFichier = doc.type === 'fichier';
+
+    if (isFichier) {
+      // ── FICHE FICHIER ──
+      const fileIcon = doc.fichierNom?.endsWith('.pdf') ? '📕' : doc.fichierNom?.endsWith('.docx') ? '📘' : '📄';
+      app.innerHTML =
+        '<div class="detail-page">'+
+        '<button class="btn-back" onclick="vue=\'liste\';docSelectionne=null;render()">← Retour</button>'+
+        '<div class="detail-card">'+
+          '<div style="background:'+cat.color+'15;border-radius:12px;padding:20px;margin-bottom:20px;border-left:4px solid '+cat.color+'">'+
+            '<div style="display:flex;align-items:center;gap:14px">'+
+              '<div style="width:52px;height:52px;border-radius:14px;background:'+cat.color+';display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">'+fileIcon+'</div>'+
+              '<div style="flex:1">'+
+                '<h2 style="font-family:\'Syne\',sans-serif;font-size:18px;margin-bottom:6px">'+doc.titre+'</h2>'+
+                '<span class="badge" style="background:'+cat.color+'22;color:'+cat.color+'">'+cat.label+'</span> '+
+                '<span class="badge" style="background:#F3F4F6;color:#374151">📎 '+doc.fichierNom+'</span>'+
+              '</div>'+
+            '</div>'+
+          '</div>'+
+          '<div class="detail-grid">'+
+            '<div class="detail-item"><span class="detail-label">📁 Fichier</span><strong>'+(doc.fichierNom||'—')+'</strong></div>'+
+            '<div class="detail-item"><span class="detail-label">📦 Taille</span><strong>'+(doc.fichierTaille||'—')+'</strong></div>'+
+            '<div class="detail-item"><span class="detail-label">📅 Importé le</span><strong>'+new Date(doc.dateRevision).toLocaleDateString('fr-FR')+'</strong></div>'+
+            '<div class="detail-item"><span class="detail-label">👤 Responsable</span><strong>'+(doc.responsable||'—')+'</strong></div>'+
+          '</div>'+
+          (doc.description ? '<div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px"><p style="font-size:13px;color:var(--ink2);line-height:1.7;margin:0">'+doc.description+'</p></div>' : '')+
+          '<div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">'+
+            '<button class="btn-primary" onclick="ouvrirFichier('+doc.id+')">👁 Consulter / Télécharger</button>'+
+            '<button class="btn-secondary" onclick="ouvrirFormulaire(documents.find(d=>d.id==='+doc.id+'))">✏️ Modifier</button>'+
+            '<button class="btn-secondary btn-danger" onclick="supprimerDocument('+doc.id+')">🗑 Supprimer</button>'+
+          '</div>'+
+        '</div>'+
+        '</div>';
+      return;
+    }
     const notesHtml = doc.notes ? doc.notes.split('\n').filter(l=>l.trim()).map(l =>
       '<div style="display:flex;gap:8px;margin-bottom:6px"><span>⚠️</span><span style="font-size:13px;line-height:1.5">'+l.trim()+'</span></div>'
     ).join('') : '';
@@ -472,11 +516,15 @@ function render() {
     if (filtered.length === 0) html += '<div class="vide">Aucun document trouvé</div>';
     filtered.forEach(doc => {
       const cat = getCat(doc.categorie); const stat = getStat(doc.statut);
+      const isFichier = doc.type === 'fichier';
+      const fileIcon = doc.fichierNom?.endsWith('.pdf') ? '📕' : doc.fichierNom?.endsWith('.docx') || doc.fichierNom?.endsWith('.doc') ? '📘' : '📄';
       html += '<div class="liste-item" onclick="docSelectionne='+doc.id+';vue=\'detail\';render()">';
-      html += '<div class="cat-icon" style="background:'+cat.color+'22;color:'+cat.color+'">'+cat.icon+'</div>';
-      html += '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"><span class="doc-titre">'+doc.titre+'</span><span class="badge" style="background:'+cat.color+'22;color:'+cat.color+'">'+cat.label+'</span><span class="statut-pill" style="background:'+stat.color+'22;color:'+stat.color+'">'+stat.label+'</span></div>';
+      html += '<div class="cat-icon" style="background:'+(isFichier?'#F3F4F6':cat.color+'22')+';color:'+(isFichier?'#374151':cat.color)+'">'+(isFichier?fileIcon:cat.icon)+'</div>';
+      html += '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"><span class="doc-titre">'+doc.titre+'</span>';
+      if (isFichier) html += '<span class="badge" style="background:#F3F4F6;color:#374151">📎 Fichier · '+(doc.fichierTaille||'')+'</span>';
+      html += '<span class="badge" style="background:'+cat.color+'22;color:'+cat.color+'">'+cat.label+'</span><span class="statut-pill" style="background:'+stat.color+'22;color:'+stat.color+'">'+stat.label+'</span></div>';
       html += '<p class="doc-desc">'+doc.description+'</p>';
-      html += '<div class="doc-meta"><span>👤 '+doc.responsable+'</span><span>📅 '+new Date(doc.dateRevision).toLocaleDateString('fr-FR')+'</span><span>🔖 '+doc.version+'</span></div></div>';
+      html += '<div class="doc-meta"><span>👤 '+(doc.responsable||'—')+'</span><span>📅 '+new Date(doc.dateRevision).toLocaleDateString('fr-FR')+'</span><span>🔖 '+doc.version+'</span></div></div>';
       html += '<span style="color:var(--ink3);font-size:20px;margin-left:8px;flex-shrink:0">›</span></div>';
     });
     html += '</div>';
@@ -500,6 +548,68 @@ function render() {
 
   app.innerHTML = html;
 }
+
+// ── UPLOAD DOCUMENT FICHIER ───────────────────────────────────────
+async function uploaderDocument(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+
+  if (file.size > 5 * 1024 * 1024) {
+    afficherNotif('⚠ Fichier trop volumineux (max 5 Mo)', 'error'); return;
+  }
+
+  afficherNotif('⏳ Chargement du fichier…');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const cats = CATEGORIES_FONCTIONNEMENT;
+    const cat = filtreCategorie !== 'toutes' ? filtreCategorie : cats[0].id;
+    const doc = {
+      id: nextId++,
+      titre: file.name.replace(/\.(pdf|docx?|xlsx|png|jpe?g)$/i, '').replace(/[-_]/g, ' '),
+      categorie: cat,
+      souscat: souscatActive || '',
+      statut: 'vigueur',
+      dateRevision: new Date().toISOString().split('T')[0],
+      description: 'Document importé le ' + new Date().toLocaleDateString('fr-FR'),
+      responsable: '',
+      version: 'v1.0',
+      objectif: '', etapes: '', notes: '',
+      fichier: e.target.result,        // base64
+      fichierNom: file.name,
+      fichierType: file.type,
+      fichierTaille: (file.size / 1024).toFixed(0) + ' Ko',
+      type: 'fichier'
+    };
+    documents.push(doc);
+    try {
+      sauverLocal();
+      afficherNotif('✅ Fichier "' + file.name + '" ajouté');
+    } catch(err) {
+      afficherNotif('⚠ Fichier ajouté mais localStorage plein — sauvegardez en JSON', 'error');
+    }
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+
+function ouvrirFichier(id) {
+  const doc = documents.find(d => d.id === id);
+  if (!doc || !doc.fichier) return;
+  const w = window.open('', '_blank');
+  if (doc.fichierType === 'application/pdf' || doc.fichierType?.includes('pdf')) {
+    w.document.write('<html><body style="margin:0"><embed src="'+doc.fichier+'" width="100%" height="100%" type="application/pdf"></body></html>');
+  } else {
+    // Pour Word/Excel : télécharger
+    const a = document.createElement('a');
+    a.href = doc.fichier;
+    a.download = doc.fichierNom;
+    a.click();
+    w.close();
+  }
+}
+// ── FIN UPLOAD ────────────────────────────────────────────────────
 
 // ── IMPORT WORD / PDF ────────────────────────────────────────────
 async function importerFichier(event) {
