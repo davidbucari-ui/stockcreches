@@ -269,7 +269,16 @@ function supprimerDocument(id) {
 }
 
 function stats() {
-  return { total:documents.length, vigueur:documents.filter(d=>d.statut==="vigueur").length, revision:documents.filter(d=>d.statut==="revision").length, archive:documents.filter(d=>d.statut==="archive").length };
+  const cats = ongletActif === 'protocoles'
+    ? CATEGORIES_PROTOCOLES.map(c => c.id)
+    : CATEGORIES_FONCTIONNEMENT.map(c => c.id);
+  const docs = documents.filter(d => cats.includes(d.categorie));
+  return {
+    total:    docs.length,
+    vigueur:  docs.filter(d => d.statut === 'vigueur').length,
+    revision: docs.filter(d => d.statut === 'revision').length,
+    archive:  docs.filter(d => d.statut === 'archive').length
+  };
 }
 
 function formatEtapes(etapes, catColor) {
