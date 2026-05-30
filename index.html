@@ -1170,6 +1170,7 @@ textarea { resize: vertical; min-height: 72px; }
         <div class="section-header">
           <div class="section-title">Univers ludiques</div>
           <button class="btn btn-primary" onclick="openModal('univers')">+ Créer un univers</button>
+          <button class="btn btn-secondary" onclick="syncUniversVersSupabase()" title="Envoyer tous les univers locaux vers Supabase">☁️ Sync univers</button>
         </div>
         <!-- Filtres crèches (internes à l'onglet) -->
         <div style="padding:0 20px 8px;display:flex;flex-wrap:wrap;gap:6px" id="univers-creche-filters">
@@ -2936,6 +2937,26 @@ function openFullscreenPhoto(src) {
     document.body.appendChild(lb);
   }
   document.getElementById('lightbox-img').src = src;
+}
+
+async function syncUniversVersSupabase() {
+  if (IS_LOCAL) { showNotif('⚠ Mode local — Supabase non connecté'); return; }
+  const total = UNIVERS.length;
+  if (total === 0) { showNotif('Aucun univers à synchroniser'); return; }
+  showNotif(`⏳ Synchronisation de ${total} univers…`);
+  let ok = 0; let err = 0;
+  for (const u of UNIVERS) {
+    try {
+      const isNew = u.id > 100000;
+      await saveUniversDB(u, isNew);
+      ok++;
+    } catch(e) {
+      try { await saveUniversDB(u, false); ok++; }
+      catch(e2) { err++; console.warn('[Sync univers]', u.nom, e2.message); }
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+  showNotif(`✅ ${ok} univers synchronisés${err > 0 ? ' · ⚠ ' + err + ' erreur(s)' : ''}`);
 }
 
 function renderHub() {
