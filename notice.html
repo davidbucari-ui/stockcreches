@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notice d'utilisation — Koalakids Stocks Pédagogiques</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --ink: #1C1917;
+    --ink2: #44403C;
+    --ink3: #A8A29E;
+    --border: #E7E5E0;
+    --accent: #6366F1;
+    --accent2: #10B981;
+    --orange: #F59E0B;
+    --red: #EF4444;
+    --radius: 14px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.07);
+  }
+
+  body {
+    font-family: 'Instrument Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  .hero {
+    background: linear-gradient(135deg, #1C1917 0%, #292524 60%, #3C2A1E 100%);
+    padding: 48px 24px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(99,102,241,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 30%, rgba(16,185,129,0.1) 0%, transparent 50%);
+  }
+  .hero-logo { font-size: 48px; margin-bottom: 16px; position: relative; }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .hero p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.55);
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto 28px;
+  }
+  .hero-badges {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .hero-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.08);
+  }
+
+  /* ── NAV TABS ── */
+  .nav-tabs {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0 24px;
+    overflow-x: auto;
+  }
+  .nav-tab {
+    padding: 16px 20px;
+    border: none;
+    background: none;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--ink3);
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .nav-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .nav-tab:hover:not(.active) { color: var(--ink2); }
+
+  /* ── LAYOUT ── */
+  .page-content { display: none; max-width: 860px; margin: 0 auto; padding: 32px 20px 60px; }
+  .page-content.active { display: block; }
+
+  /* ── SECTION TITLES ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink3);
+    margin-bottom: 16px;
+    margin-top: 40px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card p { font-size: 14px; color: var(--ink2); line-height: 1.7; }
+
+  /* ── FEATURE GRID ── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .feature-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .feature-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+  .feature-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .feature-card p { font-size: 13px; color: var(--ink3); line-height: 1.5; }
+
+  /* ── TUTORIEL STEPS ── */
+  .tuto-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .tuto-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .tuto-header:hover { background: var(--bg); }
+  .tuto-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800;
+    flex-shrink: 0;
+    color: #fff;
+  }
+  .tuto-title { font-weight: 700; font-size: 15px; flex: 1; }
+  .tuto-chevron { color: var(--ink3); font-size: 18px; transition: transform 0.2s; }
+  .tuto-body { display: none; padding: 0 20px 20px; }
+  .tuto-body.open { display: block; }
+  .tuto-card.open .tuto-chevron { transform: rotate(90deg); }
+
+  .step {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    align-items: flex-start;
+  }
+  .step-num {
+    min-width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-text { font-size: 14px; color: var(--ink2); line-height: 1.6; }
+  .step-text strong { color: var(--ink); }
+
+  .tip {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #92400E;
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .info-box {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #1D4ED8;
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  /* ── BENEFICES ── */
+  .benefit-row {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .benefit-row:last-child { border-bottom: none; }
+  .benefit-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+  .benefit-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .benefit-desc { font-size: 13px; color: var(--ink3); line-height: 1.5; }
+
+  /* ── PRINT ── */
+  .print-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .print-btn:hover { background: var(--accent); }
+
+  @media (max-width: 600px) {
+    .feature-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 24px; }
+  }
+  @media print {
+    .nav-tabs, .print-btn { display: none; }
+    .page-content { display: block !important; max-width: 100%; }
+    .hero { padding: 24px; }
+    .tuto-body { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-logo">🐨</div>
+  <h1>Stocks Pédagogiques<br>Réseau Micro-Crèches</h1>
+  <p>Notice d'utilisation — Application de gestion Koalakids</p>
+  <div class="hero-badges">
+    <span class="hero-badge">📦 Gestion des stocks</span>
+    <span class="hero-badge">🌟 Univers ludiques</span>
+    <span class="hero-badge">📋 Base réglementaire</span>
+    <span class="hero-badge">📚 Base documentaire</span>
+  </div>
+</div>
+
+<!-- ONGLETS -->
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showTab('direction', this)">🏢 Pour la direction</button>
+  <button class="nav-tab" onclick="showTab('terrain', this)">👩‍💼 Pour le terrain</button>
+  <button class="nav-tab" onclick="showTab('faq', this)">❓ FAQ</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ONGLET DIRECTION
+═══════════════════════════════════════════ -->
+<div class="page-content active" id="tab-direction">
+
+  <div class="section-label">Vue d'ensemble</div>
+  <div class="card">
+    <div class="card-title">🎯 Pourquoi cette application ?</div>
+    <p>L'application <strong>Stocks Pédagogiques Koalakids</strong> centralise la gestion du matériel pédagogique et d'entretien de l'ensemble des micro-crèches du réseau. Elle remplace les tableurs Excel dispersés et les listes papier, et offre une vision en temps réel de chaque structure.</p>
+  </div>
+
+  <div class="section-label">Fonctionnalités principales</div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#EFF6FF;color:#3B82F6">📦</div>
+      <h3>Gestion des stocks</h3>
+      <p>Suivi en temps réel du matériel pédagogique et d'entretien par structure, avec alertes de rupture automatiques.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#F0FDF4;color:#10B981">🌟</div>
+      <h3>Univers ludiques</h3>
+      <p>Création et partage de fiches d'univers avec photos, matériel associé et conseils pédagogiques.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#FFF7ED;color:#F59E0B">📋</div>
+      <h3>Base réglementaire</h3>
+      <p>35 fiches conformes au Décret 2025-304 pour sécuriser les pratiques professionnelles.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#F5F3FF;color:#8B5CF6">📚</div>
+      <h3>Base documentaire</h3>
+      <p>Protocoles internes, documents de fonctionnement et ressources humaines centralisés.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#FEF2F2;color:#EF4444">📷</div>
+      <h3>Scanner code-barres</h3>
+      <p>Entrées/sorties de stock rapides depuis un smartphone Android, sans ressaisie manuelle.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#ECFDF5;color:#059669">📊</div>
+      <h3>Statistiques</h3>
+      <p>Tableaux de bord par structure : valeur du stock, articles critiques, évolution des commandes.</p>
+    </div>
+  </div>
+
+  <div class="section-label">Bénéfices pour le réseau</div>
+  <div class="card">
+    <div class="benefit-row">
+      <div class="benefit-icon">⏱</div>
+      <div>
+        <div class="benefit-title">Gain de temps</div>
+        <div class="benefit-desc">Inventaire instantané, commandes générées automatiquement depuis les ruptures de stock, import depuis Padlet en un clic.</div>
+      </div>
+    </div>
+    <div class="benefit-row">
+      <div class="benefit-icon">🔍</div>
+      <div>
+        <div class="benefit-title">Visibilité en temps réel</div>
+        <div class="benefit-desc">La direction visualise en un coup d'œil le stock de chaque crèche, les alertes et la valeur totale du parc matériel.</div>
+      </div>
+    </div>
+    <div class="benefit-row">
+      <div class="benefit-icon">📐</div>
+      <div>
+        <div class="benefit-title">Conformité réglementaire</div>
+        <div class="benefit-desc">La base réglementaire intégrée (Décret 2025-304) et les protocoles internes sont accessibles à toute l'équipe à tout moment.</div>
+      </div>
+    </div>
+    <div class="benefit-row">
+      <div class="benefit-icon">📱</div>
+      <div>
+        <div class="benefit-title">Accessible partout</div>
+        <div class="benefit-desc">Application web progressive, accessible depuis n'importe quel navigateur — PC, tablette ou smartphone — sans installation.</div>
+      </div>
+    </div>
+    <div class="benefit-row">
+      <div class="benefit-icon">🔒</div>
+      <div>
+        <div class="benefit-title">Données sécurisées</div>
+        <div class="benefit-desc">Hébergement sur infrastructure Supabase (serveurs européens), sauvegarde JSON locale possible à tout moment.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Architecture</div>
+  <div class="card">
+    <div class="card-title">🏗 Comment ça fonctionne ?</div>
+    <p style="margin-bottom:12px">L'application est composée de plusieurs modules accessibles depuis le <strong>Tableau de bord</strong> :</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:12px;align-items:center;background:var(--bg);border-radius:10px;padding:12px">
+        <span style="font-size:20px">🏠</span>
+        <div><strong>Tableau de bord</strong> — Hub central donnant accès à toutes les applications</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;background:var(--bg);border-radius:10px;padding:12px">
+        <span style="font-size:20px">📦</span>
+        <div><strong>Gestion des stocks</strong> — Inventaire pédagogique + entretien, commandes, fournisseurs, historique</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;background:var(--bg);border-radius:10px;padding:12px">
+        <span style="font-size:20px">📋</span>
+        <div><strong>Base réglementaire</strong> — 35 fiches réglementaires, consultables et imprimables</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;background:var(--bg);border-radius:10px;padding:12px">
+        <span style="font-size:20px">📚</span>
+        <div><strong>Base documentaire</strong> — Protocoles internes + documents de fonctionnement</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ONGLET TERRAIN
+═══════════════════════════════════════════ -->
+<div class="page-content" id="tab-terrain">
+
+  <div class="section-label">Prise en main rapide</div>
+  <div class="card">
+    <div class="card-title">🚀 Par où commencer ?</div>
+    <p>L'application s'ouvre sur le <strong>Tableau de bord</strong>. Sélectionnez votre structure dans la sidebar gauche pour filtrer les données de votre crèche. Voici les actions les plus courantes :</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+      <span style="background:#EFF6FF;color:#3B82F6;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600">📦 Consulter le stock</span>
+      <span style="background:#F0FDF4;color:#10B981;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600">➕ Ajouter un article</span>
+      <span style="background:#FFF7ED;color:#F59E0B;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600">📷 Scanner un code-barres</span>
+      <span style="background:#F5F3FF;color:#8B5CF6;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600">🌟 Créer un univers</span>
+    </div>
+  </div>
+
+  <div class="section-label">Tutoriels pas-à-pas</div>
+
+  <!-- TUTO 1 : CONSULTER LE STOCK -->
+  <div class="tuto-card open" id="tuto-1">
+    <div class="tuto-header" onclick="toggleTuto('tuto-1')">
+      <div class="tuto-num" style="background:#3B82F6">1</div>
+      <div class="tuto-title">📦 Consulter et filtrer le stock</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body open">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Dans la sidebar gauche, cliquez sur <strong>votre crèche</strong> pour ne voir que ses articles.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Cliquez sur <strong>Stocks pédagogiques</strong> ou <strong>Stocks entretien</strong> dans la navigation.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Utilisez les <strong>filtres par catégorie</strong> (Sensoriel, Manipulation, Construction...) en haut de la liste.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">La barre de <strong>recherche</strong> permet de trouver un article par nom, référence ou fournisseur.</div></div>
+      <div class="tip">💡 Les articles en <strong style="color:#DC2626">rouge</strong> sont en rupture, en <strong style="color:#D97706">orange</strong> en stock bas — pensez à commander !</div>
+    </div>
+  </div>
+
+  <!-- TUTO 2 : AJOUTER ARTICLE -->
+  <div class="tuto-card" id="tuto-2">
+    <div class="tuto-header" onclick="toggleTuto('tuto-2')">
+      <div class="tuto-num" style="background:#10B981">2</div>
+      <div class="tuto-title">➕ Ajouter un article</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Cliquez sur le bouton <strong>+ Ajouter un article</strong> en bas de la sidebar.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Remplissez au minimum : <strong>Nom</strong>, <strong>Référence</strong>, <strong>Catégorie</strong>, <strong>Structure</strong> et <strong>Quantité</strong>.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Définissez un <strong>stock minimum</strong> pour recevoir une alerte automatique en cas de rupture.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Ajoutez une <strong>photo</strong> (facultatif) en cliquant sur la zone photo du formulaire.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Cliquez sur <strong>Enregistrer</strong> — l'article apparaît immédiatement dans la liste.</div></div>
+      <div class="tip">💡 Utilisez le champ <strong>Code-barres</strong> pour lier l'article à un scan physique.</div>
+    </div>
+  </div>
+
+  <!-- TUTO 3 : SCANNER -->
+  <div class="tuto-card" id="tuto-3">
+    <div class="tuto-header" onclick="toggleTuto('tuto-3')">
+      <div class="tuto-num" style="background:#EF4444">3</div>
+      <div class="tuto-title">📷 Scanner un code-barres (Android)</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Depuis un smartphone <strong>Android</strong>, ouvrez l'application dans Chrome.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Cliquez sur le bouton <strong>📷 Scanner un code-barres</strong> en bas de la sidebar.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Une page de scan s'ouvre — <strong>autorisez l'accès à la caméra</strong> si demandé.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Pointez la caméra vers le code-barres de l'article. La détection est <strong>automatique</strong>.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Si l'article est reconnu, une fiche apparaît avec les boutons <strong>Entrée</strong> / <strong>Sortie</strong> pour ajuster le stock rapidement.</div></div>
+      <div class="info-box">ℹ️ Sur PC ou iPhone, utilisez la <strong>saisie manuelle</strong> de la référence à la place du scan.</div>
+    </div>
+  </div>
+
+  <!-- TUTO 4 : UNIVERS -->
+  <div class="tuto-card" id="tuto-4">
+    <div class="tuto-header" onclick="toggleTuto('tuto-4')">
+      <div class="tuto-num" style="background:#8B5CF6">4</div>
+      <div class="tuto-title">🌟 Créer un univers ludique</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Cliquez sur <strong>Univers ludiques</strong> dans la navigation.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Cliquez sur <strong>+ Créer un univers</strong> en haut à droite.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Remplissez : <strong>Nom</strong>, <strong>Catégorie</strong> (Sensoriel, Manipulation...), <strong>Structure</strong>, <strong>Description / objectifs</strong>.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Ajoutez jusqu'à <strong>5 photos</strong> de l'univers mis en scène.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Sélectionnez les <strong>articles de l'inventaire</strong> utilisés dans cet univers.</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-text">Cliquez sur <strong>Enregistrer</strong>. La fiche est consultable et imprimable en PDF.</div></div>
+      <div class="tip">💡 Cliquez sur une photo pour l'agrandir en plein écran.</div>
+    </div>
+  </div>
+
+  <!-- TUTO 5 : ETIQUETTES -->
+  <div class="tuto-card" id="tuto-5">
+    <div class="tuto-header" onclick="toggleTuto('tuto-5')">
+      <div class="tuto-num" style="background:#F59E0B">5</div>
+      <div class="tuto-title">🏷 Imprimer des étiquettes QR</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Dans l'inventaire, cliquez sur un article pour ouvrir sa fiche.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Cliquez sur le bouton <strong>🏷 Étiquette</strong> pour générer l'étiquette QR de cet article.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Une page s'ouvre avec l'étiquette — cliquez sur <strong>🖨 Imprimer</strong>.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Pour une <strong>planche complète</strong>, cliquez sur le bouton <strong>🏷 Étiquettes</strong> en haut de l'inventaire.</div></div>
+      <div class="tip">💡 Collez les étiquettes sur les bacs ou étagères de rangement pour faciliter le scan.</div>
+    </div>
+  </div>
+
+  <!-- TUTO 6 : SAUVEGARDE -->
+  <div class="tuto-card" id="tuto-6">
+    <div class="tuto-header" onclick="toggleTuto('tuto-6')">
+      <div class="tuto-num" style="background:#6366F1">6</div>
+      <div class="tuto-title">💾 Sauvegarder et restaurer les données</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <div class="step"><div class="step-num">1</div><div class="step-text">En haut de l'inventaire, cliquez sur <strong>💾 Sauvegarder</strong> pour télécharger un fichier JSON contenant toutes vos données.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Conservez ce fichier comme <strong>sauvegarde de sécurité</strong> sur votre ordinateur.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Pour restaurer, cliquez sur <strong>📂 Restaurer</strong> et sélectionnez votre fichier JSON.</div></div>
+      <div class="info-box">ℹ️ Les données sont automatiquement synchronisées avec Supabase (cloud). La sauvegarde JSON est un filet de sécurité supplémentaire.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ONGLET FAQ
+═══════════════════════════════════════════ -->
+<div class="page-content" id="tab-faq">
+
+  <div class="section-label">Questions fréquentes</div>
+
+  <div class="tuto-card open" id="faq-1">
+    <div class="tuto-header" onclick="toggleTuto('faq-1')">
+      <div class="tuto-num" style="background:#6366F1">?</div>
+      <div class="tuto-title">L'application fonctionne-t-elle sans internet ?</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body open">
+      <p style="font-size:14px;color:var(--ink2);line-height:1.7">Partiellement. Les données récemment consultées sont disponibles hors ligne grâce au cache du navigateur. Mais pour synchroniser les modifications avec les autres crèches, une connexion internet est nécessaire. En mode hors ligne, vous pouvez consulter et modifier — les changements seront synchronisés à la reconnexion.</p>
+    </div>
+  </div>
+
+  <div class="tuto-card" id="faq-2">
+    <div class="tuto-header" onclick="toggleTuto('faq-2')">
+      <div class="tuto-num" style="background:#6366F1">?</div>
+      <div class="tuto-title">Puis-je utiliser l'application sur iPhone ?</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <p style="font-size:14px;color:var(--ink2);line-height:1.7">Oui, l'application fonctionne sur iPhone dans Safari ou Chrome. La seule limitation concerne le <strong>scanner de code-barres</strong> qui est optimisé pour Android Chrome. Sur iPhone, utilisez la <strong>saisie manuelle</strong> de la référence dans le champ de scan.</p>
+    </div>
+  </div>
+
+  <div class="tuto-card" id="faq-3">
+    <div class="tuto-header" onclick="toggleTuto('faq-3')">
+      <div class="tuto-num" style="background:#6366F1">?</div>
+      <div class="tuto-title">Comment ajouter une nouvelle crèche ?</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <p style="font-size:14px;color:var(--ink2);line-height:1.7">L'ajout d'une nouvelle structure se fait par l'administrateur de l'application. Contactez votre coordinateur pédagogique pour faire ajouter une nouvelle crèche dans le système.</p>
+    </div>
+  </div>
+
+  <div class="tuto-card" id="faq-4">
+    <div class="tuto-header" onclick="toggleTuto('faq-4')">
+      <div class="tuto-num" style="background:#6366F1">?</div>
+      <div class="tuto-title">J'ai supprimé un article par erreur, comment le récupérer ?</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <p style="font-size:14px;color:var(--ink2);line-height:1.7">Si vous avez une <strong>sauvegarde JSON</strong> récente, restaurez-la via le bouton 📂 Restaurer. Les données sont aussi conservées dans Supabase — contactez votre administrateur pour une restauration depuis la base de données.</p>
+      <div class="tip">💡 Pensez à faire une sauvegarde JSON régulièrement comme précaution.</div>
+    </div>
+  </div>
+
+  <div class="tuto-card" id="faq-5">
+    <div class="tuto-header" onclick="toggleTuto('faq-5')">
+      <div class="tuto-num" style="background:#6366F1">?</div>
+      <div class="tuto-title">Comment importer mes univers depuis Padlet ?</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Allez dans <strong>Univers ludiques</strong>.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Cliquez sur <strong>📥 Importer depuis Padlet</strong>.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Saisissez votre <strong>clé API Padlet</strong> (disponible dans Paramètres → Développeur).</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Vérifiez l'URL du Padlet et cliquez <strong>🔍 Charger</strong>.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Sélectionnez les cartes à importer et cliquez <strong>✅ Importer</strong>.</div></div>
+      <div class="info-box">ℹ️ Un abonnement Padlet Platinum est requis pour accéder à l'API.</div>
+    </div>
+  </div>
+
+  <div class="tuto-card" id="faq-6">
+    <div class="tuto-header" onclick="toggleTuto('faq-6')">
+      <div class="tuto-num" style="background:#6366F1">?</div>
+      <div class="tuto-title">Où sont stockées mes données ?</div>
+      <div class="tuto-chevron">›</div>
+    </div>
+    <div class="tuto-body">
+      <p style="font-size:14px;color:var(--ink2);line-height:1.7">Les données sont stockées sur <strong>Supabase</strong>, une plateforme cloud avec serveurs en Europe, conforme au RGPD. Une copie locale est conservée dans le navigateur (localStorage) pour un accès rapide. Aucune donnée n'est partagée avec des tiers.</p>
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-top:40px">Contact & Support</div>
+  <div class="card">
+    <div class="card-title">📞 Besoin d'aide ?</div>
+    <p>Pour toute question ou demande d'évolution, contactez votre <strong>coordinateur pédagogique</strong> du réseau Koalakids. L'application évolue régulièrement avec de nouvelles fonctionnalités.</p>
+  </div>
+
+</div>
+
+<!-- Bouton impression -->
+<button class="print-btn" onclick="window.print()">🖨 Imprimer</button>
+
+<script>
+function showTab(id, btn) {
+  document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleTuto(id) {
+  const card = document.getElementById(id);
+  const body = card.querySelector('.tuto-body');
+  const isOpen = card.classList.contains('open');
+  card.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
+}
+</script>
+</body>
+</html>
