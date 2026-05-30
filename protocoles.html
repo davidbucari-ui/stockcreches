@@ -282,6 +282,8 @@ function render() {
       '<div class="detail-page">'+
       '<button class="btn-back" onclick="vue=\'liste\';docSelectionne=null;render()">← Retour à la liste</button>'+
       '<div class="detail-card">'+
+
+        // En-tête coloré
         '<div style="background:'+cat.color+'15;border-radius:12px;padding:20px;margin-bottom:20px;border-left:4px solid '+cat.color+'">'+
           '<div style="display:flex;align-items:center;gap:14px">'+
             '<div style="width:52px;height:52px;border-radius:14px;background:'+cat.color+';display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">'+cat.icon+'</div>'+
@@ -292,16 +294,39 @@ function render() {
             '</div>'+
           '</div>'+
         '</div>'+
+
+        // Méta-infos — toujours affiché
         '<div class="detail-grid">'+
-          '<div class="detail-item"><span class="detail-label">👤 Responsable</span><strong>'+doc.responsable+'</strong></div>'+
-          '<div class="detail-item"><span class="detail-label">🔖 Version</span><strong>'+doc.version+'</strong></div>'+
+          '<div class="detail-item"><span class="detail-label">👤 Responsable</span><strong>'+(doc.responsable||'—')+'</strong></div>'+
+          '<div class="detail-item"><span class="detail-label">🔖 Version</span><strong>'+(doc.version||'—')+'</strong></div>'+
           '<div class="detail-item"><span class="detail-label">📅 Dernière révision</span><strong>'+new Date(doc.dateRevision).toLocaleDateString('fr-FR')+'</strong></div>'+
           '<div class="detail-item"><span class="detail-label">📁 Catégorie</span><strong>'+cat.label+'</strong></div>'+
         '</div>'+
-        (doc.description ? '<div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px"><p style="font-size:13px;color:var(--ink2);line-height:1.7;margin:0">'+doc.description+'</p></div>' : '')+
-        (doc.objectif ? '<div style="background:#EFF6FF;border-radius:12px;padding:16px;margin-bottom:16px;border-left:3px solid #3B82F6"><div style="font-weight:700;font-size:13px;color:#1D4ED8;margin-bottom:8px">🎯 Objectif</div><p style="font-size:13px;color:#1E40AF;line-height:1.7;margin:0">'+doc.objectif+'</p></div>' : '')+
-        (doc.etapes ? '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px"><div style="font-weight:700;font-size:14px;margin-bottom:14px">📋 Procédure à suivre</div>'+etapesHtml+'</div>' : '')+
-        (doc.notes ? '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px;margin-bottom:16px"><div style="font-weight:700;font-size:13px;color:#92400E;margin-bottom:10px">⚠️ Notes importantes</div>'+notesHtml+'</div>' : '')+
+
+        // Description — toujours affichée
+        '<div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px">'+
+          '<p style="font-size:13px;color:var(--ink2);line-height:1.7;margin:0">'+(doc.description||'<span style="color:var(--ink3);font-style:italic">Aucune description renseignée</span>')+'</p>'+
+        '</div>'+
+
+        // Objectif — toujours affiché
+        '<div style="background:#EFF6FF;border-radius:12px;padding:16px;margin-bottom:16px;border-left:3px solid #3B82F6">'+
+          '<div style="font-weight:700;font-size:13px;color:#1D4ED8;margin-bottom:8px">🎯 Objectif</div>'+
+          '<p style="font-size:13px;color:'+(doc.objectif?'#1E40AF':'#93C5FD')+';line-height:1.7;margin:0;font-style:'+(doc.objectif?'normal':'italic')+'">'+(doc.objectif||'À renseigner — cliquez sur Modifier pour ajouter l\'objectif')+'</p>'+
+        '</div>'+
+
+        // Étapes — toujours affichées
+        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">'+
+          '<div style="font-weight:700;font-size:14px;margin-bottom:14px">📋 Procédure à suivre</div>'+
+          (etapesHtml || '<p style="font-size:13px;color:var(--ink3);font-style:italic;padding:8px 0">À renseigner — cliquez sur Modifier pour ajouter les étapes de la procédure</p>')+
+        '</div>'+
+
+        // Notes — toujours affichées
+        '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px;margin-bottom:16px">'+
+          '<div style="font-weight:700;font-size:13px;color:#92400E;margin-bottom:10px">⚠️ Notes importantes</div>'+
+          (notesHtml || '<p style="font-size:13px;color:#D97706;font-style:italic">À renseigner — cliquez sur Modifier pour ajouter des notes importantes</p>')+
+        '</div>'+
+
+        // Actions
         '<div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">'+
           '<button class="btn-primary" onclick="ouvrirFormulaire(documents.find(d=>d.id==='+doc.id+'))">✏️ Modifier</button>'+
           '<button class="btn-secondary" onclick="imprimerFiche('+doc.id+')">🖨 Imprimer</button>'+
