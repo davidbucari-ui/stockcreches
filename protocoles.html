@@ -88,20 +88,48 @@
     <button class="btn-primary" onclick="ouvrirFormulaire()">+ Ajouter un document</button>
   </div>
 </div>
+
+<!-- Onglets -->
+<div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:0">
+  <button onclick="ongletActif='protocoles';filtreCategorie='toutes';souscatActive=null;render()" id="tab-protocoles"
+    style="padding:14px 24px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--ink3)">
+    🏥 Protocoles
+  </button>
+  <button onclick="ongletActif='fonctionnement';filtreCategorie='toutes';souscatActive=null;render()" id="tab-fonctionnement"
+    style="padding:14px 24px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--ink3)">
+    📋 Documents de fonctionnement
+  </button>
+</div>
 <div id="notif-container"></div>
 <div id="app" class="app-body"></div>
 
 <script>
-const CATEGORIES = [
-  { id:"hygiene",       label:"Hygiène & Soins",           icon:"🧼", color:"#4ECDC4" },
-  { id:"securite",      label:"Sécurité",                  icon:"🛡️", color:"#FF6B6B" },
-  { id:"sante",         label:"Santé & Médicaments",       icon:"💊", color:"#45B7D1" },
-  { id:"alimentation",  label:"Alimentation",              icon:"🍽️", color:"#96CEB4" },
-  { id:"pedagogie",     label:"Pédagogie & Activités",     icon:"🎨", color:"#FFEAA7" },
-  { id:"administratif", label:"Administratif",             icon:"📋", color:"#DDA0DD" },
-  { id:"urgence",       label:"Urgences",                  icon:"🚨", color:"#FF8C00" },
-  { id:"accueil",       label:"Accueil & Communication",   icon:"👶", color:"#98D8C8" },
+const CATEGORIES_PROTOCOLES = [
+  { id:"urgence",       label:"Urgences",             icon:"🚨", color:"#FF8C00" },
+  { id:"sante",         label:"Santé & Médicaments",  icon:"💊", color:"#45B7D1" },
+  { id:"hygiene",       label:"Hygiène & Soins",      icon:"🧼", color:"#4ECDC4" },
+  { id:"securite",      label:"Sécurité",             icon:"🛡️", color:"#FF6B6B" },
+  { id:"alimentation",  label:"Alimentation",         icon:"🍽️", color:"#96CEB4" },
 ];
+const CATEGORIES_FONCTIONNEMENT = [
+  { id:"administratif", label:"Administratif", icon:"📋", color:"#DDA0DD",
+    souscats: [
+      { id:"inscription",     label:"Documents d'inscription",      icon:"📝" },
+      { id:"familiarisation", label:"Documents de familiarisation",   icon:"👶" },
+      { id:"pmi",             label:"Documents PMI",                  icon:"🏥" },
+    ]
+  },
+  { id:"rh", label:"Ressources humaines", icon:"👥", color:"#F4A261",
+    souscats: [
+      { id:"stagiaires", label:"Documents stagiaires/alternants", icon:"🎓" },
+    ]
+  },
+  { id:"accueil",   label:"Accueil & Communication", icon:"💬", color:"#98D8C8", souscats:[] },
+  { id:"pedagogie", label:"Pédagogie & Activités",   icon:"🎨", color:"#FFEAA7", souscats:[] },
+];
+const CATEGORIES = [...CATEGORIES_PROTOCOLES, ...CATEGORIES_FONCTIONNEMENT];
+let ongletActif = 'protocoles';
+let souscatActive = null;
 const STATUTS = [
   { id:"vigueur",  label:"En vigueur", color:"#2ecc71" },
   { id:"revision", label:"À réviser",  color:"#f39c12" },
@@ -164,17 +192,33 @@ function afficherNotif(msg, type) {
 }
 
 function filtres() {
+  const cats = ongletActif === 'protocoles'
+    ? CATEGORIES_PROTOCOLES.map(c => c.id)
+    : CATEGORIES_FONCTIONNEMENT.map(c => c.id);
   return documents.filter(doc => {
     const q = recherche.toLowerCase();
-    return (!q || doc.titre.toLowerCase().includes(q) || doc.description.toLowerCase().includes(q) || doc.responsable.toLowerCase().includes(q))
-      && (filtreCategorie === "toutes" || doc.categorie === filtreCategorie)
-      && (filtreStatut === "tous" || doc.statut === filtreStatut);
+    const matchOnglet = cats.includes(doc.categorie);
+    const matchCat = filtreCategorie === 'toutes' || doc.categorie === filtreCategorie;
+    const matchSouscat = !souscatActive || doc.souscat === souscatActive;
+    return matchOnglet && matchCat && matchSouscat
+      && (!q || doc.titre.toLowerCase().includes(q) || doc.description.toLowerCase().includes(q) || doc.responsable.toLowerCase().includes(q))
+      && (filtreStatut === 'tous' || doc.statut === filtreStatut);
   });
 }
 
+function creerCategorie() {
+  const label = prompt('Nom de la nouvelle catégorie :');
+  if (!label || !label.trim()) return;
+  const id = label.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 20) + '_' + Date.now();
+  CATEGORIES_FONCTIONNEMENT.push({ id, label: label.trim(), icon: '📄', color: '#A0AEC0', souscats: [] });
+  afficherNotif('✅ Catégorie "' + label.trim() + '" créée');
+  render();
+}
+
 function ouvrirFormulaire(doc) {
-  formulaire = doc ? {...doc} : { titre:"", categorie:"hygiene", statut:"vigueur", dateRevision:new Date().toISOString().split("T")[0], description:"", responsable:"", version:"v1.0", objectif:"", etapes:"", notes:"" };
-  vue = "formulaire";
+  const cat = ongletActif === 'protocoles' ? CATEGORIES_PROTOCOLES[0].id : CATEGORIES_FONCTIONNEMENT[0].id;
+  formulaire = doc ? {...doc} : { titre:'', categorie:cat, souscat:'', statut:'vigueur', dateRevision:new Date().toISOString().split('T')[0], description:'', responsable:'', version:'v1.0', objectif:'', etapes:'', notes:'' };
+  vue = 'formulaire';
   render();
 }
 
@@ -194,6 +238,7 @@ function collectFormulaire() {
   formulaire.titre = document.getElementById('f-titre').value;
   formulaire.version = document.getElementById('f-version').value;
   formulaire.categorie = document.getElementById('f-cat').value;
+  formulaire.souscat = document.getElementById('f-souscat')?.value || '';
   formulaire.statut = document.getElementById('f-statut').value;
   formulaire.responsable = document.getElementById('f-resp').value;
   formulaire.dateRevision = document.getElementById('f-date').value;
@@ -201,6 +246,19 @@ function collectFormulaire() {
   formulaire.objectif = document.getElementById('f-objectif').value;
   formulaire.etapes = document.getElementById('f-etapes').value;
   formulaire.notes = document.getElementById('f-notes').value;
+}
+
+function updateSouscatSelect() {
+  const catId = document.getElementById('f-cat').value;
+  const cats = ongletActif === 'protocoles' ? CATEGORIES_PROTOCOLES : CATEGORIES_FONCTIONNEMENT;
+  const cat = cats.find(c => c.id === catId);
+  const sel = document.getElementById('f-souscat');
+  if (!sel) return;
+  if (cat && cat.souscats && cat.souscats.length > 0) {
+    sel.innerHTML = '<option value="">— Aucune —</option>' + cat.souscats.map(sc => '<option value="'+sc.id+'">'+sc.icon+' '+sc.label+'</option>').join('');
+  } else {
+    sel.innerHTML = '<option value="">—</option>';
+  }
 }
 
 function supprimerDocument(id) {
@@ -261,9 +319,14 @@ function render() {
 
   // ── FORMULAIRE ──
   if (vue === "formulaire") {
-    const cats = CATEGORIES.map(c => '<option value="'+c.id+'" '+(formulaire.categorie===c.id?'selected':'')+'>'+c.icon+' '+c.label+'</option>').join('');
+    const cats = ongletActif === 'protocoles' ? CATEGORIES_PROTOCOLES : CATEGORIES_FONCTIONNEMENT;
+    const catsOpts = cats.map(c => '<option value="'+c.id+'" '+(formulaire.categorie===c.id?'selected':'')+'>'+c.icon+' '+c.label+'</option>').join('');
+    const catSelectee = cats.find(c => c.id === formulaire.categorie) || cats[0];
+    const souscatsOpts = catSelectee && catSelectee.souscats && catSelectee.souscats.length > 0
+      ? '<option value="">— Aucune —</option>' + catSelectee.souscats.map(sc => '<option value="'+sc.id+'" '+(formulaire.souscat===sc.id?'selected':'')+'>'+sc.icon+' '+sc.label+'</option>').join('')
+      : null;
     const stats_opts = STATUTS.map(s => '<option value="'+s.id+'" '+(formulaire.statut===s.id?'selected':'')+'>'+s.label+'</option>').join('');
-    app.innerHTML = '<div class="detail-page"><button class="btn-back" onclick="vue=\'liste\';formulaire=null;render()">← Retour</button><div class="form-card"><h2 style="font-family:\'Syne\',sans-serif;margin-bottom:24px">'+(formulaire.id?"✏️ Modifier":"➕ Nouveau document")+'</h2><div class="form-grid"><div class="form-group"><label>Titre *</label><input id="f-titre" value="'+formulaire.titre.replace(/"/g,'&quot;')+'" placeholder="Nom du protocole"></div><div class="form-group"><label>Version</label><input id="f-version" value="'+formulaire.version+'"></div><div class="form-group"><label>Catégorie</label><select id="f-cat">'+cats+'</select></div><div class="form-group"><label>Statut</label><select id="f-statut">'+stats_opts+'</select></div><div class="form-group"><label>Responsable</label><input id="f-resp" value="'+formulaire.responsable.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Date de révision</label><input id="f-date" type="date" value="'+formulaire.dateRevision+'"></div><div class="form-group full"><label>Description courte</label><textarea id="f-desc" style="min-height:60px">'+formulaire.description+'</textarea></div><div class="form-group full"><label>🎯 Objectif</label><textarea id="f-objectif" style="min-height:60px">'+(formulaire.objectif||'')+'</textarea></div><div class="form-group full"><label>📋 Étapes / Procédure</label><textarea id="f-etapes" style="min-height:120px" placeholder="1. Première étape&#10;2. Deuxième étape&#10;- Sous-étape">'+(formulaire.etapes||'')+'</textarea></div><div class="form-group full"><label>⚠️ Notes importantes</label><textarea id="f-notes" style="min-height:80px">'+(formulaire.notes||'')+'</textarea></div></div><div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px"><button class="btn-secondary" onclick="vue=\'liste\';formulaire=null;render()">Annuler</button><button class="btn-primary" onclick="collectFormulaire();sauvegarderDocument()">💾 Enregistrer</button></div></div></div>';
+    app.innerHTML = '<div class="detail-page"><button class="btn-back" onclick="vue=\'liste\';formulaire=null;render()">← Retour</button><div class="form-card"><h2 style="font-family:\'Syne\',sans-serif;margin-bottom:24px">'+(formulaire.id?"✏️ Modifier":"➕ Nouveau document")+'</h2><div class="form-grid"><div class="form-group"><label>Titre *</label><input id="f-titre" value="'+formulaire.titre.replace(/"/g,'&quot;')+'" placeholder="Nom du protocole"></div><div class="form-group"><label>Version</label><input id="f-version" value="'+formulaire.version+'"></div><div class="form-group"><label>Catégorie</label><select id="f-cat" onchange="updateSouscatSelect()">'+catsOpts+'</select></div><div class="form-group"><label>Sous-catégorie</label><select id="f-souscat">'+(souscatsOpts||'<option value="">—</option>')+'</select></div><div class="form-group"><label>Statut</label><select id="f-statut">'+stats_opts+'</select></div><div class="form-group"><label>Responsable</label><input id="f-resp" value="'+formulaire.responsable.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Date de révision</label><input id="f-date" type="date" value="'+formulaire.dateRevision+'"></div><div class="form-group full"><label>Description courte</label><textarea id="f-desc" style="min-height:60px">'+formulaire.description+'</textarea></div><div class="form-group full"><label>🎯 Objectif</label><textarea id="f-objectif" style="min-height:60px">'+(formulaire.objectif||'')+'</textarea></div><div class="form-group full"><label>📋 Étapes / Procédure</label><textarea id="f-etapes" style="min-height:120px" placeholder="1. Première étape&#10;2. Deuxième étape&#10;- Sous-étape">'+(formulaire.etapes||'')+'</textarea></div><div class="form-group full"><label>⚠️ Notes importantes</label><textarea id="f-notes" style="min-height:80px">'+(formulaire.notes||'')+'</textarea></div></div><div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px"><button class="btn-secondary" onclick="vue=\'liste\';formulaire=null;render()">Annuler</button><button class="btn-primary" onclick="collectFormulaire();sauvegarderDocument()">💾 Enregistrer</button></div></div></div>';
     return;
   }
 
@@ -343,18 +406,45 @@ function render() {
   const cats_opts = CATEGORIES.map(c=>'<option value="'+c.id+'" '+(filtreCategorie===c.id?'selected':'')+'>'+c.icon+' '+c.label+'</option>').join('');
   const stat_opts = STATUTS.map(s=>'<option value="'+s.id+'" '+(filtreStatut===s.id?'selected':'')+'>'+s.label+'</option>').join('');
 
-  let html = '<div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start">';
+  // Mettre à jour les styles des onglets
+  const tp = document.getElementById('tab-protocoles');
+  const tf = document.getElementById('tab-fonctionnement');
+  if (tp) { tp.style.borderBottomColor = ongletActif==='protocoles'?'var(--accent)':'transparent'; tp.style.color = ongletActif==='protocoles'?'var(--accent)':'var(--ink3)'; }
+  if (tf) { tf.style.borderBottomColor = ongletActif==='fonctionnement'?'var(--accent)':'transparent'; tf.style.color = ongletActif==='fonctionnement'?'var(--accent)':'var(--ink3)'; }
 
-  // ── SIDEBAR CATÉGORIES ──
-  html += '<div style="background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden;position:sticky;top:80px">';
+  const cats = ongletActif === 'protocoles' ? CATEGORIES_PROTOCOLES : CATEGORIES_FONCTIONNEMENT;
+
+  let html = '<div style="display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start">';
+
+  // ── SIDEBAR ──
+  html += '<div style="background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden;position:sticky;top:120px">';
   html += '<div style="padding:14px 16px;font-family:\'Syne\',sans-serif;font-weight:700;font-size:13px;border-bottom:1px solid var(--border);color:var(--ink2)">Catégories</div>';
   html += '<div style="padding:8px">';
-  html += '<div class="cat-nav-item '+(filtreCategorie==='toutes'?'active':'')+'" onclick="filtreCategorie=\'toutes\';render()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:'+(filtreCategorie==='toutes'?'700':'400')+';background:'+(filtreCategorie==='toutes'?'var(--accent)':'transparent')+';color:'+(filtreCategorie==='toutes'?'#fff':'var(--ink2)')+'">📄 <span>Tous</span><span style="margin-left:auto;font-size:11px;opacity:0.7">'+documents.length+'</span></div>';
-  CATEGORIES.forEach(cat => {
+
+  // Bouton "Tous"
+  const allActive = filtreCategorie === 'toutes' && !souscatActive;
+  html += '<div onclick="filtreCategorie=\'toutes\';souscatActive=null;render()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:'+(allActive?'700':'400')+';background:'+(allActive?'var(--accent)':'transparent')+';color:'+(allActive?'#fff':'var(--ink2)')+'">📄 <span style="flex:1">Tous</span><span style="font-size:11px;opacity:0.7">'+documents.filter(d=>cats.map(c=>c.id).includes(d.categorie)).length+'</span></div>';
+
+  cats.forEach(cat => {
     const nb = documents.filter(d => d.categorie === cat.id).length;
-    const active = filtreCategorie === cat.id;
-    html += '<div onclick="filtreCategorie=\''+cat.id+'\';render()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:'+(active?'700':'400')+';background:'+(active?cat.color+'22':'transparent')+';color:'+(active?cat.color:'var(--ink2)')+';border-left:'+(active?'3px solid '+cat.color:'3px solid transparent')+'">'+cat.icon+' <span style="flex:1">'+cat.label+'</span><span style="font-size:11px;opacity:0.6">'+nb+'</span></div>';
+    const catActive = filtreCategorie === cat.id && !souscatActive;
+    html += '<div onclick="filtreCategorie=\''+cat.id+'\';souscatActive=null;render()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:'+(catActive?'700':'400')+';background:'+(catActive?cat.color+'22':'transparent')+';color:'+(catActive?cat.color:'var(--ink2)')+';border-left:'+(catActive?'3px solid '+cat.color:'3px solid transparent')+'">'+cat.icon+' <span style="flex:1">'+cat.label+'</span><span style="font-size:11px;opacity:0.6">'+nb+'</span></div>';
+
+    // Sous-catégories
+    if (cat.souscats && cat.souscats.length > 0) {
+      cat.souscats.forEach(sc => {
+        const scNb = documents.filter(d => d.categorie === cat.id && d.souscat === sc.id).length;
+        const scActive = souscatActive === sc.id;
+        html += '<div onclick="filtreCategorie=\''+cat.id+'\';souscatActive=\''+sc.id+'\';render()" style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 26px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:'+(scActive?'700':'400')+';background:'+(scActive?cat.color+'15':'transparent')+';color:'+(scActive?cat.color:'var(--ink3)')+'">'+sc.icon+' <span style="flex:1">'+sc.label+'</span><span style="font-size:11px;opacity:0.6">'+scNb+'</span></div>';
+      });
+    }
   });
+
+  // Bouton créer nouvelle catégorie (fonctionnement seulement)
+  if (ongletActif === 'fonctionnement') {
+    html += '<div style="padding:8px 10px;margin-top:8px;border-top:1px solid var(--border)"><button onclick="creerCategorie()" style="width:100%;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:none;cursor:pointer;font-size:12px;color:var(--ink3);font-family:inherit">+ Nouvelle catégorie</button></div>';
+  }
+
   html += '</div></div>';
 
   // ── CONTENU PRINCIPAL ──
