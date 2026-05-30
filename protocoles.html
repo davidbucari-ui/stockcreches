@@ -7,281 +7,64 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
   :root {
-    --bg: #F7F6F3;
-    --surface: #FFFFFF;
-    --ink: #1C1917;
-    --ink2: #44403C;
-    --ink3: #A8A29E;
-    --border: #E7E5E0;
-    --accent: #5C6BC0;
-    --radius: 14px;
+    --bg: #F7F6F3; --surface: #FFFFFF; --ink: #1C1917; --ink2: #44403C;
+    --ink3: #A8A29E; --border: #E7E5E0; --accent: #5C6BC0; --radius: 14px;
     --shadow: 0 2px 12px rgba(0,0,0,0.07);
   }
-
-  body {
-    font-family: 'Instrument Sans', sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-  }
-
-  /* ── HEADER ── */
-  .app-header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .app-header h1 {
-    font-family: 'Syne', sans-serif;
-    font-size: 20px;
-    font-weight: 800;
-  }
+  body { font-family: 'Instrument Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+  .app-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .app-header h1 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; }
   .app-header p { font-size: 12px; color: var(--ink3); margin-top: 2px; }
-
-  /* ── LAYOUT ── */
   .app-body { max-width: 1000px; margin: 0 auto; padding: 24px 20px; }
-
-  /* ── STATS ── */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-bottom: 24px;
-  }
-  .stat-card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    box-shadow: var(--shadow);
-    border-top: 3px solid var(--accent);
-  }
-  .stat-card .stat-num { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
-  .stat-card .stat-lbl { font-size: 11px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.5px; }
-
-  /* ── FILTRES ── */
-  .filtres-bar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
-  .search-input {
-    flex: 2;
-    min-width: 200px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1.5px solid var(--border);
-    font-family: 'Instrument Sans', sans-serif;
-    font-size: 14px;
-    background: var(--surface);
-    outline: none;
-  }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: var(--shadow); }
+  .stat-num { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+  .stat-lbl { font-size: 11px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .filtres-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-input { flex: 2; min-width: 200px; padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--border); font-family: inherit; font-size: 14px; background: var(--surface); outline: none; }
   .search-input:focus { border-color: var(--accent); }
-  .select-filtre {
-    flex: 1;
-    min-width: 150px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1.5px solid var(--border);
-    font-size: 13px;
-    background: var(--surface);
-    cursor: pointer;
-    font-family: 'Instrument Sans', sans-serif;
-  }
+  .select-filtre { flex: 1; min-width: 150px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 13px; background: var(--surface); cursor: pointer; font-family: inherit; }
   .vue-btns { display: flex; gap: 6px; }
-  .vue-btn {
-    width: 38px; height: 38px;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    background: var(--surface);
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s;
-  }
+  .vue-btn { width: 38px; height: 38px; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 16px; background: var(--surface); display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
   .vue-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-  /* ── LISTE ── */
   .liste-container { display: flex; flex-direction: column; gap: 8px; }
-  .liste-item {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    cursor: pointer;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    transition: box-shadow 0.2s, transform 0.15s;
-  }
+  .liste-item { background: var(--surface); border-radius: var(--radius); padding: 16px 18px; display: flex; align-items: flex-start; gap: 14px; cursor: pointer; box-shadow: var(--shadow); border: 1px solid var(--border); transition: box-shadow 0.2s, transform 0.15s; }
   .liste-item:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); transform: translateY(-1px); }
-  .cat-icon {
-    width: 44px; height: 44px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
-  }
+  .cat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
   .doc-titre { font-weight: 700; font-size: 15px; color: var(--ink); }
-  .doc-desc {
-    margin: 5px 0 8px;
-    font-size: 13px;
-    color: var(--ink3);
-    line-height: 1.5;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
+  .doc-desc { margin: 5px 0 8px; font-size: 13px; color: var(--ink3); line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
   .doc-meta { display: flex; gap: 14px; font-size: 12px; color: var(--ink3); flex-wrap: wrap; }
-  .badge {
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    display: inline-block;
-  }
-  .statut-pill {
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    display: inline-block;
-  }
-
-  /* ── GRILLE ── */
+  .badge { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+  .statut-pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; }
   .grille-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
-  .carte-doc {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 18px;
-    cursor: pointer;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    min-height: 180px;
-    transition: transform 0.15s, box-shadow 0.15s;
-  }
-  .carte-doc:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.1); }
-
-  /* ── CATÉGORIES ── */
+  .carte-doc { background: var(--surface); border-radius: var(--radius); padding: 18px; cursor: pointer; box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; flex-direction: column; min-height: 180px; transition: transform 0.15s; }
+  .carte-doc:hover { transform: translateY(-2px); }
   .grille-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 8px; }
-  .carte-cat {
-    background: var(--surface);
-    border-radius: 12px;
-    padding: 14px 16px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    transition: transform 0.15s;
-  }
+  .carte-cat { background: var(--surface); border-radius: 12px; padding: 14px 16px; display: flex; gap: 12px; align-items: center; cursor: pointer; box-shadow: var(--shadow); border: 1px solid var(--border); transition: transform 0.15s; }
   .carte-cat:hover { transform: translateY(-1px); }
-
-  /* ── DÉTAIL ── */
   .detail-page { max-width: 700px; margin: 0 auto; }
   .detail-card { background: var(--surface); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
-  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
   .detail-item { background: var(--bg); border-radius: 10px; padding: 14px 16px; }
   .detail-label { font-size: 11px; color: var(--ink3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
-
-  /* ── FORMULAIRE ── */
   .form-card { background: var(--surface); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); max-width: 700px; margin: 0 auto; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .form-group { display: flex; flex-direction: column; gap: 6px; }
   .form-group.full { grid-column: 1 / -1; }
   label { font-size: 13px; font-weight: 600; color: var(--ink2); }
-  input, select, textarea {
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1.5px solid var(--border);
-    font-size: 14px;
-    outline: none;
-    font-family: 'Instrument Sans', sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    transition: border-color 0.15s;
-  }
+  input, select, textarea { padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 14px; outline: none; font-family: inherit; background: var(--bg); color: var(--ink); transition: border-color 0.15s; }
   input:focus, select:focus, textarea:focus { border-color: var(--accent); }
   textarea { min-height: 100px; resize: vertical; }
-
-  /* ── BOUTONS ── */
-  .btn-primary {
-    padding: 11px 24px;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: 'Instrument Sans', sans-serif;
-    transition: opacity 0.15s;
-  }
+  .btn-primary { padding: 11px 24px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
   .btn-primary:hover { opacity: 0.9; }
-  .btn-secondary {
-    padding: 11px 24px;
-    background: var(--surface);
-    color: var(--ink2);
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    font-size: 14px;
-    cursor: pointer;
-    font-family: 'Instrument Sans', sans-serif;
-  }
-  .btn-danger { color: #e74c3c; border-color: #e74c3c; }
-  .btn-back {
-    background: none;
-    border: none;
-    color: var(--accent);
-    font-size: 14px;
-    cursor: pointer;
-    font-weight: 600;
-    font-family: 'Instrument Sans', sans-serif;
-    padding: 0;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  /* ── NOTIFICATION ── */
-  .notif {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    color: #fff;
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 14px;
-    z-index: 9999;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    animation: slideIn 0.2s ease;
-  }
-  @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
-
+  .btn-secondary { padding: 11px 24px; background: var(--surface); color: var(--ink2); border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn-danger { color: #e74c3c !important; border-color: #e74c3c !important; }
+  .btn-back { background: none; border: none; color: var(--accent); font-size: 14px; cursor: pointer; font-weight: 600; font-family: inherit; padding: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 6px; }
+  .notif { position: fixed; top: 20px; right: 20px; color: #fff; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 14px; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
   .vide { text-align: center; color: var(--ink3); padding: 40px; font-size: 15px; }
   .section-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin: 32px 0 14px; color: var(--ink2); }
-  .chevron { color: var(--ink3); font-size: 20px; margin-left: 8px; flex-shrink: 0; }
   .count-info { color: var(--ink3); font-size: 13px; margin-bottom: 12px; }
-
   @media (max-width: 600px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .form-grid { grid-template-columns: 1fr; }
@@ -290,7 +73,6 @@
 </style>
 </head>
 <body>
-
 <div class="app-header">
   <div>
     <h1>📚 Base Documentaire</h1>
@@ -298,65 +80,61 @@
   </div>
   <button class="btn-primary" onclick="ouvrirFormulaire()">+ Ajouter un document</button>
 </div>
-
 <div id="notif-container"></div>
 <div id="app" class="app-body"></div>
 
 <script>
 const CATEGORIES = [
-  { id: "hygiene",       label: "Hygiène & Soins",           icon: "🧼", color: "#4ECDC4" },
-  { id: "securite",      label: "Sécurité",                  icon: "🛡️", color: "#FF6B6B" },
-  { id: "sante",         label: "Santé & Médicaments",       icon: "💊", color: "#45B7D1" },
-  { id: "alimentation",  label: "Alimentation",              icon: "🍽️", color: "#96CEB4" },
-  { id: "pedagogie",     label: "Pédagogie & Activités",     icon: "🎨", color: "#FFEAA7" },
-  { id: "administratif", label: "Administratif",             icon: "📋", color: "#DDA0DD" },
-  { id: "urgence",       label: "Urgences",                  icon: "🚨", color: "#FF8C00" },
-  { id: "accueil",       label: "Accueil & Communication",   icon: "👶", color: "#98D8C8" },
+  { id:"hygiene",       label:"Hygiène & Soins",           icon:"🧼", color:"#4ECDC4" },
+  { id:"securite",      label:"Sécurité",                  icon:"🛡️", color:"#FF6B6B" },
+  { id:"sante",         label:"Santé & Médicaments",       icon:"💊", color:"#45B7D1" },
+  { id:"alimentation",  label:"Alimentation",              icon:"🍽️", color:"#96CEB4" },
+  { id:"pedagogie",     label:"Pédagogie & Activités",     icon:"🎨", color:"#FFEAA7" },
+  { id:"administratif", label:"Administratif",             icon:"📋", color:"#DDA0DD" },
+  { id:"urgence",       label:"Urgences",                  icon:"🚨", color:"#FF8C00" },
+  { id:"accueil",       label:"Accueil & Communication",   icon:"👶", color:"#98D8C8" },
 ];
-
 const STATUTS = [
-  { id: "vigueur",  label: "En vigueur", color: "#2ecc71" },
-  { id: "revision", label: "À réviser",  color: "#f39c12" },
-  { id: "archive",  label: "Archivé",    color: "#95a5a6" },
+  { id:"vigueur",  label:"En vigueur", color:"#2ecc71" },
+  { id:"revision", label:"À réviser",  color:"#f39c12" },
+  { id:"archive",  label:"Archivé",    color:"#95a5a6" },
 ];
-
 const DOCS_DEFAUT = [
-  { id:1,  titre:"Protocole de change et hygiène du nourrisson",      categorie:"hygiene",       statut:"vigueur",  dateRevision:"2024-09-01", description:"Procédure complète pour le change, le lavage des mains, la désinfection du matériel.", responsable:"Directrice", version:"v2.1",
+  { id:1,  titre:"Protocole de change et hygiène du nourrisson", categorie:"hygiene", statut:"vigueur", dateRevision:"2024-09-01", description:"Procédure complète pour le change, le lavage des mains, la désinfection du matériel.", responsable:"Directrice", version:"v2.1",
     objectif:"Garantir l'hygiène de l'enfant et prévenir les infections croisées lors du change.",
     etapes:"1. Préparer le plan de change avec le matériel nécessaire\n2. Se laver les mains avant et après le change\n3. Poser l'enfant sur le plan de change en maintenant une main sur lui\n4. Retirer la couche souillée et la mettre dans le sac poubelle fermé\n5. Nettoyer les fesses avec une lingette ou gant humide de l'avant vers l'arrière\n6. Mettre la couche propre\n7. Rhabiller l'enfant\n8. Désinfecter le plan de change avec le produit désinfectant",
-    notes:"Ne jamais laisser un enfant seul sur le plan de change. Tracer le change dans le cahier de liaison." },
-  { id:2,  titre:"Plan d'évacuation incendie",                         categorie:"securite",      statut:"vigueur",  dateRevision:"2024-06-15", description:"Itinéraires d'évacuation, point de rassemblement, rôles de chaque membre du personnel.", responsable:"Responsable sécurité", version:"v1.3",
+    notes:"Ne jamais laisser un enfant seul sur le plan de change.\nTracer le change dans le cahier de liaison." },
+  { id:2,  titre:"Plan d'évacuation incendie", categorie:"securite", statut:"vigueur", dateRevision:"2024-06-15", description:"Itinéraires d'évacuation, point de rassemblement, rôles de chaque membre du personnel.", responsable:"Responsable sécurité", version:"v1.3",
     objectif:"Assurer l'évacuation rapide et sécurisée de tous les enfants et adultes en cas d'incendie.",
     etapes:"1. Déclencher l'alarme incendie\n2. Appeler le 18 (pompiers)\n3. Prendre les couchages des bébés (sans perdre de temps)\n4. Faire sortir les enfants par l'itinéraire d'évacuation affiché\n5. Se diriger vers le point de rassemblement (entrée du parking)\n6. Faire l'appel de tous les enfants et adultes\n7. Attendre les secours et ne pas réintégrer les locaux",
-    notes:"Exercice d'évacuation obligatoire 2 fois par an. Les plans d'évacuation sont affichés à chaque entrée." },
-  { id:3,  titre:"Protocole de gestion des médicaments",               categorie:"sante",         statut:"vigueur",  dateRevision:"2024-01-10", description:"Conditions de stockage, administration sur ordonnance, registre de suivi.", responsable:"Infirmière", version:"v3.0",
+    notes:"Exercice d'évacuation obligatoire 2 fois par an.\nLes plans d'évacuation sont affichés à chaque entrée." },
+  { id:3,  titre:"Protocole de gestion des médicaments", categorie:"sante", statut:"vigueur", dateRevision:"2024-01-10", description:"Conditions de stockage, administration sur ordonnance, registre de suivi.", responsable:"Infirmière", version:"v3.0",
     objectif:"Assurer la sécurité de l'administration des médicaments aux enfants accueillis.",
     etapes:"1. Vérifier la prescription médicale (ordonnance datée et signée)\n2. Vérifier l'identité de l'enfant\n3. Vérifier le médicament (nom, dosage, date de péremption)\n4. Administrer le médicament selon la prescription\n5. Tracer l'administration dans le registre de soins\n6. Informer les parents en fin de journée",
-    notes:"Aucun médicament ne peut être administré sans ordonnance en cours de validité. Les médicaments sont stockés sous clé." },
-  { id:4,  titre:"Procédure d'introduction alimentaire",               categorie:"alimentation",  statut:"revision", dateRevision:"2023-11-20", description:"Diversification alimentaire progressive, allergènes, textures par tranche d'âge.", responsable:"Puéricultrice", version:"v1.8", objectif:"", etapes:"", notes:"" },
-  { id:5,  titre:"Protocole conduite à tenir en cas de fièvre",        categorie:"sante",         statut:"vigueur",  dateRevision:"2024-03-05", description:"Seuils d'alerte, mesures de température, contact avec les parents et le médecin.", responsable:"Infirmière", version:"v2.0",
+    notes:"Aucun médicament ne peut être administré sans ordonnance en cours de validité.\nLes médicaments sont stockés sous clé." },
+  { id:4,  titre:"Procédure d'introduction alimentaire", categorie:"alimentation", statut:"revision", dateRevision:"2023-11-20", description:"Diversification alimentaire progressive, allergènes, textures par tranche d'âge.", responsable:"Puéricultrice", version:"v1.8", objectif:"", etapes:"", notes:"" },
+  { id:5,  titre:"Protocole conduite à tenir en cas de fièvre", categorie:"sante", statut:"vigueur", dateRevision:"2024-03-05", description:"Seuils d'alerte, mesures de température, contact avec les parents et le médecin.", responsable:"Infirmière", version:"v2.0",
     objectif:"Définir la conduite à tenir face à un enfant fiévreux pour assurer sa sécurité.",
     etapes:"1. Prendre la température (tympanique ou axillaire)\n2. Si T° > 38°C : déshabiller l'enfant, proposer à boire\n3. Si T° > 38,5°C : appeler les parents pour récupérer l'enfant\n4. Si T° > 39°C ou convulsions : appeler le 15 (SAMU)\n5. Tracer la température et les actions dans le cahier de soins\n6. Informer la directrice",
-    notes:"Un enfant fiévreux ne peut pas être gardé en structure. Aucun médicament antipyrétique sans ordonnance." },
-  { id:6,  titre:"Règlement intérieur de la crèche",                   categorie:"administratif", statut:"vigueur",  dateRevision:"2024-01-01", description:"Horaires, facturation, droits et obligations des familles et du personnel.", responsable:"Directrice", version:"v4.2", objectif:"", etapes:"", notes:"" },
-  { id:7,  titre:"Projet pédagogique annuel",                          categorie:"pedagogie",     statut:"vigueur",  dateRevision:"2024-09-01", description:"Objectifs éducatifs, thèmes mensuels, activités d'éveil et de motricité.", responsable:"Équipe pédagogique", version:"v2025", objectif:"", etapes:"", notes:"" },
-  { id:8,  titre:"Protocole d'accueil de l'enfant porteur de handicap",categorie:"accueil",       statut:"revision", dateRevision:"2023-07-12", description:"Aménagements, partenariats avec les professionnels de santé spécialisés.", responsable:"Directrice", version:"v1.0", objectif:"", etapes:"", notes:"" },
-  { id:9,  titre:"Fiche de conduite en cas d'accident",                categorie:"urgence",       statut:"vigueur",  dateRevision:"2024-02-28", description:"Numéros d'urgence, premiers secours, rédaction du rapport d'incident.", responsable:"Toute l'équipe", version:"v2.3",
+    notes:"Un enfant fiévreux ne peut pas être gardé en structure.\nAucun médicament antipyrétique sans ordonnance." },
+  { id:6,  titre:"Règlement intérieur de la crèche", categorie:"administratif", statut:"vigueur", dateRevision:"2024-01-01", description:"Horaires, facturation, droits et obligations des familles et du personnel.", responsable:"Directrice", version:"v4.2", objectif:"", etapes:"", notes:"" },
+  { id:7,  titre:"Projet pédagogique annuel", categorie:"pedagogie", statut:"vigueur", dateRevision:"2024-09-01", description:"Objectifs éducatifs, thèmes mensuels, activités d'éveil et de motricité.", responsable:"Équipe pédagogique", version:"v2025", objectif:"", etapes:"", notes:"" },
+  { id:8,  titre:"Protocole d'accueil de l'enfant porteur de handicap", categorie:"accueil", statut:"revision", dateRevision:"2023-07-12", description:"Aménagements, partenariats avec les professionnels de santé spécialisés.", responsable:"Directrice", version:"v1.0", objectif:"", etapes:"", notes:"" },
+  { id:9,  titre:"Fiche de conduite en cas d'accident", categorie:"urgence", statut:"vigueur", dateRevision:"2024-02-28", description:"Numéros d'urgence, premiers secours, rédaction du rapport d'incident.", responsable:"Toute l'équipe", version:"v2.3",
     objectif:"Définir les actions immédiates à mener en cas d'accident d'un enfant dans la structure.",
     etapes:"1. Rester calme et sécuriser le lieu\n2. Évaluer l'état de l'enfant (conscience, respiration)\n3. Si urgence vitale : appeler le 15 (SAMU)\n4. Si blessure mineure : soins de premiers secours\n5. Appeler les parents immédiatement\n6. Rédiger le rapport d'incident\n7. Informer la directrice\n8. Conserver le rapport dans le dossier de l'enfant",
-    notes:"Le rapport d'incident est obligatoire pour tout accident, même bénin. Ne jamais déplacer un enfant inconscient." },
-  { id:10, titre:"Protocole d'adaptation (période de familiarisation)",categorie:"accueil",       statut:"vigueur",  dateRevision:"2024-08-20", description:"Étapes de l'adaptation progressive, rôle des parents, suivi du bien-être de l'enfant.", responsable:"Référente de section", version:"v1.5", objectif:"", etapes:"", notes:"" },
-  { id:11, titre:"Protocole arrêt cardio-respiratoire",                categorie:"urgence",       statut:"vigueur",  dateRevision:"2024-09-01", description:"Conduite à tenir en cas d'inconscience et d'absence de respiration chez un nourrisson ou enfant.", responsable:"Toute l'équipe", version:"v1.0",
+    notes:"Le rapport d'incident est obligatoire pour tout accident, même bénin.\nNe jamais déplacer un enfant inconscient." },
+  { id:10, titre:"Protocole d'adaptation (période de familiarisation)", categorie:"accueil", statut:"vigueur", dateRevision:"2024-08-20", description:"Étapes de l'adaptation progressive, rôle des parents, suivi du bien-être de l'enfant.", responsable:"Référente de section", version:"v1.5", objectif:"", etapes:"", notes:"" },
+  { id:11, titre:"Protocole arrêt cardio-respiratoire", categorie:"urgence", statut:"vigueur", dateRevision:"2024-09-01", description:"Conduite à tenir en cas d'inconscience et d'absence de respiration chez un nourrisson ou enfant.", responsable:"Toute l'équipe", version:"v1.0",
     objectif:"Réaliser une réanimation cardio-pulmonaire (RCP) dans les meilleures conditions en attendant les secours.",
-    etapes:"1. Noter l'heure\n2. Faire immédiatement un cycle de massage cardiaque :\n   • Regarder si corps étranger intra-buccal : si oui l'extraire au doigt\n   • 5 insufflations\n   • 15 compressions thoraciques\n3. Appeler à l'aide / crier pour :\n   • Faire appeler le 15 par un(e) collègue\n   • Faire évacuer les autres enfants dans une autre pièce\n4. Reprendre au plus vite le massage cardiaque\n5. POURSUIVRE 15 compressions / 2 insufflations jusqu'à l'arrivée des secours\n6. Avertir la responsable d'établissement\n7. Téléphoner aux parents",
-    notes:"ENFANT < 1 AN : 2 doigts au milieu de la poitrine, enfoncer 3 cm, rythme 100/min. Prendre bouche ET nez dans la bouche.\n\nENFANT > 1 AN : paume de la main, 1 bras tendu, enfoncer 3-4 cm, rythme 100/min. Boucher le nez.\n\nSi reprise d'une respiration : mettre en position latérale de sécurité (PLS)." },
+    etapes:"1. Noter l'heure\n2. Regarder si corps étranger intra-buccal : si oui l'extraire au doigt\n3. Faire 5 insufflations\n4. Faire 15 compressions thoraciques\n5. Appeler à l'aide / crier pour :\n- Faire appeler le 15 par un(e) collègue\n- Faire évacuer les autres enfants dans une autre pièce\n6. Reprendre au plus vite le massage cardiaque\n7. POURSUIVRE 15 compressions / 2 insufflations jusqu'à l'arrivée des secours\n8. Avertir la responsable d'établissement\n9. Téléphoner aux parents",
+    notes:"ENFANT < 1 AN : 2 doigts au milieu de la poitrine, enfoncer 3 cm, rythme 100/min. Prendre bouche ET nez dans la bouche.\nENFANT > 1 AN : paume de la main, 1 bras tendu, enfoncer 3-4 cm, rythme 100/min. Boucher le nez.\nSi reprise d'une respiration : mettre en position latérale de sécurité (PLS)." },
 ];
 
 const STORAGE_KEY = "creche_documents_db";
 let documents = [];
-try { documents = JSON.parse(localStorage.getItem(STORAGE_KEY)) || DOCS_DEFAUT; } catch { documents = DOCS_DEFAUT; }
+try { const d = localStorage.getItem(STORAGE_KEY); documents = d ? JSON.parse(d) : DOCS_DEFAUT; } catch { documents = DOCS_DEFAUT; }
 let nextId = Math.max(...documents.map(d => d.id), 0) + 1;
-
 let vue = "liste";
 let recherche = "";
 let filtreCategorie = "toutes";
@@ -365,11 +143,10 @@ let docSelectionne = null;
 let formulaire = null;
 
 function sauverLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(documents)); } catch {} }
+function getCat(id) { return CATEGORIES.find(c => c.id === id) || { label:id, icon:"📄", color:"#ccc" }; }
+function getStat(id) { return STATUTS.find(s => s.id === id) || { label:id, color:"#ccc" }; }
 
-function getCategorie(id) { return CATEGORIES.find(c => c.id === id) || { label: id, icon: "📄", color: "#ccc" }; }
-function getStatut(id) { return STATUTS.find(s => s.id === id) || { label: id, color: "#ccc" }; }
-
-function afficherNotif(msg, type = "success") {
+function afficherNotif(msg, type) {
   const el = document.createElement('div');
   el.className = 'notif';
   el.style.background = type === "error" ? "#e74c3c" : "#2ecc71";
@@ -378,22 +155,17 @@ function afficherNotif(msg, type = "success") {
   setTimeout(() => el.remove(), 3000);
 }
 
-function docsFiltres() {
+function filtres() {
   return documents.filter(doc => {
     const q = recherche.toLowerCase();
-    const matchQ = !q || doc.titre.toLowerCase().includes(q) || doc.description.toLowerCase().includes(q) || doc.responsable.toLowerCase().includes(q);
-    const matchCat = filtreCategorie === "toutes" || doc.categorie === filtreCategorie;
-    const matchStat = filtreStatut === "tous" || doc.statut === filtreStatut;
-    return matchQ && matchCat && matchStat;
+    return (!q || doc.titre.toLowerCase().includes(q) || doc.description.toLowerCase().includes(q) || doc.responsable.toLowerCase().includes(q))
+      && (filtreCategorie === "toutes" || doc.categorie === filtreCategorie)
+      && (filtreStatut === "tous" || doc.statut === filtreStatut);
   });
 }
 
-function ouvrirFormulaire(doc = null) {
-  formulaire = doc ? { ...doc } : {
-    titre: "", categorie: "hygiene", statut: "vigueur",
-    dateRevision: new Date().toISOString().split("T")[0],
-    description: "", responsable: "", version: "v1.0"
-  };
+function ouvrirFormulaire(doc) {
+  formulaire = doc ? {...doc} : { titre:"", categorie:"hygiene", statut:"vigueur", dateRevision:new Date().toISOString().split("T")[0], description:"", responsable:"", version:"v1.0", objectif:"", etapes:"", notes:"" };
   vue = "formulaire";
   render();
 }
@@ -404,262 +176,10 @@ function sauvegarderDocument() {
     documents = documents.map(d => d.id === formulaire.id ? formulaire : d);
     afficherNotif("Document mis à jour ✓");
   } else {
-    documents.push({ ...formulaire, id: nextId++ });
+    documents.push({...formulaire, id: nextId++});
     afficherNotif("Document ajouté ✓");
   }
-  sauverLocal();
-  formulaire = null;
-  vue = "liste";
-  render();
-}
-
-function supprimerDocument(id) {
-  if (!confirm("Supprimer ce document ?")) return;
-  documents = documents.filter(d => d.id !== id);
-  sauverLocal();
-  docSelectionne = null;
-  vue = "liste";
-  afficherNotif("Document supprimé");
-  render();
-}
-
-function stats() {
-  return {
-    total: documents.length,
-    vigueur: documents.filter(d => d.statut === "vigueur").length,
-    revision: documents.filter(d => d.statut === "revision").length,
-    archive: documents.filter(d => d.statut === "archive").length,
-  };
-}
-
-function render() {
-  const app = document.getElementById('app');
-
-  // ── FORMULAIRE ──
-  if (vue === "formulaire") {
-    app.innerHTML = `
-      <div class="detail-page">
-        <button class="btn-back" onclick="vue='liste';formulaire=null;render()">← Retour</button>
-        <div class="form-card">
-          <h2 style="font-family:'Syne',sans-serif;margin-bottom:24px">${formulaire.id ? "✏️ Modifier le document" : "➕ Nouveau document"}</h2>
-          <div class="form-grid">
-            <div class="form-group"><label>Titre *</label>
-              <input id="f-titre" value="${formulaire.titre}" placeholder="Nom du protocole ou document"></div>
-            <div class="form-group"><label>Version</label>
-              <input id="f-version" value="${formulaire.version}" placeholder="ex: v1.0"></div>
-            <div class="form-group"><label>Catégorie</label>
-              <select id="f-cat">${CATEGORIES.map(c => `<option value="${c.id}" ${formulaire.categorie===c.id?'selected':''}>${c.icon} ${c.label}</option>`).join('')}</select></div>
-            <div class="form-group"><label>Statut</label>
-              <select id="f-statut">${STATUTS.map(s => `<option value="${s.id}" ${formulaire.statut===s.id?'selected':''}>${s.label}</option>`).join('')}</select></div>
-            <div class="form-group"><label>Responsable</label>
-              <input id="f-resp" value="${formulaire.responsable}" placeholder="Nom ou rôle"></div>
-            <div class="form-group"><label>Date de révision</label>
-              <input id="f-date" type="date" value="${formulaire.dateRevision}"></div>
-            <div class="form-group full"><label>Description courte *</label>
-              <textarea id="f-desc" style="min-height:60px">${formulaire.description}</textarea></div>
-            <div class="form-group full"><label>🎯 Objectif</label>
-              <textarea id="f-objectif" style="min-height:60px">${formulaire.objectif||''}</textarea></div>
-            <div class="form-group full"><label>📋 Étapes / Procédure</label>
-              <textarea id="f-etapes" style="min-height:120px" placeholder="1. Première étape&#10;2. Deuxième étape&#10;3. ...">${formulaire.etapes||''}</textarea></div>
-            <div class="form-group full"><label>⚠️ Notes importantes</label>
-              <textarea id="f-notes" style="min-height:80px">${formulaire.notes||''}</textarea></div>
-          </div>
-          <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px">
-            <button class="btn-secondary" onclick="vue='liste';formulaire=null;render()">Annuler</button>
-            <button class="btn-primary" onclick="collectFormulaire();sauvegarderDocument()">💾 Enregistrer</button>
-          </div>
-        </div>
-      </div>`;
-    return;
-  }
-
-  // ── DÉTAIL ──
-  if (vue === "detail" && docSelectionne) {
-    const doc = documents.find(d => d.id === docSelectionne);
-    if (!doc) { vue = "liste"; render(); return; }
-    const cat = getCategorie(doc.categorie);
-    const stat = getStatut(doc.statut);
-
-    // Formater les étapes en HTML
-    const formatEtapes = (etapes) => {
-      if (!etapes) return '';
-      return etapes.split('\n').map(line => {
-        line = line.trim();
-        if (!line) return '';
-        const isStep = /^\d+[\.\)]/.test(line);
-        const isSub = /^[•\-\*]/.test(line);
-        if (isStep) return `<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start">
-          <span style="background:${cat.color};color:#fff;min-width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${line.match(/^\d+/)[0]}</span>
-          <span style="padding-top:3px;line-height:1.5">${line.replace(/^\d+[\.\)]\s*/, '')}</span>
-        </div>`;
-        if (isSub) return `<div style="padding-left:36px;margin-bottom:6px;color:var(--ink2);font-size:13px;line-height:1.5">▸ ${line.replace(/^[•\-\*]\s*/, '')}</div>`;
-        return `<div style="padding-left:36px;margin-bottom:6px;color:var(--ink2);font-size:13px;line-height:1.5">${line}</div>`;
-      }).join('');
-    };
-
-    const formatNotes = (notes) => {
-      if (!notes) return '';
-      return notes.split('\n').filter(l => l.trim()).map(line =>
-        `<div style="display:flex;gap:8px;margin-bottom:6px"><span>⚠️</span><span style="font-size:13px;line-height:1.5">${line.trim()}</span></div>`
-      ).join('');
-    };
-
-    app.innerHTML = `
-      <div class="detail-page">
-        <button class="btn-back" onclick="vue='liste';docSelectionne=null;render()">← Retour à la liste</button>
-        <div class="detail-card">
-
-          <!-- En-tête coloré -->
-          <div style="background:${cat.color}15;border-radius:12px;padding:20px;margin-bottom:20px;border-left:4px solid ${cat.color}">
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:52px;height:52px;border-radius:14px;background:${cat.color};display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">${cat.icon}</div>
-              <div style="flex:1">
-                <h2 style="font-family:'Syne',sans-serif;font-size:18px;margin-bottom:6px;color:var(--ink)">${doc.titre}</h2>
-                <div style="display:flex;gap:8px;flex-wrap:wrap">
-                  <span class="badge" style="background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}44">${cat.label}</span>
-                  <span class="statut-pill" style="background:${stat.color}22;color:${stat.color}">${stat.label}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Méta-infos -->
-          <div class="detail-grid" style="margin-bottom:20px">
-            <div class="detail-item"><span class="detail-label">👤 Responsable</span><strong>${doc.responsable}</strong></div>
-            <div class="detail-item"><span class="detail-label">🔖 Version</span><strong>${doc.version}</strong></div>
-            <div class="detail-item"><span class="detail-label">📅 Dernière révision</span><strong>${new Date(doc.dateRevision).toLocaleDateString('fr-FR')}</strong></div>
-            <div class="detail-item"><span class="detail-label">📁 Catégorie</span><strong>${cat.label}</strong></div>
-          </div>
-
-          <!-- Description -->
-          <div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px">
-            <p style="font-size:13px;color:var(--ink2);line-height:1.7;margin:0">${doc.description}</p>
-          </div>
-
-          <!-- Objectif -->
-          ${doc.objectif ? `
-          <div style="background:#EFF6FF;border-radius:12px;padding:16px;margin-bottom:16px;border-left:3px solid #3B82F6">
-            <div style="font-weight:700;font-size:13px;color:#1D4ED8;margin-bottom:8px">🎯 Objectif</div>
-            <p style="font-size:13px;color:#1E40AF;line-height:1.7;margin:0">${doc.objectif}</p>
-          </div>` : ''}
-
-          <!-- Étapes -->
-          ${doc.etapes ? `
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
-            <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
-              <span style="background:${cat.color};color:#fff;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center">📋</span>
-              Procédure à suivre
-            </div>
-            ${formatEtapes(doc.etapes)}
-          </div>` : ''}
-
-          <!-- Notes importantes -->
-          ${doc.notes ? `
-          <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px;margin-bottom:16px">
-            <div style="font-weight:700;font-size:13px;color:#92400E;margin-bottom:10px">⚠️ Notes importantes</div>
-            ${formatNotes(doc.notes)}
-          </div>` : ''}
-
-          <!-- Actions -->
-          <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
-            <button class="btn-primary" onclick="ouvrirFormulaire(documents.find(d=>d.id===${doc.id}))">✏️ Modifier</button>
-            <button class="btn-secondary" onclick="imprimerFiche(${doc.id})">🖨 Imprimer</button>
-            <button class="btn-secondary btn-danger" onclick="supprimerDocument(${doc.id})">🗑 Supprimer</button>
-          </div>
-        </div>
-      </div>`;
-    return;
-  }
-
-  // ── LISTE PRINCIPALE ──
-  const s = stats();
-  const filtered = docsFiltres();
-  const statColors = { total:"#5c6bc0", vigueur:"#2ecc71", revision:"#f39c12", archive:"#95a5a6" };
-
-  app.innerHTML = `
-    <div class="stats-grid">
-      <div class="stat-card" style="border-top-color:#5c6bc0"><span style="font-size:24px">📄</span><span class="stat-num" style="color:#5c6bc0">${s.total}</span><span class="stat-lbl">Total</span></div>
-      <div class="stat-card" style="border-top-color:#2ecc71"><span style="font-size:24px">✅</span><span class="stat-num" style="color:#2ecc71">${s.vigueur}</span><span class="stat-lbl">En vigueur</span></div>
-      <div class="stat-card" style="border-top-color:#f39c12"><span style="font-size:24px">⚠️</span><span class="stat-num" style="color:#f39c12">${s.revision}</span><span class="stat-lbl">À réviser</span></div>
-      <div class="stat-card" style="border-top-color:#95a5a6"><span style="font-size:24px">🗂️</span><span class="stat-num" style="color:#95a5a6">${s.archive}</span><span class="stat-lbl">Archivés</span></div>
-    </div>
-
-    <div class="filtres-bar">
-      <input class="search-input" placeholder="🔍 Rechercher un document..." value="${recherche}" oninput="recherche=this.value;render()">
-      <select class="select-filtre" onchange="filtreCategorie=this.value;render()">
-        <option value="toutes" ${filtreCategorie==='toutes'?'selected':''}>Toutes les catégories</option>
-        ${CATEGORIES.map(c => `<option value="${c.id}" ${filtreCategorie===c.id?'selected':''}>${c.icon} ${c.label}</option>`).join('')}
-      </select>
-      <select class="select-filtre" onchange="filtreStatut=this.value;render()">
-        <option value="tous" ${filtreStatut==='tous'?'selected':''}>Tous les statuts</option>
-        ${STATUTS.map(s => `<option value="${s.id}" ${filtreStatut===s.id?'selected':''}>${s.label}</option>`).join('')}
-      </select>
-      <div class="vue-btns">
-        <button class="vue-btn ${vue==='liste'?'active':''}" onclick="vue='liste';render()" title="Vue liste">☰</button>
-        <button class="vue-btn ${vue==='grille'?'active':''}" onclick="vue='grille';render()" title="Vue grille">⊞</button>
-      </div>
-    </div>
-
-    <p class="count-info">${filtered.length} document${filtered.length!==1?'s':''} trouvé${filtered.length!==1?'s':''}</p>
-
-    ${vue === 'liste' ? `
-    <div class="liste-container">
-      ${filtered.length === 0 ? '<div class="vide">Aucun document trouvé</div>' :
-        filtered.map(doc => {
-          const cat = getCategorie(doc.categorie);
-          const stat = getStatut(doc.statut);
-          return `<div class="liste-item" onclick="docSelectionne=${doc.id};vue='detail';render()">
-            <div class="cat-icon" style="background:${cat.color}22;color:${cat.color}">${cat.icon}</div>
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-                <span class="doc-titre">${doc.titre}</span>
-                <span class="badge" style="background:${cat.color}22;color:${cat.color}">${cat.label}</span>
-                <span class="statut-pill" style="background:${stat.color}22;color:${stat.color}">${stat.label}</span>
-              </div>
-              <p class="doc-desc">${doc.description}</p>
-              <div class="doc-meta">
-                <span>👤 ${doc.responsable}</span>
-                <span>📅 ${new Date(doc.dateRevision).toLocaleDateString('fr-FR')}</span>
-                <span>🔖 ${doc.version}</span>
-              </div>
-            </div>
-            <span class="chevron">›</span>
-          </div>`;
-        }).join('')}
-    </div>` : `
-    <div class="grille-container">
-      ${filtered.length === 0 ? '<div class="vide">Aucun document trouvé</div>' :
-        filtered.map(doc => {
-          const cat = getCategorie(doc.categorie);
-          const stat = getStatut(doc.statut);
-          return `<div class="carte-doc" style="border-top:4px solid ${cat.color}" onclick="docSelectionne=${doc.id};vue='detail';render()">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-              <span style="font-size:28px">${cat.icon}</span>
-              <span class="statut-pill" style="background:${stat.color}22;color:${stat.color}">${stat.label}</span>
-            </div>
-            <h3 style="font-size:14px;color:var(--ink);line-height:1.4;margin-bottom:8px">${doc.titre}</h3>
-            <p class="doc-desc" style="font-size:12px;-webkit-line-clamp:2">${doc.description}</p>
-            <div class="doc-meta" style="margin-top:auto;padding-top:10px">
-              <span>👤 ${doc.responsable}</span>
-              <span>🔖 ${doc.version}</span>
-            </div>
-          </div>`;
-        }).join('')}
-    </div>`}
-
-    <p class="section-title">Parcourir par catégorie</p>
-    <div class="grille-cats">
-      ${CATEGORIES.map(cat => {
-        const nb = documents.filter(d => d.categorie === cat.id).length;
-        return `<div class="carte-cat" style="border-left:4px solid ${cat.color}" onclick="filtreCategorie='${cat.id}';filtreStatut='tous';recherche='';window.scrollTo(0,0);render()">
-          <span style="font-size:24px">${cat.icon}</span>
-          <div>
-            <div style="font-weight:700;font-size:14px">${cat.label}</div>
-            <div style="font-size:12px;color:var(--ink3)">${nb} document${nb!==1?'s':''}</div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
+  sauverLocal(); formulaire = null; vue = "liste"; render();
 }
 
 function collectFormulaire() {
@@ -675,14 +195,165 @@ function collectFormulaire() {
   formulaire.notes = document.getElementById('f-notes').value;
 }
 
+function supprimerDocument(id) {
+  if (!confirm("Supprimer ce document ?")) return;
+  documents = documents.filter(d => d.id !== id);
+  sauverLocal(); docSelectionne = null; vue = "liste";
+  afficherNotif("Document supprimé"); render();
+}
+
+function stats() {
+  return { total:documents.length, vigueur:documents.filter(d=>d.statut==="vigueur").length, revision:documents.filter(d=>d.statut==="revision").length, archive:documents.filter(d=>d.statut==="archive").length };
+}
+
+function formatEtapes(etapes, catColor) {
+  if (!etapes) return '';
+  return etapes.split('\n').map(line => {
+    line = line.trim(); if (!line) return '';
+    if (/^\d+[.)]/.test(line)) {
+      const num = line.match(/^\d+/)[0];
+      const txt = line.replace(/^\d+[.)]\s*/, '');
+      return '<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start"><span style="background:'+catColor+';color:#fff;min-width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">'+num+'</span><span style="padding-top:3px;line-height:1.5">'+txt+'</span></div>';
+    }
+    if (/^[-•*]/.test(line)) {
+      return '<div style="padding-left:36px;margin-bottom:6px;color:var(--ink2);font-size:13px;line-height:1.5">▸ '+line.replace(/^[-•*]\s*/,'')+'</div>';
+    }
+    return '<div style="padding-left:36px;margin-bottom:6px;color:var(--ink2);font-size:13px;line-height:1.5">'+line+'</div>';
+  }).join('');
+}
+
 function imprimerFiche(id) {
-  const doc = documents.find(d => d.id === id);
-  if (!doc) return;
-  const cat = getCategorie(doc.categorie);
-  const stat = getStatut(doc.statut);
-  const fep = (e) => { if (!e) return ""; return e.split("\n").map(l => { l=l.trim(); if (!l) return ""; const s=/^\d+[\.)]/.test(l); const sb=/^[•\-\*]/.test(l); if (s) return `<div class="step"><span class="sn">${l.match(/^\d+/)[0]}</span><span>${l.replace(/^\d+[\.)\s*/,"")}</span></div>`; if (sb) return `<div class="ss">▸ ${l.replace(/^[•\-\*]\s*/,"")}</div>`; return `<div class="ss">${l}</div>`; }).join(""); };
-  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${doc.titre}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;padding:20px;max-width:800px;margin:0 auto}.header{background:${cat.color}18;border-left:5px solid ${cat.color};padding:16px 20px;border-radius:0 10px 10px 0;margin-bottom:20px}.header h1{font-size:18px;font-weight:800}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}.mi{background:#f5f5f5;border-radius:8px;padding:10px;font-size:11px}.ml{color:#888;font-weight:600;text-transform:uppercase;font-size:10px;display:block;margin-bottom:3px}.sec{border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;margin-bottom:14px}.st{background:#f8f8f8;padding:10px 14px;font-weight:700;font-size:12px;border-bottom:1px solid #e5e5e5}.sb{padding:14px}.step{display:flex;gap:10px;margin-bottom:8px}.sn{background:${cat.color};color:#fff;min-width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}.ss{padding-left:32px;margin-bottom:5px;color:#555;font-size:11px;line-height:1.5}.obj{background:#EFF6FF;border-left:3px solid #3B82F6;padding:12px;font-size:12px;line-height:1.6;color:#1E40AF}.nt{background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:12px}.nl{display:flex;gap:6px;margin-bottom:5px;font-size:11px;line-height:1.5}.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;text-align:center;font-size:10px;color:#aaa}@media print{.np{display:none}@page{margin:1.5cm}}</style></head><body><div class="np" style="text-align:center;margin-bottom:16px"><button onclick="window.print()" style="background:#5c6bc0;color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer">🖨 Imprimer</button></div><div class="header"><h1>${cat.icon} ${doc.titre}</h1></div><div class="meta"><div class="mi"><span class="ml">Responsable</span>${doc.responsable}</div><div class="mi"><span class="ml">Version</span>${doc.version}</div><div class="mi"><span class="ml">Révision</span>${new Date(doc.dateRevision).toLocaleDateString("fr-FR")}</div><div class="mi"><span class="ml">Statut</span>${stat.label}</div></div>${doc.description?`<div class="sec"><div class="st">📄 Description</div><div class="sb">${doc.description}</div></div>`:""} ${doc.objectif?`<div class="sec"><div class="st">🎯 Objectif</div><div class="sb"><div class="obj">${doc.objectif}</div></div></div>`:""} ${doc.etapes?`<div class="sec"><div class="st">📋 Procédure</div><div class="sb">${fep(doc.etapes)}</div></div>`:""} ${doc.notes?`<div class="sec"><div class="st">⚠️ Notes importantes</div><div class="sb"><div class="nt">${doc.notes.split("\n").filter(l=>l.trim()).map(l=>`<div class="nl"><span>⚠️</span><span>${l.trim()}</span></div>`).join("")}</div></div></div>`:""}<div class="footer">Base documentaire · ${new Date().toLocaleDateString("fr-FR")}</div><script>window.onload=()=>window.print()</script></body></html>`;
-  const w=window.open("","_blank"); w.document.write(html); w.document.close();
+  const doc = documents.find(d => d.id === id); if (!doc) return;
+  const cat = getCat(doc.categorie);
+  const stat = getStat(doc.statut);
+  const etapesHtml = doc.etapes ? doc.etapes.split('\n').map(line => {
+    line = line.trim(); if (!line) return '';
+    if (/^\d+[.)]/.test(line)) return '<div class="step"><span class="sn">'+line.match(/^\d+/)[0]+'</span><span>'+line.replace(/^\d+[.)]\s*/,'')+'</span></div>';
+    if (/^[-•*]/.test(line)) return '<div class="ss">▸ '+line.replace(/^[-•*]\s*/,'')+'</div>';
+    return '<div class="ss">'+line+'</div>';
+  }).join('') : '';
+  const notesHtml = doc.notes ? doc.notes.split('\n').filter(l=>l.trim()).map(l=>'<div class="nl"><span>⚠️</span><span>'+l.trim()+'</span></div>').join('') : '';
+
+  const w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>'+doc.titre+'</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;padding:20px;max-width:800px;margin:0 auto}.hdr{background:'+cat.color+'18;border-left:5px solid '+cat.color+';padding:16px 20px;border-radius:0 10px 10px 0;margin-bottom:20px}.hdr h1{font-size:18px;font-weight:800;margin-bottom:6px}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}.mi{background:#f5f5f5;border-radius:8px;padding:10px}.ml{color:#888;font-size:10px;font-weight:600;text-transform:uppercase;display:block;margin-bottom:3px}.sec{border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;margin-bottom:14px}.st{background:#f8f8f8;padding:10px 14px;font-weight:700;font-size:12px;border-bottom:1px solid #e5e5e5}.sb{padding:14px;font-size:12px;line-height:1.6}.step{display:flex;gap:10px;margin-bottom:8px;align-items:flex-start}.sn{background:'+cat.color+';color:#fff;min-width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}.ss{padding-left:32px;margin-bottom:5px;color:#555;font-size:11px;line-height:1.5}.obj{background:#EFF6FF;border-left:3px solid #3B82F6;padding:12px;color:#1E40AF}.nt{background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:12px}.nl{display:flex;gap:6px;margin-bottom:5px;font-size:11px}.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;text-align:center;font-size:10px;color:#aaa}.badge{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;background:'+cat.color+'22;color:'+cat.color+'}.np{text-align:center;margin-bottom:16px}@media print{.np{display:none}@page{margin:1.5cm}}</style></head><body>');
+  w.document.write('<div class="np"><button onclick="window.print()" style="background:#5c6bc0;color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px">🖨 Imprimer</button></div>');
+  w.document.write('<div class="hdr"><h1>'+cat.icon+' '+doc.titre+'</h1><span class="badge">'+cat.label+'</span></div>');
+  w.document.write('<div class="meta"><div class="mi"><span class="ml">Responsable</span>'+doc.responsable+'</div><div class="mi"><span class="ml">Version</span>'+doc.version+'</div><div class="mi"><span class="ml">Révision</span>'+new Date(doc.dateRevision).toLocaleDateString('fr-FR')+'</div><div class="mi"><span class="ml">Statut</span>'+stat.label+'</div></div>');
+  if (doc.description) w.document.write('<div class="sec"><div class="st">📄 Description</div><div class="sb">'+doc.description+'</div></div>');
+  if (doc.objectif) w.document.write('<div class="sec"><div class="st">🎯 Objectif</div><div class="sb"><div class="obj">'+doc.objectif+'</div></div></div>');
+  if (doc.etapes) w.document.write('<div class="sec"><div class="st">📋 Procédure à suivre</div><div class="sb">'+etapesHtml+'</div></div>');
+  if (doc.notes) w.document.write('<div class="sec"><div class="st">⚠️ Notes importantes</div><div class="sb"><div class="nt">'+notesHtml+'</div></div></div>');
+  w.document.write('<div class="footer">Base documentaire Koalakids · Imprimé le '+new Date().toLocaleDateString('fr-FR')+'</div>');
+  w.document.write('<script>window.onload=function(){window.print();}<\/script></body></html>');
+  w.document.close();
+}
+
+function render() {
+  const app = document.getElementById('app');
+
+  // ── FORMULAIRE ──
+  if (vue === "formulaire") {
+    const cats = CATEGORIES.map(c => '<option value="'+c.id+'" '+(formulaire.categorie===c.id?'selected':'')+'>'+c.icon+' '+c.label+'</option>').join('');
+    const stats_opts = STATUTS.map(s => '<option value="'+s.id+'" '+(formulaire.statut===s.id?'selected':'')+'>'+s.label+'</option>').join('');
+    app.innerHTML = '<div class="detail-page"><button class="btn-back" onclick="vue=\'liste\';formulaire=null;render()">← Retour</button><div class="form-card"><h2 style="font-family:\'Syne\',sans-serif;margin-bottom:24px">'+(formulaire.id?"✏️ Modifier":"➕ Nouveau document")+'</h2><div class="form-grid"><div class="form-group"><label>Titre *</label><input id="f-titre" value="'+formulaire.titre.replace(/"/g,'&quot;')+'" placeholder="Nom du protocole"></div><div class="form-group"><label>Version</label><input id="f-version" value="'+formulaire.version+'"></div><div class="form-group"><label>Catégorie</label><select id="f-cat">'+cats+'</select></div><div class="form-group"><label>Statut</label><select id="f-statut">'+stats_opts+'</select></div><div class="form-group"><label>Responsable</label><input id="f-resp" value="'+formulaire.responsable.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Date de révision</label><input id="f-date" type="date" value="'+formulaire.dateRevision+'"></div><div class="form-group full"><label>Description courte</label><textarea id="f-desc" style="min-height:60px">'+formulaire.description+'</textarea></div><div class="form-group full"><label>🎯 Objectif</label><textarea id="f-objectif" style="min-height:60px">'+(formulaire.objectif||'')+'</textarea></div><div class="form-group full"><label>📋 Étapes / Procédure</label><textarea id="f-etapes" style="min-height:120px" placeholder="1. Première étape&#10;2. Deuxième étape&#10;- Sous-étape">'+(formulaire.etapes||'')+'</textarea></div><div class="form-group full"><label>⚠️ Notes importantes</label><textarea id="f-notes" style="min-height:80px">'+(formulaire.notes||'')+'</textarea></div></div><div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px"><button class="btn-secondary" onclick="vue=\'liste\';formulaire=null;render()">Annuler</button><button class="btn-primary" onclick="collectFormulaire();sauvegarderDocument()">💾 Enregistrer</button></div></div></div>';
+    return;
+  }
+
+  // ── DÉTAIL ──
+  if (vue === "detail" && docSelectionne) {
+    const doc = documents.find(d => d.id === docSelectionne);
+    if (!doc) { vue = "liste"; render(); return; }
+    const cat = getCat(doc.categorie);
+    const stat = getStat(doc.statut);
+    const etapesHtml = formatEtapes(doc.etapes, cat.color);
+    const notesHtml = doc.notes ? doc.notes.split('\n').filter(l=>l.trim()).map(l =>
+      '<div style="display:flex;gap:8px;margin-bottom:6px"><span>⚠️</span><span style="font-size:13px;line-height:1.5">'+l.trim()+'</span></div>'
+    ).join('') : '';
+
+    app.innerHTML =
+      '<div class="detail-page">'+
+      '<button class="btn-back" onclick="vue=\'liste\';docSelectionne=null;render()">← Retour à la liste</button>'+
+      '<div class="detail-card">'+
+        '<div style="background:'+cat.color+'15;border-radius:12px;padding:20px;margin-bottom:20px;border-left:4px solid '+cat.color+'">'+
+          '<div style="display:flex;align-items:center;gap:14px">'+
+            '<div style="width:52px;height:52px;border-radius:14px;background:'+cat.color+';display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">'+cat.icon+'</div>'+
+            '<div style="flex:1">'+
+              '<h2 style="font-family:\'Syne\',sans-serif;font-size:18px;margin-bottom:6px">'+doc.titre+'</h2>'+
+              '<span class="badge" style="background:'+cat.color+'22;color:'+cat.color+'">'+cat.label+'</span> '+
+              '<span class="statut-pill" style="background:'+stat.color+'22;color:'+stat.color+'">'+stat.label+'</span>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="detail-grid">'+
+          '<div class="detail-item"><span class="detail-label">👤 Responsable</span><strong>'+doc.responsable+'</strong></div>'+
+          '<div class="detail-item"><span class="detail-label">🔖 Version</span><strong>'+doc.version+'</strong></div>'+
+          '<div class="detail-item"><span class="detail-label">📅 Dernière révision</span><strong>'+new Date(doc.dateRevision).toLocaleDateString('fr-FR')+'</strong></div>'+
+          '<div class="detail-item"><span class="detail-label">📁 Catégorie</span><strong>'+cat.label+'</strong></div>'+
+        '</div>'+
+        (doc.description ? '<div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px"><p style="font-size:13px;color:var(--ink2);line-height:1.7;margin:0">'+doc.description+'</p></div>' : '')+
+        (doc.objectif ? '<div style="background:#EFF6FF;border-radius:12px;padding:16px;margin-bottom:16px;border-left:3px solid #3B82F6"><div style="font-weight:700;font-size:13px;color:#1D4ED8;margin-bottom:8px">🎯 Objectif</div><p style="font-size:13px;color:#1E40AF;line-height:1.7;margin:0">'+doc.objectif+'</p></div>' : '')+
+        (doc.etapes ? '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px"><div style="font-weight:700;font-size:14px;margin-bottom:14px">📋 Procédure à suivre</div>'+etapesHtml+'</div>' : '')+
+        (doc.notes ? '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px;margin-bottom:16px"><div style="font-weight:700;font-size:13px;color:#92400E;margin-bottom:10px">⚠️ Notes importantes</div>'+notesHtml+'</div>' : '')+
+        '<div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">'+
+          '<button class="btn-primary" onclick="ouvrirFormulaire(documents.find(d=>d.id==='+doc.id+'))">✏️ Modifier</button>'+
+          '<button class="btn-secondary" onclick="imprimerFiche('+doc.id+')">🖨 Imprimer</button>'+
+          '<button class="btn-secondary btn-danger" onclick="supprimerDocument('+doc.id+')">🗑 Supprimer</button>'+
+        '</div>'+
+      '</div>'+
+      '</div>';
+    return;
+  }
+
+  // ── LISTE PRINCIPALE ──
+  const s = stats();
+  const filtered = filtres();
+  const cats_opts = CATEGORIES.map(c=>'<option value="'+c.id+'" '+(filtreCategorie===c.id?'selected':'')+'>'+c.icon+' '+c.label+'</option>').join('');
+  const stat_opts = STATUTS.map(s=>'<option value="'+s.id+'" '+(filtreStatut===s.id?'selected':'')+'>'+s.label+'</option>').join('');
+
+  let html = '<div class="stats-grid">';
+  html += '<div class="stat-card" style="border-top:3px solid #5c6bc0"><span style="font-size:24px">📄</span><span class="stat-num" style="color:#5c6bc0">'+s.total+'</span><span class="stat-lbl">Total</span></div>';
+  html += '<div class="stat-card" style="border-top:3px solid #2ecc71"><span style="font-size:24px">✅</span><span class="stat-num" style="color:#2ecc71">'+s.vigueur+'</span><span class="stat-lbl">En vigueur</span></div>';
+  html += '<div class="stat-card" style="border-top:3px solid #f39c12"><span style="font-size:24px">⚠️</span><span class="stat-num" style="color:#f39c12">'+s.revision+'</span><span class="stat-lbl">À réviser</span></div>';
+  html += '<div class="stat-card" style="border-top:3px solid #95a5a6"><span style="font-size:24px">🗂️</span><span class="stat-num" style="color:#95a5a6">'+s.archive+'</span><span class="stat-lbl">Archivés</span></div>';
+  html += '</div>';
+  html += '<div class="filtres-bar"><input class="search-input" placeholder="🔍 Rechercher..." value="'+recherche+'" oninput="recherche=this.value;render()"><select class="select-filtre" onchange="filtreCategorie=this.value;render()"><option value="toutes" '+(filtreCategorie==='toutes'?'selected':'')+'>Toutes les catégories</option>'+cats_opts+'</select><select class="select-filtre" onchange="filtreStatut=this.value;render()"><option value="tous" '+(filtreStatut==='tous'?'selected':'')+'>Tous les statuts</option>'+stat_opts+'</select><div class="vue-btns"><button class="vue-btn '+(vue==='liste'?'active':'')+'" onclick="vue=\'liste\';render()" title="Liste">☰</button><button class="vue-btn '+(vue==='grille'?'active':'')+'" onclick="vue=\'grille\';render()" title="Grille">⊞</button></div></div>';
+  html += '<p class="count-info">'+filtered.length+' document'+(filtered.length!==1?'s':'')+' trouvé'+(filtered.length!==1?'s':'')+'</p>';
+
+  if (vue === 'liste') {
+    html += '<div class="liste-container">';
+    if (filtered.length === 0) html += '<div class="vide">Aucun document trouvé</div>';
+    filtered.forEach(doc => {
+      const cat = getCat(doc.categorie); const stat = getStat(doc.statut);
+      html += '<div class="liste-item" onclick="docSelectionne='+doc.id+';vue=\'detail\';render()">';
+      html += '<div class="cat-icon" style="background:'+cat.color+'22;color:'+cat.color+'">'+cat.icon+'</div>';
+      html += '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"><span class="doc-titre">'+doc.titre+'</span><span class="badge" style="background:'+cat.color+'22;color:'+cat.color+'">'+cat.label+'</span><span class="statut-pill" style="background:'+stat.color+'22;color:'+stat.color+'">'+stat.label+'</span></div>';
+      html += '<p class="doc-desc">'+doc.description+'</p>';
+      html += '<div class="doc-meta"><span>👤 '+doc.responsable+'</span><span>📅 '+new Date(doc.dateRevision).toLocaleDateString('fr-FR')+'</span><span>🔖 '+doc.version+'</span></div></div>';
+      html += '<span style="color:var(--ink3);font-size:20px;margin-left:8px;flex-shrink:0">›</span></div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="grille-container">';
+    if (filtered.length === 0) html += '<div class="vide">Aucun document trouvé</div>';
+    filtered.forEach(doc => {
+      const cat = getCat(doc.categorie); const stat = getStat(doc.statut);
+      html += '<div class="carte-doc" style="border-top:4px solid '+cat.color+'" onclick="docSelectionne='+doc.id+';vue=\'detail\';render()">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px"><span style="font-size:28px">'+cat.icon+'</span><span class="statut-pill" style="background:'+stat.color+'22;color:'+stat.color+'">'+stat.label+'</span></div>';
+      html += '<h3 style="font-size:14px;color:var(--ink);line-height:1.4;margin-bottom:8px">'+doc.titre+'</h3>';
+      html += '<p class="doc-desc" style="font-size:12px">'+doc.description+'</p>';
+      html += '<div class="doc-meta" style="margin-top:auto;padding-top:10px"><span>👤 '+doc.responsable+'</span><span>🔖 '+doc.version+'</span></div></div>';
+    });
+    html += '</div>';
+  }
+
+  html += '<p class="section-title">Parcourir par catégorie</p><div class="grille-cats">';
+  CATEGORIES.forEach(cat => {
+    const nb = documents.filter(d => d.categorie === cat.id).length;
+    html += '<div class="carte-cat" style="border-left:4px solid '+cat.color+'" onclick="filtreCategorie=\''+cat.id+'\';filtreStatut=\'tous\';recherche=\'\';window.scrollTo(0,0);render()"><span style="font-size:24px">'+cat.icon+'</span><div><div style="font-weight:700;font-size:14px">'+cat.label+'</div><div style="font-size:12px;color:var(--ink3)">'+nb+' document'+(nb!==1?'s':'')+'</div></div></div>';
+  });
+  html += '</div>';
+
+  app.innerHTML = html;
 }
 
 render();
