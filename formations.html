@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎓 Formations — Koalakids</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F7F6F3; --surface: #FFFFFF; --ink: #1C1917; --ink2: #44403C;
+    --ink3: #A8A29E; --border: #E7E5E0; --accent: #6366F1;
+    --radius: 14px; --shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  body { font-family: 'Instrument Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, #1C1917 0%, #292524 60%, #1E1B4B 100%);
+    padding: 40px 24px 32px; text-align: center; position: relative; overflow: hidden;
+  }
+  .hero::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse at 30% 50%, rgba(99,102,241,0.2) 0%, transparent 60%), radial-gradient(ellipse at 70% 30%, rgba(139,92,246,0.15) 0%, transparent 50%); }
+  .hero h1 { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:#fff; margin-bottom:6px; position:relative; }
+  .hero p { font-size:13px; color:rgba(255,255,255,0.5); position:relative; margin-bottom:20px; }
+  .hero-stats { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; position:relative; }
+  .hero-stat { text-align:center; }
+  .hero-stat .num { font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:#fff; }
+  .hero-stat .lbl { font-size:11px; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* LAYOUT */
+  .app-layout { display:grid; grid-template-columns:240px 1fr; min-height:calc(100vh - 140px); }
+
+  /* SIDEBAR */
+  .sidebar { background:var(--surface); border-right:1px solid var(--border); padding:16px 0; position:sticky; top:0; height:100vh; overflow-y:auto; }
+  .sidebar-section { padding:0 12px; margin-bottom:8px; }
+  .sidebar-section-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--ink3); padding:12px 8px 6px; }
+  .nav-item { width:100%; display:flex; align-items:center; gap:10px; padding:9px 10px; border:none; background:none; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13px; color:var(--ink2); text-align:left; transition:background 0.15s; }
+  .nav-item:hover { background:var(--bg); }
+  .nav-item.active { background:var(--accent); color:#fff; font-weight:700; }
+  .nav-item .count { margin-left:auto; font-size:11px; opacity:0.6; background:rgba(0,0,0,0.08); padding:1px 7px; border-radius:10px; }
+  .nav-item.active .count { background:rgba(255,255,255,0.2); opacity:1; }
+
+  /* MAIN */
+  .main-content { padding:24px; overflow-y:auto; }
+
+  /* PROGRESS BAR */
+  .progress-bar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:8px; }
+  .progress-fill { height:100%; background:linear-gradient(90deg, var(--accent), #8B5CF6); border-radius:3px; transition:width 0.3s; }
+
+  /* FORMATION CARDS */
+  .formations-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px; }
+  .formation-card {
+    background:var(--surface); border-radius:var(--radius); border:1px solid var(--border);
+    box-shadow:var(--shadow); overflow:hidden; cursor:pointer; transition:transform 0.15s, box-shadow 0.15s;
+    display:flex; flex-direction:column;
+  }
+  .formation-card:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(0,0,0,0.1); }
+  .formation-card.vue { border-left:3px solid #10B981; }
+  .card-thumb {
+    height:140px; display:flex; align-items:center; justify-content:center;
+    font-size:48px; position:relative; flex-shrink:0;
+  }
+  .card-thumb .type-badge {
+    position:absolute; top:10px; right:10px; padding:3px 8px; border-radius:6px;
+    font-size:10px; font-weight:700; color:#fff;
+  }
+  .card-thumb .vue-badge {
+    position:absolute; top:10px; left:10px; background:#10B981; color:#fff;
+    padding:3px 8px; border-radius:6px; font-size:10px; font-weight:700;
+  }
+  .card-thumb .fav-btn {
+    position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.4); border:none;
+    color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .card-body { padding:16px; flex:1; display:flex; flex-direction:column; gap:8px; }
+  .card-title { font-weight:700; font-size:14px; line-height:1.4; }
+  .card-desc { font-size:12px; color:var(--ink3); line-height:1.5; flex:1; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+  .card-meta { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .badge { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+  .card-footer { padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center; }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal { background:var(--surface); border-radius:var(--radius); width:100%; max-width:640px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .modal-header { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .modal-header h2 { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; }
+  .modal-close { background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink3); }
+  .modal-body { padding:24px; }
+  .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+
+  /* FORM */
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+  .form-group.full { grid-column:1/-1; }
+  label { font-size:12px; font-weight:600; color:var(--ink2); }
+  input, select, textarea { padding:9px 11px; border-radius:9px; border:1.5px solid var(--border); font-size:13px; outline:none; font-family:inherit; background:var(--bg); color:var(--ink); }
+  input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+  textarea { min-height:80px; resize:vertical; }
+
+  /* BOUTONS */
+  .btn { padding:10px 20px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; border:none; display:inline-flex; align-items:center; gap:6px; transition:opacity 0.15s; }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { opacity:0.9; }
+  .btn-secondary { background:var(--surface); color:var(--ink2); border:1.5px solid var(--border); }
+  .btn-danger { color:#e74c3c; border-color:#e74c3c; background:var(--surface); }
+
+  /* NOTIF */
+  .notif { position:fixed; top:20px; right:20px; color:#fff; padding:12px 20px; border-radius:12px; font-weight:700; font-size:13px; z-index:9999; box-shadow:0 4px 16px rgba(0,0,0,0.2); }
+
+  /* VIDE */
+  .vide { text-align:center; color:var(--ink3); padding:60px 20px; font-size:15px; }
+  .vide .vide-icon { font-size:48px; margin-bottom:12px; }
+
+  /* VIDEO EMBED */
+  .video-container { position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:10px; margin-bottom:16px; }
+  .video-container iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:none; border-radius:10px; }
+
+  @media (max-width:700px) {
+    .app-layout { grid-template-columns:1fr; }
+    .sidebar { position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); }
+    .formations-grid { grid-template-columns:1fr; }
+    .form-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>🎓 Formations</h1>
+  <p>Ressources pédagogiques et formations du réseau Koalakids</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="num" id="stat-total">0</div><div class="lbl">Formations</div></div>
+    <div class="hero-stat"><div class="num" id="stat-vues">0</div><div class="lbl">Complétées</div></div>
+    <div class="hero-stat"><div class="num" id="stat-favs">0</div><div class="lbl">Favoris</div></div>
+    <div class="hero-stat"><div class="num" id="stat-progress">0%</div><div class="lbl">Progression</div></div>
+  </div>
+</div>
+
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Vue</div>
+      <button class="nav-item active" id="nav-toutes" onclick="setFiltre('toutes', this)">🎓 Toutes les formations <span class="count" id="cnt-toutes">0</span></button>
+      <button class="nav-item" id="nav-favoris" onclick="setFiltre('favoris', this)">⭐ Mes favoris <span class="count" id="cnt-favs">0</span></button>
+      <button class="nav-item" id="nav-a-faire" onclick="setFiltre('a-faire', this)">📌 À faire <span class="count" id="cnt-afaire">0</span></button>
+      <button class="nav-item" id="nav-vues" onclick="setFiltre('vues', this)">✅ Complétées <span class="count" id="cnt-vues">0</span></button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Par public</div>
+      <button class="nav-item" onclick="setFiltre('public:direction', this)">🏢 Direction <span class="count" id="cnt-direction">0</span></button>
+      <button class="nav-item" onclick="setFiltre('public:terrain', this)">👩‍💼 Équipe terrain <span class="count" id="cnt-terrain">0</span></button>
+      <button class="nav-item" onclick="setFiltre('public:stagiaires', this)">🎓 Stagiaires/alternants <span class="count" id="cnt-stagiaires">0</span></button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Par thème</div>
+      <button class="nav-item" onclick="setFiltre('theme:pedagogie', this)">🎨 Pédagogie & éveil <span class="count" id="cnt-pedagogie">0</span></button>
+      <button class="nav-item" onclick="setFiltre('theme:reglementation', this)">📋 Réglementation <span class="count" id="cnt-reglementation">0</span></button>
+      <button class="nav-item" onclick="setFiltre('theme:hygiene', this)">🧼 Hygiène & soins <span class="count" id="cnt-hygiene">0</span></button>
+      <button class="nav-item" onclick="setFiltre('theme:management', this)">👥 Management & RH <span class="count" id="cnt-management">0</span></button>
+      <button class="nav-item" onclick="setFiltre('theme:administratif', this)">📁 Administratif <span class="count" id="cnt-administratif">0</span></button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Par type</div>
+      <button class="nav-item" onclick="setFiltre('type:video', this)">🎥 Vidéos <span class="count" id="cnt-video">0</span></button>
+      <button class="nav-item" onclick="setFiltre('type:document', this)">📄 Documents <span class="count" id="cnt-document">0</span></button>
+      <button class="nav-item" onclick="setFiltre('type:fiche', this)">📝 Fiches texte <span class="count" id="cnt-fiche">0</span></button>
+      <button class="nav-item" onclick="setFiltre('type:lien', this)">🔗 Liens externes <span class="count" id="cnt-lien">0</span></button>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="ouvrirFormulaire()">+ Ajouter une formation</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- Barre de recherche + tri -->
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+      <input type="text" id="search-input" placeholder="🔍 Rechercher une formation…" style="flex:2;min-width:200px" oninput="render()">
+      <select id="tri-select" style="flex:1;min-width:140px" onchange="render()">
+        <option value="recent">Plus récents</option>
+        <option value="alpha">Alphabétique</option>
+        <option value="type">Par type</option>
+      </select>
+    </div>
+
+    <!-- Progression globale -->
+    <div style="background:var(--surface);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;border:1px solid var(--border);box-shadow:var(--shadow)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-weight:700;font-size:14px">📊 Votre progression</span>
+        <span id="progress-label" style="font-size:13px;color:var(--ink3)">0 / 0 formations complétées</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Liste formations -->
+    <div id="formations-container"></div>
+  </div>
+</div>
+
+<!-- MODAL DÉTAIL -->
+<div class="modal-overlay" id="modal-detail" onclick="closeModalClick(event,'modal-detail')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="detail-titre">Formation</h2>
+      <button class="modal-close" onclick="closeModal('modal-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+    <div class="modal-footer" id="detail-footer"></div>
+  </div>
+</div>
+
+<!-- MODAL FORMULAIRE -->
+<div class="modal-overlay" id="modal-form" onclick="closeModalClick(event,'modal-form')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="form-titre">Ajouter une formation</h2>
+      <button class="modal-close" onclick="closeModal('modal-form')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>Titre *</label><input id="f-titre" placeholder="Titre de la formation"></div>
+        <div class="form-group full"><label>Description</label><textarea id="f-desc" placeholder="Décrivez le contenu de cette formation…"></textarea></div>
+        <div class="form-group">
+          <label>Type</label>
+          <select id="f-type">
+            <option value="video">🎥 Vidéo</option>
+            <option value="document">📄 Document PDF</option>
+            <option value="fiche">📝 Fiche texte</option>
+            <option value="lien">🔗 Lien externe</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Thème</label>
+          <select id="f-theme">
+            <option value="pedagogie">🎨 Pédagogie & éveil</option>
+            <option value="reglementation">📋 Réglementation</option>
+            <option value="hygiene">🧼 Hygiène & soins</option>
+            <option value="management">👥 Management & RH</option>
+            <option value="administratif">📁 Administratif</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Public cible</label>
+          <select id="f-public">
+            <option value="tous">👥 Tous</option>
+            <option value="direction">🏢 Direction</option>
+            <option value="terrain">👩‍💼 Équipe terrain</option>
+            <option value="stagiaires">🎓 Stagiaires/alternants</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Durée estimée</label>
+          <input id="f-duree" placeholder="Ex: 30 min, 1h30…">
+        </div>
+        <div class="form-group full"><label>URL / Lien (vidéo YouTube, PDF, site…)</label><input id="f-url" placeholder="https://…"></div>
+        <div class="form-group full"><label>Contenu texte (pour les fiches)</label><textarea id="f-contenu" style="min-height:120px" placeholder="Contenu de la fiche formation…"></textarea></div>
+        <div class="form-group full"><label>Auteur / Source</label><input id="f-auteur" placeholder="Ex: Koalakids, ONAPE, Ministère…"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-form')">Annuler</button>
+      <button class="btn btn-primary" onclick="sauvegarder()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="notif-zone"></div>
+
+<script>
+const STORAGE_KEY = 'koala_formations';
+const TYPE_CONFIG = {
+  video:    { icon:'🎥', label:'Vidéo',     color:'#EF4444', bg:'#FEF2F2' },
+  document: { icon:'📄', label:'Document',  color:'#3B82F6', bg:'#EFF6FF' },
+  fiche:    { icon:'📝', label:'Fiche',     color:'#10B981', bg:'#F0FDF4' },
+  lien:     { icon:'🔗', label:'Lien',      color:'#8B5CF6', bg:'#F5F3FF' },
+};
+const THEME_CONFIG = {
+  pedagogie:      { icon:'🎨', label:'Pédagogie & éveil',  color:'#F59E0B' },
+  reglementation: { icon:'📋', label:'Réglementation',     color:'#6366F1' },
+  hygiene:        { icon:'🧼', label:'Hygiène & soins',    color:'#4ECDC4' },
+  management:     { icon:'👥', label:'Management & RH',    color:'#EC4899' },
+  administratif:  { icon:'📁', label:'Administratif',      color:'#A78BFA' },
+};
+const PUBLIC_CONFIG = {
+  tous:       { icon:'👥', label:'Tous' },
+  direction:  { icon:'🏢', label:'Direction' },
+  terrain:    { icon:'👩‍💼', label:'Équipe terrain' },
+  stagiaires: { icon:'🎓', label:'Stagiaires' },
+};
+
+const FORMATIONS_DEFAUT = [
+  { id:1, titre:"Introduction à la motricité libre chez le nourrisson", desc:"Comprendre les principes de la motricité libre selon Emmi Pikler. Postures adaptées, aménagement de l'espace, rôle de l'adulte.", type:"video", theme:"pedagogie", public:"terrain", duree:"45 min", url:"https://www.youtube.com/watch?v=dQw4w9WgXcQ", contenu:"", auteur:"ONAPE", date:"2024-09-01" },
+  { id:2, titre:"Décret 2025-304 — Les nouvelles obligations réglementaires", desc:"Présentation détaillée des changements apportés par le décret du 25 mars 2025 sur les établissements d'accueil du jeune enfant.", type:"fiche", theme:"reglementation", public:"tous", duree:"30 min", url:"", contenu:"## Décret 2025-304 du 25 mars 2025\n\n### Principaux changements\n\n1. **Taux d'encadrement** : 1 professionnel pour 5 enfants qui ne marchent pas, 1 pour 8 qui marchent\n2. **Qualifications** : Renforcement des exigences de qualification du personnel\n3. **Projet d'établissement** : Obligation de révision tous les 5 ans\n4. **Continuité de direction** : Obligation de désigner un remplaçant qualifié\n\n### Points de vigilance\n- Mise en conformité avant le 1er septembre 2025\n- Formation obligatoire pour tout nouveau personnel\n- Registre de suivi des formations à tenir à jour", auteur:"Ministère des Solidarités", date:"2025-03-01" },
+  { id:3, titre:"Protocoles d'hygiène en crèche — Les bonnes pratiques", desc:"Lavage des mains, désinfection des surfaces, gestion du linge. Tout ce qu'il faut savoir pour maintenir un environnement sain.", type:"document", theme:"hygiene", public:"terrain", duree:"20 min", url:"", contenu:"", auteur:"Koalakids", date:"2024-11-15" },
+  { id:4, titre:"Manager une équipe en micro-crèche", desc:"Techniques de management adapté aux petites structures : communication, délégation, gestion des conflits, motivation de l'équipe.", type:"video", theme:"management", public:"direction", duree:"1h15", url:"", contenu:"", auteur:"Formation interne", date:"2024-06-01" },
+  { id:5, titre:"Le projet d'accueil individualisé (PAI)", desc:"Comment mettre en place un PAI, les acteurs impliqués, la gestion des allergies et pathologies chroniques.", type:"fiche", theme:"reglementation", public:"terrain", duree:"25 min", url:"", contenu:"## Le Projet d'Accueil Individualisé\n\n### Qu'est-ce que le PAI ?\nLe PAI est un document contractuel élaboré à la demande des parents, du médecin de l'établissement ou du médecin traitant. Il précise les adaptations nécessaires pour accueillir l'enfant.\n\n### Qui est concerné ?\n- Enfants avec allergies alimentaires\n- Enfants avec pathologies chroniques\n- Enfants nécessitant un traitement médical régulier\n\n### Les étapes\n1. Demande formulée par les parents\n2. Réunion avec les parents, le médecin et la directrice\n3. Rédaction du PAI\n4. Signature par toutes les parties\n5. Mise à disposition du PAI à l'équipe\n6. Révision annuelle obligatoire", auteur:"Koalakids", date:"2024-08-20" },
+  { id:6, titre:"La facturation PAJE et PSU expliquée", desc:"Comprendre le fonctionnement de la Prestation de Service Unique et de la PAJE pour une gestion administrative optimale.", type:"lien", theme:"administratif", public:"direction", duree:"40 min", url:"https://www.caf.fr", contenu:"", auteur:"CAF", date:"2024-10-01" },
+];
+
+let formations = [];
+try { formations = JSON.parse(localStorage.getItem(STORAGE_KEY)) || FORMATIONS_DEFAUT; } catch { formations = FORMATIONS_DEFAUT; }
+let progression = {};
+try { progression = JSON.parse(localStorage.getItem(STORAGE_KEY + '_prog')) || {}; } catch { progression = {}; }
+let favoris = {};
+try { favoris = JSON.parse(localStorage.getItem(STORAGE_KEY + '_favs')) || {}; } catch { favoris = {}; }
+
+let nextId = Math.max(...formations.map(f => f.id), 0) + 1;
+let filtreActif = 'toutes';
+let editingId = null;
+
+function sauverLocal() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(formations));
+  localStorage.setItem(STORAGE_KEY + '_prog', JSON.stringify(progression));
+  localStorage.setItem(STORAGE_KEY + '_favs', JSON.stringify(favoris));
+}
+
+function showNotif(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'notif';
+  el.style.background = type === 'error' ? '#e74c3c' : '#10B981';
+  el.textContent = msg;
+  document.getElementById('notif-zone').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function closeModalClick(e, id) {
+  if (e.target.id === id) closeModal(id);
+}
+
+function setFiltre(filtre, btn) {
+  filtreActif = filtre;
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  render();
+}
+
+function getFormationsFiltrees() {
+  let data = [...formations];
+  const q = document.getElementById('search-input')?.value.toLowerCase() || '';
+  if (q) data = data.filter(f => f.titre.toLowerCase().includes(q) || f.desc.toLowerCase().includes(q));
+
+  if (filtreActif === 'favoris') data = data.filter(f => favoris[f.id]);
+  else if (filtreActif === 'vues') data = data.filter(f => progression[f.id]);
+  else if (filtreActif === 'a-faire') data = data.filter(f => !progression[f.id]);
+  else if (filtreActif.startsWith('public:')) data = data.filter(f => f.public === filtreActif.split(':')[1] || f.public === 'tous');
+  else if (filtreActif.startsWith('theme:')) data = data.filter(f => f.theme === filtreActif.split(':')[1]);
+  else if (filtreActif.startsWith('type:')) data = data.filter(f => f.type === filtreActif.split(':')[1]);
+
+  const tri = document.getElementById('tri-select')?.value || 'recent';
+  if (tri === 'alpha') data.sort((a,b) => a.titre.localeCompare(b.titre,'fr'));
+  else if (tri === 'type') data.sort((a,b) => a.type.localeCompare(b.type));
+  else data.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  return data;
+}
+
+function updateCounts() {
+  const total = formations.length;
+  const vues = formations.filter(f => progression[f.id]).length;
+  const favs = formations.filter(f => favoris[f.id]).length;
+  const pct = total > 0 ? Math.round(vues/total*100) : 0;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-vues').textContent = vues;
+  document.getElementById('stat-favs').textContent = favs;
+  document.getElementById('stat-progress').textContent = pct + '%';
+  document.getElementById('progress-label').textContent = `${vues} / ${total} formations complétées`;
+  document.getElementById('progress-fill').style.width = pct + '%';
+
+  document.getElementById('cnt-toutes').textContent = total;
+  document.getElementById('cnt-vues').textContent = vues;
+  document.getElementById('cnt-favs').textContent = favs;
+  document.getElementById('cnt-afaire').textContent = total - vues;
+  document.getElementById('cnt-direction').textContent = formations.filter(f=>f.public==='direction'||f.public==='tous').length;
+  document.getElementById('cnt-terrain').textContent = formations.filter(f=>f.public==='terrain'||f.public==='tous').length;
+  document.getElementById('cnt-stagiaires').textContent = formations.filter(f=>f.public==='stagiaires'||f.public==='tous').length;
+  ['pedagogie','reglementation','hygiene','management','administratif'].forEach(t => {
+    document.getElementById('cnt-'+t).textContent = formations.filter(f=>f.theme===t).length;
+  });
+  ['video','document','fiche','lien'].forEach(t => {
+    document.getElementById('cnt-'+t).textContent = formations.filter(f=>f.type===t).length;
+  });
+}
+
+function render() {
+  updateCounts();
+  const data = getFormationsFiltrees();
+  const container = document.getElementById('formations-container');
+
+  if (data.length === 0) {
+    container.innerHTML = '<div class="vide"><div class="vide-icon">🎓</div><p>Aucune formation trouvée</p></div>';
+    return;
+  }
+
+  const typeColors = { video:'#FEF2F2', document:'#EFF6FF', fiche:'#F0FDF4', lien:'#F5F3FF' };
+  const typeLabel = { video:'🎥 Vidéo', document:'📄 Document', fiche:'📝 Fiche', lien:'🔗 Lien' };
+  const typeBadge = { video:'#EF4444', document:'#3B82F6', fiche:'#10B981', lien:'#8B5CF6' };
+  const themeConf = THEME_CONFIG;
+
+  container.innerHTML = '<div class="formations-grid">' + data.map(f => {
+    const tc = TYPE_CONFIG[f.type] || TYPE_CONFIG.fiche;
+    const th = THEME_CONFIG[f.theme] || { icon:'📁', color:'#ccc' };
+    const isVue = !!progression[f.id];
+    const isFav = !!favoris[f.id];
+    return `<div class="formation-card ${isVue?'vue':''}" onclick="ouvrirDetail(${f.id})">
+      <div class="card-thumb" style="background:${tc.bg}">
+        <span style="font-size:52px">${tc.icon}</span>
+        <span class="type-badge" style="background:${tc.color}">${tc.label}</span>
+        ${isVue ? '<span class="vue-badge">✅ Vu</span>' : ''}
+        <button class="fav-btn" onclick="event.stopPropagation();toggleFavori(${f.id})" title="${isFav?'Retirer des favoris':'Ajouter aux favoris'}">${isFav?'⭐':'☆'}</button>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${f.titre}</div>
+        <div class="card-desc">${f.desc}</div>
+        <div class="card-meta">
+          <span class="badge" style="background:${th.color}22;color:${th.color}">${th.icon} ${th.label}</span>
+          ${f.duree ? `<span style="font-size:11px;color:var(--ink3)">⏱ ${f.duree}</span>` : ''}
+          ${f.auteur ? `<span style="font-size:11px;color:var(--ink3)">• ${f.auteur}</span>` : ''}
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-primary" style="flex:1;justify-content:center;padding:8px" onclick="event.stopPropagation();marquerVue(${f.id})">${isVue?'✅ Complétée':'▶ Commencer'}</button>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function ouvrirDetail(id) {
+  const f = formations.find(x => x.id === id);
+  if (!f) return;
+  const tc = TYPE_CONFIG[f.type] || TYPE_CONFIG.fiche;
+  const th = THEME_CONFIG[f.theme] || { icon:'📁', label:'', color:'#ccc' };
+  const pub = PUBLIC_CONFIG[f.public] || PUBLIC_CONFIG.tous;
+  const isVue = !!progression[f.id];
+  const isFav = !!favoris[f.id];
+
+  document.getElementById('detail-titre').textContent = f.titre;
+
+  let videoHtml = '';
+  if (f.type === 'video' && f.url) {
+    let embedUrl = f.url;
+    const ytMatch = f.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+    if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`;
+    const vimeoMatch = f.url.match(/vimeo\.com\/(\d+)/);
+    if (vimeoMatch) embedUrl = `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    videoHtml = `<div class="video-container"><iframe src="${embedUrl}" allowfullscreen></iframe></div>`;
+  }
+
+  let contenuHtml = '';
+  if (f.contenu) {
+    const md = f.contenu
+      .replace(/^## (.+)$/gm, '<h3 style="font-size:15px;font-weight:700;margin:16px 0 8px;color:var(--ink)">$1</h3>')
+      .replace(/^### (.+)$/gm, '<h4 style="font-size:13px;font-weight:700;margin:12px 0 6px;color:var(--ink2)">$1</h4>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^(\d+)\. (.+)$/gm, '<div style="display:flex;gap:8px;margin-bottom:6px"><span style="background:var(--accent);color:#fff;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">$1</span><span style="font-size:13px;line-height:1.5">$2</span></div>')
+      .replace(/^- (.+)$/gm, '<div style="display:flex;gap:8px;margin-bottom:5px;font-size:13px;color:var(--ink2)"><span>▸</span><span>$1</span></div>')
+      .replace(/\n\n/g, '<br>');
+    contenuHtml = `<div style="background:var(--bg);border-radius:10px;padding:16px;margin-top:16px">${md}</div>`;
+  }
+
+  document.getElementById('detail-body').innerHTML = `
+    ${videoHtml}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <span class="badge" style="background:${tc.color}22;color:${tc.color}">${tc.icon} ${tc.label}</span>
+      <span class="badge" style="background:${th.color}22;color:${th.color}">${th.icon} ${th.label}</span>
+      <span class="badge" style="background:var(--bg);color:var(--ink2)">${pub.icon} ${pub.label}</span>
+      ${f.duree ? `<span class="badge" style="background:var(--bg);color:var(--ink2)">⏱ ${f.duree}</span>` : ''}
+      ${isVue ? '<span class="badge" style="background:#F0FDF4;color:#10B981">✅ Complétée</span>' : ''}
+    </div>
+    <p style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:12px">${f.desc}</p>
+    ${f.auteur ? `<p style="font-size:12px;color:var(--ink3)">Source : ${f.auteur}</p>` : ''}
+    ${contenuHtml}
+    ${f.url && f.type !== 'video' ? `<div style="margin-top:16px"><a href="${f.url}" target="_blank" style="color:var(--accent);font-size:13px;font-weight:600">🔗 Ouvrir le lien →</a></div>` : ''}`;
+
+  document.getElementById('detail-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="toggleFavori(${f.id});renderDetailFooter(${f.id})">${isFav?'⭐ Retirer des favoris':'☆ Ajouter aux favoris'}</button>
+    <button class="btn btn-secondary" onclick="ouvrirFormulaire(formations.find(x=>x.id===${f.id}))">✏️ Modifier</button>
+    <button class="btn btn-primary" onclick="marquerVue(${f.id});renderDetailFooter(${f.id})">${isVue?'↩ Marquer non vu':'✅ Marquer complétée'}</button>`;
+
+  document.getElementById('modal-detail').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function renderDetailFooter(id) {
+  const f = formations.find(x => x.id === id);
+  if (!f) return;
+  const isVue = !!progression[f.id];
+  const isFav = !!favoris[f.id];
+  document.getElementById('detail-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="toggleFavori(${f.id});renderDetailFooter(${f.id})">${isFav?'⭐ Retirer des favoris':'☆ Ajouter aux favoris'}</button>
+    <button class="btn btn-secondary" onclick="ouvrirFormulaire(formations.find(x=>x.id===${f.id}))">✏️ Modifier</button>
+    <button class="btn btn-primary" onclick="marquerVue(${f.id});renderDetailFooter(${f.id})">${isVue?'↩ Marquer non vu':'✅ Marquer complétée'}</button>`;
+}
+
+function marquerVue(id) {
+  if (progression[id]) delete progression[id];
+  else progression[id] = new Date().toISOString();
+  sauverLocal(); render();
+  showNotif(progression[id] ? '✅ Formation marquée complétée' : '↩ Formation remise à faire');
+}
+
+function toggleFavori(id) {
+  if (favoris[id]) delete favoris[id];
+  else favoris[id] = true;
+  sauverLocal(); render();
+}
+
+function ouvrirFormulaire(f) {
+  editingId = f ? f.id : null;
+  document.getElementById('form-titre').textContent = f ? '✏️ Modifier la formation' : '➕ Ajouter une formation';
+  document.getElementById('f-titre').value = f?.titre || '';
+  document.getElementById('f-desc').value = f?.desc || '';
+  document.getElementById('f-type').value = f?.type || 'video';
+  document.getElementById('f-theme').value = f?.theme || 'pedagogie';
+  document.getElementById('f-public').value = f?.public || 'tous';
+  document.getElementById('f-duree').value = f?.duree || '';
+  document.getElementById('f-url').value = f?.url || '';
+  document.getElementById('f-contenu').value = f?.contenu || '';
+  document.getElementById('f-auteur').value = f?.auteur || '';
+  document.getElementById('modal-form').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function sauvegarder() {
+  const titre = document.getElementById('f-titre').value.trim();
+  if (!titre) { showNotif('Le titre est obligatoire', 'error'); return; }
+  const f = {
+    titre, desc: document.getElementById('f-desc').value,
+    type: document.getElementById('f-type').value,
+    theme: document.getElementById('f-theme').value,
+    public: document.getElementById('f-public').value,
+    duree: document.getElementById('f-duree').value,
+    url: document.getElementById('f-url').value,
+    contenu: document.getElementById('f-contenu').value,
+    auteur: document.getElementById('f-auteur').value,
+    date: new Date().toISOString().split('T')[0],
+  };
+  if (editingId) {
+    const idx = formations.findIndex(x => x.id === editingId);
+    formations[idx] = { ...formations[idx], ...f };
+    showNotif('✅ Formation mise à jour');
+  } else {
+    formations.push({ ...f, id: nextId++ });
+    showNotif('✅ Formation ajoutée');
+  }
+  sauverLocal(); closeModal('modal-form'); render();
+}
+
+render();
+</script>
+</body>
+</html>
