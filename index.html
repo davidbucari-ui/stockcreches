@@ -3104,6 +3104,74 @@ document.addEventListener('DOMContentLoaded', () => {
   updateAlertBadge();
 });
 
+// ── AUTHENTIFICATION SUPABASE ─────────────────────────────────────
+let currentUser = null;
+
+async function checkSession() {
+  if (IS_LOCAL) { startApp(); return; }
+  const token = localStorage.getItem('sb_token');
+  if (token) {
+    try {
+      const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
+        headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        currentUser = await res.json();
+        if (currentUser && currentUser.id) { startApp(); return; }
+      }
+    } catch(e) {}
+  }
+  showLoginScreen();
+}
+
+function showLoginScreen() {
+  const s = document.getElementById('login-screen');
+  if (s) { s.style.display = 'flex'; }
+}
+
+function hideLoginScreen() {
+  const s = document.getElementById('login-screen');
+  if (s) s.style.display = 'none';
+}
+
+async function loginUser() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  if (!email || !password) { showLoginError('Veuillez remplir tous les champs'); return; }
+  btn.textContent = '⏳ Connexion…'; btn.disabled = true;
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.access_token) throw new Error(data.error_description || 'Email ou mot de passe incorrect');
+    localStorage.setItem('sb_token', data.access_token);
+    currentUser = data.user;
+    hideLoginScreen();
+    startApp();
+  } catch(e) {
+    showLoginError(e.message);
+    btn.textContent = 'Se connecter'; btn.disabled = false;
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = '⚠ ' + msg; el.style.display = 'block';
+}
+
+function startApp() {
+  const token = localStorage.getItem('sb_token');
+  if (token && !IS_LOCAL) SUPA_HEADERS['Authorization'] = 'Bearer ' + token;
+  init();
+}
+// ── FIN AUTH ─────────────────────────────────────────────────────
+
 function init() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('c-date').value = today;
@@ -5257,7 +5325,7 @@ async function removeArticlePhoto(id) {
 
 const SUPA_URL = 'https://drxqjeilbunpfqyecpdg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyeHFqZWlsYnVucGZxeWVjcGRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ2MzgsImV4cCI6MjA5NTQ2MDYzOH0.vTQZwnbrmL6zaUxYb3qzMMWp3Jhs-fWeSJiBdmn_6m8';
-const SUPA_HEADERS = {
+let SUPA_HEADERS = {
   'Content-Type': 'application/json',
   'apikey': SUPA_KEY,
   'Authorization': 'Bearer ' + SUPA_KEY,
@@ -5777,7 +5845,7 @@ function onClearData()         { clearData().catch(e => console.error(e)); }
 
 // Lancer l'app
 try {
-  init();
+  checkSession();
 } catch(e) {
   console.error('[Init error]', e.message, e.stack);
   // Ne montrer l'erreur que si l'inventaire n'a pas pu se charger
@@ -6323,6 +6391,42 @@ function showImportResult(type, html) {
       <button class="btn btn-secondary" onclick="telechargerBordereau()">⬇ Télécharger</button>
       <button class="btn btn-secondary" onclick="ouvrirMailBordereau()">✉️ Mail</button>
       <button class="btn btn-primary" onclick="partagerBordereau()">📤 Partager</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ÉCRAN DE CONNEXION ── -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#1C1917,#292524,#1E1B4B);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:24px;padding:40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:48px;margin-bottom:12px">🐨</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#1C1917">DB Solutions</div>
+      <div style="font-size:13px;color:#A8A29E;margin-top:4px">Stocks Pédagogiques</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#44403C;display:block;margin-bottom:5px">Email</label>
+        <input type="email" id="login-email" placeholder="votre@email.com"
+          style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #E7E5E0;font-size:14px;outline:none;font-family:'Instrument Sans',sans-serif"
+          onfocus="this.style.borderColor='#6366F1'" onblur="this.style.borderColor='#E7E5E0'"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#44403C;display:block;margin-bottom:5px">Mot de passe</label>
+        <input type="password" id="login-password" placeholder="••••••••"
+          style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #E7E5E0;font-size:14px;outline:none;font-family:'Instrument Sans',sans-serif"
+          onfocus="this.style.borderColor='#6366F1'" onblur="this.style.borderColor='#E7E5E0'"
+          onkeydown="if(event.key==='Enter')loginUser()">
+      </div>
+      <div id="login-error" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 12px;font-size:13px;color:#DC2626"></div>
+      <button onclick="loginUser()" id="login-btn"
+        style="background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:opacity 0.15s"
+        onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+        Se connecter
+      </button>
+    </div>
+    <div style="text-align:center;margin-top:20px;font-size:12px;color:#A8A29E">
+      DB Solutions · Accès réservé
     </div>
   </div>
 </div>
