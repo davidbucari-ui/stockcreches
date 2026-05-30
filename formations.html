@@ -269,6 +269,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-form')">Annuler</button>
+      <button class="btn btn-secondary" style="color:#e74c3c;border-color:#e74c3c" onclick="supprimerFormation()" id="btn-supprimer" style="display:none">🗑 Supprimer</button>
       <button class="btn btn-primary" onclick="sauvegarder()">💾 Enregistrer</button>
     </div>
   </div>
@@ -523,6 +524,7 @@ function toggleFavori(id) {
 function ouvrirFormulaire(f) {
   editingId = f ? f.id : null;
   document.getElementById('form-titre').textContent = f ? '✏️ Modifier la formation' : '➕ Ajouter une formation';
+  document.getElementById('btn-supprimer').style.display = f ? 'inline-flex' : 'none';
   document.getElementById('f-titre').value = f?.titre || '';
   document.getElementById('f-desc').value = f?.desc || '';
   document.getElementById('f-type').value = f?.type || 'video';
@@ -534,6 +536,16 @@ function ouvrirFormulaire(f) {
   document.getElementById('f-auteur').value = f?.auteur || '';
   document.getElementById('modal-form').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+function supprimerFormation() {
+  if (!editingId) return;
+  if (!confirm('Supprimer cette formation ?')) return;
+  formations = formations.filter(f => f.id !== editingId);
+  sauverLocal();
+  closeModal('modal-form');
+  showNotif('🗑 Formation supprimée');
+  render();
 }
 
 function sauvegarder() {
