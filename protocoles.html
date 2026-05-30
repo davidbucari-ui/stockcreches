@@ -84,7 +84,7 @@
     <button class="btn-secondary" onclick="document.getElementById('import-file-input').click()" style="display:flex;align-items:center;gap:6px">
       📄 Importer Word / PDF
     </button>
-    <input type="file" id="import-file-input" accept=".docx,.pdf" style="display:none" onchange="importerFichier(event)">
+    <input type="file" id="import-file-input" accept=".docx,.pdf" style="display:none" onchange="importerFichier(event)" multiple>
     <button class="btn-primary" onclick="ouvrirFormulaire()">+ Ajouter un document</button>
   </div>
 </div>
@@ -379,26 +379,39 @@ function render() {
 
 // ── IMPORT WORD / PDF ────────────────────────────────────────────
 async function importerFichier(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
   event.target.value = '';
-  afficherNotif('⏳ Lecture du fichier en cours…');
-  try {
-    let texte = '';
-    if (file.name.endsWith('.docx')) {
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      texte = result.value;
-    } else if (file.name.endsWith('.pdf')) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        texte += content.items.map(item => item.str).join(' ') + '\n';
+
+  // Import massif (plusieurs fichiers)
+  if (files.length > 1) {
+    afficherNotif('⏳ Import de ' + files.length + ' fichiers en cours…');
+    let importes = 0;
+    let erreurs = 0;
+    for (const file of files) {
+      try {
+        const texte = await extraireTexte(file);
+        if (!texte.trim()) { erreurs++; continue; }
+        const parsed = analyserTexteProtocole(texte, file.name);
+        documents.push({ ...parsed, id: nextId++ });
+        importes++;
+      } catch(e) {
+        console.error('[Import]', file.name, e);
+        erreurs++;
       }
     }
+    sauverLocal();
+    vue = 'liste';
+    render();
+    afficherNotif('✅ ' + importes + ' protocole(s) importé(s)' + (erreurs > 0 ? ' · ' + erreurs + ' erreur(s)' : ''));
+    return;
+  }
+
+  // Import unique → ouvrir le formulaire pour vérification
+  const file = files[0];
+  afficherNotif('⏳ Lecture du fichier en cours…');
+  try {
+    const texte = await extraireTexte(file);
     if (!texte.trim()) { afficherNotif('⚠ Impossible de lire le fichier', 'error'); return; }
     formulaire = analyserTexteProtocole(texte, file.name);
     vue = 'formulaire';
@@ -407,6 +420,26 @@ async function importerFichier(event) {
   } catch(e) {
     afficherNotif('⚠ Erreur : ' + e.message, 'error');
   }
+}
+
+async function extraireTexte(file) {
+  if (file.name.endsWith('.docx')) {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  } else if (file.name.endsWith('.pdf')) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let texte = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      texte += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    return texte;
+  }
+  return '';
 }
 
 function analyserTexteProtocole(texte, nomFichier) {
