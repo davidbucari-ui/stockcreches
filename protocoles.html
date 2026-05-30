@@ -321,16 +321,35 @@ const STATUTS = [
 ];
 
 const DOCS_DEFAUT = [
-  { id:1,  titre:"Protocole de change et hygiène du nourrisson",      categorie:"hygiene",       statut:"vigueur",  dateRevision:"2024-09-01", description:"Procédure complète pour le change, le lavage des mains, la désinfection du matériel.", responsable:"Directrice", version:"v2.1" },
-  { id:2,  titre:"Plan d'évacuation incendie",                         categorie:"securite",      statut:"vigueur",  dateRevision:"2024-06-15", description:"Itinéraires d'évacuation, point de rassemblement, rôles de chaque membre du personnel.", responsable:"Responsable sécurité", version:"v1.3" },
-  { id:3,  titre:"Protocole de gestion des médicaments",               categorie:"sante",         statut:"vigueur",  dateRevision:"2024-01-10", description:"Conditions de stockage, administration sur ordonnance, registre de suivi.", responsable:"Infirmière", version:"v3.0" },
-  { id:4,  titre:"Procédure d'introduction alimentaire",               categorie:"alimentation",  statut:"revision", dateRevision:"2023-11-20", description:"Diversification alimentaire progressive, allergènes, textures par tranche d'âge.", responsable:"Puéricultrice", version:"v1.8" },
-  { id:5,  titre:"Protocole conduite à tenir en cas de fièvre",        categorie:"sante",         statut:"vigueur",  dateRevision:"2024-03-05", description:"Seuils d'alerte, mesures de température, contact avec les parents et le médecin.", responsable:"Infirmière", version:"v2.0" },
-  { id:6,  titre:"Règlement intérieur de la crèche",                   categorie:"administratif", statut:"vigueur",  dateRevision:"2024-01-01", description:"Horaires, facturation, droits et obligations des familles et du personnel.", responsable:"Directrice", version:"v4.2" },
-  { id:7,  titre:"Projet pédagogique annuel",                          categorie:"pedagogie",     statut:"vigueur",  dateRevision:"2024-09-01", description:"Objectifs éducatifs, thèmes mensuels, activités d'éveil et de motricité.", responsable:"Équipe pédagogique", version:"v2025" },
-  { id:8,  titre:"Protocole d'accueil de l'enfant porteur de handicap",categorie:"accueil",       statut:"revision", dateRevision:"2023-07-12", description:"Aménagements, partenariats avec les professionnels de santé spécialisés.", responsable:"Directrice", version:"v1.0" },
-  { id:9,  titre:"Fiche de conduite en cas d'accident",                categorie:"urgence",       statut:"vigueur",  dateRevision:"2024-02-28", description:"Numéros d'urgence, premiers secours, rédaction du rapport d'incident.", responsable:"Toute l'équipe", version:"v2.3" },
-  { id:10, titre:"Protocole d'adaptation (période de familiarisation)",categorie:"accueil",       statut:"vigueur",  dateRevision:"2024-08-20", description:"Étapes de l'adaptation progressive, rôle des parents, suivi du bien-être de l'enfant.", responsable:"Référente de section", version:"v1.5" },
+  { id:1,  titre:"Protocole de change et hygiène du nourrisson",      categorie:"hygiene",       statut:"vigueur",  dateRevision:"2024-09-01", description:"Procédure complète pour le change, le lavage des mains, la désinfection du matériel.", responsable:"Directrice", version:"v2.1",
+    objectif:"Garantir l'hygiène de l'enfant et prévenir les infections croisées lors du change.",
+    etapes:"1. Préparer le plan de change avec le matériel nécessaire\n2. Se laver les mains avant et après le change\n3. Poser l'enfant sur le plan de change en maintenant une main sur lui\n4. Retirer la couche souillée et la mettre dans le sac poubelle fermé\n5. Nettoyer les fesses avec une lingette ou gant humide de l'avant vers l'arrière\n6. Mettre la couche propre\n7. Rhabiller l'enfant\n8. Désinfecter le plan de change avec le produit désinfectant",
+    notes:"Ne jamais laisser un enfant seul sur le plan de change. Tracer le change dans le cahier de liaison." },
+  { id:2,  titre:"Plan d'évacuation incendie",                         categorie:"securite",      statut:"vigueur",  dateRevision:"2024-06-15", description:"Itinéraires d'évacuation, point de rassemblement, rôles de chaque membre du personnel.", responsable:"Responsable sécurité", version:"v1.3",
+    objectif:"Assurer l'évacuation rapide et sécurisée de tous les enfants et adultes en cas d'incendie.",
+    etapes:"1. Déclencher l'alarme incendie\n2. Appeler le 18 (pompiers)\n3. Prendre les couchages des bébés (sans perdre de temps)\n4. Faire sortir les enfants par l'itinéraire d'évacuation affiché\n5. Se diriger vers le point de rassemblement (entrée du parking)\n6. Faire l'appel de tous les enfants et adultes\n7. Attendre les secours et ne pas réintégrer les locaux",
+    notes:"Exercice d'évacuation obligatoire 2 fois par an. Les plans d'évacuation sont affichés à chaque entrée." },
+  { id:3,  titre:"Protocole de gestion des médicaments",               categorie:"sante",         statut:"vigueur",  dateRevision:"2024-01-10", description:"Conditions de stockage, administration sur ordonnance, registre de suivi.", responsable:"Infirmière", version:"v3.0",
+    objectif:"Assurer la sécurité de l'administration des médicaments aux enfants accueillis.",
+    etapes:"1. Vérifier la prescription médicale (ordonnance datée et signée)\n2. Vérifier l'identité de l'enfant\n3. Vérifier le médicament (nom, dosage, date de péremption)\n4. Administrer le médicament selon la prescription\n5. Tracer l'administration dans le registre de soins\n6. Informer les parents en fin de journée",
+    notes:"Aucun médicament ne peut être administré sans ordonnance en cours de validité. Les médicaments sont stockés sous clé." },
+  { id:4,  titre:"Procédure d'introduction alimentaire",               categorie:"alimentation",  statut:"revision", dateRevision:"2023-11-20", description:"Diversification alimentaire progressive, allergènes, textures par tranche d'âge.", responsable:"Puéricultrice", version:"v1.8", objectif:"", etapes:"", notes:"" },
+  { id:5,  titre:"Protocole conduite à tenir en cas de fièvre",        categorie:"sante",         statut:"vigueur",  dateRevision:"2024-03-05", description:"Seuils d'alerte, mesures de température, contact avec les parents et le médecin.", responsable:"Infirmière", version:"v2.0",
+    objectif:"Définir la conduite à tenir face à un enfant fiévreux pour assurer sa sécurité.",
+    etapes:"1. Prendre la température (tympanique ou axillaire)\n2. Si T° > 38°C : déshabiller l'enfant, proposer à boire\n3. Si T° > 38,5°C : appeler les parents pour récupérer l'enfant\n4. Si T° > 39°C ou convulsions : appeler le 15 (SAMU)\n5. Tracer la température et les actions dans le cahier de soins\n6. Informer la directrice",
+    notes:"Un enfant fiévreux ne peut pas être gardé en structure. Aucun médicament antipyrétique sans ordonnance." },
+  { id:6,  titre:"Règlement intérieur de la crèche",                   categorie:"administratif", statut:"vigueur",  dateRevision:"2024-01-01", description:"Horaires, facturation, droits et obligations des familles et du personnel.", responsable:"Directrice", version:"v4.2", objectif:"", etapes:"", notes:"" },
+  { id:7,  titre:"Projet pédagogique annuel",                          categorie:"pedagogie",     statut:"vigueur",  dateRevision:"2024-09-01", description:"Objectifs éducatifs, thèmes mensuels, activités d'éveil et de motricité.", responsable:"Équipe pédagogique", version:"v2025", objectif:"", etapes:"", notes:"" },
+  { id:8,  titre:"Protocole d'accueil de l'enfant porteur de handicap",categorie:"accueil",       statut:"revision", dateRevision:"2023-07-12", description:"Aménagements, partenariats avec les professionnels de santé spécialisés.", responsable:"Directrice", version:"v1.0", objectif:"", etapes:"", notes:"" },
+  { id:9,  titre:"Fiche de conduite en cas d'accident",                categorie:"urgence",       statut:"vigueur",  dateRevision:"2024-02-28", description:"Numéros d'urgence, premiers secours, rédaction du rapport d'incident.", responsable:"Toute l'équipe", version:"v2.3",
+    objectif:"Définir les actions immédiates à mener en cas d'accident d'un enfant dans la structure.",
+    etapes:"1. Rester calme et sécuriser le lieu\n2. Évaluer l'état de l'enfant (conscience, respiration)\n3. Si urgence vitale : appeler le 15 (SAMU)\n4. Si blessure mineure : soins de premiers secours\n5. Appeler les parents immédiatement\n6. Rédiger le rapport d'incident\n7. Informer la directrice\n8. Conserver le rapport dans le dossier de l'enfant",
+    notes:"Le rapport d'incident est obligatoire pour tout accident, même bénin. Ne jamais déplacer un enfant inconscient." },
+  { id:10, titre:"Protocole d'adaptation (période de familiarisation)",categorie:"accueil",       statut:"vigueur",  dateRevision:"2024-08-20", description:"Étapes de l'adaptation progressive, rôle des parents, suivi du bien-être de l'enfant.", responsable:"Référente de section", version:"v1.5", objectif:"", etapes:"", notes:"" },
+  { id:11, titre:"Protocole arrêt cardio-respiratoire",                categorie:"urgence",       statut:"vigueur",  dateRevision:"2024-09-01", description:"Conduite à tenir en cas d'inconscience et d'absence de respiration chez un nourrisson ou enfant.", responsable:"Toute l'équipe", version:"v1.0",
+    objectif:"Réaliser une réanimation cardio-pulmonaire (RCP) dans les meilleures conditions en attendant les secours.",
+    etapes:"1. Noter l'heure\n2. Faire immédiatement un cycle de massage cardiaque :\n   • Regarder si corps étranger intra-buccal : si oui l'extraire au doigt\n   • 5 insufflations\n   • 15 compressions thoraciques\n3. Appeler à l'aide / crier pour :\n   • Faire appeler le 15 par un(e) collègue\n   • Faire évacuer les autres enfants dans une autre pièce\n4. Reprendre au plus vite le massage cardiaque\n5. POURSUIVRE 15 compressions / 2 insufflations jusqu'à l'arrivée des secours\n6. Avertir la responsable d'établissement\n7. Téléphoner aux parents",
+    notes:"ENFANT < 1 AN : 2 doigts au milieu de la poitrine, enfoncer 3 cm, rythme 100/min. Prendre bouche ET nez dans la bouche.\n\nENFANT > 1 AN : paume de la main, 1 bras tendu, enfoncer 3-4 cm, rythme 100/min. Boucher le nez.\n\nSi reprise d'une respiration : mettre en position latérale de sécurité (PLS)." },
 ];
 
 const STORAGE_KEY = "creche_documents_db";
@@ -436,8 +455,14 @@ function render() {
               <input id="f-resp" value="${formulaire.responsable}" placeholder="Nom ou rôle"></div>
             <div class="form-group"><label>Date de révision</label>
               <input id="f-date" type="date" value="${formulaire.dateRevision}"></div>
-            <div class="form-group full"><label>Description</label>
-              <textarea id="f-desc">${formulaire.description}</textarea></div>
+            <div class="form-group full"><label>Description courte *</label>
+              <textarea id="f-desc" style="min-height:60px">${formulaire.description}</textarea></div>
+            <div class="form-group full"><label>🎯 Objectif</label>
+              <textarea id="f-objectif" style="min-height:60px">${formulaire.objectif||''}</textarea></div>
+            <div class="form-group full"><label>📋 Étapes / Procédure</label>
+              <textarea id="f-etapes" style="min-height:120px" placeholder="1. Première étape&#10;2. Deuxième étape&#10;3. ...">${formulaire.etapes||''}</textarea></div>
+            <div class="form-group full"><label>⚠️ Notes importantes</label>
+              <textarea id="f-notes" style="min-height:80px">${formulaire.notes||''}</textarea></div>
           </div>
           <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px">
             <button class="btn-secondary" onclick="vue='liste';formulaire=null;render()">Annuler</button>
@@ -454,29 +479,91 @@ function render() {
     if (!doc) { vue = "liste"; render(); return; }
     const cat = getCategorie(doc.categorie);
     const stat = getStatut(doc.statut);
+
+    // Formater les étapes en HTML
+    const formatEtapes = (etapes) => {
+      if (!etapes) return '';
+      return etapes.split('\n').map(line => {
+        line = line.trim();
+        if (!line) return '';
+        const isStep = /^\d+[\.\)]/.test(line);
+        const isSub = /^[•\-\*]/.test(line);
+        if (isStep) return `<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start">
+          <span style="background:${cat.color};color:#fff;min-width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${line.match(/^\d+/)[0]}</span>
+          <span style="padding-top:3px;line-height:1.5">${line.replace(/^\d+[\.\)]\s*/, '')}</span>
+        </div>`;
+        if (isSub) return `<div style="padding-left:36px;margin-bottom:6px;color:var(--ink2);font-size:13px;line-height:1.5">▸ ${line.replace(/^[•\-\*]\s*/, '')}</div>`;
+        return `<div style="padding-left:36px;margin-bottom:6px;color:var(--ink2);font-size:13px;line-height:1.5">${line}</div>`;
+      }).join('');
+    };
+
+    const formatNotes = (notes) => {
+      if (!notes) return '';
+      return notes.split('\n').filter(l => l.trim()).map(line =>
+        `<div style="display:flex;gap:8px;margin-bottom:6px"><span>⚠️</span><span style="font-size:13px;line-height:1.5">${line.trim()}</span></div>`
+      ).join('');
+    };
+
     app.innerHTML = `
       <div class="detail-page">
         <button class="btn-back" onclick="vue='liste';docSelectionne=null;render()">← Retour à la liste</button>
         <div class="detail-card">
-          <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
-            <div class="cat-icon" style="background:${cat.color}22;color:${cat.color};width:56px;height:56px;font-size:28px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">${cat.icon}</div>
-            <div>
-              <h2 style="font-family:'Syne',sans-serif;font-size:20px;margin-bottom:6px">${doc.titre}</h2>
-              <span class="badge" style="background:${cat.color}22;color:${cat.color}">${cat.label}</span>
+
+          <!-- En-tête coloré -->
+          <div style="background:${cat.color}15;border-radius:12px;padding:20px;margin-bottom:20px;border-left:4px solid ${cat.color}">
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="width:52px;height:52px;border-radius:14px;background:${cat.color};display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">${cat.icon}</div>
+              <div style="flex:1">
+                <h2 style="font-family:'Syne',sans-serif;font-size:18px;margin-bottom:6px;color:var(--ink)">${doc.titre}</h2>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <span class="badge" style="background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}44">${cat.label}</span>
+                  <span class="statut-pill" style="background:${stat.color}22;color:${stat.color}">${stat.label}</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="detail-grid">
-            <div class="detail-item"><span class="detail-label">Statut</span><span class="statut-pill" style="background:${stat.color}22;color:${stat.color}">${stat.label}</span></div>
-            <div class="detail-item"><span class="detail-label">Version</span><strong>${doc.version}</strong></div>
-            <div class="detail-item"><span class="detail-label">Responsable</span><strong>${doc.responsable}</strong></div>
-            <div class="detail-item"><span class="detail-label">Dernière révision</span><strong>${new Date(doc.dateRevision).toLocaleDateString('fr-FR')}</strong></div>
+
+          <!-- Méta-infos -->
+          <div class="detail-grid" style="margin-bottom:20px">
+            <div class="detail-item"><span class="detail-label">👤 Responsable</span><strong>${doc.responsable}</strong></div>
+            <div class="detail-item"><span class="detail-label">🔖 Version</span><strong>${doc.version}</strong></div>
+            <div class="detail-item"><span class="detail-label">📅 Dernière révision</span><strong>${new Date(doc.dateRevision).toLocaleDateString('fr-FR')}</strong></div>
+            <div class="detail-item"><span class="detail-label">📁 Catégorie</span><strong>${cat.label}</strong></div>
           </div>
-          <div style="background:var(--bg);border-radius:12px;padding:18px;margin-top:4px">
-            <span class="detail-label">Description</span>
-            <p style="margin-top:8px;line-height:1.7;color:var(--ink2)">${doc.description}</p>
+
+          <!-- Description -->
+          <div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px">
+            <p style="font-size:13px;color:var(--ink2);line-height:1.7;margin:0">${doc.description}</p>
           </div>
-          <div style="display:flex;gap:12px;margin-top:24px">
+
+          <!-- Objectif -->
+          ${doc.objectif ? `
+          <div style="background:#EFF6FF;border-radius:12px;padding:16px;margin-bottom:16px;border-left:3px solid #3B82F6">
+            <div style="font-weight:700;font-size:13px;color:#1D4ED8;margin-bottom:8px">🎯 Objectif</div>
+            <p style="font-size:13px;color:#1E40AF;line-height:1.7;margin:0">${doc.objectif}</p>
+          </div>` : ''}
+
+          <!-- Étapes -->
+          ${doc.etapes ? `
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+              <span style="background:${cat.color};color:#fff;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center">📋</span>
+              Procédure à suivre
+            </div>
+            ${formatEtapes(doc.etapes)}
+          </div>` : ''}
+
+          <!-- Notes importantes -->
+          ${doc.notes ? `
+          <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px;margin-bottom:16px">
+            <div style="font-weight:700;font-size:13px;color:#92400E;margin-bottom:10px">⚠️ Notes importantes</div>
+            ${formatNotes(doc.notes)}
+          </div>` : ''}
+
+          <!-- Actions -->
+          <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
             <button class="btn-primary" onclick="ouvrirFormulaire(documents.find(d=>d.id===${doc.id}))">✏️ Modifier</button>
+            <button class="btn-secondary" onclick="imprimerFiche(${doc.id})">🖨 Imprimer</button>
             <button class="btn-secondary btn-danger" onclick="supprimerDocument(${doc.id})">🗑 Supprimer</button>
           </div>
         </div>
@@ -583,6 +670,19 @@ function collectFormulaire() {
   formulaire.responsable = document.getElementById('f-resp').value;
   formulaire.dateRevision = document.getElementById('f-date').value;
   formulaire.description = document.getElementById('f-desc').value;
+  formulaire.objectif = document.getElementById('f-objectif').value;
+  formulaire.etapes = document.getElementById('f-etapes').value;
+  formulaire.notes = document.getElementById('f-notes').value;
+}
+
+function imprimerFiche(id) {
+  const doc = documents.find(d => d.id === id);
+  if (!doc) return;
+  const cat = getCategorie(doc.categorie);
+  const stat = getStatut(doc.statut);
+  const fep = (e) => { if (!e) return ""; return e.split("\n").map(l => { l=l.trim(); if (!l) return ""; const s=/^\d+[\.)]/.test(l); const sb=/^[•\-\*]/.test(l); if (s) return `<div class="step"><span class="sn">${l.match(/^\d+/)[0]}</span><span>${l.replace(/^\d+[\.)\s*/,"")}</span></div>`; if (sb) return `<div class="ss">▸ ${l.replace(/^[•\-\*]\s*/,"")}</div>`; return `<div class="ss">${l}</div>`; }).join(""); };
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${doc.titre}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;padding:20px;max-width:800px;margin:0 auto}.header{background:${cat.color}18;border-left:5px solid ${cat.color};padding:16px 20px;border-radius:0 10px 10px 0;margin-bottom:20px}.header h1{font-size:18px;font-weight:800}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}.mi{background:#f5f5f5;border-radius:8px;padding:10px;font-size:11px}.ml{color:#888;font-weight:600;text-transform:uppercase;font-size:10px;display:block;margin-bottom:3px}.sec{border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;margin-bottom:14px}.st{background:#f8f8f8;padding:10px 14px;font-weight:700;font-size:12px;border-bottom:1px solid #e5e5e5}.sb{padding:14px}.step{display:flex;gap:10px;margin-bottom:8px}.sn{background:${cat.color};color:#fff;min-width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}.ss{padding-left:32px;margin-bottom:5px;color:#555;font-size:11px;line-height:1.5}.obj{background:#EFF6FF;border-left:3px solid #3B82F6;padding:12px;font-size:12px;line-height:1.6;color:#1E40AF}.nt{background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:12px}.nl{display:flex;gap:6px;margin-bottom:5px;font-size:11px;line-height:1.5}.footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;text-align:center;font-size:10px;color:#aaa}@media print{.np{display:none}@page{margin:1.5cm}}</style></head><body><div class="np" style="text-align:center;margin-bottom:16px"><button onclick="window.print()" style="background:#5c6bc0;color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer">🖨 Imprimer</button></div><div class="header"><h1>${cat.icon} ${doc.titre}</h1></div><div class="meta"><div class="mi"><span class="ml">Responsable</span>${doc.responsable}</div><div class="mi"><span class="ml">Version</span>${doc.version}</div><div class="mi"><span class="ml">Révision</span>${new Date(doc.dateRevision).toLocaleDateString("fr-FR")}</div><div class="mi"><span class="ml">Statut</span>${stat.label}</div></div>${doc.description?`<div class="sec"><div class="st">📄 Description</div><div class="sb">${doc.description}</div></div>`:""} ${doc.objectif?`<div class="sec"><div class="st">🎯 Objectif</div><div class="sb"><div class="obj">${doc.objectif}</div></div></div>`:""} ${doc.etapes?`<div class="sec"><div class="st">📋 Procédure</div><div class="sb">${fep(doc.etapes)}</div></div>`:""} ${doc.notes?`<div class="sec"><div class="st">⚠️ Notes importantes</div><div class="sb"><div class="nt">${doc.notes.split("\n").filter(l=>l.trim()).map(l=>`<div class="nl"><span>⚠️</span><span>${l.trim()}</span></div>`).join("")}</div></div></div>`:""}<div class="footer">Base documentaire · ${new Date().toLocaleDateString("fr-FR")}</div><script>window.onload=()=>window.print()</script></body></html>`;
+  const w=window.open("","_blank"); w.document.write(html); w.document.close();
 }
 
 render();
