@@ -80,18 +80,59 @@ body {
   padding: 20px 20px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
+
 .sidebar-company-logo {
-  width:100%;height:64px;margin-bottom:14px;border-radius:10px;
-  background:rgba(255,255,255,0.06);border:1.5px dashed rgba(255,255,255,0.2);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;
-  transition:background 0.2s,border-color 0.2s;overflow:hidden;position:relative;
+  width: 100%;
+  height: 64px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px dashed rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  overflow: hidden;
+  position: relative;
 }
-.sidebar-company-logo:hover{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.4)}
-.sidebar-company-logo img{max-width:100%;max-height:60px;object-fit:contain;border-radius:8px}
-.sidebar-company-logo .logo-placeholder{display:flex;flex-direction:column;align-items:center;gap:4px;color:rgba(255,255,255,0.35);font-size:10px;letter-spacing:0.5px;text-transform:uppercase;pointer-events:none}
-.sidebar-company-logo .logo-placeholder span{font-size:20px}
-.sidebar-company-logo .logo-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.15s}
-.sidebar-company-logo:hover .logo-remove{opacity:1}
+.sidebar-company-logo:hover {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.4);
+}
+.sidebar-company-logo img {
+  max-width: 100%;
+  max-height: 60px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.sidebar-company-logo .logo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255,255,255,0.35);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.sidebar-company-logo .logo-placeholder span { font-size: 20px; }
+.sidebar-company-logo .logo-remove {
+  position: absolute;
+  top: 4px; right: 4px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 18px; height: 18px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.sidebar-company-logo:hover .logo-remove { opacity: 1; }
 
 .sidebar-logo h1 {
   font-family: 'Syne', sans-serif;
@@ -745,6 +786,10 @@ textarea { resize: vertical; min-height: 72px; }
   .content { padding: 16px; }
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 </head>
 <body>
 
@@ -766,13 +811,14 @@ textarea { resize: vertical; min-height: 72px; }
 <!-- ── SIDEBAR ── -->
 <aside class="sidebar">
   <div class="sidebar-logo">
+    <!-- Zone logo entreprise -->
     <div class="sidebar-company-logo" id="logoZone" onclick="triggerLogoUpload()" title="Cliquez pour ajouter votre logo">
       <div class="logo-placeholder" id="logoPlaceholder">
         <span>🏢</span>
         <div>Votre logo</div>
       </div>
-      <img id="logoImg" style="display:none" alt="Logo">
-      <button class="logo-remove" id="logoRemoveBtn" style="display:none" onclick="removeLogo(event)">✕</button>
+      <img id="logoImg" style="display:none" alt="Logo entreprise">
+      <button class="logo-remove" id="logoRemoveBtn" style="display:none" onclick="removeLogo(event)" title="Supprimer le logo">✕</button>
     </div>
     <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
     <h1>Stocks Pédagogiques</h1>
@@ -792,17 +838,18 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 
   <div class="sidebar-section-title">Navigation</div>
-  <button class="nav-item active" onclick="showPage('inventaire', this)">
-    <span class="nav-icon">📦</span> Inventaire
+  <button class="nav-item active" onclick="showPage('dashboard', this)">
+    <span class="nav-icon">🏠</span> Tableau de bord
   </button>
-  <button class="nav-item" onclick="showPage('commandes', this)">
-    <span class="nav-icon">🛒</span> Commandes
+  <button class="nav-item" onclick="showPage('statistiques', this)">
+    <span class="nav-icon">📊</span> Statistiques
+    <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
-  <button class="nav-item" onclick="showPage('fournisseurs', this)">
-    <span class="nav-icon">🏭</span> Fournisseurs
+  <button class="nav-item" onclick="showPage('inventaire', this)">
+    <span class="nav-icon">📦</span> Stocks pédagogiques
   </button>
-  <button class="nav-item" onclick="showPage('historique', this)">
-    <span class="nav-icon">📋</span> Historique
+  <button class="nav-item" onclick="showPage('entretien', this)">
+    <span class="nav-icon">🧹</span> Stocks entretien
   </button>
   <button class="nav-item" onclick="showPage('univers', this)">
     <span class="nav-icon">🌟</span> Univers ludiques
@@ -849,6 +896,9 @@ textarea { resize: vertical; min-height: 72px; }
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="openModal('add')">
       + Ajouter un article
     </button>
+    <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="openScanner()">
+      📷 Scanner un code-barres
+    </button>
   </div>
 </aside>
 
@@ -867,7 +917,9 @@ textarea { resize: vertical; min-height: 72px; }
       </div>
       <button class="btn btn-secondary" onclick="triggerImport()">⬆ Importer Excel</button>
       <input type="file" id="importInput" accept=".xlsx" style="display:none" onchange="importExcel(event)">
-      <button class="btn btn-secondary" onclick="exportCSV()">⬇ Exporter</button>
+      <button class="btn btn-secondary" onclick="exportCSV()">⬇ CSV</button>
+      <button class="btn btn-secondary" onclick="exportInventairePDF()" title="Exporter l'inventaire en PDF imprimable">🖨 PDF</button>
+      <button class="btn btn-secondary" onclick="openEtiquettes()" title="Imprimer des étiquettes QR code">🏷 Étiquettes</button>
       <button class="btn btn-secondary" onclick="exportBackup()" title="Sauvegarder toutes les données (JSON)">💾 Sauvegarder</button>
       <button class="btn btn-secondary" onclick="document.getElementById('restoreInput').click()" title="Restaurer une sauvegarde">📂 Restaurer</button>
       <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importBackup(event)">
@@ -879,8 +931,71 @@ textarea { resize: vertical; min-height: 72px; }
   <!-- CONTENT -->
   <div class="content">
 
+    <!-- ── PAGE DASHBOARD ── -->
+    <div id="page-dashboard">
+      <div style="padding:32px 20px">
+        <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:4px">Tableau de bord</div>
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:32px">Choisissez une application</div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <!-- Stocks -->
+          <button onclick="showPage('inventaire', document.querySelectorAll('.nav-item')[2])" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:18px;padding:28px 24px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:20px;width:100%">
+            <div style="width:56px;height:56px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">📦</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:17px;color:var(--ink)">Gestion des stocks</div>
+              <div style="font-size:12px;color:var(--ink3);margin-top:4px">Inventaire · Commandes · Historique</div>
+            </div>
+            <div style="color:var(--ink3);font-size:20px">→</div>
+          </button>
+
+          <!-- Réglementaire -->
+          <button onclick="window.open('reglementaire.html','_blank')" style="background:linear-gradient(135deg,#1A1208,#6B4C2A);border:none;border-radius:18px;padding:28px 24px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:20px;width:100%">
+            <div style="width:56px;height:56px;background:rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">📋</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:17px;color:#fff">Base réglementaire</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:4px">35 fiches · Décret 2025-304 · Avril 2026</div>
+            </div>
+            <div style="color:rgba(255,255,255,0.4);font-size:20px">→</div>
+          </button>
+
+          <!-- Protocoles -->
+          <button onclick="window.open('protocoles.html','_blank')" style="background:linear-gradient(135deg,#0D2137,#1A4B7A);border:none;border-radius:18px;padding:28px 24px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:20px;width:100%">
+            <div style="width:56px;height:56px;background:rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">📚</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:17px;color:#fff">Base documentaire</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:4px">Protocoles & documents de fonctionnement</div>
+            </div>
+            <div style="color:rgba(255,255,255,0.4);font-size:20px">→</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE STATISTIQUES ── -->
+    <div id="page-statistiques" style="display:none">
+      <!-- KPI row -->
+      <div class="stats-grid" id="dash-kpi" style="margin-bottom:8px"></div>
+      <!-- Alert panel -->
+      <div id="dash-alerts-panel" style="margin:0 20px 20px"></div>
+      <!-- Charts row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 20px 20px">
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)">
+          <div style="font-weight:700;font-size:14px;margin-bottom:16px">📦 Stock par structure</div>
+          <canvas id="chart-creches" height="200"></canvas>
+        </div>
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)">
+          <div style="font-weight:700;font-size:14px;margin-bottom:16px">🏷 Valeur par catégorie</div>
+          <canvas id="chart-cats" height="200"></canvas>
+        </div>
+        <div style="background:var(--surface2);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);grid-column:1/-1">
+          <div style="font-weight:700;font-size:14px;margin-bottom:16px">📉 Niveaux de stock (articles critiques)</div>
+          <canvas id="chart-critical" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+
     <!-- ── PAGE INVENTAIRE ── -->
-    <div id="page-inventaire">
+    <div id="page-inventaire" style="display:none">
 
       <!-- STATS -->
       <div class="stats-grid">
@@ -934,6 +1049,45 @@ textarea { resize: vertical; min-height: 72px; }
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PAGE ENTRETIEN ── -->
+    <div id="page-entretien" style="display:none">
+      <div style="padding:20px 20px 8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="font-size:18px;font-weight:800;font-family:'Syne',sans-serif">🧹 Stocks Entretien</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="exportEntretienCSV()">⬇ CSV</button>
+          <button class="btn btn-primary" onclick="openAddEntretien()">+ Ajouter</button>
+        </div>
+      </div>
+
+      <!-- Barre de recherche -->
+      <div style="padding:0 20px 12px">
+        <div style="position:relative">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink3)">🔍</span>
+          <input type="text" id="searchEntretien" placeholder="Rechercher un article d'entretien…"
+            style="width:100%;padding:10px 10px 10px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Instrument Sans',sans-serif;font-size:14px;background:var(--surface2)"
+            oninput="renderEntretien()">
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div style="padding:0 20px 20px;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Article</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Structure</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Catégorie</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Stock</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Prix unit.</th>
+              <th style="text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Fournisseur</th>
+              <th style="padding:10px 12px;border-bottom:1px solid var(--border)"></th>
+            </tr>
+          </thead>
+          <tbody id="entretienBody"></tbody>
         </table>
       </div>
     </div>
@@ -1006,9 +1160,6 @@ textarea { resize: vertical; min-height: 72px; }
         <div class="section-header">
           <div class="section-title">Univers ludiques</div>
           <button class="btn btn-primary" onclick="openModal('univers')">+ Créer un univers</button>
-          <button class="btn btn-secondary" onclick="openPadletImport()" style="gap:6px">
-            📥 Importer depuis Padlet
-          </button>
         </div>
         <!-- Filtres crèches (internes à l'onglet) -->
         <div style="padding:0 20px 8px;display:flex;flex-wrap:wrap;gap:6px" id="univers-creche-filters">
@@ -1028,11 +1179,16 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="filter-chip" onclick="filterUnivers('Motricité', this)">🏃 Motricité</div>
           <div class="filter-chip" onclick="filterUnivers('Imitation', this)">🎭 Imitation</div>
           <div class="filter-chip" onclick="filterUnivers('Expression artistique', this)">🎨 Expression</div>
-          <div class="filter-chip" onclick="filterUnivers('Multi-catégories', this)">🌟 Multi-catégories</div>
           <div id="univers-subcat-filters"></div>
         </div>
         <div id="univers-list" style="padding:0 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px"></div>
 
+        <!-- Bouton suggestions IA -->
+        <div style="padding:24px 20px 0;display:flex;justify-content:center">
+          <button class="btn btn-primary" onclick="ouvrirSuggestionsIA()"
+            style="gap:8px;font-size:14px;padding:12px 24px;border-radius:12px;background:linear-gradient(135deg,#7C3AED,#2563EB)">
+            ✨ Suggérer des activités par IA
+          </button>
         </div>
       </div>
 
@@ -1050,66 +1206,42 @@ textarea { resize: vertical; min-height: 72px; }
 </main>
 </div><!-- /app -->
 
-<!-- ── MODAL IMPORT PADLET ── -->
-<div class="modal-overlay" id="modal-padlet" onclick="closeModalClick(event,'modal-padlet')">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-header" style="background:linear-gradient(135deg,#FF6B6B,#FF8E53);border-radius:var(--radius) var(--radius) 0 0">
-      <h2 style="color:#fff">📥 Importer depuis Padlet</h2>
-      <button class="modal-close" onclick="closeModal('modal-padlet')" style="color:#fff">✕</button>
+<!-- ── MODAL SUGGESTIONS IA ── -->
+<div class="modal-overlay" id="modal-ia" onclick="closeModalClick(event,'modal-ia')">
+  <div class="modal" style="max-width:700px;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="background:linear-gradient(135deg,#7C3AED,#2563EB);color:white;border-radius:var(--radius) var(--radius) 0 0">
+      <h2 style="color:white">✨ Suggestions d'activités par IA</h2>
+      <button class="modal-close" onclick="closeModal('modal-ia')" style="color:white;opacity:0.8">✕</button>
     </div>
-    <div class="modal-body">
-      <div id="padlet-step-1">
-        <div class="form-grid">
-          <div class="form-group full">
-            <label>🔑 Votre clé API Padlet</label>
-            <input type="password" id="padlet-api-key" placeholder="Collez votre clé API ici…"
-              style="font-family:monospace">
-            <div style="font-size:11px;color:var(--ink3);margin-top:4px">
-              Tableau de bord Padlet → ⚙️ → Compte personnel → Développeur → Générer une clé API
-            </div>
-          </div>
-          <div class="form-group full">
-            <label>🔗 URL de votre Padlet</label>
-            <input type="text" id="padlet-url" placeholder="https://padlet.com/votre-compte/nom-du-padlet-xxxx"
-              value="https://padlet.com/coordinateurpedagogiquekoalakids/les-propositions-ludiques-ikeyazl400qvmcp9">
-          </div>
-          <div class="form-group">
-            <label>Structure par défaut</label>
-            <select id="padlet-creche"></select>
-          </div>
-          <div class="form-group">
-            <label>Catégorie par défaut</label>
-            <select id="padlet-cat-default">
-              <option value="">Depuis la colonne Padlet</option>
-              <option>Sensoriel</option>
-              <option>Manipulation</option>
-              <option>Construction</option>
-              <option>Motricité</option>
-              <option>Imitation</option>
-              <option>Expression artistique</option>
-              <option>Multi-catégories</option>
-            </select>
-          </div>
+    <div class="modal-body" style="flex-shrink:0">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Crèche</label>
+          <select id="ia-creche">
+            <option>Brunet</option><option>Cuers</option><option>Ollioules</option>
+            <option>St Jean</option><option>Picot 1</option><option>Picot 2</option>
+          </select>
         </div>
-        <div id="padlet-error" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:12px;font-size:13px;color:#DC2626;margin-top:8px"></div>
-      </div>
-
-      <!-- Résultats -->
-      <div id="padlet-step-2" style="display:none">
-        <div style="font-size:13px;color:var(--ink3);margin-bottom:12px" id="padlet-summary"></div>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="btn btn-secondary btn-sm" onclick="padletSelectAll(true)">Tout sélectionner</button>
-          <button class="btn btn-secondary btn-sm" onclick="padletSelectAll(false)">Tout désélectionner</button>
+        <div class="form-group">
+          <label>Catégorie souhaitée</label>
+          <select id="ia-cat">
+            <option value="">Toutes catégories</option>
+            <option>Sensoriel</option><option>Manipulation</option><option>Construction</option>
+            <option>Motricité</option><option>Imitation</option><option>Expression artistique</option>
+          </select>
         </div>
-        <div id="padlet-cards-list" style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius)"></div>
+        <div class="form-group full">
+          <label>Consignes supplémentaires (facultatif)</label>
+          <input type="text" id="ia-consignes" placeholder="Ex : activité calme, pour 2 enfants, thème hiver...">
+        </div>
       </div>
-    </div>
-    <div class="modal-footer" id="padlet-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-padlet')">Annuler</button>
-      <button class="btn btn-primary" id="padlet-btn-fetch" onclick="fetchPadletBoard()">
-        🔍 Charger le Padlet
+      <button class="btn btn-primary" onclick="genererSuggestionsIA()"
+        id="btn-generer-ia"
+        style="width:100%;background:linear-gradient(135deg,#7C3AED,#2563EB);margin-top:4px">
+        ✨ Générer les suggestions
       </button>
     </div>
+    <div id="ia-result" style="flex:1;overflow-y:auto;padding:20px;background:var(--bg);display:none"></div>
   </div>
 </div>
 
@@ -1317,16 +1449,253 @@ textarea { resize: vertical; min-height: 72px; }
             </div>
           </div>
         </div>
+        <div class="form-group">
+          <label>📅 Date de péremption</label>
+          <input type="date" id="f-expiry" placeholder="">
+        </div>
+        <div class="form-group">
+          <label>🔖 Code-barres associé</label>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="f-barcode" placeholder="Ex : 3017620422003" style="flex:1;font-family:monospace">
+            <button type="button" class="btn btn-secondary" onclick="scanBarcodeForForm()" title="Scanner avec la caméra" style="padding:0 10px;font-size:16px">📷</button>
+          </div>
+        </div>
         <div class="form-group full">
           <label>🔗 Lien internet (fiche produit, catalogue...)</label>
           <input type="url" id="f-url" placeholder="https://www.fournisseur.fr/produit...">
         </div>
         <input type="hidden" id="f-notes" value="">
+        <input type="hidden" id="f-type-hidden" value="pedagogique">
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-add')">Annuler</button>
       <button class="btn btn-primary" onclick="onSaveArticle()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL SCANNER ── -->
+<div class="modal-overlay" id="modal-scanner" onclick="if(event.target===this)closeScanner()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>📷 Scanner un code-barres</h2>
+      <button class="modal-close" onclick="closeScanner()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <!-- Viewfinder -->
+      <div style="position:relative;background:#000;border-radius:0;overflow:hidden;min-height:280px;display:flex;align-items:center;justify-content:center">
+        <video id="scanner-video" style="width:100%;max-height:320px;display:block" playsinline autoplay muted></video>
+        <!-- Viseur -->
+        <div style="position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center">
+          <div style="width:220px;height:140px;border:2px solid rgba(99,102,241,0.8);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,0.35)">
+            <div style="position:absolute;top:0;left:0;width:24px;height:24px;border-top:3px solid #6366F1;border-left:3px solid #6366F1;border-radius:4px 0 0 0;transform:translate(-1px,-1px)"></div>
+            <div style="position:absolute;top:0;right:0;width:24px;height:24px;border-top:3px solid #6366F1;border-right:3px solid #6366F1;border-radius:0 4px 0 0;transform:translate(1px,-1px)"></div>
+            <div style="position:absolute;bottom:0;left:0;width:24px;height:24px;border-bottom:3px solid #6366F1;border-left:3px solid #6366F1;border-radius:0 0 0 4px;transform:translate(-1px,1px)"></div>
+            <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-bottom:3px solid #6366F1;border-right:3px solid #6366F1;border-radius:0 0 4px 0;transform:translate(1px,1px)"></div>
+            <!-- Ligne de scan animée -->
+            <div id="scan-line" style="position:absolute;left:4px;right:4px;height:2px;background:linear-gradient(90deg,transparent,#6366F1,transparent);border-radius:1px;animation:scanLine 1.8s ease-in-out infinite"></div>
+          </div>
+        </div>
+        <div id="scanner-status" style="position:absolute;bottom:12px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:500;text-shadow:0 1px 4px rgba(0,0,0,0.8)">
+          Pointez la caméra vers un code-barres…
+        </div>
+      </div>
+      <!-- Saisie manuelle -->
+      <div style="padding:16px 20px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--ink3);margin-bottom:8px;font-weight:500">Ou saisir le code manuellement :</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="scanner-manual-input" placeholder="Ex : 3017620422003" 
+                 style="flex:1;font-family:'Instrument Sans',sans-serif"
+                 onkeydown="if(event.key==='Enter') processManualBarcode()">
+          <button class="btn btn-primary" onclick="processManualBarcode()">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL RÉSULTAT SCAN ── -->
+<div class="modal-overlay" id="modal-scan-result" onclick="closeModalClick(event,'modal-scan-result')">
+  <div class="modal" style="max-width:480px;width:calc(100% - 24px);margin:12px auto;border-radius:20px">
+    <div class="modal-header" style="border-radius:20px 20px 0 0;padding:16px 20px">
+      <h2 id="scan-result-title" style="font-size:17px">Article trouvé</h2>
+      <button class="modal-close" onclick="closeModal('modal-scan-result')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px">
+
+      <!-- Article existant : ajustement rapide -->
+      <div id="scan-existing" style="display:none">
+        <!-- Infos article -->
+        <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;padding:14px;background:var(--bg);border-radius:14px">
+          <img id="scan-existing-photo" style="width:64px;height:64px;object-fit:contain;border-radius:10px;background:#fff;border:1px solid var(--border);flex-shrink:0" src="" alt="">
+          <div style="min-width:0">
+            <div id="scan-existing-name" style="font-weight:700;font-size:17px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+            <div id="scan-existing-meta" style="font-size:12px;color:var(--ink3)"></div>
+            <div style="margin-top:5px;font-size:14px">Stock : <strong id="scan-existing-stock" style="color:var(--accent);font-size:18px;font-family:'Syne',sans-serif"></strong></div>
+          </div>
+        </div>
+
+        <!-- Ajustement rapide -->
+        <div style="background:var(--bg);border-radius:14px;padding:20px;text-align:center;margin-bottom:14px">
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Ajustement rapide</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:16px">
+            <button onclick="quickScanAdjust(-1)" style="width:56px;height:56px;border-radius:50%;border:2.5px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:28px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">−</button>
+            <div style="text-align:center">
+              <input type="number" id="scan-qty-input" value="1" min="1"
+                     style="width:72px;text-align:center;font-size:24px;font-weight:700;font-family:'Syne',sans-serif;border:2px solid var(--border);border-radius:10px;padding:8px 4px">
+              <div style="font-size:11px;color:var(--ink3);margin-top:3px">quantité</div>
+            </div>
+            <button onclick="quickScanAdjust(+1)" style="width:56px;height:56px;border-radius:50%;border:2.5px solid #16A34A;background:#F0FDF4;color:#16A34A;font-size:28px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">+</button>
+          </div>
+          <!-- Boutons entrée/sortie directs -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0">
+            <button onclick="confirmScanAdjust('sortie')" style="padding:14px;border-radius:12px;border:2px solid #DC2626;background:#FEF2F2;color:#DC2626;font-size:15px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">
+              📤 Sortie
+            </button>
+            <button onclick="confirmScanAdjust('entrée')" style="padding:14px;border-radius:12px;border:2px solid #16A34A;background:#F0FDF4;color:#16A34A;font-size:15px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">
+              📥 Entrée
+            </button>
+          </div>
+        </div>
+
+        <button style="width:100%;padding:13px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);color:var(--ink2);font-size:14px;cursor:pointer;font-family:'Instrument Sans',sans-serif" onclick="closeModal('modal-scan-result');showDetail(scanResultArticleId)">
+          📋 Voir la fiche complète
+        </button>
+      </div>
+
+      <!-- Article inconnu : création rapide -->
+      <div id="scan-new" style="display:none">
+        <div id="scan-new-product-info" style="display:flex;gap:12px;align-items:center;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:12px">
+          <img id="scan-new-photo" style="width:56px;height:56px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid var(--border)" src="" alt="">
+          <div>
+            <div id="scan-new-name" style="font-weight:600;font-size:14px"></div>
+            <div id="scan-new-barcode-display" style="font-size:11px;color:var(--ink3);font-family:monospace;margin-top:2px"></div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Nom de l'article *</label>
+            <input type="text" id="scan-new-nom">
+          </div>
+          <div class="form-group">
+            <label>Catégorie</label>
+            <select id="scan-new-cat"></select>
+          </div>
+          <div class="form-group">
+            <label>Structure</label>
+            <select id="scan-new-creche"></select>
+          </div>
+          <div class="form-group">
+            <label>Stock initial</label>
+            <input type="number" id="scan-new-stock" value="1" min="0">
+          </div>
+          <div class="form-group">
+            <label>Prix unitaire (€)</label>
+            <input type="number" id="scan-new-prix" value="0" min="0" step="0.01">
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer" id="scan-result-footer" style="border-radius:0 0 20px 20px;padding:12px 20px"></div>
+  </div>
+</div>
+
+<style>
+@keyframes scanLine {
+  0%   { top: 8px; opacity: 1; }
+  50%  { top: calc(100% - 10px); opacity: 0.7; }
+  100% { top: 8px; opacity: 1; }
+}
+</style>
+
+<!-- ── MODAL ÉTIQUETTES ── -->
+<div class="modal-overlay" id="modal-etiquettes" onclick="closeModalClick(event,'modal-etiquettes')">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h2>🏷 Imprimer des étiquettes QR code</h2>
+      <button class="modal-close" onclick="closeModal('modal-etiquettes')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Filtres -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div class="form-group" style="margin:0">
+          <label>Structure</label>
+          <select id="etiq-creche">
+            <option value="all">Toutes</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Catégorie</label>
+          <select id="etiq-cat">
+            <option value="all">Toutes</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Format</label>
+          <select id="etiq-format">
+            <option value="3x5">3 × 5 par page (petit)</option>
+            <option value="2x4" selected>2 × 4 par page (moyen)</option>
+            <option value="2x2">2 × 2 par page (grand)</option>
+          </select>
+        </div>
+      </div>
+      <!-- Liste sélectable -->
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <span id="etiq-count">0 article(s) sélectionné(s)</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="etiqSelectAll()">Tout sélectionner</button>
+          <button class="btn btn-secondary btn-sm" onclick="etiqSelectNone()">Tout désélectionner</button>
+        </div>
+      </div>
+      <div id="etiq-list" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-etiquettes')">Annuler</button>
+      <button class="btn btn-primary" onclick="printEtiquettes()">🖨 Imprimer les étiquettes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL TRANSFERT ── -->
+<div class="modal-overlay" id="modal-transfert" onclick="closeModalClick(event,'modal-transfert')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>🔄 Transférer vers une autre crèche</h2>
+      <button class="modal-close" onclick="closeModal('modal-transfert')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Article</label>
+          <div id="transfert-article-name" style="font-weight:600;font-size:15px;color:var(--ink);padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm)"></div>
+        </div>
+        <div class="form-group">
+          <label>De la crèche</label>
+          <div id="transfert-from" style="font-weight:600;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm)"></div>
+        </div>
+        <div class="form-group">
+          <label>Vers la crèche *</label>
+          <select id="transfert-to"></select>
+        </div>
+        <div class="form-group">
+          <label>Quantité à transférer *</label>
+          <input type="number" id="transfert-qty" min="1" placeholder="1">
+        </div>
+        <div class="form-group">
+          <label>Stock disponible</label>
+          <div id="transfert-stock-dispo" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent);padding:6px 0"></div>
+        </div>
+        <div class="form-group full">
+          <label>Note (optionnel)</label>
+          <input type="text" id="transfert-note" placeholder="Ex : Prêt temporaire, besoin urgent…">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-transfert')">Annuler</button>
+      <button class="btn btn-primary" onclick="doTransfert()">🔄 Confirmer le transfert</button>
     </div>
   </div>
 </div>
@@ -1521,6 +1890,1192 @@ let currentHisto = 'all';
 let editingId = null;
 
 // ─── INIT ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// ── NOUVELLES FONCTIONNALITÉS v7 ────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+
+// ── LOGO ENTREPRISE ──────────────────────────────────────────────
+function triggerLogoUpload() {
+  document.getElementById('logoFileInput').click();
+}
+
+function handleLogoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = ev.target.result;
+    localStorage.setItem('companyLogo', data);
+    applyLogo(data);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function applyLogo(data) {
+  const img = document.getElementById('logoImg');
+  const placeholder = document.getElementById('logoPlaceholder');
+  const removeBtn = document.getElementById('logoRemoveBtn');
+  if (data) {
+    img.src = data;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+    removeBtn.style.display = 'flex';
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = 'flex';
+    removeBtn.style.display = 'none';
+  }
+}
+
+function removeLogo(e) {
+  e.stopPropagation();
+  localStorage.removeItem('companyLogo');
+  applyLogo(null);
+}
+
+// Charger le logo au démarrage
+(function() {
+  const saved = localStorage.getItem('companyLogo');
+  if (saved) applyLogo(saved);
+})();
+
+// ── FIN LOGO ─────────────────────────────────────────────────────
+
+// ── ÉTIQUETTES QR CODE ───────────────────────────────────────────
+let etiqSelected = new Set();
+
+function openEtiquettes() {
+  // Remplir les filtres
+  const crecheSel = document.getElementById('etiq-creche');
+  crecheSel.innerHTML = '<option value="all">Toutes</option>' +
+    CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  const cats = [...new Set(ARTICLES.map(a => a.cat).filter(Boolean))].sort();
+  const catSel = document.getElementById('etiq-cat');
+  catSel.innerHTML = '<option value="all">Toutes</option>' +
+    cats.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  // Événements filtres
+  crecheSel.onchange = renderEtiqList;
+  catSel.onchange = renderEtiqList;
+
+  etiqSelected = new Set(ARTICLES.map(a => a.id));
+  renderEtiqList();
+  document.getElementById('modal-etiquettes').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function renderEtiqList() {
+  const creche = document.getElementById('etiq-creche').value;
+  const cat = document.getElementById('etiq-cat').value;
+  const filtered = ARTICLES.filter(a =>
+    (creche === 'all' || a.creche === creche) &&
+    (cat === 'all' || a.cat === cat)
+  ).sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
+
+  const list = document.getElementById('etiq-list');
+  list.innerHTML = filtered.map(a => `
+    <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;${etiqSelected.has(a.id)?'background:var(--surface2)':''}">
+      <input type="checkbox" ${etiqSelected.has(a.id)?'checked':''} onchange="etiqToggle(${a.id}, this.checked)" style="width:16px;height:16px;flex-shrink:0">
+      ${a.photo ? `<img src="${a.photo}" style="width:36px;height:36px;object-fit:contain;border-radius:6px;flex-shrink:0">` : '<div style="width:36px;height:36px;border-radius:6px;background:var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>'}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nom}</div>
+        <div style="font-size:11px;color:var(--ink3)">${a.creche} · ${a.cat}</div>
+      </div>
+      <div style="font-family:monospace;font-size:10px;color:var(--ink3);flex-shrink:0">${a.barcode || a.ref || a.id}</div>
+    </label>`).join('');
+
+  updateEtiqCount();
+}
+
+function etiqToggle(id, checked) {
+  if (checked) etiqSelected.add(id);
+  else etiqSelected.delete(id);
+  updateEtiqCount();
+}
+
+function etiqSelectAll() {
+  const creche = document.getElementById('etiq-creche').value;
+  const cat = document.getElementById('etiq-cat').value;
+  ARTICLES.filter(a =>
+    (creche === 'all' || a.creche === creche) &&
+    (cat === 'all' || a.cat === cat)
+  ).forEach(a => etiqSelected.add(a.id));
+  renderEtiqList();
+}
+
+function etiqSelectNone() {
+  etiqSelected.clear();
+  renderEtiqList();
+}
+
+function updateEtiqCount() {
+  document.getElementById('etiq-count').textContent = `${etiqSelected.size} article(s) sélectionné(s)`;
+}
+
+function printEtiquettes() {
+  if (etiqSelected.size === 0) { showNotif('⚠ Sélectionnez au moins un article'); return; }
+
+  const format = document.getElementById('etiq-format').value;
+  const cols = parseInt(format.split('x')[0]);
+  const rows = parseInt(format.split('x')[1]);
+  const perPage = cols * rows;
+
+  const articles = ARTICLES.filter(a => etiqSelected.has(a.id))
+    .sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
+
+  const labelW = format === '3x5' ? 62 : format === '2x4' ? 95 : 130;
+  const labelH = format === '3x5' ? 50 : format === '2x4' ? 70 : 110;
+  const qrSize = format === '3x5' ? 40 : format === '2x4' ? 56 : 90;
+  const fontSize = format === '3x5' ? 7 : format === '2x4' ? 9 : 11;
+
+  const labelsHtml = articles.map(a => {
+    const code = a.barcode || a.ref || String(a.id);
+    const nom = a.nom.length > (format === '3x5' ? 22 : 30) ? a.nom.slice(0, format === '3x5' ? 22 : 30)+'…' : a.nom;
+    return `
+    <div class="label">
+      <div class="label-qr" id="qr-${a.id}"></div>
+      <div class="label-info">
+        <div class="label-nom">${nom}</div>
+        <div class="label-meta">${a.creche}</div>
+        <div class="label-code">${code}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <title>Étiquettes QR code</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; background:#fff; }
+    .page { display:grid; grid-template-columns:repeat(${cols}, ${labelW}mm); gap:3mm; padding:10mm; }
+    .label { width:${labelW}mm; height:${labelH}mm; border:0.5px solid #ccc; border-radius:3mm; padding:2mm; display:flex; flex-direction:row; align-items:center; gap:2mm; overflow:hidden; page-break-inside:avoid; }
+    .label-qr { flex-shrink:0; }
+    .label-qr canvas, .label-qr img { width:${qrSize}px !important; height:${qrSize}px !important; }
+    .label-info { flex:1; min-width:0; }
+    .label-nom { font-size:${fontSize}pt; font-weight:700; line-height:1.2; margin-bottom:1mm; word-break:break-word; }
+    .label-meta { font-size:${fontSize-1}pt; color:#666; margin-bottom:1mm; }
+    .label-code { font-family:monospace; font-size:${fontSize-1}pt; color:#999; }
+    @media print {
+      body { margin:0; }
+      .no-print { display:none !important; }
+      @page { margin:0; size:A4; }
+    }
+  </style>
+</head><body>
+  <div class="no-print" style="padding:16px;text-align:center;border-bottom:1px solid #eee;margin-bottom:8px">
+    <strong>${articles.length} étiquettes</strong> · Format ${format.replace('x',' × ')} par page
+    <button onclick="window.print()" style="margin-left:16px;background:#1C1917;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer">🖨 Imprimer</button>
+  </div>
+  <div class="page">${labelsHtml}</div>
+  <script>window.onload=function(){${articles.map(a => {
+        const code = (a.barcode || a.ref || String(a.id)).replace(/'/g, "\\'");
+        return `try { new QRCode(document.getElementById('qr-${a.id}'), { text:'${code}', width:${qrSize}, height:${qrSize}, colorDark:'#1C1917', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}`;
+      }).join('\n      ')}
+    };
+  <\/script>
+</body></html>`;
+
+  closeModal('modal-etiquettes');
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+// ── FIN ÉTIQUETTES ────────────────────────────────────────────────
+
+function printArticleLabel(id) {
+  const a = ARTICLES.find(x => x.id === id);
+  if (!a) return;
+  const code = a.barcode || a.ref || String(a.id);
+  const photoHtml = a.photo ? `<img src="${a.photo}" style="width:60px;height:60px;object-fit:contain;border-radius:6px;border:1px solid #eee">` : '';
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <title>Étiquette — ${a.nom}</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .label{background:#fff;border:1.5px solid #ddd;border-radius:12px;padding:20px;width:320px}
+    .label-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #f0f0f0}
+    .label-title{font-size:14px;font-weight:700;color:#1C1917;line-height:1.3}
+    .label-meta{font-size:11px;color:#888;margin-top:3px}
+    .label-body{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .label-info{flex:1}
+    .label-info-row{font-size:11px;color:#555;margin-bottom:4px}
+    .label-info-row strong{color:#1C1917}
+    .label-footer{margin-top:14px;padding-top:12px;border-top:1px solid #f0f0f0;text-align:center;font-size:10px;color:#aaa}
+    .label-ref{font-family:monospace;font-size:12px;font-weight:700;background:#f5f5f5;padding:3px 8px;border-radius:4px;color:#444;display:inline-block;margin-top:4px}
+    @media print{body{background:white}.label{border:1px solid #ccc}.no-print{display:none}}
+  </style>
+</head><body>
+  <div>
+    <div class="label">
+      <div class="label-header">
+        ${photoHtml}
+        <div><div class="label-title">${a.nom}</div><div class="label-meta">${a.cat} · ${a.creche}</div></div>
+      </div>
+      <div class="label-body">
+        <div class="label-info">
+          <div class="label-info-row">Réf : <strong>${a.ref||'—'}</strong></div>
+          <div class="label-info-row">Stock : <strong>${a.stock}</strong></div>
+          ${a.prix>0?`<div class="label-info-row">Prix : <strong>${a.prix.toFixed(2)} €</strong></div>`:''}
+          ${a.fourn?`<div class="label-info-row">Fourn. : <strong>${a.fourn}</strong></div>`:''}
+          <div class="label-ref">${code}</div>
+        </div>
+        <div id="qr-container"></div>
+      </div>
+      <div class="label-footer">Stocks Pédagogiques · Réseau Micro-Crèches</div>
+    </div>
+    <div class="no-print" style="text-align:center;margin-top:16px">
+      <button onclick="window.print()" style="background:#1C1917;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer">🖨 Imprimer</button>
+    </div>
+  </div>
+  <script>
+    window.onload=function(){
+      new QRCode(document.getElementById('qr-container'),{text:'${code}',width:100,height:100,colorDark:'#1C1917',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    };
+  <\/script>
+</body></html>`;
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
+let scannerActive = false;
+let scanResultArticleId = null;
+let lastScannedCode = null;
+
+function openScanner() {
+  // Sauvegarder l'état actuel
+  localStorage.setItem('scannerReturn', 'true');
+  // Ouvrir une page scanner dédiée
+  const scanPage = window.open('', '_blank');
+  if (!scanPage) {
+    // Popup bloqué — utiliser le modal inline
+    openScannerModal();
+    return;
+  }
+  scanPage.document.write(buildScannerPage());
+  scanPage.document.close();
+}
+
+function openScannerModal() {
+  document.getElementById('modal-scanner').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('scanner-manual-input').value = '';
+  document.getElementById('scanner-status').textContent = 'Pointez la caméra vers un code-barres…';
+  startCameraScanner();
+}
+
+function buildScannerPage() {
+  return `<!DOCTYPE html><html lang="fr"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Scanner</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#000;font-family:Arial,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    #video{width:100%;flex:1;object-fit:cover}
+    .overlay{position:fixed;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+    .frame{width:240px;height:160px;border:3px solid #6366F1;border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,0.5)}
+    .scanline{position:absolute;left:10px;right:10px;height:2px;background:linear-gradient(90deg,transparent,#6366F1,transparent);animation:scan 1.8s ease-in-out infinite}
+    @keyframes scan{0%{top:20%}50%{top:75%}100%{top:20%}}
+    .status{position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.8);color:#fff;text-align:center;padding:16px;font-size:14px}
+    .manual{display:flex;gap:8px;padding:12px;background:#111}
+    .manual input{flex:1;padding:10px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-size:16px}
+    .manual button{padding:10px 16px;background:#6366F1;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+    .close-btn{position:fixed;top:16px;right:16px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;z-index:10}
+  </style>
+</head><body>
+  <video id="video" playsinline autoplay muted></video>
+  <div class="overlay"><div class="frame"><div class="scanline"></div></div></div>
+  <button class="close-btn" onclick="window.close()">✕</button>
+  <div class="manual">
+    <input type="text" id="manualCode" placeholder="Saisir code manuellement…" inputmode="text">
+    <button onclick="sendCode(document.getElementById('manualCode').value)">→</button>
+  </div>
+  <div class="status" id="status">Pointez vers un code-barres…</div>
+  <script>
+    async function init() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        await video.play();
+        if ('BarcodeDetector' in window) {
+          const detector = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});
+          let detected = false;
+          const loop = async () => {
+            if (detected) return;
+            try {
+              const codes = await detector.detect(video);
+              if (codes.length > 0) {
+                detected = true;
+                const code = codes[0].rawValue;
+                document.getElementById('status').textContent = '✅ Détecté : ' + code;
+                stream.getTracks().forEach(t => t.stop());
+                navigator.vibrate && navigator.vibrate(80);
+                setTimeout(() => sendCode(code), 500);
+                return;
+              }
+            } catch(e){}
+            requestAnimationFrame(loop);
+          };
+          requestAnimationFrame(loop);
+        } else {
+          document.getElementById('status').textContent = '⚠ Saisie manuelle uniquement';
+        }
+      } catch(e) {
+        document.getElementById('status').textContent = '⚠ Caméra non disponible — saisie manuelle';
+      }
+    }
+    function sendCode(code) {
+      code = (code||'').trim();
+      if (!code) return;
+      // Envoyer le code à la fenêtre parente
+      if (window.opener && window.opener.receiveScanCode) {
+        window.opener.receiveScanCode(code);
+        window.close();
+      } else {
+        // Fallback : localStorage
+        localStorage.setItem('lastScanCode', code);
+        localStorage.setItem('lastScanTime', Date.now());
+        window.close();
+      }
+    }
+    init();
+  <\/script>
+</body></html>`;
+}
+
+// Réception du code depuis la page scanner
+window.receiveScanCode = async function(code) {
+  try { await processBarcode(code); }
+  catch(e) { showNotif('⚠ ' + e.message); }
+};
+
+// Vérifier si un code a été scanné (fallback localStorage)
+setInterval(() => {
+  const code = localStorage.getItem('lastScanCode');
+  const time = parseInt(localStorage.getItem('lastScanTime') || '0');
+  if (code && Date.now() - time < 5000) {
+    localStorage.removeItem('lastScanCode');
+    localStorage.removeItem('lastScanTime');
+    processBarcode(code).catch(e => showNotif('⚠ ' + e.message));
+  }
+}, 500);
+
+function closeScanner() {
+  stopCameraScanner();
+  const modal = document.getElementById('modal-scanner');
+  modal.classList.remove('open');
+  modal.style.display = 'none';
+  modal.style.visibility = 'hidden';
+  modal.style.pointerEvents = 'none';
+  document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
+  document.body.style.position = '';
+  // Remettre display après un tick pour ne pas casser le CSS
+  requestAnimationFrame(() => {
+    modal.style.display = '';
+    modal.style.visibility = '';
+    modal.style.pointerEvents = '';
+  });
+}
+
+async function startCameraScanner() {
+  const videoEl = document.getElementById('scanner-video');
+  const statusEl = document.getElementById('scanner-status');
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    videoEl.srcObject = stream;
+    await videoEl.play();
+    scannerActive = true;
+    statusEl.textContent = 'Pointez la caméra vers un code-barres…';
+
+    // API native Android Chrome (BarcodeDetector)
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code','data_matrix'] });
+      const scanLoop = async () => {
+        if (!scannerActive) return;
+        try {
+          const barcodes = await detector.detect(videoEl);
+          if (barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+            if (code !== lastScannedCode) {
+              lastScannedCode = code;
+              // Arrêter immédiatement le stream sur Android
+              scannerActive = false;
+              if (videoEl.srcObject) {
+                videoEl.srcObject.getTracks().forEach(t => t.stop());
+                videoEl.srcObject = null;
+              }
+              statusEl.innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
+              navigator.vibrate && navigator.vibrate(80);
+              setTimeout(() => {
+                closeScanner();
+                setTimeout(async () => {
+                  try { await processBarcode(code); }
+                  catch(e) { showNotif('⚠ Erreur : ' + e.message); }
+                }, 300);
+              }, 500);
+              return;
+            }
+          }
+        } catch(e) {}
+        if (scannerActive) requestAnimationFrame(scanLoop);
+      };
+      requestAnimationFrame(scanLoop);
+    } else {
+      if (window.ZXing) {
+        scannerCodeReader = new ZXing.BrowserMultiFormatReader();
+        scannerCodeReader.decodeFromStream(stream, videoEl, (result, err) => {
+          if (!scannerActive) return;
+          if (result) {
+            const code = result.getText();
+            if (code === lastScannedCode) return;
+            lastScannedCode = code;
+            navigator.vibrate && navigator.vibrate(80);
+            statusEl.innerHTML = `✅ Code détecté : <strong>${code}</strong>`;
+            setTimeout(() => {
+              closeScanner();
+              setTimeout(async () => {
+                try { await processBarcode(code); }
+                catch(e) { console.error('[scan]', e); showNotif('⚠ Erreur : ' + e.message); }
+              }, 300);
+            }, 400);
+          }
+        });
+      } else {
+        statusEl.textContent = '⚠ Scanner non supporté — utilisez la saisie manuelle';
+      }
+    }
+  } catch(e) {
+    console.warn('[Scanner]', e);
+    statusEl.textContent = '⚠ Caméra non disponible — utilisez la saisie manuelle';
+  }
+}
+
+function stopCameraScanner() {
+  scannerActive = false;
+  lastScannedCode = null;
+  // Arrêter le stream natif
+  const videoEl = document.getElementById('scanner-video');
+  if (videoEl && videoEl.srcObject) {
+    videoEl.srcObject.getTracks().forEach(t => t.stop());
+    videoEl.srcObject = null;
+  }
+  // Arrêter ZXing si utilisé
+  if (scannerCodeReader) {
+    try { scannerCodeReader.reset(); } catch(e) {}
+    scannerCodeReader = null;
+  }
+}
+
+function processManualBarcode() {
+  const code = document.getElementById('scanner-manual-input').value.trim();
+  if (!code) return;
+  closeScanner();
+  setTimeout(async () => {
+    try { await processBarcode(code); }
+    catch(e) { showNotif('⚠ Erreur : ' + e.message); }
+  }, 300);
+}
+
+async function processBarcode(code) {
+  // Mode "associer au formulaire"
+  if (scanForFormMode) {
+    scanForFormMode = false;
+    const fBarcode = document.getElementById('f-barcode');
+    if (fBarcode) {
+      fBarcode.value = code;
+      if (!document.getElementById('modal-add').classList.contains('open')) {
+        document.getElementById('modal-add').classList.add('open');
+      }
+      showNotif(`✅ Code-barres associé : ${code}`);
+    }
+    return;
+  }
+
+  // Mode normal — chercher dans le stock
+  const codeTrim = code.trim().toLowerCase();
+  const existing = ARTICLES.find(a =>
+    (a.barcode && a.barcode.trim().toLowerCase() === codeTrim) ||
+    (a.ref && a.ref.trim().toLowerCase() === codeTrim)
+  );
+
+  if (existing) {
+    showScanExisting(existing);
+    return;
+  }
+
+  // Article inconnu → proposer association ou création
+  showNotif('🔍 Code non reconnu — recherche en ligne…');
+  const info = await lookupBarcode(code);
+  showScanNew(code, info);
+}
+
+async function lookupBarcode(code) {
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+    const data = await res.json();
+    if (data.status === 1 && data.product) {
+      const p = data.product;
+      return {
+        nom: p.product_name_fr || p.product_name || p.generic_name || '',
+        photo: p.image_front_small_url || p.image_url || '',
+        marque: p.brands || '',
+        found: true
+      };
+    }
+  } catch(e) { /* silencieux */ }
+  return { nom: '', photo: '', marque: '', found: false };
+}
+
+function showScanExisting(article) {
+  scanResultArticleId = article.id;
+  document.getElementById('scan-result-title').textContent = '📦 Article trouvé';
+  document.getElementById('scan-existing').style.display = 'block';
+  document.getElementById('scan-new').style.display = 'none';
+
+  const photo = document.getElementById('scan-existing-photo');
+  if (article.photo) { photo.src = article.photo; photo.style.display = 'block'; }
+  else { photo.style.display = 'none'; }
+
+  document.getElementById('scan-existing-name').textContent = article.nom;
+  document.getElementById('scan-existing-meta').textContent = `${article.cat} · ${article.creche}`;
+  document.getElementById('scan-existing-stock').textContent = article.stock;
+  document.getElementById('scan-qty-input').value = 1;
+
+  document.getElementById('scan-result-footer').innerHTML = '';
+  document.getElementById('modal-scan-result').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function quickScanAdjust(dir) {
+  const input = document.getElementById('scan-qty-input');
+  const v = parseInt(input.value) || 1;
+  input.value = Math.max(1, v + dir);
+}
+
+function confirmScanAdjust(forceType) {
+  const article = ARTICLES.find(a => a.id === scanResultArticleId);
+  if (!article) return;
+  const qty = parseInt(document.getElementById('scan-qty-input').value) || 1;
+
+  let delta;
+  if (forceType === 'entrée') {
+    delta = qty;
+  } else if (forceType === 'sortie') {
+    delta = -qty;
+  } else {
+    // Fallback : demander
+    const action = confirm(`Ajouter ${qty} (OK) ou retirer ${qty} (Annuler) ?`);
+    delta = action ? qty : -qty;
+  }
+
+  const newStock = Math.max(0, article.stock + delta);
+  article.stock = newStock;
+  const type = delta > 0 ? 'entrée' : 'sortie';
+  addHisto(type, article.nom, delta, article.creche, 'Vous', 'Scan code-barres');
+  saveData();
+  saveArticleDB(article, false);
+  renderTable(); renderStats();
+  closeModal('modal-scan-result');
+  showNotif(`${delta > 0 ? '📥' : '📤'} ${article.nom} → stock : ${newStock}`);
+}
+
+function showScanNew(code, info) {
+  document.getElementById('scan-result-title').textContent = info.found ? '✨ Produit identifié' : '❓ Code non reconnu';
+  document.getElementById('scan-existing').style.display = 'none';
+  document.getElementById('scan-new').style.display = 'block';
+
+  // Infos produit
+  const photo = document.getElementById('scan-new-photo');
+  if (info.photo) { photo.src = info.photo; photo.style.display = 'block'; }
+  else { photo.style.display = 'none'; }
+
+  document.getElementById('scan-new-name').textContent = info.found
+    ? `${info.nom}${info.marque ? ' — ' + info.marque : ''}`
+    : 'Produit non trouvé dans la base en ligne';
+  document.getElementById('scan-new-barcode-display').textContent = `Code : ${code}`;
+
+  // Pré-remplir le formulaire création
+  document.getElementById('scan-new-nom').value = info.nom || '';
+  document.getElementById('scan-new-stock').value = 1;
+  document.getElementById('scan-new-prix').value = 0;
+
+  const catSel = document.getElementById('scan-new-cat');
+  const allCats = [...new Set(ARTICLES.map(a => a.cat).filter(Boolean))].sort();
+  catSel.innerHTML = allCats.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  const crecheSel = document.getElementById('scan-new-creche');
+  crecheSel.innerHTML = CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (currentCreche && currentCreche !== 'all') crecheSel.value = currentCreche;
+
+  // Sélecteur "associer à un article existant"
+  const sorted = [...ARTICLES].sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
+  const assocSel = `
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--ink3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">
+        Ou associer ce code à un article existant
+      </div>
+      <div style="display:flex;gap:8px">
+        <select id="scan-assoc-select" style="flex:1;font-size:13px">
+          <option value="">— Choisir un article —</option>
+          ${sorted.map(a => `<option value="${a.id}">${a.nom} (${a.creche})</option>`).join('')}
+        </select>
+        <button class="btn btn-primary" onclick="associateBarcode('${code}')">Associer</button>
+      </div>
+    </div>`;
+
+  // Injecter le sélecteur sous le form-grid dans scan-new
+  const scanNew = document.getElementById('scan-new');
+  const existing = scanNew.querySelector('#scan-assoc-wrapper');
+  if (existing) existing.remove();
+  const wrapper = document.createElement('div');
+  wrapper.id = 'scan-assoc-wrapper';
+  wrapper.innerHTML = assocSel;
+  scanNew.appendChild(wrapper);
+
+  document.getElementById('scan-result-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal('modal-scan-result')">Annuler</button>
+    <button class="btn btn-primary" onclick="createFromScan('${code}', '${(info.photo||'').replace(/'/g,"\\'")}')">➕ Créer l'article</button>`;
+
+  document.getElementById('modal-scan-result').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+async function associateBarcode(code) {
+  const sel = document.getElementById('scan-assoc-select');
+  const id = parseInt(sel.value);
+  if (!id) { showNotif('⚠ Choisissez un article dans la liste'); return; }
+
+  const article = ARTICLES.find(a => a.id === id);
+  if (!article) return;
+
+  article.barcode = code;
+  saveData();
+  await saveArticleDB(article, false);
+  closeModal('modal-scan-result');
+  showNotif(`✅ Code-barres associé à "${article.nom}" — prochaine fois il sera reconnu automatiquement !`);
+}
+
+async function createFromScan(code, photoUrl) {
+  const nom = document.getElementById('scan-new-nom').value.trim();
+  if (!nom) { showNotif('⚠ Saisissez un nom pour l\'article'); return; }
+
+  const cat    = document.getElementById('scan-new-cat').value;
+  const creche = document.getElementById('scan-new-creche').value;
+  const stock  = parseInt(document.getElementById('scan-new-stock').value) || 0;
+  const prix   = parseFloat(document.getElementById('scan-new-prix').value) || 0;
+
+  let photoData = null;
+  if (photoUrl) {
+    try {
+      const res = await fetch(photoUrl);
+      const blob = await res.blob();
+      photoData = await new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(blob); });
+    } catch(e) {}
+  }
+
+  // Stopper le polling pendant la création
+  if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+
+  try {
+    const row = {
+      nom, ref: code, barcode: code, cat, creche,
+      stock, min: 0, prix: prix, fourn: '', notes: '', url: '', expiry: '',
+      photo: photoData || null, photo_name: nom
+    };
+
+    // 1. Insérer dans Supabase
+    const rows = await sbInsert('articles', row);
+    if (!rows || !rows[0]) throw new Error('Pas de retour Supabase');
+    const realId = rows[0].id;
+
+    // 2. Forcer barcode explicitement (double sécurité)
+    await sbUpdate('articles', realId, { barcode: code });
+
+    // 3. Attendre 1s puis recharger TOUS les articles depuis Supabase
+    await new Promise(r => setTimeout(r, 1000));
+    const arts = await sbGet('articles');
+    if (Array.isArray(arts)) {
+      ARTICLES.splice(0, ARTICLES.length, ...arts.map(rowToArticle));
+      saveData();
+    }
+
+    renderTable(); renderStats();
+    closeModal('modal-scan-result');
+    showNotif(`✅ "${nom}" créé et synchronisé !`);
+
+  } catch(e) {
+    console.error('[createFromScan]', e);
+    showNotif('⚠ Erreur lors de la création — réessayez');
+  }
+
+  // Relancer le polling après 2s
+  setTimeout(() => startPolling(30), 2000);
+}
+
+let scanForFormMode = false;
+
+function scanBarcodeForForm() {
+  scanForFormMode = true;
+  document.getElementById('modal-scanner').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('scanner-manual-input').value = '';
+  document.getElementById('scanner-status').textContent = 'Scannez le code-barres du produit…';
+  startCameraScanner();
+}
+// ── FIN SCAN FORMULAIRE ───────────────────────────────────────────
+
+// ── 1. UTILITAIRES DATE DE PÉREMPTION ───────────────────────────
+function expiryColor(dateStr) {
+  if (!dateStr) return 'var(--ink3)';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(dateStr); exp.setHours(0,0,0,0);
+  const diff = Math.round((exp - today) / 86400000);
+  if (diff < 0) return '#DC2626';   // expiré → rouge
+  if (diff <= 30) return '#D97706'; // < 30j → orange
+  if (diff <= 90) return '#CA8A04'; // < 90j → jaune
+  return '#16A34A';                  // OK → vert
+}
+
+function formatExpiry(dateStr) {
+  if (!dateStr) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(dateStr); exp.setHours(0,0,0,0);
+  const diff = Math.round((exp - today) / 86400000);
+  const fmt = new Date(dateStr).toLocaleDateString('fr-FR');
+  if (diff < 0) return `⚠ Expiré le ${fmt}`;
+  if (diff === 0) return `⚠ Expire aujourd'hui`;
+  if (diff <= 7) return `⚠ Expire dans ${diff}j (${fmt})`;
+  if (diff <= 30) return `📅 Dans ${diff}j (${fmt})`;
+  return `📅 ${fmt}`;
+}
+
+function getExpiryAlerts() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return ARTICLES.filter(a => {
+    if (!a.expiry) return false;
+    const exp = new Date(a.expiry); exp.setHours(0,0,0,0);
+    return Math.round((exp - today) / 86400000) <= 30;
+  }).sort((a,b) => new Date(a.expiry) - new Date(b.expiry));
+}
+
+// ── 2. ALERTES STOCK BAS + BADGE NAV ─────────────────────────────
+function getLowStockArticles() {
+  return ARTICLES.filter(a => a.stock <= a.min && a.min > 0);
+}
+
+function updateAlertBadge() {
+  const low = getLowStockArticles();
+  const exp = getExpiryAlerts();
+  const total = low.length + exp.length;
+  const badge = document.getElementById('nav-alert-badge');
+  if (!badge) return;
+  if (total > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = total;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── 3. TRANSFERT ENTRE CRÈCHES ───────────────────────────────────
+let transfertArticleId = null;
+
+function openTransfert(id) {
+  const a = ARTICLES.find(x => x.id === id);
+  if (!a) return;
+  transfertArticleId = id;
+  document.getElementById('transfert-article-name').textContent = a.nom;
+  document.getElementById('transfert-from').textContent = a.creche;
+  document.getElementById('transfert-stock-dispo').textContent = a.stock;
+  document.getElementById('transfert-qty').value = 1;
+  document.getElementById('transfert-note').value = '';
+
+  const sel = document.getElementById('transfert-to');
+  sel.innerHTML = CRECHES
+    .filter(c => c !== a.creche)
+    .map(c => `<option value="${c}">${c}</option>`)
+    .join('');
+
+  closeModal('modal-detail');
+  document.getElementById('modal-transfert').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function doTransfert() {
+  const a = ARTICLES.find(x => x.id === transfertArticleId);
+  if (!a) return;
+  const qty = parseInt(document.getElementById('transfert-qty').value) || 0;
+  const to = document.getElementById('transfert-to').value;
+  const note = document.getElementById('transfert-note').value.trim();
+
+  if (qty <= 0) { showNotif('⚠ Quantité invalide'); return; }
+  if (qty > a.stock) { showNotif(`⚠ Stock insuffisant (${a.stock} disponibles)`); return; }
+
+  // Réduire le stock source
+  a.stock -= qty;
+  addHisto('sortie', a.nom, -qty, a.creche, 'Vous', `Transfert vers ${to}${note ? ' — '+note : ''}`);
+
+  // Chercher ou créer un article identique dans la crèche cible
+  let target = ARTICLES.find(x => x.nom === a.nom && x.creche === to);
+  if (target) {
+    target.stock += qty;
+    addHisto('entrée', target.nom, qty, to, 'Vous', `Transfert depuis ${a.creche}${note ? ' — '+note : ''}`);
+  } else {
+    target = { ...a, id: Date.now(), creche: to, stock: qty };
+    ARTICLES.push(target);
+    addHisto('entrée', target.nom, qty, to, 'Vous', `Transfert depuis ${a.creche} (nouvel article créé)${note ? ' — '+note : ''}`);
+  }
+
+  saveData();
+  renderTable(); renderHistorique(); updateAlertBadge();
+  closeModal('modal-transfert');
+  showNotif(`🔄 ${qty} × "${a.nom}" transféré(s) vers ${to}`);
+}
+
+// ── 4. EXPORT PDF INVENTAIRE ─────────────────────────────────────
+function exportInventairePDF() {
+  const today = new Date().toLocaleDateString('fr-FR');
+  const filtered = (() => {
+    const q = (document.getElementById('searchInput')||{}).value?.toLowerCase() || '';
+    return ARTICLES.filter(a => {
+      const matchCat = currentCat === 'all' || a.cat === currentCat;
+      const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
+      const matchQ = !q || a.nom.toLowerCase().includes(q) || a.ref.toLowerCase().includes(q);
+      return matchCat && matchCreche && matchQ;
+    });
+  })();
+
+  const totalVal = filtered.reduce((s,a) => s+a.stock*a.prix, 0);
+  const alertes = filtered.filter(a => a.stock <= a.min && a.min > 0);
+
+  const rows = filtered.map(a => {
+    const st = a.stock === 0 ? 'color:#DC2626;font-weight:700' :
+               a.stock <= a.min ? 'color:#D97706;font-weight:700' : '';
+    const exp = a.expiry ? `<br><small style="color:${expiryColor(a.expiry)}">${formatExpiry(a.expiry)}</small>` : '';
+    return `<tr>
+      <td>${a.ref}</td>
+      <td>${a.nom}${exp}</td>
+      <td>${a.cat}</td>
+      <td>${a.creche}</td>
+      <td style="${st}">${a.stock}</td>
+      <td>${a.min}</td>
+      <td>${a.prix > 0 ? a.prix.toFixed(2)+' €' : '—'}</td>
+      <td>${(a.stock*a.prix).toFixed(2)} €</td>
+      <td style="font-size:11px">${a.fourn || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <title>Inventaire — ${today}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 20px; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .meta { color: #888; font-size: 11px; margin-bottom: 16px; }
+    .kpi { display: flex; gap: 24px; margin-bottom: 20px; }
+    .kpi-box { background: #f5f5f5; border-radius: 8px; padding: 12px 20px; }
+    .kpi-box strong { display: block; font-size: 20px; }
+    .alert-box { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1C1917; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; letter-spacing: 0.5px; }
+    td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafafa; }
+    tfoot td { background: #f0f0f0; font-weight: 700; }
+    @media print { @page { margin: 1.5cm; } body { padding: 0; } }
+  </style></head><body>
+  <h1>📦 Inventaire Pédagogique</h1>
+  <div class="meta">Généré le ${today} · ${filtered.length} articles · Filtre : ${currentCreche === 'all' ? 'Toutes les crèches' : currentCreche}</div>
+  <div class="kpi">
+    <div class="kpi-box"><strong>${filtered.length}</strong> Articles</div>
+    <div class="kpi-box"><strong>${totalVal.toFixed(2)} €</strong> Valeur totale</div>
+    <div class="kpi-box"><strong style="color:#DC2626">${alertes.length}</strong> Alertes stock bas</div>
+  </div>
+  ${alertes.length > 0 ? `<div class="alert-box">⚠ Articles en alerte : ${alertes.map(a=>a.nom).join(', ')}</div>` : ''}
+  <table>
+    <thead><tr>
+      <th>Réf.</th><th>Article</th><th>Catégorie</th><th>Structure</th>
+      <th>Stock</th><th>Min.</th><th>Prix unit.</th><th>Valeur</th><th>Fournisseur</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="7" style="text-align:right">Total général :</td>
+      <td colspan="2">${totalVal.toFixed(2)} €</td>
+    </tr></tfoot>
+  </table>
+  <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+// ── STOCKS ENTRETIEN ─────────────────────────────────────────────
+const CATS_ENTRETIEN = ['Nettoyage', 'Désinfection', 'Hygiène', 'Consommables', 'Matériel', 'Autre'];
+
+function renderEntretien() {
+  const q = (document.getElementById('searchEntretien')?.value || '').toLowerCase();
+  const data = ARTICLES.filter(a => {
+    const matchType = a.type === 'entretien';
+    const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
+    const matchQ = !q || a.nom.toLowerCase().includes(q) || (a.ref||'').toLowerCase().includes(q);
+    return matchType && matchCreche && matchQ;
+  }).sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
+
+  const tb = document.getElementById('entretienBody');
+  if (data.length === 0) {
+    tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink3)">Aucun article d'entretien — cliquez sur + Ajouter</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = data.map(a => {
+    const stockColor = a.stock === 0 ? '#DC2626' : a.min > 0 && a.stock <= a.min ? '#D97706' : 'var(--ink)';
+    return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="showDetail(${a.id})">
+      <td style="padding:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${a.photo ? `<img src="${a.photo}" style="width:36px;height:36px;object-fit:contain;border-radius:6px;background:var(--bg)">` : '<div style="width:36px;height:36px;border-radius:6px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px">🧹</div>'}
+          <div>
+            <div style="font-weight:600;font-size:13px">${a.nom}</div>
+            <div style="font-size:11px;color:var(--ink3)">${a.ref||'—'}</div>
+          </div>
+        </div>
+      </td>
+      <td style="padding:12px"><span class="badge badge-blue">${a.creche}</span></td>
+      <td style="padding:12px"><span class="badge badge-blue">${a.cat||'—'}</span></td>
+      <td style="padding:12px;font-weight:700;color:${stockColor}">${a.stock}</td>
+      <td style="padding:12px">${a.prix > 0 ? a.prix.toFixed(2)+' €' : '—'}</td>
+      <td style="padding:12px;font-size:12px;color:var(--ink3)">${a.fourn||'—'}</td>
+      <td style="padding:12px;white-space:nowrap">
+        <button onclick="event.stopPropagation();editArticle(${a.id})" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--ink3);font-size:16px" title="Modifier">✏️</button>
+        <button onclick="event.stopPropagation();deleteArticle(${a.id})" style="background:none;border:none;cursor:pointer;padding:4px;color:#DC2626;font-size:16px" title="Supprimer">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddEntretien() {
+  // Ouvrir le modal d'ajout en mode entretien
+  editingId = null;
+  currentPhotoData = null; currentPhotoName = null;
+  document.getElementById('modalAddTitle').textContent = '🧹 Ajouter un article d\'entretien';
+  document.getElementById('f-nom').value = '';
+  document.getElementById('f-ref').value = '';
+  document.getElementById('f-stock').value = 1;
+  document.getElementById('f-prix').value = 0;
+  document.getElementById('f-fourn').value = '';
+  document.getElementById('f-url').value = '';
+  const fExpiry = document.getElementById('f-expiry'); if (fExpiry) fExpiry.value = '';
+  const fBarcode = document.getElementById('f-barcode'); if (fBarcode) fBarcode.value = '';
+
+  // Remplir catégories entretien
+  const catSel = document.getElementById('f-cat');
+  catSel.innerHTML = CATS_ENTRETIEN.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  // Remplir crèches
+  const crecheSel = document.getElementById('f-creche');
+  crecheSel.innerHTML = CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (currentCreche !== 'all') crecheSel.value = currentCreche;
+
+  // Marquer comme entretien
+  document.getElementById('f-type-hidden').value = 'entretien';
+
+  document.getElementById('modal-add').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function exportEntretienCSV() {
+  const data = ARTICLES.filter(a => a.type === 'entretien');
+  if (data.length === 0) { showNotif('Aucun article d\'entretien à exporter'); return; }
+  const rows = [['Nom','Réf','Catégorie','Structure','Stock','Min','Prix','Fournisseur']];
+  data.forEach(a => rows.push([a.nom, a.ref, a.cat, a.creche, a.stock, a.min, a.prix, a.fourn]));
+  const csv = rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = 'stocks-entretien.csv';
+  a.click();
+}
+// ── FIN ENTRETIEN ─────────────────────────────────────────────────
+function setCarouselPhoto(src, thumb) {
+  const mainImg = document.getElementById('carousel-main-img');
+  const main = document.getElementById('carousel-main');
+  if (mainImg) mainImg.src = src;
+  if (main) main.onclick = () => openFullscreenPhoto(src);
+  if (thumb && thumb.parentNode) {
+    Array.from(thumb.parentNode.children).forEach(t => t.style.opacity = '0.7');
+    thumb.style.opacity = '1';
+  }
+}
+
+function openFullscreenPhoto(src) {
+  let lb = document.getElementById('lightbox-overlay');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'lightbox-overlay';
+    lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;animation:fadeOverlay 0.2s ease';
+    lb.onclick = () => { lb.remove(); };
+    lb.innerHTML = `<img id="lightbox-img" style="max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.8)">
+      <button onclick="event.stopPropagation();document.getElementById('lightbox-overlay').remove()" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer">✕</button>`;
+    document.body.appendChild(lb);
+  }
+  document.getElementById('lightbox-img').src = src;
+}
+
+function renderHub() {
+  const low = getLowStockArticles();
+  const exp = getExpiryAlerts();
+  const totalVal = ARTICLES.reduce((s,a) => s+a.stock*a.prix, 0);
+
+  // Alertes
+  const alerts = [
+    ...low.map(a => ({ color:'#FEF2F2', border:'#FECACA', icon:'🔴', msg: `Stock bas — <strong>${a.nom}</strong> : ${a.stock}/${a.min}`, id: a.id })),
+    ...exp.map(a => ({ color:'#FFFBEB', border:'#FDE68A', icon:'⏰', msg: `Péremption — <strong>${a.nom}</strong> : ${formatExpiry(a.expiry)}`, id: a.id }))
+  ];
+  document.getElementById('hub-alerts').innerHTML = alerts.length === 0
+    ? `<div style="background:var(--bg);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--ink3)">✅ Aucune alerte — tout est en ordre !</div>`
+    : alerts.slice(0, 5).map(al => `
+      <div onclick="showDetail(${al.id})" style="background:${al.color};border:1px solid ${al.border};border-radius:10px;padding:10px 14px;margin-bottom:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px">
+        <span>${al.icon}</span><span>${al.msg}</span>
+        <span style="margin-left:auto;color:var(--ink3);font-size:11px">Voir →</span>
+      </div>`).join('') + (alerts.length > 5 ? `<div style="font-size:12px;color:var(--ink3);padding:6px 4px">+ ${alerts.length-5} autre(s) alerte(s) — voir <a href="#" onclick="showPage('statistiques', document.querySelector('[onclick*=statistiques]'))">Statistiques</a></div>` : '');
+
+  // KPI
+  document.getElementById('hub-kpi').innerHTML = `
+    <div style="background:var(--surface2);border-radius:12px;padding:16px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Articles</div>
+      <div style="font-size:28px;font-weight:800;font-family:'Syne',sans-serif;color:var(--ink);margin:4px 0">${ARTICLES.length}</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:12px;padding:16px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Valeur stock</div>
+      <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);margin:4px 0">${totalVal.toFixed(0)} €</div>
+    </div>
+    <div style="background:${low.length>0?'#FEF2F2':'var(--surface2)'};border-radius:12px;padding:16px;border:1px solid ${low.length>0?'#FECACA':'var(--border)'}">
+      <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Stock bas</div>
+      <div style="font-size:28px;font-weight:800;font-family:'Syne',sans-serif;color:${low.length>0?'#DC2626':'var(--ink)'};margin:4px 0">${low.length}</div>
+    </div>
+    <div style="background:${exp.length>0?'#FFFBEB':'var(--surface2)'};border-radius:12px;padding:16px;border:1px solid ${exp.length>0?'#FDE68A':'var(--border)'}">
+      <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Péremptions</div>
+      <div style="font-size:28px;font-weight:800;font-family:'Syne',sans-serif;color:${exp.length>0?'#D97706':'var(--ink)'};margin:4px 0">${exp.length}</div>
+    </div>`;
+}
+// ── FIN HUB ───────────────────────────────────────────────────────
+let dashCharts = {};
+
+function renderDashboard() {
+  // KPI
+  const low = getLowStockArticles();
+  const exp = getExpiryAlerts();
+  const totalVal = ARTICLES.reduce((s,a) => s+a.stock*a.prix, 0);
+  const totalArt = ARTICLES.length;
+
+  document.getElementById('dash-kpi').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Articles total</div>
+      <div class="stat-value">${totalArt}</div>
+      <div class="stat-sub">dans toutes les crèches</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Valeur du stock</div>
+      <div class="stat-value">${totalVal.toFixed(0)} €</div>
+      <div class="stat-sub">prix × quantité</div>
+    </div>
+    <div class="stat-card" style="${low.length > 0 ? 'border-left:3px solid #DC2626' : ''}">
+      <div class="stat-label">🔴 Stock bas</div>
+      <div class="stat-value" style="color:#DC2626">${low.length}</div>
+      <div class="stat-sub">articles sous le minimum</div>
+    </div>
+    <div class="stat-card" style="${exp.length > 0 ? 'border-left:3px solid #D97706' : ''}">
+      <div class="stat-label">⏰ Péremptions proches</div>
+      <div class="stat-value" style="color:#D97706">${exp.length}</div>
+      <div class="stat-sub">dans moins de 30 jours</div>
+    </div>`;
+
+  // Alerts panel
+  const alerts = [
+    ...low.map(a => ({ color:'#FEF2F2', border:'#FECACA', icon:'🔴', msg: `Stock bas — <strong>${a.nom}</strong> (${a.creche}) : ${a.stock} / min ${a.min}`, id: a.id })),
+    ...exp.map(a => ({ color:'#FFFBEB', border:'#FDE68A', icon:'⏰', msg: `Péremption — <strong>${a.nom}</strong> : ${formatExpiry(a.expiry)}`, id: a.id }))
+  ];
+  document.getElementById('dash-alerts-panel').innerHTML = alerts.length === 0
+    ? `<div style="text-align:center;padding:20px;color:var(--ink3);font-size:13px">✅ Aucune alerte — tout est en ordre !</div>`
+    : `<div style="font-weight:700;font-size:13px;margin-bottom:8px;padding-left:4px">⚠ Alertes actives (${alerts.length})</div>
+       ${alerts.map(al => `<div onclick="showDetail(${al.id})" style="background:${al.color};border:1px solid ${al.border};border-radius:8px;padding:10px 14px;margin-bottom:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px">
+         <span style="font-size:16px">${al.icon}</span><span>${al.msg}</span>
+         <span style="margin-left:auto;font-size:11px;color:var(--ink3)">Voir →</span>
+       </div>`).join('')}`;
+
+  // Charts
+  setTimeout(() => {
+    renderChartCreches();
+    renderChartCats();
+    renderChartCritical();
+  }, 50);
+}
+
+function renderChartCreches() {
+  const ctx = document.getElementById('chart-creches');
+  if (!ctx) return;
+  if (dashCharts.creches) { dashCharts.creches.destroy(); }
+  const labels = CRECHES.filter(c => ARTICLES.some(a => a.creche === c));
+  const vals = labels.map(c => ARTICLES.filter(a => a.creche === c).reduce((s,a) => s+a.stock*a.prix, 0));
+  const colors = labels.map(c => CRECHE_COLORS[c] || '#6366F1');
+  dashCharts.creches = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label:'Valeur (€)', data: vals, backgroundColor: colors.map(c=>c+'CC'), borderColor: colors, borderWidth: 2, borderRadius: 6 }] },
+    options: { responsive:true, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true, ticks:{callback:v=>v+'€'} } } }
+  });
+}
+
+function renderChartCats() {
+  const ctx = document.getElementById('chart-cats');
+  if (!ctx) return;
+  if (dashCharts.cats) { dashCharts.cats.destroy(); }
+  const cats = [...new Set(ARTICLES.map(a=>a.cat))].filter(Boolean);
+  const vals = cats.map(c => ARTICLES.filter(a=>a.cat===c).reduce((s,a)=>s+a.stock*a.prix,0));
+  const palette = ['#2563EB','#16A34A','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#65A30D','#EA580C','#0284C7'];
+  dashCharts.cats = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: cats, datasets: [{ data: vals, backgroundColor: palette, borderWidth: 2 }] },
+    options: { responsive:true, plugins:{ legend:{ position:'right', labels:{font:{size:11}, boxWidth:12} } } }
+  });
+}
+
+function renderChartCritical() {
+  const ctx = document.getElementById('chart-critical');
+  if (!ctx) return;
+  if (dashCharts.critical) { dashCharts.critical.destroy(); }
+  const critical = ARTICLES
+    .filter(a => a.min > 0)
+    .sort((a,b) => (a.stock/Math.max(a.min,1)) - (b.stock/Math.max(b.min,1)))
+    .slice(0, 12);
+  const labels = critical.map(a => a.nom.length > 22 ? a.nom.slice(0,20)+'…' : a.nom);
+  const stocks = critical.map(a => a.stock);
+  const mins = critical.map(a => a.min);
+  const bgColors = critical.map(a => a.stock === 0 ? '#FEE2E2' : a.stock <= a.min ? '#FEF3C7' : '#DCFCE7');
+  const bdColors = critical.map(a => a.stock === 0 ? '#DC2626' : a.stock <= a.min ? '#D97706' : '#16A34A');
+  dashCharts.critical = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Stock actuel', data: stocks, backgroundColor: bgColors, borderColor: bdColors, borderWidth: 2, borderRadius: 4 },
+        { label:'Stock min.', data: mins, type:'line', borderColor:'#94A3B8', borderDash:[4,4], pointRadius:3, fill:false }
+      ]
+    },
+    options: { responsive:true, indexAxis:'y', plugins:{ legend:{position:'top'} }, scales:{ x:{beginAtZero:true} } }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateAlertBadge();
+});
+
 function init() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('c-date').value = today;
@@ -1536,6 +3091,7 @@ function init() {
   // Sync Supabase en arrière-plan
   loadData().then(() => {
     renderTable(); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique(); updateCounts();
+    if (typeof updateAlertBadge === 'function') updateAlertBadge();
     if (typeof startPolling === 'function') startPolling(30);
   }).catch(e => {
     console.warn('Supabase unavailable:', e.message);
@@ -1547,10 +3103,11 @@ function init() {
 function renderTable() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   let data = ARTICLES.filter(a => {
+    const matchType = !a.type || a.type === 'pedagogique';
     const matchCat = currentCat === 'all' || a.cat === currentCat;
     const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
     const matchQ = !q || a.nom.toLowerCase().includes(q) || a.ref.toLowerCase().includes(q) || a.fourn.toLowerCase().includes(q);
-    return matchCat && matchCreche && matchQ;
+    return matchType && matchCat && matchCreche && matchQ;
   }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
 
   const tb = document.getElementById('tableBody');
@@ -1560,7 +3117,7 @@ function renderTable() {
   if (oldFootEarly && oldFootEarly.parentNode) oldFootEarly.parentNode.removeChild(oldFootEarly);
 
   if (data.length === 0) {
-    tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink3)">Aucun article trouvé</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink3)">Aucun article trouvé</td></tr>`;
     return;
   }
 
@@ -1582,11 +3139,13 @@ function renderTable() {
           </div>
         </div>
       </td>
+      <td><span class="badge badge-blue">${a.creche}</span></td>
       <td><span class="badge badge-blue">${a.cat}</span></td>
       <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px">${a.stock}</td>
       <td style="font-weight:500">${a.prix > 0 ? a.prix.toFixed(2)+' €' : '—'}</td>
       <td style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent)">
         ${montant > 0 ? montant.toFixed(2)+' €' : '—'}
+        ${a.expiry ? `<div style="font-size:10px;font-weight:600;margin-top:2px;color:${expiryColor(a.expiry)}">${formatExpiry(a.expiry)}</div>` : ''}
       </td>
       <td style="color:var(--ink2);font-size:12px">${a.fourn || '—'}</td>
       <td onclick="event.stopPropagation()">
@@ -1614,7 +3173,7 @@ function renderTable() {
   tfoot.id = 'tableFooter';
   tfoot.innerHTML = `
     <tr style="background:var(--bg);border-top:2px solid var(--border)">
-      <td colspan="2" style="padding:14px 16px">
+      <td colspan="3" style="padding:14px 16px">
         <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
           <span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink3)">Coût par structure</span>
           ${totauxParStructure.map(({c, total, count}) => `
@@ -1640,16 +3199,16 @@ function renderTable() {
 }
 
 function renderStats() {
-  const data = (typeof currentCreche !== 'undefined' && currentCreche !== 'all')
-    ? ARTICLES.filter(a => a.creche === currentCreche)
-    : ARTICLES;
+  if (typeof updateAlertBadge === 'function') updateAlertBadge();
+  const data = (typeof currentCreche !== 'undefined' && currentCreche !== 'all') ? ARTICLES.filter(a => a.creche === currentCreche) : ARTICLES;
   const el = document.getElementById('stat-total');
   if (el) el.textContent = data.length;
+  // Stock critique supprimé
   const valeur = data.reduce((s,a) => s + a.stock * a.prix, 0);
   const elVal = document.getElementById('stat-valeur');
   if (elVal) elVal.textContent = valeur.toFixed(0)+' €';
   const elCmd = document.getElementById('stat-commandes');
-  if (elCmd) elCmd.textContent = COMMANDES.filter(c => c.status === 'en-cours' && (currentCreche === 'all' || c.creche === currentCreche)).length;
+  if (elCmd) elCmd.textContent = COMMANDES.filter(c=>c.status==='en-cours').length;
 }
 
 function updateCounts() {
@@ -1861,6 +3420,9 @@ function openModal(type) {
     ['f-min','f-notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     ['f-cat','f-creche','f-fourn'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-url').value = '';
+    const fExpiry = document.getElementById('f-expiry'); if (fExpiry) fExpiry.value = '';
+    const fBarcode = document.getElementById('f-barcode'); if (fBarcode) fBarcode.value = '';
+    const fType = document.getElementById('f-type-hidden'); if (fType) fType.value = 'pedagogique';
     resetPhotoUpload();
   }
   document.getElementById(`modal-${type}`).classList.add('open');
@@ -1871,7 +3433,18 @@ function editArticle(id) {
   const a = ARTICLES.find(x => x.id === id);
   if (!a) return;
   editingId = id;
-  document.getElementById('modalAddTitle').textContent = 'Modifier l\'article';
+  const isEntretien = a.type === 'entretien';
+  document.getElementById('modalAddTitle').textContent = isEntretien ? '🧹 Modifier l\'article d\'entretien' : 'Modifier l\'article';
+
+  // Remplir les catégories selon le type
+  const catSel = document.getElementById('f-cat');
+  if (isEntretien) {
+    catSel.innerHTML = CATS_ENTRETIEN.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  const fType = document.getElementById('f-type-hidden');
+  if (fType) fType.value = a.type || 'pedagogique';
+
   document.getElementById('f-nom').value = a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').replace(/\s*\{.*?\}\s*/g,'').trim();
   document.getElementById('f-ref').value = a.ref;
   document.getElementById('f-cat').value = a.cat;
@@ -1880,6 +3453,10 @@ function editArticle(id) {
   document.getElementById('f-prix').value = a.prix;
   document.getElementById('f-fourn').value = a.fourn;
   document.getElementById('f-url').value = a.url || '';
+  const fBarcode = document.getElementById('f-barcode');
+  if (fBarcode) fBarcode.value = a.barcode || '';
+  const fExpiry = document.getElementById('f-expiry');
+  if (fExpiry) fExpiry.value = a.expiry || '';
   // f-min et f-notes supprimés — utiliser les champs cachés si présents
   const fMin = document.getElementById('f-min');
   if (fMin) fMin.value = a.min || 0;
@@ -1899,7 +3476,12 @@ function editArticle(id) {
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
-  document.body.style.overflow = '';
+  // Vérifier s'il reste des modals ouverts
+  const anyOpen = document.querySelectorAll('.modal-overlay.open').length > 0;
+  if (!anyOpen) {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  }
 }
 
 function closeModalClick(e, id) {
@@ -1928,6 +3510,9 @@ async function saveArticle() {
     fourn: document.getElementById('f-fourn').value,
     notes: ((document.getElementById('f-notes')||{}).value||'').trim(),
     url:   document.getElementById('f-url').value.trim(),
+    expiry: (document.getElementById('f-expiry')||{}).value || '',
+    barcode: ((document.getElementById('f-barcode')||{}).value||'').trim(),
+    type: (document.getElementById('f-type-hidden')||{}).value || 'pedagogique',
     photo: currentPhotoData || (editingId ? (ARTICLES.find(a=>a.id===editingId)||{}).photo : null),
     photoName: currentPhotoName || null,
   };
@@ -1951,7 +3536,11 @@ async function saveArticle() {
   currentPhotoName = null;
   resetPhotoUpload();
   closeModal('modal-add');
-  renderTable();
+  if (article.type === 'entretien') {
+    renderEntretien();
+  } else {
+    renderTable();
+  }
   renderHistorique();
   updateCounts();
 }
@@ -2386,6 +3975,7 @@ function showDetail(id) {
           <tr><td style="color:var(--ink3);padding:3px 0">Fournisseur</td><td style="font-weight:500">${a.fourn || '—'}</td></tr>
           <tr><td style="color:var(--ink3);padding:3px 0">Valeur stock</td><td style="font-weight:600;color:var(--accent)">${(a.stock*a.prix).toFixed(2)} €</td></tr>
           ${a.url ? `<tr><td style="color:var(--ink3);padding:3px 0">Lien</td><td><a href="${a.url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px">🔗 Voir</a></td></tr>` : ''}
+          ${a.expiry ? `<tr><td style="color:var(--ink3);padding:3px 0">Péremption</td><td style="font-weight:600;color:${expiryColor(a.expiry)}">${formatExpiry(a.expiry)}</td></tr>` : ''}
         </table>
       </div>
     </div>
@@ -2401,6 +3991,8 @@ function showDetail(id) {
 
   document.getElementById('detail-footer').innerHTML = `
     <button class="btn btn-secondary" onclick="closeModal('modal-detail')">Fermer</button>
+    <button class="btn btn-secondary" onclick="printArticleLabel(${a.id})">🏷 Étiquette</button>
+    <button class="btn btn-secondary" onclick="openTransfert(${a.id})">🔄 Transférer</button>
     <button class="btn btn-secondary" onclick="editArticleFromDetail(${a.id})">✏️ Modifier</button>
     <button class="btn btn-primary" onclick="closeModal('modal-detail');commanderArticle(${a.id})">🛒 Commander</button>`;
 
@@ -2448,17 +4040,21 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  ['inventaire','commandes','fournisseurs','historique','univers'].forEach(p => {
-    document.getElementById(`page-${p}`).style.display = p === page ? 'block' : 'none';
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers'].forEach(p => {
+    const el = document.getElementById(`page-${p}`);
+    if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const titles = { inventaire:'Inventaire', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', univers:'Univers ludiques' };
+  if (btn) btn.classList.add('active');
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques' };
   document.getElementById('pageTitle').textContent = titles[page];
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
   if (page === 'univers') { renderUnivers(); if(typeof updateSouscatFilters==='function') updateSouscatFilters(); }
   if (page === 'fournisseurs') { renderFournisseurs(); }
+  if (page === 'statistiques') { renderDashboard(); }
+  if (page === 'dashboard') { renderHub(); }
+  if (page === 'entretien') { renderEntretien(); }
   if (page === 'historique') { renderHistorique(); }
   if (page === 'inventaire') { renderTable(); renderStats(); }
 }
@@ -2836,8 +4432,7 @@ function renderUnivers() {
       `<span class="univers-article-tag">${n}</span>`).join('') +
       (articleNames.length > 4 ? `<span class="univers-article-tag">+${articleNames.length-4}</span>` : '');
 
-    const firstPhoto = (u.photos && u.photos.length > 0) ? u.photos[0] : u.photo;
-    const cardPhotoStr = firstPhoto ? '<div style="height:200px;border-radius:8px 8px 0 0;overflow:hidden;margin:-20px -20px 12px -20px"><img src="' + firstPhoto + '" style="width:100%;height:100%;object-fit:cover">' + (u.photos && u.photos.length > 1 ? '<div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.5);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px">📷 '+u.photos.length+'</div>' : '') + '</div>' : '';
+    const cardPhotoStr = u.photo ? '<div style="height:200px;border-radius:8px 8px 0 0;overflow:hidden;margin:-20px -20px 12px -20px"><img src="' + u.photo + '" style="width:100%;height:100%;object-fit:cover"></div>' : '';
     return '<div class="univers-card" onclick="showUniversDetail(' + u.id + ')">' + cardPhotoStr + `
       <div class="univers-card-header">
         <span class="univers-icon">${icon}</span>
@@ -2846,7 +4441,7 @@ function renderUnivers() {
           <div class="univers-card-meta">
             <span class="creche-tag" style="background:${crecheColor}22;color:${crecheColor}">● ${u.creche||'—'}</span>
             <span style="background:var(--accent-lt);color:var(--accent);padding:1px 6px;border-radius:10px;font-size:10px">${u.cat}</span>
-            
+            ${u.ia_generated ? '<span style="background:#F3E8FF;color:#7C3AED;padding:1px 6px;border-radius:10px;font-size:10px">✨ IA</span>' : ''}
           </div>
         </div>
       </div>
@@ -2877,7 +4472,7 @@ function filterUnivers(cat, el) {
   renderUnivers();
 }
 
-let _universPhotos = []; // tableau de base64
+let _universPhotos = [];
 
 function handleUniversPhoto(event) {
   const files = Array.from(event.target.files);
@@ -2886,10 +4481,7 @@ function handleUniversPhoto(event) {
   if (toProcess.length === 0) { showNotif('⚠ Maximum 5 photos atteint'); return; }
   toProcess.forEach(file => {
     const reader = new FileReader();
-    reader.onload = e => {
-      _universPhotos.push(e.target.result);
-      renderUniversPhotosGrid();
-    };
+    reader.onload = e => { _universPhotos.push(e.target.result); renderUniversPhotosGrid(); };
     reader.readAsDataURL(file);
   });
   event.target.value = '';
@@ -2914,14 +4506,9 @@ function removeUniversPhoto(index) {
 }
 
 function resetUniversPhotoUI(photoData) {
-  // Compatibilité : photoData peut être une string (ancienne version) ou un tableau
-  if (Array.isArray(photoData)) {
-    _universPhotos = [...photoData];
-  } else if (photoData) {
-    _universPhotos = [photoData];
-  } else {
-    _universPhotos = [];
-  }
+  if (Array.isArray(photoData)) _universPhotos = [...photoData];
+  else if (photoData) _universPhotos = [photoData];
+  else _universPhotos = [];
   renderUniversPhotosGrid();
 }
 
@@ -2967,7 +4554,7 @@ function getSelectedArticleIds() {
 
 function openModal_univers() {
   editingUniversId = null;
-  _universPhotoData = null;
+  _universPhotos = [];
   document.getElementById('modalUniversTitle').textContent = 'Créer un univers ludique';
   document.getElementById('btn-save-univers').textContent = '✨ Enregistrer l\'univers';
   ['u-nom','u-age','u-duree','u-enfants','u-desc','u-conseils'].forEach(id => {
@@ -3001,9 +4588,9 @@ async function saveUnivers() {
     conseils: document.getElementById('u-conseils').value.trim(),
     articles: JSON.stringify(getSelectedArticleIds()),
     souscat:  parseInt(document.getElementById('u-souscat')?.value) || null,
-    photo:    _universPhotos.length > 0 ? _universPhotos[0] : null, // compatibilité
+    photo:    _universPhotos.length > 0 ? _universPhotos[0] : null,
     photos:   [..._universPhotos],
-    
+    ia_generated: window._iaGenerating || false,
     created_at: new Date().toISOString(),
   };
 
@@ -3105,7 +4692,6 @@ function showUniversDetail(id) {
             <span style="font-size:36px">${icon}</span>
           </div>
         </div>`;
-      // Plusieurs photos : grande + miniatures
       return `
         <div style="margin:-20px -20px 20px -20px">
           <div style="height:220px;overflow:hidden;position:relative;cursor:zoom-in" onclick="openFullscreenPhoto('${photos[0]}')" id="carousel-main">
@@ -3120,8 +4706,8 @@ function showUniversDetail(id) {
           </div>
           <div style="display:grid;grid-template-columns:repeat(${photos.length},1fr);gap:3px;margin-top:3px">
             ${photos.map((p,i) => `
-              <div style="height:60px;overflow:hidden;cursor:pointer;opacity:${i===0?'1':'0.7'};transition:opacity 0.15s;border-radius:${i===0?'0 0 0 12px':i===photos.length-1?'0 0 12px 0':'0'}" 
-                onclick="setCarouselPhoto('${p}',this)" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${i===0?'1':'0.7'}'">
+              <div style="height:60px;overflow:hidden;cursor:pointer;opacity:${i===0?'1':'0.7'};transition:opacity 0.15s;border-radius:${i===0?'0 0 0 12px':i===photos.length-1?'0 0 12px 0':'0'}"
+                onclick="setCarouselPhoto('${p}',this)">
                 <img src="${p}" style="width:100%;height:100%;object-fit:cover">
               </div>`).join('')}
           </div>
@@ -3165,14 +4751,13 @@ function showUniversDetail(id) {
         </div>`}
     </div>
 
-    <!-- Conseils mise en scène -->
+    <!-- Conseils -->
     ${u.conseils ? `
     <div style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1px solid #FDE68A;border-radius:12px;padding:16px">
       <div style="font-weight:700;font-size:13px;color:#92400E;margin-bottom:8px">💡 Mise en scène & Conseils</div>
       <div style="font-size:13px;line-height:1.7;color:#78350F">${u.conseils}</div>
     </div>` : ''}
   `;
-
   document.getElementById('detail-univers-footer').innerHTML = `
     <button class="btn btn-secondary" onclick="closeModal('modal-univers-detail')">Fermer</button>
     <button class="btn btn-secondary" onclick="closeModal('modal-univers-detail');editUnivers(${u.id})">✏️ Modifier</button>
@@ -3243,7 +4828,7 @@ function printUnivers(id) {
       <tbody>${rowsHTML}</tbody></table>
     </div>
     ${u.conseils ? `<div class="section"><h3>💡 Mise en scène</h3><div class="conseils-box">${u.conseils}</div></div>` : ''}
-    <div class="footer">Fiche générée le ${new Date().toLocaleDateString('fr-FR')} — ${u.creche}</div>
+    <div class="footer">Fiche générée le ${new Date().toLocaleDateString('fr-FR')} — ${u.creche}${u.ia_generated ? ' · ✨ Activité suggérée par Claude (IA)' : ''}</div>
     </body></html>`;
 
   const blob = new Blob([html], { type:'text/html;charset=utf-8' });
@@ -3315,7 +4900,6 @@ function importBackup(event) {
       saveData();
       renderTable(); renderStats(); renderCommandes();
       renderFournisseurs(); renderHistorique(); updateCounts();
-      if (typeof renderUnivers === 'function') renderUnivers();
       showNotif(`⏳ Restauration locale OK — synchronisation Supabase en cours…`);
 
       // Push to Supabase if connected
@@ -3625,8 +5209,8 @@ async function removeArticlePhoto(id) {
 
 // ─── SUPABASE CLOUD SYNC ──────────────────────────────────────────────────
 
-const SUPA_URL = '';
-const SUPA_KEY = '';
+const SUPA_URL = 'https://drxqjeilbunpfqyecpdg.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyeHFqZWlsYnVucGZxeWVjcGRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ2MzgsImV4cCI6MjA5NTQ2MDYzOH0.vTQZwnbrmL6zaUxYb3qzMMWp3Jhs-fWeSJiBdmn_6m8';
 const SUPA_HEADERS = {
   'Content-Type': 'application/json',
   'apikey': SUPA_KEY,
@@ -3661,12 +5245,25 @@ async function syncFromCloud() {
       sbGet('historique', 'order=id.desc&limit=200'),
       sbGet('univers', 'order=id.desc').catch(() => []),
     ]);
-    if (Array.isArray(arts))   ARTICLES.splice(0,     ARTICLES.length,     ...arts);
-    if (Array.isArray(cmds))   COMMANDES.splice(0,    COMMANDES.length,    ...cmds);
-    if (Array.isArray(fourns)) FOURNISSEURS.splice(0, FOURNISSEURS.length, ...fourns);
-    if (Array.isArray(histos)) HISTORIQUE.splice(0,   HISTORIQUE.length,   ...histos);
+    if (Array.isArray(arts)) {
+      // Garder url/expiry/barcode locaux si Supabase a NULL
+      const localById = {};
+      ARTICLES.forEach(a => { localById[a.id] = a; });
+      ARTICLES.splice(0, ARTICLES.length, ...arts.map(r => {
+        const fromCloud = rowToArticle(r);
+        const local = localById[fromCloud.id];
+        if (local) {
+          if (!fromCloud.url     && local.url)     fromCloud.url     = local.url;
+          if (!fromCloud.expiry  && local.expiry)  fromCloud.expiry  = local.expiry;
+          if (!fromCloud.barcode && local.barcode) fromCloud.barcode = local.barcode;
+        }
+        return fromCloud;
+      }));
+    }
+    if (Array.isArray(cmds))   COMMANDES.splice(0,    COMMANDES.length,    ...cmds.map(rowToCommande));
+    if (Array.isArray(fourns)) FOURNISSEURS.splice(0, FOURNISSEURS.length, ...fourns.map(rowToFournisseur));
+    if (Array.isArray(histos)) HISTORIQUE.splice(0,   HISTORIQUE.length,   ...histos.map(rowToHisto));
     if (Array.isArray(univs)) {
-      // Map Supabase column 'description' back to 'desc' used in app
       const mapped = univs.map(u => ({ ...u, desc: u.description || u.desc || '' }));
       UNIVERS.splice(0, UNIVERS.length, ...mapped);
     }
@@ -3753,12 +5350,15 @@ async function sbDelete(table, id) {
 function articleToRow(a) {
   return { id: a.id, nom: a.nom, ref: a.ref, cat: a.cat, creche: a.creche,
            stock: a.stock, min: a.min, prix: a.prix, fourn: a.fourn,
-           notes: a.notes||'', photo: a.photo||null, photo_name: a.photoName||null };
+           notes: a.notes||'', url: a.url||'', expiry: a.expiry||'',
+           barcode: a.barcode||'', type: a.type||'pedagogique',
+           photo: a.photo||null, photo_name: a.photoName||null };
 }
 function rowToArticle(r) {
   return { id: r.id, nom: r.nom, ref: r.ref, cat: r.cat, creche: r.creche,
            stock: r.stock, min: r.min, prix: parseFloat(r.prix)||0,
-           fourn: r.fourn||'', notes: r.notes||'',
+           fourn: r.fourn||'', notes: r.notes||'', url: r.url||'', expiry: r.expiry||'',
+           barcode: r.barcode||'', type: r.type||'pedagogique',
            photo: r.photo||null, photoName: r.photo_name||null };
 }
 function commandeToRow(c) {
@@ -3816,7 +5416,19 @@ async function loadData() {
     ]);
 
     if (arts.length > 0) {
-      ARTICLES.splice(0, ARTICLES.length, ...arts.map(rowToArticle));
+      // Fusionner : garder url/expiry/barcode du localStorage si Supabase a NULL
+      const localById = {};
+      ARTICLES.forEach(a => { localById[a.id] = a; });
+      ARTICLES.splice(0, ARTICLES.length, ...arts.map(r => {
+        const fromCloud = rowToArticle(r);
+        const local = localById[fromCloud.id];
+        if (local) {
+          if (!fromCloud.url     && local.url)     fromCloud.url     = local.url;
+          if (!fromCloud.expiry  && local.expiry)  fromCloud.expiry  = local.expiry;
+          if (!fromCloud.barcode && local.barcode) fromCloud.barcode = local.barcode;
+        }
+        return fromCloud;
+      }));
     }
     if (cmds.length > 0) {
       COMMANDES.splice(0, COMMANDES.length, ...cmds.map(rowToCommande));
@@ -3834,6 +5446,14 @@ async function loadData() {
 
     const now = new Date();
     setIndicator('☁️ Sync cloud — ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}), 'var(--green)');
+
+    // Remonter les url/expiry/barcode du localStorage vers Supabase si Supabase avait NULL
+    const toSync = ARTICLES.filter(a => a.url || a.expiry || a.barcode);
+    for (const a of toSync) {
+      try { await sbUpdate('articles', a.id, { url: a.url||'', expiry: a.expiry||'', barcode: a.barcode||'' }); }
+      catch(e) { /* silencieux */ }
+    }
+
     return true;
   } catch(e) {
     setIndicator('⚠️ Hors ligne — données locales', 'var(--amber)');
@@ -4044,280 +5664,6 @@ function loadLocalData() {
   }
 }
 
-function setCarouselPhoto(src, thumb) {
-  const mainImg = document.getElementById("carousel-main-img");
-  const main = document.getElementById("carousel-main");
-  if (mainImg) mainImg.src = src;
-  if (main) main.onclick = () => openFullscreenPhoto(src);
-  if (thumb && thumb.parentNode) {
-    Array.from(thumb.parentNode.children).forEach(t => t.style.opacity = "0.7");
-    thumb.style.opacity = "1";
-  }
-}
-
-// ── IMPORT PADLET ─────────────────────────────────────────────────
-let _padletCards = [];
-
-function openPadletImport() {
-  const sel = document.getElementById('padlet-creche');
-  sel.innerHTML = CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
-  if (currentCreche && currentCreche !== 'all') sel.value = currentCreche;
-  document.getElementById('padlet-step-1').style.display = 'block';
-  document.getElementById('padlet-step-2').style.display = 'none';
-  document.getElementById('padlet-error').style.display = 'none';
-  document.getElementById('padlet-footer').innerHTML = `
-    <button class="btn btn-secondary" onclick="closeModal('modal-padlet')">Annuler</button>
-    <button class="btn btn-primary" id="padlet-btn-fetch" onclick="fetchPadletBoard()">🔍 Charger le Padlet</button>`;
-  document.getElementById('modal-padlet').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-async function fetchPadletBoard() {
-  const apiKey = document.getElementById('padlet-api-key').value.trim();
-  const url = document.getElementById('padlet-url').value.trim();
-  if (!apiKey) { showPadletError('Veuillez saisir votre clé API'); return; }
-  if (!url) { showPadletError('Veuillez saisir l\'URL du Padlet'); return; }
-  const boardId = extractPadletBoardId(url);
-  if (!boardId) { showPadletError('URL Padlet invalide'); return; }
-  const btn = document.getElementById('padlet-btn-fetch');
-  btn.textContent = '⏳ Chargement…'; btn.disabled = true;
-  document.getElementById('padlet-error').style.display = 'none';
-  try {
-    const res = await fetch(`https://api.padlet.dev/v1/boards/${boardId}?include=posts,sections`, {
-      headers: { 'X-API-KEY': apiKey, 'Accept': 'application/vnd.api+json' }
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.errors?.[0]?.detail || `Erreur ${res.status}`);
-    }
-    const data = await res.json();
-    parsePadletData(data);
-  } catch(e) {
-    showPadletError(e.message);
-    btn.textContent = '🔍 Charger le Padlet'; btn.disabled = false;
-  }
-}
-
-function extractPadletBoardId(url) {
-  const slugMatch = url.match(/padlet\.com\/[^/]+\/[^/]+-([a-z0-9]+)\/?$/i);
-  const directMatch = url.match(/([a-z0-9]{12,})\/?$/i);
-  return (slugMatch && slugMatch[1]) || (directMatch && directMatch[1]) || null;
-}
-
-function parsePadletData(data) {
-  // L'API Padlet v1 retourne les posts dans data.data ou data.included
-  console.log('[Padlet] Response:', JSON.stringify(data).slice(0, 500));
-  
-  // Chercher les posts partout dans la réponse
-  let posts = [];
-  let sections = [];
-  
-  // Structure possible 1 : data.included avec types
-  if (data.included) {
-    posts = data.included.filter(i => i.type === 'post');
-    sections = data.included.filter(i => i.type === 'section');
-  }
-  
-  // Structure possible 2 : data.data est un array de posts
-  if (posts.length === 0 && Array.isArray(data.data)) {
-    posts = data.data.filter(i => i.type === 'post');
-    sections = data.data.filter(i => i.type === 'section');
-  }
-  
-  // Structure possible 3 : nested dans data.data.relationships
-  if (posts.length === 0 && data.data && data.data.relationships) {
-    const postRefs = data.data.relationships.posts?.data || [];
-    posts = postRefs.map(ref => data.included?.find(i => i.id === ref.id && i.type === 'post')).filter(Boolean);
-    const sectionRefs = data.data.relationships.sections?.data || [];
-    sections = sectionRefs.map(ref => data.included?.find(i => i.id === ref.id && i.type === 'section')).filter(Boolean);
-  }
-
-  console.log('[Padlet] Posts found:', posts.length, 'Sections:', sections.length);
-  if (posts.length > 0) console.log('[Padlet] First post:', JSON.stringify(posts[0]).slice(0, 300));
-
-  if (posts.length === 0) {
-    showPadletError(`Padlet chargé mais aucune carte trouvée. Vérifiez que le Padlet contient des publications.`);
-    return;
-  }
-
-  const sectionMap = {};
-  sections.forEach(s => { sectionMap[s.id] = s.attributes?.title || s.attributes?.headline || ''; });
-
-  const catMap = {
-    'sensoriel':'Sensoriel','construction':'Construction','manipulation':'Manipulation',
-    'patouille':'Manipulation','imitation':'Imitation','motricité':'Motricité',
-    'motricite':'Motricité','expression':'Expression artistique','artistique':'Expression artistique',
-    'multi':'Multi-catégories'
-  };
-
-  _padletCards = posts
-    .filter(p => {
-      const attr = p.attributes || {};
-      const content = attr.content || attr;
-      return content.subject || content.headline || content.body || attr.subject || attr.headline;
-    })
-    .map(p => {
-      const attr = p.attributes || {};
-      const content = attr.content || attr; // contenu peut être dans attr.content ou directement dans attr
-      const sectionId = p.relationships?.section?.data?.id || p.relationships?.column?.data?.id;
-      const sectionTitle = sectionId ? sectionMap[sectionId] : '';
-      let cat = 'Multi-catégories';
-      const sl = (sectionTitle || '').toLowerCase();
-      for (const [k,v] of Object.entries(catMap)) { if (sl.includes(k)) { cat = v; break; } }
-
-      // Photo dans différents endroits
-      const photo = content.preview?.url || content.attachment?.url ||
-                    attr.preview?.url || attr.attachment?.url ||
-                    attr.image?.url || attr.thumbnail?.url || null;
-
-      return {
-        id: p.id,
-        nom: content.subject || content.headline || attr.subject || attr.headline || 'Sans titre',
-        desc: content.body || content.description || attr.body || '',
-        cat, section: sectionTitle, photo, selected: true
-      };
-    })
-    .sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
-
-  renderPadletCards();
-}
-
-function renderPadletCards() {
-  const selected = _padletCards.filter(c => c.selected).length;
-  document.getElementById('padlet-summary').textContent = `${_padletCards.length} cartes · ${selected} sélectionnées`;
-  document.getElementById('padlet-cards-list').innerHTML = _padletCards.map((c,i) => `
-    <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;background:${c.selected?'var(--surface2)':''}">
-      <input type="checkbox" ${c.selected?'checked':''} onchange="padletToggle(${i},this.checked)" style="width:16px;height:16px;flex-shrink:0">
-      ${c.photo?`<img src="${c.photo}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.style.display='none'">`:
-        `<div style="width:48px;height:48px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:22px">🌟</div>`}
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.nom}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">
-          <span style="background:var(--accent-lt);color:var(--accent);padding:1px 6px;border-radius:10px">${c.cat}</span>
-          ${c.section?`<span style="margin-left:4px">${c.section}</span>`:''}
-        </div>
-        ${c.desc?`<div style="font-size:11px;color:var(--ink2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.desc.slice(0,80)}</div>`:''}
-      </div>
-    </label>`).join('');
-  document.getElementById('padlet-step-1').style.display = 'none';
-  document.getElementById('padlet-step-2').style.display = 'block';
-  document.getElementById('padlet-footer').innerHTML = `
-    <button class="btn btn-secondary" onclick="closeModal('modal-padlet')">Annuler</button>
-    <button class="btn btn-primary" onclick="importPadletCards()">✅ Importer les sélectionnés</button>`;
-}
-
-function padletToggle(i, checked) {
-  _padletCards[i].selected = checked;
-  const selected = _padletCards.filter(c => c.selected).length;
-  document.getElementById('padlet-summary').textContent = `${_padletCards.length} cartes · ${selected} sélectionnées`;
-}
-
-function padletSelectAll(val) { _padletCards.forEach(c => c.selected = val); renderPadletCards(); }
-
-async function importPadletCards() {
-  const toImport = _padletCards.filter(c => c.selected);
-  if (toImport.length === 0) { showNotif('⚠ Sélectionnez au moins une carte'); return; }
-  const creche = document.getElementById('padlet-creche').value;
-  const catDefault = document.getElementById('padlet-cat-default').value;
-
-  let imported = 0;
-  for (const card of toImport) {
-    // Utiliser l'URL directe de la photo (pas de téléchargement)
-    const photoUrl = card.photo || null;
-    UNIVERS.push({
-      id: Date.now() + imported,
-      nom: card.nom,
-      cat: catDefault || card.cat,
-      creche,
-      desc: card.desc || '',
-      conseils: '', age: '', enfants: '',
-      articles: [],
-      photo: photoUrl,        // URL directe Padlet
-      photos: photoUrl ? [photoUrl] : [],
-      souscat: null
-    });
-    imported++;
-  }
-
-  saveData();
-  renderUnivers();
-  closeModal('modal-padlet');
-  showNotif(`✅ ${imported} univers importés depuis Padlet !`);
-}
-
-function showPadletError(msg) {
-  const el = document.getElementById('padlet-error');
-  el.textContent = '⚠ ' + msg; el.style.display = 'block';
-  const btn = document.getElementById('padlet-btn-fetch');
-  if (btn) { btn.textContent = '🔍 Charger le Padlet'; btn.disabled = false; }
-}
-// ── FIN IMPORT PADLET ─────────────────────────────────────────────
-
-// ── IMPORT PADLET INSERTION POINT ──
-// ── PHOTO PLEIN ÉCRAN ─────────────────────────────────────────────
-function openFullscreenPhoto(src) {
-  let lb = document.getElementById('lightbox-overlay');
-  if (!lb) {
-    lb = document.createElement('div');
-    lb.id = 'lightbox-overlay';
-    lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;animation:fadeOverlay 0.2s ease';
-    lb.onclick = () => { lb.remove(); document.body.style.overflow = ''; };
-    lb.innerHTML = `<img id="lightbox-img" style="max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.8)">
-      <button onclick="event.stopPropagation();document.getElementById('lightbox-overlay').remove()" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer">✕</button>`;
-    document.body.appendChild(lb);
-  }
-  document.getElementById('lightbox-img').src = src;
-  document.body.style.overflow = 'hidden';
-}
-// ── LOGO ─────────────────────────────────────────────────────────
-function triggerLogoUpload() { document.getElementById('logoFileInput').click(); }
-
-function handleLogoUpload(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => { localStorage.setItem('companyLogo', ev.target.result); applyLogo(ev.target.result); };
-  reader.readAsDataURL(file);
-  e.target.value = '';
-}
-
-function applyLogo(data) {
-  const img = document.getElementById('logoImg');
-  const placeholder = document.getElementById('logoPlaceholder');
-  const removeBtn = document.getElementById('logoRemoveBtn');
-  if (data) {
-    img.src = data; img.style.display = 'block';
-    placeholder.style.display = 'none'; removeBtn.style.display = 'flex';
-  } else {
-    img.style.display = 'none'; placeholder.style.display = 'flex'; removeBtn.style.display = 'none';
-  }
-}
-
-function removeLogo(e) {
-  e.stopPropagation();
-  localStorage.removeItem('companyLogo');
-  applyLogo(null);
-}
-
-// Charger logo au démarrage
-(function() { const saved = localStorage.getItem('companyLogo'); if (saved) applyLogo(saved); })();
-// ── FIN LOGO ─────────────────────────────────────────────────────
-
-// ── PHOTO PLEIN ÉCRAN ─────────────────────────────────────────────
-function openFullscreenPhoto(src) {
-  let lb = document.getElementById('lightbox-overlay');
-  if (!lb) {
-    lb = document.createElement('div');
-    lb.id = 'lightbox-overlay';
-    lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;animation:fadeOverlay 0.2s ease';
-    lb.onclick = () => { lb.remove(); };
-    lb.innerHTML = `<img id="lightbox-img" style="max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.8)">
-      <button onclick="event.stopPropagation();document.getElementById('lightbox-overlay').remove()" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer">✕</button>`;
-    document.body.appendChild(lb);
-  }
-  document.getElementById('lightbox-img').src = src;
-}
-// ── FIN PHOTO PLEIN ÉCRAN ─────────────────────────────────────────
-
 function clearData() {
   if (!confirm('⚠️ Supprimer toutes les données et repartir de zéro ?\n\nCette action est irréversible.')) return;
   localStorage.removeItem(LS_KEY);
@@ -4326,15 +5672,12 @@ function clearData() {
 
 // ─── PWA ────────────────────────────────────────────────────────────────────
 
-// Service Worker : uniquement sur HTTPS (Netlify, pas en local ni dans Claude)
-if ('serviceWorker' in navigator &&
-    location.protocol === 'https:' &&
-    !location.hostname.includes('claudeusercontent')) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(r => console.log('SW registered:', r.scope))
-      .catch(e => console.log('SW error:', e));
+// Service Worker désactivé — dés-enregistrement du cache existant
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
   });
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
 }
 
 let deferredPrompt = null;
@@ -4584,6 +5927,167 @@ function importExcel(event) {
   reader.readAsArrayBuffer(file);
 }
 
+// ─── SUGGESTIONS IA ──────────────────────────────────────────────────────
+
+function ouvrirSuggestionsIA() {
+  const iaCreche = document.getElementById('ia-creche');
+  if (iaCreche && currentCreche && currentCreche !== 'all') iaCreche.value = currentCreche;
+  document.getElementById('ia-result').style.display = 'none';
+  document.getElementById('ia-result').innerHTML = '';
+  document.getElementById('modal-ia').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+async function genererSuggestionsIA() {
+  const creche     = document.getElementById('ia-creche').value;
+  const cat        = document.getElementById('ia-cat').value;
+  const consignes  = document.getElementById('ia-consignes').value.trim();
+  const btnGen     = document.getElementById('btn-generer-ia');
+  const resultDiv  = document.getElementById('ia-result');
+
+  // Articles en stock pour cette crèche
+  const articles = ARTICLES.filter(a =>
+    a.creche === creche &&
+    a.stock > 0 &&
+    (!cat || a.cat === cat)
+  );
+
+  if (articles.length === 0) {
+    showNotif(`⚠ Aucun article en stock pour ${creche}${cat ? ' — ' + cat : ''}`);
+    return;
+  }
+
+  btnGen.disabled = true;
+  btnGen.textContent = '⏳ Génération en cours…';
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = `
+    <div style="text-align:center;padding:40px;color:var(--ink3)">
+      <div style="font-size:32px;margin-bottom:12px">✨</div>
+      <div style="font-size:14px">Claude analyse votre stock et prépare des activités…</div>
+    </div>`;
+
+  // Préparer la liste du matériel
+  const materiel = articles.map(a => {
+    const nom = a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').replace(/\s*\{.*?\}\s*/g,'').trim();
+    return `- ${nom} (catégorie: ${a.cat}, stock: ${a.stock})`;
+  }).join('\n');
+
+  // Store suggestions globally accessible
+  window._iaSuggestions = [];
+
+  const prompt = `Tu es un expert en pédagogie de la petite enfance spécialisé dans les micro-crèches.
+
+Voici le matériel disponible en stock à la crèche "${creche}"${cat ? ` (catégorie ${cat})` : ''} :
+
+${materiel}
+
+${consignes ? `Consignes supplémentaires : ${consignes}` : ''}
+
+Génère 3 propositions d'activités ludiques et pédagogiques adaptées à des enfants de 0-3 ans.
+
+Réponds UNIQUEMENT en JSON valide, sans texte avant ou après, avec ce format :
+{"suggestions":[{"titre":"emoji Titre","cat":"Sensoriel","description":"Objectifs et déroulement.","conseils":"Mise en scène.","articles":["nom article 1","nom article 2"]}]}`;
+
+  try {
+    const response = await fetch('https://claude-proxy.david-bucari.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await response.json();
+    const texte = data?.content?.[0]?.text || data?.error?.message || '';
+
+    let suggestions = [];
+    try {
+      const clean = texte.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      suggestions = parsed.suggestions || [];
+      window._iaSuggestions = suggestions;
+    } catch(e) {
+      resultDiv.innerHTML = `<div style="padding:16px;color:var(--red)">⚠ Erreur parsing JSON : ${e.message}</div>`;
+      btnGen.disabled = false; btnGen.textContent = '✨ Générer les suggestions'; return;
+    }
+
+    const html = suggestions.map((s, i) => `
+      <div style="background:white;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px">${s.titre}</div>
+        <span style="font-size:11px;background:var(--accent-lt);color:var(--accent);padding:2px 8px;border-radius:20px">${s.cat}</span>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.6;margin:8px 0">${s.description}</div>
+        ${s.conseils ? `<div style="font-size:12px;background:#FEF9C3;border-radius:6px;padding:8px;color:#92400E;margin-bottom:8px">💡 ${s.conseils}</div>` : ''}
+        <div style="font-size:12px;color:var(--ink3);margin-bottom:10px">📦 ${(s.articles||[]).join(', ')}</div>
+        <button class="btn btn-primary btn-sm" onclick="creerUniversDepuisIASuggestion(${i})" style="width:100%">+ Créer cet univers</button>
+      </div>`).join('');
+
+    resultDiv.innerHTML = `
+      <div style="margin-bottom:12px;padding:10px 14px;background:var(--accent-lt);border-radius:8px;font-size:12px;color:var(--accent)">
+        ✨ ${articles.length} articles analysés — ${suggestions.length} activités suggérées pour ${creche}
+      </div>${html}
+      <button class="btn btn-secondary btn-sm" onclick="genererSuggestionsIA()" style="width:100%;margin-top:4px">🔄 Nouvelles suggestions</button>`;
+
+  } catch(e) {
+    resultDiv.innerHTML = `<div style="color:var(--red);padding:20px;font-size:13px">⚠ Erreur : ${e.message}</div>`;
+  }
+  btnGen.disabled = false;
+  btnGen.textContent = '✨ Générer les suggestions';
+}
+
+function creerUniversDepuisIASuggestion(index) {
+  const s = (window._iaSuggestions || [])[index];
+  if (!s) return;
+  const creche = document.getElementById('ia-creche')?.value || CRECHES[0];
+  window._iaGenerating = true;
+  closeModal('modal-ia');
+  openModal('univers');
+
+  // Add "← Retour aux suggestions" button
+  setTimeout(() => {
+    const footer = document.querySelector('#modal-univers .modal-footer');
+    // Remove existing retour button if any
+    const existing = document.getElementById('btn-retour-ia');
+    if (existing) existing.remove();
+    if (footer) {
+      const btn = document.createElement('button');
+      btn.id = 'btn-retour-ia';
+      btn.className = 'btn btn-secondary';
+      btn.textContent = '← Retour aux suggestions';
+      btn.onclick = () => {
+        closeModal('modal-univers');
+        document.getElementById('modal-ia').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      };
+      footer.insertBefore(btn, footer.firstChild);
+    }
+  }, 100);
+
+  setTimeout(() => {
+    const el = (id) => document.getElementById(id);
+    if (el('u-nom'))     el('u-nom').value      = s.titre || '';
+    if (el('u-cat'))     el('u-cat').value      = s.cat || 'Sensoriel';
+    if (el('u-desc'))    el('u-desc').value     = s.description || '';
+    if (el('u-conseils'))el('u-conseils').value  = s.conseils || '';
+    if (el('u-creche'))  el('u-creche').value   = creche;
+    buildArticlePicker(creche, []);
+    setTimeout(() => {
+      const noms = (s.articles || []).map(n => n.toLowerCase().trim());
+      ARTICLES.filter(a => a.creche === creche).forEach(a => {
+        const nom = a.nom.replace(/\s*\(.*?\)/g,'').replace(/\s*\{.*?\}/g,'').trim().toLowerCase();
+        if (noms.some(n => nom.includes(n.substring(0,6)) || n.includes(nom.substring(0,6)))) {
+          const cb = el('pick-' + a.id);
+          if (cb) cb.checked = true;
+        }
+      });
+      showNotif('✅ Formulaire pré-rempli — cliquez ← Retour pour créer les autres univers');
+    }, 300);
+  }, 200);
+}
+
+function creerUniversDepuisIA() {
+  closeModal('modal-ia'); openModal('univers');
+  const iaCreche = document.getElementById('ia-creche')?.value;
+  const uCreche = document.getElementById('u-creche');
+  if (uCreche && iaCreche) uCreche.value = iaCreche;
+}
 function exportCommandesExcel() { showNotif('Utilisez le bouton ⬇ Excel sur chaque commande'); }
 
 // ─── SOUS-CATÉGORIES ─────────────────────────────────────────────────────
@@ -4738,6 +6242,25 @@ function showImportResult(type, html) {
   const color = type === 'success' ? 'var(--green)'      : 'var(--red)';
   el.innerHTML = `<div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:14px 16px;font-size:13px;color:${color};line-height:1.7">${html}</div>`;
 }
+</script>
+
+<!-- ── MODAL PRÉVISUALISATION BORDEREAU ── -->
+<div class="modal-overlay" id="modal-preview" onclick="closeModalClick(event,'modal-preview')" style="z-index:1100">
+  <div class="modal" style="max-width:860px;width:96%;max-height:92vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <h2>👁 Prévisualisation du bordereau</h2>
+      <button class="modal-close" onclick="closeModal('modal-preview')">✕</button>
+    </div>
+    <div id="preview-body" style="flex:1;overflow-y:auto;padding:24px;background:#F5F5F4;border-bottom:1px solid var(--border)"></div>
+    <div class="modal-footer" style="flex-shrink:0;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="closeModal('modal-preview')">Fermer</button>
+      <button class="btn btn-secondary" id="btn-do-print" onclick="doPrint()">🖨 Aperçu impression</button>
+      <button class="btn btn-secondary" onclick="telechargerBordereau()">⬇ Télécharger</button>
+      <button class="btn btn-secondary" onclick="ouvrirMailBordereau()">✉️ Mail</button>
+      <button class="btn btn-primary" onclick="partagerBordereau()">📤 Partager</button>
+    </div>
+  </div>
+</div>
 </script>
 
 <!-- ── MODAL PRÉVISUALISATION BORDEREAU ── -->
