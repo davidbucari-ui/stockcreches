@@ -71,6 +71,8 @@
     .detail-grid { grid-template-columns: 1fr; }
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 <div class="app-header">
@@ -78,7 +80,13 @@
     <h1>📚 Base Documentaire</h1>
     <p>Protocoles & documents de fonctionnement de la crèche</p>
   </div>
-  <button class="btn-primary" onclick="ouvrirFormulaire()">+ Ajouter un document</button>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn-secondary" onclick="document.getElementById('import-file-input').click()" style="display:flex;align-items:center;gap:6px">
+      📄 Importer Word / PDF
+    </button>
+    <input type="file" id="import-file-input" accept=".docx,.pdf" style="display:none" onchange="importerFichier(event)">
+    <button class="btn-primary" onclick="ouvrirFormulaire()">+ Ajouter un document</button>
+  </div>
 </div>
 <div id="notif-container"></div>
 <div id="app" class="app-body"></div>
@@ -355,6 +363,64 @@ function render() {
 
   app.innerHTML = html;
 }
+
+// ── IMPORT WORD / PDF ────────────────────────────────────────────
+async function importerFichier(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  afficherNotif('⏳ Lecture du fichier en cours…');
+  try {
+    let texte = '';
+    if (file.name.endsWith('.docx')) {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      texte = result.value;
+    } else if (file.name.endsWith('.pdf')) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        texte += content.items.map(item => item.str).join(' ') + '\n';
+      }
+    }
+    if (!texte.trim()) { afficherNotif('⚠ Impossible de lire le fichier', 'error'); return; }
+    formulaire = analyserTexteProtocole(texte, file.name);
+    vue = 'formulaire';
+    render();
+    afficherNotif('✅ Fichier importé — vérifiez et complétez les champs');
+  } catch(e) {
+    afficherNotif('⚠ Erreur : ' + e.message, 'error');
+  }
+}
+
+function analyserTexteProtocole(texte, nomFichier) {
+  const lignes = texte.split('\n').map(l => l.trim()).filter(l => l);
+  const titre = (lignes[0] && lignes[0].length < 100) ? lignes[0] : nomFichier.replace(/\.(docx|pdf)$/i,'').replace(/[-_]/g,' ');
+  const txt = texte.toLowerCase();
+  let categorie = 'administratif';
+  if (/cardio|arrêt|réanimation|rcp|urgence|accident|incendie|évacuation/.test(txt)) categorie = 'urgence';
+  else if (/hygiène|change|lavage|désinfection/.test(txt)) categorie = 'hygiene';
+  else if (/médicament|fièvre|maladie|santé|soin/.test(txt)) categorie = 'sante';
+  else if (/alimentaire|alimentation|repas|allergie/.test(txt)) categorie = 'alimentation';
+  else if (/pédagogi|activité|éveil|motricité/.test(txt)) categorie = 'pedagogie';
+  else if (/sécurité|incendie|danger/.test(txt)) categorie = 'securite';
+  else if (/accueil|adaptation|famille|parent/.test(txt)) categorie = 'accueil';
+
+  const etapesLines = lignes.filter(l => /^\d+[\.\)]\s/.test(l) || /^[•\-\*]\s/.test(l));
+  const etapes = etapesLines.join('\n');
+  const notesMatch = texte.match(/(?:nb\s*:|note\s*:|important\s*:|attention\s*:)([\s\S]*?)(?=\n\s*\n|$)/gi);
+  const notes = notesMatch ? notesMatch.map(n => n.trim()).join('\n') : '';
+  const objectifMatch = texte.match(/objectif[s]?\s*[:\-]?\s*([^\n]{20,200})/i);
+  const objectif = objectifMatch ? objectifMatch[1].trim() : '';
+  const descLignes = lignes.slice(1, 4).filter(l => !/^\d+[\.\)]/.test(l) && l.length > 20);
+  const description = descLignes.join(' ').slice(0, 200) || titre;
+
+  return { titre, categorie, statut:'vigueur', dateRevision:new Date().toISOString().split('T')[0], description, responsable:'', version:'v1.0', objectif, etapes, notes };
+}
+// ── FIN IMPORT ────────────────────────────────────────────────────
 
 render();
 </script>
