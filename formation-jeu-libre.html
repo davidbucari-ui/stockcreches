@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le Jeu Libre — Formation Koalakids</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --cream: #FDF8F2; --warm: #F5EDE0; --sage: #7B9E87; --sage-dark: #5A7A65;
+    --sage-light: #A8C4B0; --terracotta: #C4714A; --terracotta-light: #E8956D;
+    --charcoal: #2C2C2C; --muted: #7A7065; --gold: #D4A847;
+  }
+  body { font-family: 'Instrument Sans', sans-serif; background: var(--cream); color: var(--charcoal); }
+
+  .fade-in { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .fade-in.visible { opacity: 1; transform: none; }
+
+  /* HERO */
+  .hero { background: var(--sage-dark); padding: 80px 24px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.05) 0%, transparent 60%); }
+  .hero-badge { display:inline-block; background:var(--sage-light); color:#fff; font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; padding:5px 14px; border-radius:20px; margin-bottom:20px; }
+  .hero h1 { font-family:'Playfair Display', Georgia, serif; font-size:clamp(2rem, 5vw, 3.2rem); color:#fff; line-height:1.2; margin-bottom:16px; max-width:700px; margin-left:auto; margin-right:auto; }
+  .hero-sub { font-size:1.1rem; color:rgba(255,255,255,0.75); max-width:560px; margin:0 auto 32px; line-height:1.7; }
+  .hero-meta { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; }
+  .hero-meta span { color:rgba(255,255,255,0.8); font-size:0.9rem; display:flex; align-items:center; gap:6px; }
+
+  /* QUOTE */
+  .quote-section { background:var(--sage); padding:60px 24px; text-align:center; }
+  .quote-mark { font-size:3rem; color:var(--sage-light); line-height:1; margin-bottom:12px; font-family:Georgia,serif; }
+  .quote-text { font-family:'Playfair Display',Georgia,serif; font-size:clamp(1.3rem,3vw,1.8rem); color:#fff; max-width:640px; margin:0 auto 20px; line-height:1.5; }
+  .quote-sub { font-size:0.9rem; color:rgba(255,255,255,0.7); max-width:540px; margin:0 auto; line-height:1.6; }
+  .quote-sub em { font-style:italic; color:rgba(255,255,255,0.9); }
+
+  /* SECTIONS */
+  .section { padding:80px 24px; }
+  .section-inner { max-width:860px; margin:0 auto; }
+  .section-label { text-align:center; color:var(--terracotta); font-weight:700; letter-spacing:0.12em; text-transform:uppercase; font-size:0.78rem; margin-bottom:12px; }
+  .section-title { text-align:center; font-family:'Playfair Display',Georgia,serif; font-size:clamp(1.6rem,3vw,2.2rem); margin-bottom:16px; line-height:1.3; }
+  .section-desc { text-align:center; color:var(--muted); max-width:560px; margin:0 auto 48px; line-height:1.7; }
+
+  /* GAME TYPES */
+  .games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:20px; }
+  .game-card { background:#fff; border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); border-top:4px solid; height:100%; }
+  .game-emoji { font-size:2rem; margin-bottom:8px; }
+  .game-age { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:6px; }
+  .game-title { font-family:'Playfair Display',Georgia,serif; font-size:1.1rem; margin-bottom:10px; color:var(--charcoal); }
+  .game-desc { font-size:0.9rem; color:var(--muted); line-height:1.6; margin-bottom:14px; }
+  .game-tip { background:var(--cream); border-radius:10px; padding:10px 14px; font-size:0.82rem; color:var(--sage-dark); line-height:1.5; border-left:3px solid var(--sage-light); }
+
+  /* OBJECTIFS */
+  .objectives-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+  .obj-item { background:#fff; border-radius:14px; padding:20px; box-shadow:0 2px 12px rgba(0,0,0,0.05); display:flex; gap:14px; align-items:flex-start; }
+  .obj-icon { font-size:1.4rem; flex-shrink:0; }
+  .obj-title { font-weight:700; font-size:0.9rem; margin-bottom:5px; color:var(--charcoal); }
+  .obj-desc { font-size:0.83rem; color:var(--muted); line-height:1.5; }
+
+  /* CONTENU */
+  .content-list { display:flex; flex-direction:column; gap:12px; max-width:600px; margin:0 auto; }
+  .content-item { background:#fff; border-radius:12px; padding:16px 20px; display:flex; gap:14px; align-items:center; box-shadow:0 2px 10px rgba(0,0,0,0.05); }
+  .content-icon { font-size:1.3rem; flex-shrink:0; }
+  .content-title { font-weight:700; font-size:0.9rem; margin-bottom:3px; }
+  .content-desc { font-size:0.82rem; color:var(--muted); }
+
+  /* CHECK ITEMS */
+  .check-item { display:flex; align-items:flex-start; gap:12px; margin-bottom:14px; }
+  .check-circle { width:22px; height:22px; border-radius:50%; background:var(--sage); display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; }
+
+  /* PUBLICS */
+  .publics-grid { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+  .public-badge { background:#fff; border:1px solid var(--sage-light); border-radius:20px; padding:8px 18px; font-size:0.88rem; color:var(--sage-dark); font-weight:600; }
+
+  /* TESTIMONIALS */
+  .testi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; }
+  .testi-card { background:var(--sage-dark); border-radius:16px; padding:24px; }
+  .testi-quote { font-style:italic; color:rgba(255,255,255,0.9); line-height:1.6; font-size:0.93rem; margin-bottom:16px; }
+  .testi-name { font-weight:700; color:#fff; font-size:0.88rem; }
+  .testi-role { color:rgba(255,255,255,0.6); font-size:0.8rem; margin-top:2px; }
+
+  /* FAQ */
+  .faq-list { max-width:680px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+  .faq-item { background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.05); }
+  .faq-q { padding:18px 20px; font-weight:700; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:0.95rem; }
+  .faq-q:hover { background:var(--warm); }
+  .faq-a { padding:0 20px 16px; font-size:0.88rem; color:var(--muted); line-height:1.7; display:none; }
+  .faq-item.open .faq-a { display:block; }
+  .faq-item.open .faq-chevron { transform:rotate(180deg); }
+  .faq-chevron { transition:transform 0.2s; color:var(--sage); }
+
+  /* CTA */
+  .cta-section { background:linear-gradient(135deg, var(--terracotta), var(--terracotta-light)); padding:80px 24px; text-align:center; }
+  .cta-title { font-family:'Playfair Display',Georgia,serif; font-size:clamp(1.6rem,3vw,2rem); color:#fff; margin-bottom:16px; }
+  .cta-sub { color:rgba(255,255,255,0.85); max-width:480px; margin:0 auto 32px; line-height:1.7; }
+  .cta-btn { display:inline-block; background:#fff; color:var(--terracotta); padding:14px 32px; border-radius:50px; font-weight:700; font-size:1rem; text-decoration:none; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
+  .cta-price { color:rgba(255,255,255,0.7); font-size:0.85rem; margin-top:16px; }
+
+  /* BACK BTN */
+  .back-btn { position:fixed; top:16px; left:16px; background:rgba(0,0,0,0.5); color:#fff; border:none; padding:8px 16px; border-radius:20px; font-size:13px; cursor:pointer; font-family:inherit; z-index:100; backdrop-filter:blur(4px); }
+  .back-btn:hover { background:rgba(0,0,0,0.7); }
+
+  @media (max-width:600px) { .games-grid, .objectives-grid, .testi-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<button class="back-btn" onclick="window.close()">← Retour</button>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="fade-in">
+    <div class="hero-badge">Formation Pédagogie</div>
+    <h1>Le Jeu Libre :<br>Comprendre, Observer, Valoriser</h1>
+    <p class="hero-sub">La formation complète pour comprendre pourquoi le jeu libre est le moteur du développement de l'enfant — et comment l'accompagner avec confiance et méthode.</p>
+    <div class="hero-meta">
+      <span>⏱️ 2h de formation</span>
+      <span>📱 100% en ligne</span>
+      <span>♾️ Accès à vie</span>
+      <span>🏅 Attestation incluse</span>
+    </div>
+  </div>
+</section>
+
+<!-- QUOTE -->
+<section class="quote-section">
+  <div class="fade-in">
+    <div class="quote-mark">"</div>
+    <p class="quote-text">Il ne fait que jouer…</p>
+    <p class="quote-sub">Vous l'avez déjà entendu. Peut-être même pensé.<br>
+    <em>"Vous ne devriez pas lui proposer quelque chose de plus éducatif ?"</em><br><br>
+    Cette formation vous donne les mots, les preuves et les outils pour répondre avec assurance — et pour voir le jeu libre tel qu'il est vraiment : le travail sérieux de l'enfant.</p>
+  </div>
+</section>
+
+<!-- 4 TYPES DE JEU -->
+<section class="section" style="background:var(--warm)">
+  <div class="section-inner">
+    <div class="fade-in">
+      <p class="section-label">Le programme</p>
+      <h2 class="section-title">Les 4 types de jeu et ce qu'ils développent</h2>
+      <p class="section-desc">Chaque type de jeu correspond à une étape clé du développement. Apprendre à les reconnaître change tout à votre regard professionnel.</p>
+    </div>
+    <div class="games-grid">
+      <div class="game-card fade-in" style="border-top-color:#4A90D9">
+        <div class="game-emoji">🔵</div>
+        <div class="game-age">0 – 18 mois</div>
+        <h3 class="game-title">Jeu d'exploration</h3>
+        <p class="game-desc">L'enfant touche, porte à la bouche, secoue, lâche. Il découvre le monde physique avec tous ses sens.</p>
+        <div class="game-tip">💡 Un bébé qui met tout à la bouche apprend — il n'est pas en train de "faire n'importe quoi".</div>
+      </div>
+      <div class="game-card fade-in" style="border-top-color:#E8A838">
+        <div class="game-emoji">🟡</div>
+        <div class="game-age">18 mois – 6 ans</div>
+        <h3 class="game-title">Jeu symbolique</h3>
+        <p class="game-desc">Il fait semblant. La cuillère devient baguette, la couverture une cabane. La pensée abstraite s'éveille.</p>
+        <div class="game-tip">💡 Rejouer une dispute entre poupées, c'est digérer une émotion difficile en toute sécurité.</div>
+      </div>
+      <div class="game-card fade-in" style="border-top-color:#7B9E87">
+        <div class="game-emoji">🟢</div>
+        <div class="game-age">2 – 6 ans</div>
+        <h3 class="game-title">Jeu de construction</h3>
+        <p class="game-desc">Empiler, équilibrer, détruire et recommencer. La tour qui tombe est aussi formatrice que celle qui tient.</p>
+        <div class="game-tip">💡 Intervenir trop vite prive l'enfant d'un apprentissage fondamental : la persévérance.</div>
+      </div>
+      <div class="game-card fade-in" style="border-top-color:#C4714A">
+        <div class="game-emoji">🔴</div>
+        <div class="game-age">Dès 4 ans</div>
+        <h3 class="game-title">Jeu de règles</h3>
+        <p class="game-desc">Accepter de perdre, attendre son tour, respecter des règles collectives. Le social s'apprend en jouant.</p>
+        <div class="game-tip">💡 Un enfant qui triche à 4 ans teste les règles sociales. C'est exactement ce qu'il doit faire.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OBJECTIFS -->
+<section class="section" style="background:var(--cream)">
+  <div class="section-inner">
+    <div class="fade-in">
+      <p class="section-label">Vos objectifs</p>
+      <h2 class="section-title">Ce que vous saurez faire après cette formation</h2>
+      <p class="section-desc">Des compétences concrètes, directement applicables dès le lendemain matin.</p>
+    </div>
+    <div class="objectives-grid">
+      <div class="obj-item fade-in">
+        <div class="obj-icon">🔵</div>
+        <div><div class="obj-title">Identifier les 4 types de jeu</div><div class="obj-desc">Et ce qu'ils développent concrètement chez l'enfant de 0 à 6 ans</div></div>
+      </div>
+      <div class="obj-item fade-in">
+        <div class="obj-icon">🔍</div>
+        <div><div class="obj-title">Observer avec précision</div><div class="obj-desc">Lire un enfant en train de jouer comme vous ne l'avez jamais fait</div></div>
+      </div>
+      <div class="obj-item fade-in">
+        <div class="obj-icon">🏡</div>
+        <div><div class="obj-title">Aménager votre espace</div><div class="obj-desc">5 principes simples pour que le jeu fasse vraiment son travail</div></div>
+      </div>
+      <div class="obj-item fade-in">
+        <div class="obj-icon">💬</div>
+        <div><div class="obj-title">Répondre avec assurance</div><div class="obj-desc">Aux parents et à la direction qui questionnent vos choix pédagogiques</div></div>
+      </div>
+      <div class="obj-item fade-in">
+        <div class="obj-icon">🛠️</div>
+        <div><div class="obj-title">Repartir outillé(e)</div><div class="obj-desc">3 outils concrets à tester dès le lendemain matin</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTENU -->
+<section class="section" style="background:var(--warm)" id="contenu">
+  <div class="section-inner">
+    <div class="fade-in">
+      <p class="section-label">Ce que contient la formation</p>
+      <h2 class="section-title">Tout ce que vous recevez</h2>
+    </div>
+    <div class="content-list">
+      <div class="content-item fade-in">
+        <div class="content-icon">🎬</div>
+        <div><div class="content-title">4 séquences vidéo</div><div class="content-desc">Courtes, dynamiques, ancrées dans des situations réelles du quotidien professionnel</div></div>
+      </div>
+      <div class="content-item fade-in">
+        <div class="content-icon">📋</div>
+        <div><div class="content-title">Grille d'observation</div><div class="content-desc">À utiliser dès le lendemain avec les enfants — prête à l'emploi, à imprimer</div></div>
+      </div>
+      <div class="content-item fade-in">
+        <div class="content-icon">📄</div>
+        <div><div class="content-title">Fiche mémo synthèse</div><div class="content-desc">Visuelle et pratique, à afficher dans votre structure ou à partager avec votre équipe</div></div>
+      </div>
+      <div class="content-item fade-in">
+        <div class="content-icon">💬</div>
+        <div><div class="content-title">Guide parents</div><div class="content-desc">Comment expliquer le jeu libre en 5 arguments clairs et bienveillants</div></div>
+      </div>
+      <div class="content-item fade-in">
+        <div class="content-icon">📝</div>
+        <div><div class="content-title">Quiz d'évaluation</div><div class="content-desc">10 questions pour valider vos acquis et recevoir votre attestation de formation</div></div>
+      </div>
+      <div class="content-item fade-in">
+        <div class="content-icon">🎁</div>
+        <div><div class="content-title">Bonus : groupe privé</div><div class="content-desc">Accès à la communauté d'apprenants pour échanger, partager et progresser ensemble</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PUBLICS -->
+<section class="section" style="background:var(--cream)">
+  <div class="section-inner">
+    <div class="fade-in">
+      <p class="section-label">À qui s'adresse cette formation</p>
+      <h2 class="section-title">Faite pour vous si vous travaillez avec les 0-6 ans</h2>
+    </div>
+    <div class="publics-grid fade-in">
+      <div class="public-badge">Auxiliaires de puériculture</div>
+      <div class="public-badge">Éducateurs/trices de jeunes enfants</div>
+      <div class="public-badge">Assistantes maternelles</div>
+      <div class="public-badge">Directeurs/trices de crèche</div>
+      <div class="public-badge">Responsables RAM / RPE</div>
+      <div class="public-badge">Agents petite enfance</div>
+    </div>
+  </div>
+</section>
+
+<!-- TÉMOIGNAGES -->
+<section class="section" style="background:var(--sage)">
+  <div class="section-inner">
+    <div class="fade-in">
+      <p class="section-label" style="color:rgba(255,255,255,0.7)">Ils ont suivi la formation</p>
+      <h2 class="section-title" style="color:#fff">Ce qu'ils en disent</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card fade-in">
+        <p class="testi-quote">"J'ai enfin les mots pour expliquer aux parents ce que je fais et pourquoi. Je me sens beaucoup plus sereine dans ma pratique."</p>
+        <div class="testi-name">Marie</div>
+        <div class="testi-role">Auxiliaire de puériculture, crèche associative</div>
+      </div>
+      <div class="testi-card fade-in">
+        <p class="testi-quote">"La grille d'observation a changé mon regard sur les enfants. Je vois des choses que je ne voyais pas avant."</p>
+        <div class="testi-name">Sandrine</div>
+        <div class="testi-role">Assistante maternelle</div>
+      </div>
+      <div class="testi-card fade-in">
+        <p class="testi-quote">"J'ai partagé la fiche mémo avec toute mon équipe. On en a parlé en réunion pendant une heure !"</p>
+        <div class="testi-name">Nathalie</div>
+        <div class="testi-role">Directrice de micro-crèche</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section" style="background:var(--warm)">
+  <div class="section-inner">
+    <div class="fade-in">
+      <p class="section-label">Questions fréquentes</p>
+      <h2 class="section-title">Tout ce que vous voulez savoir</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item fade-in">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Comment accéder à la formation ?
+          <span class="faq-chevron">▾</span>
+        </div>
+        <div class="faq-a">Dès votre inscription, vous recevez un email avec vos identifiants. Vous pouvez commencer immédiatement, à votre rythme, depuis n'importe quel appareil (ordinateur, tablette, téléphone).</div>
+      </div>
+      <div class="faq-item fade-in">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Combien de temps ai-je pour la suivre ?
+          <span class="faq-chevron">▾</span>
+        </div>
+        <div class="faq-a">L'accès est illimité à vie. Vous avancez quand vous voulez, aussi souvent que vous le souhaitez. Chaque séquence dure entre 20 et 25 minutes, idéal pour avancer par petits blocs.</div>
+      </div>
+      <div class="faq-item fade-in">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Cette formation est-elle éligible au CPF ?
+          <span class="faq-chevron">▾</span>
+        </div>
+        <div class="faq-a">Elle n'est pas encore éligible au CPF, mais une attestation de formation officielle vous est délivrée après validation du quiz final. Elle peut être présentée à votre employeur.</div>
+      </div>
+      <div class="faq-item fade-in">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Je travaille seule, cette formation est-elle adaptée ?
+          <span class="faq-chevron">▾</span>
+        </div>
+        <div class="faq-a">Absolument. Que vous soyez en structure collective ou assistante maternelle à domicile, tous les contenus et outils sont pensés pour s'adapter à votre contexte de travail.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="fade-in">
+    <h2 class="cta-title">Prêt(e) à changer votre regard sur le jeu ?</h2>
+    <p class="cta-sub">Rejoignez les professionnels de la petite enfance qui ont transformé leur pratique grâce à cette formation.</p>
+    <a href="#" class="cta-btn">Accéder à la formation →</a>
+    <p class="cta-price">Formation incluse dans votre abonnement Koalakids</p>
+  </div>
+</section>
+
+<script>
+// Animations au scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// FAQ
+function toggleFaq(btn) {
+  const item = btn.parentElement;
+  item.classList.toggle('open');
+}
+</script>
+</body>
+</html>

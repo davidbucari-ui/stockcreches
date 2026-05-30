@@ -299,7 +299,7 @@ const PUBLIC_CONFIG = {
 };
 
 const FORMATIONS_DEFAUT = [
-  { id:1, titre:"Introduction à la motricité libre chez le nourrisson", desc:"Comprendre les principes de la motricité libre selon Emmi Pikler. Postures adaptées, aménagement de l'espace, rôle de l'adulte.", type:"video", theme:"pedagogie", public:"terrain", duree:"45 min", url:"https://www.youtube.com/watch?v=dQw4w9WgXcQ", contenu:"", auteur:"ONAPE", date:"2024-09-01" },
+  { id:1, titre:"Le Jeu Libre — Comprendre, Observer, Valoriser", desc:"La formation complète pour comprendre pourquoi le jeu libre est le moteur du développement de l'enfant — et comment l'accompagner avec confiance et méthode.", type:"fiche", theme:"pedagogie", public:"terrain", duree:"2h", url:"formation-jeu-libre.html", contenu:"", auteur:"DB Solutions", date:"2026-05-30" },
   { id:2, titre:"Décret 2025-304 — Les nouvelles obligations réglementaires", desc:"Présentation détaillée des changements apportés par le décret du 25 mars 2025 sur les établissements d'accueil du jeune enfant.", type:"fiche", theme:"reglementation", public:"tous", duree:"30 min", url:"", contenu:"## Décret 2025-304 du 25 mars 2025\n\n### Principaux changements\n\n1. **Taux d'encadrement** : 1 professionnel pour 5 enfants qui ne marchent pas, 1 pour 8 qui marchent\n2. **Qualifications** : Renforcement des exigences de qualification du personnel\n3. **Projet d'établissement** : Obligation de révision tous les 5 ans\n4. **Continuité de direction** : Obligation de désigner un remplaçant qualifié\n\n### Points de vigilance\n- Mise en conformité avant le 1er septembre 2025\n- Formation obligatoire pour tout nouveau personnel\n- Registre de suivi des formations à tenir à jour", auteur:"Ministère des Solidarités", date:"2025-03-01" },
   { id:3, titre:"Protocoles d'hygiène en crèche — Les bonnes pratiques", desc:"Lavage des mains, désinfection des surfaces, gestion du linge. Tout ce qu'il faut savoir pour maintenir un environnement sain.", type:"document", theme:"hygiene", public:"terrain", duree:"20 min", url:"", contenu:"", auteur:"Koalakids", date:"2024-11-15" },
   { id:4, titre:"Manager une équipe en micro-crèche", desc:"Techniques de management adapté aux petites structures : communication, délégation, gestion des conflits, motivation de l'équipe.", type:"video", theme:"management", public:"direction", duree:"1h15", url:"", contenu:"", auteur:"Formation interne", date:"2024-06-01" },
@@ -485,7 +485,7 @@ function ouvrirDetail(id) {
     <p style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:12px">${f.desc}</p>
     ${f.auteur ? `<p style="font-size:12px;color:var(--ink3)">Source : ${f.auteur}</p>` : ''}
     ${contenuHtml}
-    ${f.url && f.type !== 'video' ? `<div style="margin-top:16px"><a href="${f.url}" target="_blank" style="color:var(--accent);font-size:13px;font-weight:600">🔗 Ouvrir le lien →</a></div>` : ''}`;
+    ${f.url && f.type !== 'video' ? `<div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap"><a href="${f.url}" target="_blank" style="background:var(--accent);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px">▶ Accéder à la formation →</a></div>` : ''}`;
 
   document.getElementById('detail-footer').innerHTML = `
     <button class="btn btn-secondary" onclick="toggleFavori(${f.id});renderDetailFooter(${f.id})">${isFav?'⭐ Retirer des favoris':'☆ Ajouter aux favoris'}</button>
