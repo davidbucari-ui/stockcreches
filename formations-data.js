@@ -625,3 +625,152 @@ function reflexionBlock(question) {
       <textarea placeholder="Notez vos réflexions ici…" style="width:100%;border:1px solid var(--purple);border-radius:8px;padding:10px;font-family:'Instrument Sans',sans-serif;font-size:0.83rem;color:var(--ink);background:white;resize:vertical;min-height:70px;outline:none"></textarea>
     </div>`;
 }
+
+
+// ────────────────────────────────────────────────────────────
+//  MOTEUR QUIZ — NE PAS MODIFIER
+// ────────────────────────────────────────────────────────────
+
+function buildQuiz(id, questions) {
+  return `
+    <div id="quiz-${id}-questions">
+      ${questions.map((q, i) => `
+        <div style="background:var(--surface);border-radius:12px;padding:20px;margin-bottom:14px" id="q-${id}-${i}">
+          <div style="font-weight:700;font-size:0.9rem;margin-bottom:14px;line-height:1.5">${i+1}. ${q.q}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${q.choices.map((c, j) => `
+              <button onclick="answerQuiz('${id}',${i},${j})" id="btn-${id}-${i}-${j}"
+                style="background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;text-align:left;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:0.83rem;color:var(--ink);transition:all 0.2s"
+                onmouseover="if(!this.dataset.answered) this.style.borderColor='var(--accent)'"
+                onmouseout="if(!this.dataset.answered) this.style.borderColor='var(--border)'">
+                ${c}
+              </button>`).join('')}
+          </div>
+          <div id="feedback-${id}-${i}" style="display:none;margin-top:12px;font-size:0.82rem;padding:10px 14px;border-radius:8px;line-height:1.5"></div>
+        </div>`).join('')}
+      <button onclick="submitQuiz('${id}')" id="btn-submit-${id}"
+        style="width:100%;background:linear-gradient(135deg,#7B9E87,#5A7A65);color:#fff;border:none;padding:14px;border-radius:10px;font-weight:800;font-size:0.9rem;cursor:pointer;font-family:'Instrument Sans',sans-serif;margin-top:8px">
+        Valider mes réponses →
+      </button>
+    </div>
+    <div id="quiz-${id}-result" style="display:none;text-align:center;padding:32px 20px"></div>
+  `;
+}
+
+const quizAnswers = {};
+
+function answerQuiz(id, qIdx, aIdx) {
+  if (!quizAnswers[id]) quizAnswers[id] = {};
+  quizAnswers[id][qIdx] = aIdx;
+  document.querySelectorAll(`[id^="btn-${id}-${qIdx}-"]`).forEach((btn, j) => {
+    btn.style.borderColor = j === aIdx ? 'var(--accent)' : 'var(--border)';
+    btn.style.background  = j === aIdx ? 'var(--accent-lt)' : 'var(--surface2)';
+    btn.style.fontWeight  = j === aIdx ? '700' : '400';
+  });
+}
+
+function submitQuiz(id) {
+  const questions = id === 'jeu' ? quizJeu : id === 'alim1' ? quizAlim1 : id === 'alim2' ? quizAlim2 : quizAlim3;
+  const answers = quizAnswers[id] || {};
+  let score = 0;
+  const activeGradient = id === 'jeu' ? 'linear-gradient(135deg,#7B9E87,#5A7A65)' : 'linear-gradient(135deg,#D4922A,#B97A20)';
+
+  questions.forEach((q, i) => {
+    const userAnswer = answers[i];
+    const correct    = q.answer;
+    const isCorrect  = userAnswer === correct;
+    if (isCorrect) score++;
+
+    document.querySelectorAll(`[id^="btn-${id}-${i}-"]`).forEach((btn, j) => {
+      btn.dataset.answered = 'true';
+      btn.style.cursor     = 'default';
+      btn.onmouseover      = null;
+      if (j === correct)                   { btn.style.background = '#F0FDF4'; btn.style.borderColor = '#16A34A'; btn.style.color = '#15803D'; btn.style.fontWeight = '700'; }
+      else if (j === userAnswer && !isCorrect) { btn.style.background = '#FEF2F2'; btn.style.borderColor = '#DC2626'; btn.style.color = '#DC2626'; }
+    });
+
+    const fb = document.getElementById(`feedback-${id}-${i}`);
+    if (fb) {
+      fb.style.display    = 'block';
+      fb.style.background = isCorrect ? '#F0FDF4' : '#FEF2F2';
+      fb.style.color      = isCorrect ? '#15803D' : '#991B1B';
+      fb.style.borderLeft = `3px solid ${isCorrect ? '#16A34A' : '#DC2626'}`;
+      fb.innerHTML        = (isCorrect ? '✅ ' : '❌ ') + q.feedback;
+    }
+  });
+
+  document.getElementById(`btn-submit-${id}`).style.display = 'none';
+
+  const pass = score >= 7;
+  const result = document.getElementById(`quiz-${id}-result`);
+  result.style.display = 'block';
+  result.innerHTML = `
+    <div style="font-size:3rem;margin-bottom:16px">${pass ? '🏅' : '📖'}</div>
+    <div style="font-size:2rem;font-weight:800;font-family:'Syne',sans-serif;color:${pass ? '#7B9E87' : '#D4922A'};margin-bottom:8px">${score} / ${questions.length}</div>
+    <div style="font-size:1rem;font-weight:700;margin-bottom:12px;color:${pass ? '#7B9E87' : '#D4922A'}">${pass ? '✅ Félicitations !' : '📚 Continuez !'}</div>
+    <p style="font-size:0.88rem;color:var(--ink2);max-width:400px;margin:0 auto 20px;line-height:1.7">
+      ${pass ? 'Excellent résultat ! Votre attestation est disponible.' : 'Relisez les feedbacks des questions manquées pour consolider vos acquis avant de retenter.'}
+    </p>
+    ${pass
+      ? `<button onclick="genererAttestation('${id}', ${score})" style="background:${activeGradient};color:#fff;border:none;padding:12px 28px;border-radius:10px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:0.88rem">🏅 Télécharger mon attestation</button>`
+      : `<button onclick="resetQuiz('${id}')" style="background:var(--accent);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:0.88rem">🔄 Réessayer</button>`
+    }
+  `;
+  result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetQuiz(id) {
+  document.getElementById(`quiz-${id}-result`).style.display = 'none';
+  document.querySelectorAll(`[id^="btn-${id}-"]`).forEach(b => {
+    if (b.id.startsWith(`btn-${id}-`) && b.id !== `btn-submit-${id}`) {
+      b.dataset.answered = '';
+      b.style.background = 'var(--surface2)';
+      b.style.borderColor = 'var(--border)';
+      b.style.color      = 'var(--ink)';
+      b.style.fontWeight = '400';
+    }
+  });
+  quizAnswers[id] = {};
+  document.getElementById(`btn-submit-${id}`).style.display = 'block';
+  document.querySelectorAll(`[id^="feedback-${id}"]`).forEach(f => f.style.display = 'none');
+}
+
+function genererAttestation(id, score) {
+  const date = new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+  const titres = {
+    jeu:   '"Il ne fait que jouer…" — Le jeu libre',
+    alim1: 'Nourrir et protéger — Module 1 : L\'alimentation',
+    alim2: 'Nourrir et protéger — Module 2 : L\'hygiène',
+    alim3: 'Nourrir et protéger — Module 3 : Ma posture professionnelle'
+  };
+  const titre     = titres[id] || 'Formation petite enfance';
+  const scoreText = (score !== undefined) ? score + '/10' : '7/10 ou plus';
+  const w = window.open('', '_blank');
+  if (!w) { showNotif('⚠️ Autorisez les popups pour télécharger l\'attestation'); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Attestation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+  <style>body{font-family:'Lato',sans-serif;background:#f8f6f2;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}
+  .cert{background:white;max-width:680px;width:100%;padding:60px;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.12);text-align:center;position:relative;border:2px solid #7B9E87}
+  .cert::before{content:'';position:absolute;inset:8px;border:1px solid #7B9E8740;border-radius:10px;pointer-events:none}
+  h1{font-family:'Playfair Display',serif;font-size:2rem;color:#2A2D26;margin:0 0 8px}
+  .sub{color:#7B9E87;font-size:0.8rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:32px}
+  .name{font-family:'Playfair Display',serif;font-size:1.6rem;color:#5A7A65;font-style:italic;margin:20px 0}
+  .formation{font-size:1.1rem;font-weight:700;color:#2A2D26;margin:16px 0 8px}
+  .date{color:#7A7065;font-size:0.88rem;margin-bottom:32px}
+  .badge{font-size:3rem;margin-bottom:20px}
+  .sig{border-top:1px solid #e0e0e0;padding-top:20px;margin-top:32px;font-size:0.8rem;color:#A8A29E}
+  @media print{body{background:white}.cert{box-shadow:none}}</style></head>
+  <body><div class="cert">
+  <div class="badge">🏅</div>
+  <div class="sub">Attestation de formation</div>
+  <h1>Certificat de réussite</h1>
+  <p style="color:#7A7065;font-size:0.9rem;margin:0 0 4px">Cette attestation certifie que</p>
+  <div class="name">le titulaire de cette attestation</div>
+  <p style="color:#7A7065;font-size:0.9rem;margin:0 0 4px">a suivi et validé avec succès la formation</p>
+  <div class="formation">${titre}</div>
+  <div class="date">le ${date}</div>
+  <p style="font-size:0.83rem;color:#7A7065;line-height:1.7;max-width:480px;margin:0 auto 24px">Score obtenu : ${scoreText} au quiz d'évaluation final.<br>Formation dispensée dans le cadre du développement des compétences professionnelles en petite enfance.</p>
+  <div class="sig">David Bucari · Éducateur de jeunes enfants · Formateur petite enfance<br>Formation en ligne — Accès Orevy</div>
+  <div style="margin-top:24px"><button onclick="window.print()" style="background:#7B9E87;color:white;border:none;padding:10px 24px;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.88rem">🖨 Imprimer / Sauvegarder en PDF</button></div>
+  </div></body></html>`);
+}
