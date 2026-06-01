@@ -3687,40 +3687,9 @@ function logoutUser() {
 
 async function checkSession() {
   if (IS_LOCAL) { hideLoginScreen(); startApp(); return; }
-
-  const token = localStorage.getItem('sb_token');
-
-  // Pas de token → afficher le login directement, rien d'autre à faire
-  if (!token) {
-    showLoginScreen();
-    return;
-  }
-
-  // Token présent → vérifier sa validité silencieusement en arrière-plan
-  // Le login reste visible pendant la vérification
+  // Toujours afficher le login au démarrage
+  // L'utilisateur doit se connecter manuellement à chaque session
   showLoginScreen();
-
-  try {
-    const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token }
-    });
-    if (res.ok) {
-      currentUser = await res.json();
-      if (currentUser && currentUser.id) {
-        // Token valide → connexion silencieuse
-        hideLoginScreen();
-        const btnLogout = document.getElementById('btn-logout');
-        if (btnLogout) btnLogout.style.display = 'flex';
-        startApp();
-        return;
-      }
-    }
-    // Token invalide → le supprimer, le login reste visible
-    localStorage.removeItem('sb_token');
-  } catch(e) {
-    // Erreur réseau → supprimer le token, le login reste visible
-    localStorage.removeItem('sb_token');
-  }
 }
 
 function showLoginScreen() {
