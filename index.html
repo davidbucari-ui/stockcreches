@@ -2274,13 +2274,7 @@ textarea { resize: vertical; min-height: 72px; }
 // ─── DÉTECTION CONTEXTE ──────────────────────────────────────────────────────
 const IS_LOCAL = (typeof location !== 'undefined') &&
   (location.protocol === 'file:' ||
-   (location.hostname && (
-     location.hostname.includes('claudeusercontent') ||
-     location.hostname.includes('github.io') ||
-     location.hostname.includes('netlify.app') ||
-     location.hostname === 'localhost' ||
-     location.hostname === '127.0.0.1'
-   )));
+   (location.hostname && location.hostname.includes('claudeusercontent')));
 
 // ─── DATA ─────────────────────────────────────────────────────────────────
 
@@ -3768,6 +3762,7 @@ function showLoginError(msg) {
 }
 
 function startApp() {
+  hideLoginScreen();
   const token = localStorage.getItem('sb_token');
   if (token && !IS_LOCAL) SUPA_HEADERS['Authorization'] = 'Bearer ' + token;
   appliquerPrefs();
@@ -6981,7 +6976,7 @@ function showImportResult(type, html) {
 </div>
 
 <!-- ── ÉCRAN DE CONNEXION ── -->
-<div id="login-screen" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#1C1917,#292524,#1E1B4B);z-index:9999;align-items:center;justify-content:center">
+<div id="login-screen" style="display:flex;position:fixed;inset:0;background:linear-gradient(135deg,#1C1917,#292524,#1E1B4B);z-index:9999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:24px;padding:40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
     <div style="text-align:center;margin-bottom:32px">
       <div style="font-size:48px;margin-bottom:12px">🐨</div>
