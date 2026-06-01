@@ -1039,11 +1039,7 @@ textarea { resize: vertical; min-height: 72px; }
           <div style="display:flex;align-items:center;gap:16px">
             <div style="flex:1">
               <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:6px">Couleur principale</label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap" id="param-colors">
-                ${['#6366F1','#10B981','#F59E0B','#EF4444','#0EA5E9','#8B5CF6','#EC4899','#14B8A6'].map(c =>
-                  `<div onclick="setAccentColor('${c}')" style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:2px solid transparent;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform=''"></div>`
-                ).join('')}
-              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap" id="param-colors"></div>
             </div>
             <div>
               <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:6px">Couleur perso</label>
@@ -3109,6 +3105,7 @@ function renderParametres() {
 
   // Charger les valeurs sauvegardées
   const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const accent = prefs.accent || '#6366F1';
   const nomInput = document.getElementById('param-nom-reseau');
   const seuilInput = document.getElementById('param-seuil-stock');
   const peremptionInput = document.getElementById('param-seuil-peremption');
@@ -3116,11 +3113,14 @@ function renderParametres() {
   if (seuilInput) seuilInput.value = prefs.seuilStock || 2;
   if (peremptionInput) peremptionInput.value = prefs.seuilPeremption || 30;
 
-  // Marquer la couleur active
-  const accent = prefs.accent || '#6366F1';
-  document.querySelectorAll('#param-colors div').forEach(el => {
-    el.style.border = el.style.background === accent ? '3px solid var(--ink)' : '2px solid transparent';
-  });
+  // Générer les cercles de couleur
+  const colorsEl = document.getElementById('param-colors');
+  if (colorsEl) {
+    const palette = ['#6366F1','#10B981','#F59E0B','#EF4444','#0EA5E9','#8B5CF6','#EC4899','#14B8A6'];
+    colorsEl.innerHTML = palette.map(c =>
+      `<div onclick="setAccentColor('${c}')" style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:${accent===c?'3px solid var(--ink)':'2px solid transparent'};transition:transform 0.15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform=''"></div>`
+    ).join('');
+  }
 
   list.innerHTML = CRECHES_DATA.map((c, i) => `
     <div style="background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px">
