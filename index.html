@@ -1033,63 +1033,9 @@ textarea { resize: vertical; min-height: 72px; }
               <div style="font-weight:700;font-size:0.85rem;margin-bottom:4px">📱 Formations 100% en ligne</div>
               <div style="font-size:0.8rem;color:var(--ink2)">Accès immédiat · À votre rythme · Quiz interactif · Attestation automatique · Accès à vie</div>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:36px">
-
-              <!-- Carte Jeu libre -->
-              <div style="background:var(--surface2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lg);cursor:pointer;transition:transform 0.2s"
-                   onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''"
-                   onclick="showFormation('jeu')">
-                <div style="background:linear-gradient(135deg,#7B9E87,#5A7A65);padding:28px 24px 24px;position:relative;overflow:hidden">
-                  <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.12">🧸</div>
-                  <div style="font-size:2.5rem;margin-bottom:10px">🧸</div>
-                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.65rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:20px">4 séquences</span>
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.65rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:20px">2h en ligne</span>
-                  </div>
-                  <h3 style="margin:0 0 6px;color:#fff;font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;line-height:1.3">"Il ne fait que jouer…"</h3>
-                  <p style="margin:0;color:rgba(255,255,255,0.8);font-size:0.82rem;font-style:italic">Et si c'était exactement ce dont il avait besoin ?</p>
-                </div>
-                <div style="padding:20px 24px">
-                  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-                    <div style="display:flex;align-items:center;gap:10px;font-size:0.83rem;color:var(--ink2)"><span>✅</span> Séq. 1 — Les 4 types de jeu</div>
-                    <div style="display:flex;align-items:center;gap:10px;font-size:0.83rem;color:var(--ink2)"><span>✅</span> Séq. 2 — Jeu libre vs jeu dirigé</div>
-                    <div style="display:flex;align-items:center;gap:10px;font-size:0.83rem;color:var(--ink2)"><span>✅</span> Séq. 3 — Aménager l'espace</div>
-                    <div style="display:flex;align-items:center;gap:10px;font-size:0.83rem;color:var(--ink2)"><span>✅</span> Séq. 4 — Observer le jeu</div>
-                    <div style="display:flex;align-items:center;gap:10px;font-size:0.83rem;color:var(--ink2)"><span>📝</span> Quiz 10 questions</div>
-                  </div>
-                  <button style="width:100%;background:linear-gradient(135deg,#7B9E87,#5A7A65);color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;font-size:0.88rem;cursor:pointer;font-family:'Instrument Sans',sans-serif">
-                    Accéder à la formation →
-                  </button>
-                </div>
-              </div>
-
-              <!-- Carte Alimentation -->
-              <div style="background:var(--surface2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lg);cursor:pointer;transition:transform 0.2s"
-                   onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''"
-                   onclick="showFormation('alim')">
-                <div style="background:linear-gradient(135deg,#D4922A,#B97A20);padding:28px 24px 24px;position:relative;overflow:hidden">
-                  <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.12">🥦</div>
-                  <div style="font-size:2.5rem;margin-bottom:10px">🥦</div>
-                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.65rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:20px">3 modules</span>
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.65rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:20px">1h45 en ligne</span>
-                  </div>
-                  <h3 style="margin:0 0 6px;color:#fff;font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;line-height:1.3">Nourrir et protéger</h3>
-                  <p style="margin:0;color:rgba(255,255,255,0.8);font-size:0.82rem;font-style:italic">Les gestes essentiels pour accompagner l'enfant au quotidien</p>
-                </div>
-                <div style="padding:20px 24px">
-                  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-                    <div style="display:flex;align-items:center;gap:10px;font-size:0.83rem;color:var(--ink2)"><span>🥦</span> Module 1 — L'alimentation (45 min)</div>
-                    <div style="display:flex;align-items:center;gap:10px;font-size:0.83rem;color:var(--ink2)"><span>🧼</span> Module 2 — L'hygiène (30 min)</div>
-                    <div style="display:flex;align-items:center;gap:10px;font-size:0.83rem;color:var(--ink2)"><span>🌱</span> Module 3 — Ma posture (30 min)</div>
-                    <div style="display:flex;align-items:center;gap:10px;font-size:0.83rem;color:var(--ink2)"><span>📝</span> 3 quiz + attestation</div>
-                  </div>
-                  <button style="width:100%;background:linear-gradient(135deg,#D4922A,#B97A20);color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;font-size:0.88rem;cursor:pointer;font-family:'Instrument Sans',sans-serif">
-                    Accéder à la formation →
-                  </button>
-                </div>
-              </div>
-
+            <!-- Catalogue dynamique chargé depuis Supabase -->
+            <div id="cat-enligne-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:36px">
+              <div style="text-align:center;padding:40px;color:var(--ink3);grid-column:1/-1">⏳ Chargement des formations…</div>
             </div>
           </div>
 
@@ -1110,8 +1056,8 @@ textarea { resize: vertical; min-height: 72px; }
               </div>
             </div>
 
-            <!-- Grille 4 formations animées -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:32px">
+            <!-- Grille formations animées — catalogue dynamique -->
+            <div id="cat-animee-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:32px">
 
               <!-- Carte 1 — Conflits et agressivité -->
               <div style="background:var(--surface2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lg);transition:transform 0.2s"
@@ -1279,50 +1225,6 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <!-- ── VUE DÉTAIL FORMATION JEU LIBRE ── -->
-        <div id="f-detail-jeu" style="display:none">
-          <button onclick="document.getElementById('f-catalogue').style.display='';document.getElementById('f-detail-jeu').style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--accent);font-weight:700;font-size:0.88rem;margin-bottom:20px;padding:0;display:flex;align-items:center;gap:6px">← Retour au catalogue</button>
-
-          <div style="background:linear-gradient(135deg,#7B9E87,#5A7A65);border-radius:16px;padding:28px;margin-bottom:24px;position:relative;overflow:hidden">
-            <div style="position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:80px;opacity:0.12">🧸</div>
-            <div style="font-size:2rem;margin-bottom:10px">🧸</div>
-            <h2 style="margin:0 0 8px;color:#fff;font-family:'Syne',sans-serif;font-size:1.5rem">"Il ne fait que jouer…"</h2>
-            <p style="margin:0;color:rgba(255,255,255,0.8);font-size:0.9rem">Et si c'était exactement ce dont il avait besoin ?</p>
-          </div>
-
-          <!-- Onglets séquences -->
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px" id="jeu-tabs">
-            <button class="f-tab active" onclick="showSeq('jeu',1,this)" style="background:#7B9E87;color:#fff;border:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer">📖 Séq. 1</button>
-            <button class="f-tab" onclick="showSeq('jeu',2,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📖 Séq. 2</button>
-            <button class="f-tab" onclick="showSeq('jeu',3,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📖 Séq. 3</button>
-            <button class="f-tab" onclick="showSeq('jeu',4,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📖 Séq. 4</button>
-            <button class="f-tab" onclick="showSeq('jeu',5,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📝 Quiz</button>
-          </div>
-
-          <div id="jeu-seq-content" style="background:var(--surface2);border-radius:16px;padding:28px;box-shadow:var(--shadow)"></div>
-        </div>
-
-        <!-- ── VUE DÉTAIL FORMATION ALIMENTATION ── -->
-        <div id="f-detail-alim" style="display:none">
-          <button onclick="document.getElementById('f-catalogue').style.display='';document.getElementById('f-detail-alim').style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--accent);font-weight:700;font-size:0.88rem;margin-bottom:20px;padding:0;display:flex;align-items:center;gap:6px">← Retour au catalogue</button>
-
-          <div style="background:linear-gradient(135deg,#D4922A,#B97A20);border-radius:16px;padding:28px;margin-bottom:24px;position:relative;overflow:hidden">
-            <div style="position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:80px;opacity:0.12">🥦</div>
-            <div style="font-size:2rem;margin-bottom:10px">🥦</div>
-            <h2 style="margin:0 0 8px;color:#fff;font-family:'Syne',sans-serif;font-size:1.5rem">Nourrir et protéger</h2>
-            <p style="margin:0;color:rgba(255,255,255,0.8);font-size:0.9rem">Les gestes essentiels pour accompagner l'enfant au quotidien</p>
-          </div>
-
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
-            <button class="f-tab-alim active" onclick="showSeq('alim',1,this)" style="background:#D4922A;color:#fff;border:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer">🥦 Module 1</button>
-            <button class="f-tab-alim" onclick="showSeq('alim',2,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">🧼 Module 2</button>
-            <button class="f-tab-alim" onclick="showSeq('alim',3,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">🌱 Module 3</button>
-            <button class="f-tab-alim" onclick="showSeq('alim',4,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📝 Quiz 1</button>
-            <button class="f-tab-alim" onclick="showSeq('alim',5,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📝 Quiz 2</button>
-            <button class="f-tab-alim" onclick="showSeq('alim',6,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📝 Quiz 3</button>
-          </div>
-
-          <div id="alim-seq-content" style="background:var(--surface2);border-radius:16px;padding:28px;box-shadow:var(--shadow)"></div>
-        </div>
 
       </div>
     </div>
@@ -4755,6 +4657,7 @@ function showPage(page, btn) {
   if (page === 'historique') { renderHistorique(); }
   if (page === 'inventaire') { renderTable(); renderStats(); }
   if (page === 'parametres') { renderParametres(); }
+  if (page === 'formations') { if (typeof renderFormationsCatalogue === 'function') setTimeout(renderFormationsCatalogue, 50); }
 }
 
 function showTab(tab, btn) {
@@ -7082,34 +6985,14 @@ function envoyerDemande() {
 
 // ─── FORMATIONS ────────────────────────────────────────────────────────────
 
-function showFormation(id) {
-  document.getElementById('f-catalogue').style.display = 'none';
-  document.getElementById('f-detail-jeu').style.display = 'none';
-  document.getElementById('f-detail-alim').style.display = 'none';
-  document.getElementById('f-detail-' + id).style.display = 'block';
-  if (id === 'jeu') showSeq('jeu', 1, document.querySelector('#jeu-tabs .f-tab'));
-  if (id === 'alim') showSeq('alim', 1, document.querySelector('.f-tab-alim'));
-}
-
-function showSeq(formation, num, btn) {
-  const containerId = formation === 'jeu' ? 'jeu-seq-content' : 'alim-seq-content';
-  const tabClass = formation === 'jeu' ? 'f-tab' : 'f-tab-alim';
-  const activeColor = formation === 'jeu' ? '#7B9E87' : '#D4922A';
-
-  document.querySelectorAll('.' + tabClass).forEach(b => {
-    b.style.background = 'var(--surface2)';
-    b.style.color = 'var(--ink2)';
-    b.style.border = '1px solid var(--border)';
-  });
-  if (btn) {
-    btn.style.background = activeColor;
-    btn.style.color = '#fff';
-    btn.style.border = 'none';
+// showFormation et showSeq sont désormais gérés par formations-data.js (Supabase)
+// Ces stubs évitent les erreurs si d'anciennes références existent
+function showFormation(slug) {
+  if (typeof window._showFormationSupabase === 'function') {
+    window._showFormationSupabase(slug);
   }
-
-  const content = formation === 'jeu' ? getJeuContent(num) : getAlimContent(num);
-  document.getElementById(containerId).innerHTML = content;
 }
+function showSeq() {} // géré dynamiquement dans formations-data.js
 
 </script>
 
