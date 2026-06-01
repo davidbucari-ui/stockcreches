@@ -3176,6 +3176,33 @@ async function loginUser() {
   }
 }
 
+async function motDePasseOublie() {
+  const email = document.getElementById('login-email').value.trim();
+  if (!email) {
+    showLoginError('Saisissez votre email ci-dessus puis cliquez sur "Mot de passe oublié"');
+    return;
+  }
+  try {
+    const res = await fetch(`${SUPA_URL}/auth/v1/recover`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if (res.ok) {
+      const el = document.getElementById('login-error');
+      el.style.background = '#F0FDF4';
+      el.style.borderColor = '#86EFAC';
+      el.style.color = '#15803D';
+      el.textContent = '✅ Email de réinitialisation envoyé — vérifiez votre boîte mail';
+      el.style.display = 'block';
+    } else {
+      showLoginError('Erreur lors de l\'envoi — vérifiez votre email');
+    }
+  } catch(e) {
+    showLoginError('Erreur réseau — réessayez');
+  }
+}
+
 function showLoginError(msg) {
   const el = document.getElementById('login-error');
   el.textContent = '⚠ ' + msg; el.style.display = 'block';
@@ -6440,6 +6467,11 @@ function showImportResult(type, html) {
         onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
         Se connecter
       </button>
+      <div style="text-align:center">
+        <button onclick="motDePasseOublie()" style="background:none;border:none;color:#6366F1;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">
+          Mot de passe oublié ?
+        </button>
+      </div>
     </div>
     <div style="text-align:center;margin-top:20px;font-size:12px;color:#A8A29E">
       Evlae · Accès réservé
