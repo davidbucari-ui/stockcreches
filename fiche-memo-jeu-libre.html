@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fiche mémo — Le jeu libre</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --sage: #6B9E78;
+    --sage-dark: #4A7A57;
+    --sage-light: #EEF5F0;
+    --amber: #D4922A;
+    --amber-light: #FDF3E3;
+    --terra: #C4714A;
+    --terra-light: #FCF0EB;
+    --blue: #4A7FB5;
+    --blue-light: #EBF2FA;
+    --purple: #7B5EA7;
+    --purple-light: #F3EFF9;
+    --ink: #1E2420;
+    --muted: #6B7A6E;
+    --border: #DCE8DF;
+    --bg: #F7FAF8;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #E8EDE9;
+    padding: 24px;
+    color: var(--ink);
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: white;
+    margin: 0 auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--sage-dark) 0%, var(--sage) 100%);
+    padding: 28px 36px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '🧸';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 72px;
+    opacity: 0.15;
+  }
+  .header-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.9);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    color: white;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+  .header p {
+    color: rgba(255,255,255,0.75);
+    font-size: 0.82rem;
+    font-style: italic;
+  }
+
+  /* BODY */
+  .body { padding: 24px 36px 28px; background: var(--bg); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* TYPES DE JEU — grille 2x2 */
+  .jeux-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .jeu-card {
+    border-radius: 10px;
+    padding: 14px 16px;
+    border-left: 4px solid;
+  }
+  .jeu-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .jeu-card-emoji { font-size: 1.2rem; }
+  .jeu-card-title { font-weight: 700; font-size: 0.85rem; }
+  .jeu-card-age {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 6px;
+  }
+  .jeu-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .tag {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    opacity: 0.85;
+  }
+  .jeu-card-tip {
+    font-size: 0.72rem;
+    font-style: italic;
+    line-height: 1.5;
+    opacity: 0.8;
+  }
+
+  /* RATIO 70/30 */
+  .ratio-box {
+    background: white;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .ratio-visual {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(var(--sage) 0% 70%, #D0E8D8 70% 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .ratio-visual::after {
+    content: '';
+    width: 44px;
+    height: 44px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+  }
+  .ratio-label {
+    position: absolute;
+    z-index: 1;
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+  .ratio-text { flex: 1; }
+  .ratio-text h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; }
+  .ratio-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 0.78rem;
+  }
+  .ratio-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  /* DEUX COLONNES */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .col-card {
+    background: white;
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+  }
+  .col-card-title {
+    font-weight: 700;
+    font-size: 0.82rem;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .col-card ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .col-card ul li {
+    font-size: 0.75rem;
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+    line-height: 1.4;
+  }
+  .col-card ul li::before { content: '→'; flex-shrink: 0; opacity: 0.5; }
+
+  /* ERREURS */
+  .erreurs {
+    background: #FEF2F2;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    border-left: 4px solid #DC2626;
+  }
+  .erreurs-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #991B1B;
+    margin-bottom: 8px;
+  }
+  .erreurs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+  }
+  .erreur-item {
+    font-size: 0.72rem;
+    color: #7F1D1D;
+    display: flex;
+    gap: 6px;
+    line-height: 1.4;
+  }
+  .erreur-item::before { content: '✗'; flex-shrink: 0; font-weight: 700; }
+
+  /* POSTURE */
+  .posture-box {
+    background: linear-gradient(135deg, var(--sage-light), white);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+  .posture-title {
+    font-weight: 700;
+    font-size: 0.82rem;
+    margin-bottom: 10px;
+    color: var(--sage-dark);
+  }
+  .posture-steps {
+    display: flex;
+    gap: 0;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .posture-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 80px;
+  }
+  .posture-step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--sage);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.8rem;
+  }
+  .posture-step-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+  .posture-arrow {
+    font-size: 0.8rem;
+    color: var(--border);
+    margin: 0 2px;
+    padding-bottom: 14px;
+  }
+
+  /* FOOTER */
+  .footer {
+    background: var(--sage-dark);
+    padding: 14px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-left {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.7rem;
+  }
+  .footer-right {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.65rem;
+    text-align: right;
+  }
+
+  /* PRINT */
+  @media print {
+    body { background: white; padding: 0; }
+    .page { box-shadow: none; width: 100%; }
+    .no-print { display: none; }
+  }
+
+  /* BOUTON IMPRIMER */
+  .print-btn {
+    display: block;
+    width: 210mm;
+    margin: 16px auto;
+    text-align: center;
+  }
+  .print-btn button {
+    background: var(--sage);
+    color: white;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 25px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(107,158,120,0.4);
+  }
+</style>
+</head>
+<body>
+
+<div class="print-btn no-print">
+  <button onclick="window.print()">🖨 Imprimer / Sauvegarder en PDF</button>
+</div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-badge">Fiche mémo · Formation petite enfance</div>
+    <h1>"Il ne fait que jouer…"</h1>
+    <p>Le jeu libre : l'outil de développement que vous avez déjà sous la main</p>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- LES 4 TYPES -->
+    <div class="section-title">Les 4 types de jeu</div>
+    <div class="jeux-grid">
+
+      <div class="jeu-card" style="background:var(--blue-light);border-color:var(--blue)">
+        <div class="jeu-card-header">
+          <span class="jeu-card-emoji">🔵</span>
+          <span class="jeu-card-title">Jeu d'exploration</span>
+        </div>
+        <div class="jeu-card-age" style="color:var(--blue)">0 – 18 mois</div>
+        <div class="jeu-card-tags">
+          <span class="tag" style="background:var(--blue)20;color:var(--blue)">Motricité</span>
+          <span class="tag" style="background:var(--blue)20;color:var(--blue)">Sens</span>
+          <span class="tag" style="background:var(--blue)20;color:var(--blue)">Curiosité</span>
+        </div>
+        <div class="jeu-card-tip" style="color:var(--blue)">💡 Mettre à la bouche = apprendre, pas "faire n'importe quoi"</div>
+      </div>
+
+      <div class="jeu-card" style="background:var(--amber-light);border-color:var(--amber)">
+        <div class="jeu-card-header">
+          <span class="jeu-card-emoji">🟡</span>
+          <span class="jeu-card-title">Jeu symbolique</span>
+        </div>
+        <div class="jeu-card-age" style="color:var(--amber)">18 mois – 6 ans</div>
+        <div class="jeu-card-tags">
+          <span class="tag" style="background:var(--amber)20;color:var(--amber)">Langage</span>
+          <span class="tag" style="background:var(--amber)20;color:var(--amber)">Émotions</span>
+          <span class="tag" style="background:var(--amber)20;color:var(--amber)">Empathie</span>
+        </div>
+        <div class="jeu-card-tip" style="color:var(--amber)">💡 Rejouer une dispute = digérer une émotion en sécurité</div>
+      </div>
+
+      <div class="jeu-card" style="background:var(--sage-light);border-color:var(--sage)">
+        <div class="jeu-card-header">
+          <span class="jeu-card-emoji">🟢</span>
+          <span class="jeu-card-title">Jeu de construction</span>
+        </div>
+        <div class="jeu-card-age" style="color:var(--sage-dark)">2 – 6 ans</div>
+        <div class="jeu-card-tags">
+          <span class="tag" style="background:var(--sage)20;color:var(--sage-dark)">Logique</span>
+          <span class="tag" style="background:var(--sage)20;color:var(--sage-dark)">Persévérance</span>
+          <span class="tag" style="background:var(--sage)20;color:var(--sage-dark)">Maths</span>
+        </div>
+        <div class="jeu-card-tip" style="color:var(--sage-dark)">💡 La tour qui tombe est aussi formatrice que celle qui tient</div>
+      </div>
+
+      <div class="jeu-card" style="background:var(--terra-light);border-color:var(--terra)">
+        <div class="jeu-card-header">
+          <span class="jeu-card-emoji">🔴</span>
+          <span class="jeu-card-title">Jeu de règles</span>
+        </div>
+        <div class="jeu-card-age" style="color:var(--terra)">Dès 4 ans</div>
+        <div class="jeu-card-tags">
+          <span class="tag" style="background:var(--terra)20;color:var(--terra)">Social</span>
+          <span class="tag" style="background:var(--terra)20;color:var(--terra)">Self-control</span>
+          <span class="tag" style="background:var(--terra)20;color:var(--terra)">Fair-play</span>
+        </div>
+        <div class="jeu-card-tip" style="color:var(--terra)">💡 Tricher à 4 ans = tester les règles sociales, c'est normal</div>
+      </div>
+
+    </div>
+
+    <!-- RATIO 70/30 -->
+    <div class="section-title">Équilibre de la journée</div>
+    <div class="ratio-box">
+      <div class="ratio-visual">
+        <span class="ratio-label" style="font-size:0.9rem">70%</span>
+      </div>
+      <div class="ratio-text">
+        <h3>La règle du 70/30</h3>
+        <div class="ratio-row">
+          <div class="ratio-dot" style="background:var(--sage)"></div>
+          <span><strong>70% jeu libre</strong> — autonomie, créativité, concentration profonde</span>
+        </div>
+        <div class="ratio-row">
+          <div class="ratio-dot" style="background:#D0E8D8"></div>
+          <span><strong>30% jeu dirigé</strong> — compétences ciblées, socialisation, relation à l'adulte</span>
+        </div>
+        <div style="margin-top:6px;font-size:0.72rem;color:var(--muted);font-style:italic">⚠ Dans beaucoup de structures, ce ratio est inversé. C'est souvent à l'origine de l'agitation.</div>
+      </div>
+    </div>
+
+    <!-- BONS MOMENTS + MATÉRIAUX -->
+    <div class="section-title">Mise en pratique</div>
+    <div class="two-col">
+      <div class="col-card">
+        <div class="col-card-title"><span>🕐</span> Bons moments pour le jeu libre</div>
+        <ul>
+          <li>À l'arrivée le matin — se poser, retrouver ses repères</li>
+          <li>Après le repas — digérer à son rythme</li>
+          <li>En milieu de matinée — respiration entre deux temps forts</li>
+          <li>En fin d'après-midi — décompresser avant la famille</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <div class="col-card-title"><span>🌿</span> Matériaux ouverts à privilégier</div>
+        <ul>
+          <li>Boîtes et rouleaux en carton</li>
+          <li>Tissus de différentes textures</li>
+          <li>Kapla, cubes en bois</li>
+          <li>Cailloux, coquillages, pommes de pin</li>
+          <li>Bouchons, bobines, pinces à linge</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- POSTURE D'OBSERVATION -->
+    <div class="section-title">Posture d'observation</div>
+    <div class="posture-box">
+      <div class="posture-title">👁️ La boucle observer → analyser → adapter</div>
+      <div class="posture-steps">
+        <div class="posture-step">
+          <div class="posture-step-num">1</div>
+          <div class="posture-step-label">Observer<br>sans intervenir</div>
+        </div>
+        <div class="posture-arrow">→</div>
+        <div class="posture-step">
+          <div class="posture-step-num">2</div>
+          <div class="posture-step-label">Noter des<br>faits bruts</div>
+        </div>
+        <div class="posture-arrow">→</div>
+        <div class="posture-step">
+          <div class="posture-step-num">3</div>
+          <div class="posture-step-label">Identifier<br>un besoin</div>
+        </div>
+        <div class="posture-arrow">→</div>
+        <div class="posture-step">
+          <div class="posture-step-num">4</div>
+          <div class="posture-step-label">Adapter<br>l'environnement</div>
+        </div>
+        <div class="posture-arrow">→</div>
+        <div class="posture-step">
+          <div class="posture-step-num">5</div>
+          <div class="posture-step-label">Observer<br>à nouveau</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:0.72rem;color:var(--muted);font-style:italic">⏱ Règle des 3 secondes : avant d'intervenir, attendez 3 secondes. Dans la majorité des cas, l'enfant trouve seul la solution.</div>
+    </div>
+
+    <!-- ERREURS -->
+    <div class="section-title">Erreurs fréquentes</div>
+    <div class="erreurs">
+      <div class="erreurs-title">🛑 À éviter</div>
+      <div class="erreurs-grid">
+        <div class="erreur-item">Interrompre un jeu libre pour une activité dirigée</div>
+        <div class="erreur-item">Transformer le jeu libre en jeu dirigé sans le dire</div>
+        <div class="erreur-item">Remplir tous les temps libres d'activités dirigées</div>
+        <div class="erreur-item">Confondre observer et surveiller</div>
+        <div class="erreur-item">N'observer que les enfants qui posent problème</div>
+        <div class="erreur-item">Garder ses observations sans les partager en équipe</div>
+      </div>
+    </div>
+
+    <!-- CITATION -->
+    <div style="background:var(--sage-dark);border-radius:10px;padding:16px 20px;text-align:center">
+      <p style="color:white;font-family:'Playfair Display',serif;font-size:0.95rem;font-style:italic;line-height:1.7;margin-bottom:6px">"L'environnement est le troisième éducateur — après la famille et le professionnel."</p>
+      <p style="color:rgba(255,255,255,0.5);font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase">Principe fondateur de la pédagogie Reggio Emilia</p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      <strong style="color:white">Orevy</strong> · Plateforme Petite Enfance<br>
+      Formation : "Il ne fait que jouer…" · Le jeu libre
+    </div>
+    <div class="footer-right">
+      David Bucari · Éducateur de jeunes enfants<br>
+      Formateur petite enfance
+    </div>
+  </div>
+
+</div>
+
+<div class="print-btn no-print" style="margin-bottom:32px">
+  <button onclick="window.print()">🖨 Imprimer / Sauvegarder en PDF</button>
+</div>
+
+</body>
+</html>

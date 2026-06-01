@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fiche mémo — Nourrir et protéger</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --amber: #C4820A;
+    --amber-dark: #9A6608;
+    --amber-light: #FDF3E3;
+    --sage: #6B9E78;
+    --sage-light: #EEF5F0;
+    --terra: #C4714A;
+    --terra-light: #FCF0EB;
+    --blue: #4A7FB5;
+    --blue-light: #EBF2FA;
+    --red: #DC2626;
+    --red-light: #FEF2F2;
+    --green: #16A34A;
+    --green-light: #F0FDF4;
+    --ink: #1E2420;
+    --muted: #6B7065;
+    --border: #E8DDD0;
+    --bg: #FDFAF6;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #EDE5D8;
+    padding: 24px;
+    color: var(--ink);
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: white;
+    margin: 0 auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--amber-dark) 0%, var(--amber) 100%);
+    padding: 28px 36px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '🥦';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 72px;
+    opacity: 0.15;
+  }
+  .header-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.9);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    color: white;
+    margin-bottom: 4px;
+  }
+  .header p {
+    color: rgba(255,255,255,0.75);
+    font-size: 0.82rem;
+    font-style: italic;
+  }
+
+  /* BODY */
+  .body { padding: 22px 36px 26px; background: var(--bg); }
+
+  .section-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* MODULES */
+  .modules-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .module-card {
+    border-radius: 10px;
+    padding: 14px;
+    border-top: 4px solid;
+    background: white;
+    border: 1px solid var(--border);
+    border-top-width: 4px;
+  }
+  .module-num {
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    opacity: 0.7;
+  }
+  .module-title {
+    font-weight: 700;
+    font-size: 0.82rem;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .module-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .module-item {
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+    line-height: 1.4;
+  }
+  .module-item::before { content: '·'; flex-shrink: 0; font-weight: 800; }
+
+  /* DIVERSIFICATION */
+  .diver-box {
+    background: var(--blue-light);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--blue);
+  }
+  .diver-title {
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+  .diver-timeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 8px;
+  }
+  .diver-point {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+  }
+  .diver-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.75rem; color: white;
+  }
+  .diver-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+  .diver-line {
+    height: 2px;
+    background: var(--blue);
+    flex: 1;
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  /* LAVAGE DES MAINS */
+  .mains-box {
+    background: var(--green-light);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--green);
+  }
+  .mains-title {
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--green);
+    margin-bottom: 10px;
+  }
+  .mains-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .mains-col-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .mains-item {
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+  .mains-item::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
+  .mains-technique {
+    background: white;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    grid-column: 1 / -1;
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.6;
+    border: 1px solid var(--border);
+  }
+
+  /* POSTURE */
+  .posture-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .posture-card {
+    background: white;
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+  }
+  .posture-card-title {
+    font-weight: 700;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .posture-card ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .posture-card ul li {
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+    line-height: 1.4;
+  }
+  .posture-card ul li::before { content: '→'; flex-shrink: 0; opacity: 0.5; }
+
+  /* ERREURS */
+  .erreurs {
+    background: var(--red-light);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--red);
+  }
+  .erreurs-title { font-size: 0.75rem; font-weight: 700; color: #991B1B; margin-bottom: 8px; }
+  .erreurs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+  .erreur-item {
+    font-size: 0.72rem; color: #7F1D1D;
+    display: flex; gap: 6px; line-height: 1.4;
+  }
+  .erreur-item::before { content: '✗'; flex-shrink: 0; font-weight: 700; }
+
+  /* CITATION */
+  .citation {
+    background: linear-gradient(135deg, var(--amber-dark), var(--amber));
+    border-radius: 10px;
+    padding: 16px 20px;
+    text-align: center;
+  }
+
+  /* FOOTER */
+  .footer {
+    background: var(--amber-dark);
+    padding: 14px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-left { color: rgba(255,255,255,0.7); font-size: 0.7rem; }
+  .footer-right { color: rgba(255,255,255,0.5); font-size: 0.65rem; text-align: right; }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .page { box-shadow: none; width: 100%; }
+    .no-print { display: none; }
+  }
+
+  .print-btn {
+    display: block;
+    width: 210mm;
+    margin: 16px auto;
+    text-align: center;
+  }
+  .print-btn button {
+    background: var(--amber);
+    color: white;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 25px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(196,130,10,0.4);
+  }
+</style>
+</head>
+<body>
+
+<div class="print-btn no-print">
+  <button onclick="window.print()">🖨 Imprimer / Sauvegarder en PDF</button>
+</div>
+
+<div class="page">
+
+  <div class="header">
+    <div class="header-badge">Fiche mémo · Formation petite enfance</div>
+    <h1>Nourrir et protéger</h1>
+    <p>Les gestes essentiels pour accompagner l'enfant au quotidien · 0-6 ans</p>
+  </div>
+
+  <div class="body">
+
+    <!-- LES 3 MODULES -->
+    <div class="section-title">Les 3 modules de la formation</div>
+    <div class="modules-row">
+      <div class="module-card" style="border-top-color:var(--sage)">
+        <div class="module-num" style="color:var(--sage)">Module 1 · 45 min</div>
+        <div class="module-title">🥦 L'alimentation, bien plus qu'un repas</div>
+        <div class="module-items">
+          <div class="module-item">Équilibre alimentaire 0-6 ans</div>
+          <div class="module-item">La diversification : 4 à 6 mois</div>
+          <div class="module-item">Alimentation et attachement</div>
+          <div class="module-item">Culture et pratiques familiales</div>
+          <div class="module-item">Mon rôle professionnel</div>
+        </div>
+      </div>
+      <div class="module-card" style="border-top-color:var(--green)">
+        <div class="module-num" style="color:var(--green)">Module 2 · 30 min</div>
+        <div class="module-title">🧼 L'hygiène, un apprentissage</div>
+        <div class="module-items">
+          <div class="module-item">Idées reçues sur la maladie</div>
+          <div class="module-item">Virus vs froid : la vraie cause</div>
+          <div class="module-item">Lavage des mains : technique</div>
+          <div class="module-item">Hygiène chez l'enfant</div>
+          <div class="module-item">Environnement sain</div>
+        </div>
+      </div>
+      <div class="module-card" style="border-top-color:var(--terra)">
+        <div class="module-num" style="color:var(--terra)">Module 3 · 30 min</div>
+        <div class="module-title">🌱 Ma posture face aux familles</div>
+        <div class="module-items">
+          <div class="module-item">La juste distance éducative</div>
+          <div class="module-item">Culture et valeurs : accueillir la différence</div>
+          <div class="module-item">Mon propre rapport à la nourriture</div>
+          <div class="module-item">Communiquer avec les familles</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIVERSIFICATION -->
+    <div class="section-title">La diversification alimentaire</div>
+    <div class="diver-box">
+      <div class="diver-title">🍼 Quand introduire les aliments solides ?</div>
+      <div class="diver-timeline">
+        <div class="diver-point">
+          <div class="diver-dot" style="background:#DC2626">✗</div>
+          <div class="diver-label">Avant<br>4 mois</div>
+        </div>
+        <div class="diver-line"></div>
+        <div class="diver-point">
+          <div class="diver-dot" style="background:var(--green)">✓</div>
+          <div class="diver-label">4 mois<br>révolus</div>
+        </div>
+        <div class="diver-line"></div>
+        <div class="diver-point">
+          <div class="diver-dot" style="background:var(--green)">✓</div>
+          <div class="diver-label">Idéal :<br>5-6 mois</div>
+        </div>
+        <div class="diver-line"></div>
+        <div class="diver-point">
+          <div class="diver-dot" style="background:#DC2626">✗</div>
+          <div class="diver-label">Après<br>6 mois</div>
+        </div>
+        <div class="diver-line"></div>
+        <div class="diver-point">
+          <div class="diver-dot" style="background:var(--amber)">→</div>
+          <div class="diver-label">Alim.<br>familiale</div>
+        </div>
+      </div>
+      <div style="font-size:0.72rem;color:#1e40af;font-style:italic">⚠ Même chez les enfants à risque allergique — ne pas retarder au-delà de 6 mois. Le lait seul ne couvre plus les besoins nutritionnels.</div>
+    </div>
+
+    <!-- LAVAGE DES MAINS -->
+    <div class="section-title">Le lavage des mains</div>
+    <div class="mains-box">
+      <div class="mains-title">🙌 Mesure d'hygiène la plus efficace — Journée mondiale : 15 octobre</div>
+      <div class="mains-grid">
+        <div>
+          <div class="mains-col-title">Quand se laver les mains ?</div>
+          <div class="mains-item">Avant de s'occuper d'un bébé</div>
+          <div class="mains-item">Avant de préparer ou servir les repas</div>
+          <div class="mains-item">Après s'être mouché / toussé</div>
+          <div class="mains-item">Après chaque sortie extérieure</div>
+          <div class="mains-item">Après les toilettes</div>
+        </div>
+        <div>
+          <div class="mains-col-title">Chez l'enfant en particulier</div>
+          <div class="mains-item">Après les toilettes</div>
+          <div class="mains-item">Avant de manger</div>
+          <div class="mains-item">Après avoir joué avec des jouets partagés</div>
+          <div class="mains-item">Après avoir touché un animal</div>
+          <div class="mains-item">Après avoir joué dehors</div>
+        </div>
+        <div class="mains-technique">
+          <strong>Technique :</strong> Eau + savon liquide · 30 secondes · Frotter ongles, paumes, dos des mains, jointures, poignets · Sécher avec serviette propre.<br>
+          <span style="color:var(--red);font-weight:700">⚠ Solution hydroalcoolique à proscrire chez l'enfant.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- POSTURE PROFESSIONNELLE -->
+    <div class="section-title">Posture professionnelle face aux familles</div>
+    <div class="posture-grid">
+      <div class="posture-card">
+        <div class="posture-card-title"><span>🎯</span> La juste distance</div>
+        <ul>
+          <li>Répondre aux besoins de l'enfant ET aux attentes du parent</li>
+          <li>Identifier ce qui relève de la sécurité vs des préférences</li>
+          <li>S'appuyer sur les recommandations officielles (OMS, PNNS)</li>
+          <li>Savoir expliquer pourquoi on fait ce qu'on fait</li>
+        </ul>
+      </div>
+      <div class="posture-card">
+        <div class="posture-card-title"><span>💬</span> Communiquer avec les familles</div>
+        <ul>
+          <li>Utiliser des observations concrètes, pas des jugements</li>
+          <li><em>"J'ai remarqué que…"</em> plutôt que <em>"Il faut que…"</em></li>
+          <li>Reconnaître et accueillir les pratiques culturelles différentes</li>
+          <li>Mettre à distance son propre rapport à la nourriture</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- IDÉES REÇUES -->
+    <div class="section-title">Idées reçues à déconstruire</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:var(--red-light);border-radius:8px;padding:12px;border:1px solid #FECACA">
+        <div style="font-size:0.72rem;font-weight:700;color:#991B1B;margin-bottom:4px">❌ Idée reçue</div>
+        <div style="font-size:0.78rem;color:#7F1D1D;font-style:italic;">"On attrape froid parce qu'on n'a pas mis ses chaussettes"</div>
+      </div>
+      <div style="background:var(--green-light);border-radius:8px;padding:12px;border:1px solid #BBF7D0">
+        <div style="font-size:0.72rem;font-weight:700;color:#15803D;margin-bottom:4px">✅ La réalité</div>
+        <div style="font-size:0.78rem;color:#14532D">On contracte un virus. Le froid est un facteur aggravant, pas la cause. On ne "prend" pas froid.</div>
+      </div>
+      <div style="background:var(--red-light);border-radius:8px;padding:12px;border:1px solid #FECACA">
+        <div style="font-size:0.72rem;font-weight:700;color:#991B1B;margin-bottom:4px">❌ Idée reçue</div>
+        <div style="font-size:0.78rem;color:#7F1D1D;font-style:italic;">"Un enfant qui mange avec les doigts est mal élevé"</div>
+      </div>
+      <div style="background:var(--green-light);border-radius:8px;padding:12px;border:1px solid #BBF7D0">
+        <div style="font-size:0.72rem;font-weight:700;color:#15803D;margin-bottom:4px">✅ La réalité</div>
+        <div style="font-size:0.78rem;color:#14532D">C'est une exploration sensorielle normale. Dans de nombreuses cultures, c'est la norme. Ne pas réprimer.</div>
+      </div>
+    </div>
+
+    <!-- ERREURS -->
+    <div class="erreurs">
+      <div class="erreurs-title">🛑 Erreurs fréquentes à éviter</div>
+      <div class="erreurs-grid">
+        <div class="erreur-item">Imposer ses propres habitudes à l'enfant ou à la famille</div>
+        <div class="erreur-item">Utiliser le gel hydroalcoolique sur les enfants</div>
+        <div class="erreur-item">Juger les pratiques culturelles différentes des siennes</div>
+        <div class="erreur-item">Commencer la diversification avant 4 mois révolus</div>
+        <div class="erreur-item">Confondre préférence personnelle et pratique professionnelle</div>
+        <div class="erreur-item">Retarder la diversification au-delà de 6 mois</div>
+      </div>
+    </div>
+
+    <!-- CITATION -->
+    <div class="citation">
+      <p style="color:white;font-family:'Playfair Display',serif;font-size:0.93rem;font-style:italic;line-height:1.7;margin-bottom:6px">"Derrière chaque repas, chaque moment d'hygiène, il y a une relation. Une occasion de tisser du lien, de transmettre, de rassurer."</p>
+      <p style="color:rgba(255,255,255,0.5);font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase">David Bucari · Éducateur de jeunes enfants</p>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <div class="footer-left">
+      <strong style="color:white">Orevy</strong> · Plateforme Petite Enfance<br>
+      Formation : Nourrir et protéger · Alimentation & Hygiène
+    </div>
+    <div class="footer-right">
+      David Bucari · Éducateur de jeunes enfants<br>
+      Formateur petite enfance
+    </div>
+  </div>
+
+</div>
+
+<div class="print-btn no-print" style="margin-bottom:32px">
+  <button onclick="window.print()">🖨 Imprimer / Sauvegarder en PDF</button>
+</div>
+
+</body>
+</html>
