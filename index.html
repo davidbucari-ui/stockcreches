@@ -1314,6 +1314,9 @@ textarea { resize: vertical; min-height: 72px; }
             <button class="f-tab-alim active" onclick="showSeq('alim',1,this)" style="background:#D4922A;color:#fff;border:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer">🥦 Module 1</button>
             <button class="f-tab-alim" onclick="showSeq('alim',2,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">🧼 Module 2</button>
             <button class="f-tab-alim" onclick="showSeq('alim',3,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">🌱 Module 3</button>
+            <button class="f-tab-alim" onclick="showSeq('alim',4,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📝 Quiz 1</button>
+            <button class="f-tab-alim" onclick="showSeq('alim',5,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📝 Quiz 2</button>
+            <button class="f-tab-alim" onclick="showSeq('alim',6,this)" style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-weight:600;font-size:0.82rem;cursor:pointer">📝 Quiz 3</button>
           </div>
 
           <div id="alim-seq-content" style="background:var(--surface2);border-radius:16px;padding:28px;box-shadow:var(--shadow)"></div>
@@ -7344,6 +7347,30 @@ function getAlimContent(num) {
 
       ${erreurBlock(['Imposer ses propres habitudes alimentaires à l\'enfant ou à la famille','Juger les pratiques culturelles différentes des siennes','Confondre hygiène professionnelle obligatoire et préférences personnelles','Éviter d\'aborder les sujets sensibles avec les familles par peur du conflit'])}
       ${reflexionBlock('Pensez à une situation récente où les pratiques d\'une famille vous ont questionné. Était-ce une question de sécurité ou de valeurs personnelles ? Comment avez-vous réagi ?')}
+    `,
+    4: `
+      <div style="margin-bottom:24px">
+        <span style="background:#D4922A20;color:#B97A20;font-size:0.72rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 14px;border-radius:20px">Quiz Module 1 · 10 questions</span>
+        <h2 style="font-family:'Syne',sans-serif;font-size:1.3rem;margin:14px 0 6px">Évaluation — L'alimentation</h2>
+        <p style="color:var(--ink3);font-size:0.88rem">Seuil de réussite : 7/10 pour obtenir l'attestation partielle</p>
+      </div>
+      <div id="quiz-alim1-container">${buildQuiz('alim1', quizAlim1)}</div>
+    `,
+    5: `
+      <div style="margin-bottom:24px">
+        <span style="background:#D4922A20;color:#B97A20;font-size:0.72rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 14px;border-radius:20px">Quiz Module 2 · 10 questions</span>
+        <h2 style="font-family:'Syne',sans-serif;font-size:1.3rem;margin:14px 0 6px">Évaluation — L'hygiène</h2>
+        <p style="color:var(--ink3);font-size:0.88rem">Seuil de réussite : 7/10 pour obtenir l'attestation partielle</p>
+      </div>
+      <div id="quiz-alim2-container">${buildQuiz('alim2', quizAlim2)}</div>
+    `,
+    6: `
+      <div style="margin-bottom:24px">
+        <span style="background:#D4922A20;color:#B97A20;font-size:0.72rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 14px;border-radius:20px">Quiz Module 3 · 10 questions</span>
+        <h2 style="font-family:'Syne',sans-serif;font-size:1.3rem;margin:14px 0 6px">Évaluation — Ma posture professionnelle</h2>
+        <p style="color:var(--ink3);font-size:0.88rem">Seuil de réussite : 7/10 · Ce quiz valide l'ensemble du parcours</p>
+      </div>
+      <div id="quiz-alim3-container">${buildQuiz('alim3', quizAlim3)}</div>
     `
   };
   return modules[num] || '';
@@ -7420,6 +7447,45 @@ const quizJeu = [
   { q: "Quelle phrase valorise le mieux l'effort d'un enfant ?", choices: ["'Bravo, tu as fait la plus belle tour !'","'Tu es vraiment doué !'","'C'est bien, mais tu pourrais faire mieux'","'Tu as essayé plusieurs fois, tu n'as pas abandonné !'"], answer: 3, feedback: "Valoriser le processus plutôt que le résultat développe la motivation intrinsèque — le principe du growth mindset." }
 ];
 
+const quizAlim1 = [
+  { q: "À partir de quel âge minimum peut-on commencer la diversification alimentaire ?", choices: ["3 mois","4 mois révolus","6 mois","8 mois"], answer: 1, feedback: "La diversification ne doit pas commencer avant 4 mois révolus. Elle ne doit pas non plus être retardée au-delà de 6 mois, même chez les enfants à risque allergique." },
+  { q: "Quelle est la répartition idéale des macronutriments dans l'alimentation du jeune enfant ?", choices: ["30% protides, 40% lipides, 30% glucides","15% protides, 30-35% lipides, 50-55% glucides","20% protides, 20% lipides, 60% glucides","10% protides, 50% lipides, 40% glucides"], answer: 1, feedback: "L'équilibre alimentaire repose sur 15% de protides, 30-35% de lipides et 50-55% de glucides. Il s'obtient en variant les aliments, pas en calculant chaque repas." },
+  { q: "Un enfant de 18 mois mange avec les doigts. Que faire ?", choices: ["Le reprendre immédiatement","Ignorer ce comportement","Laisser faire — c'est une exploration sensorielle normale","Retirer l'assiette jusqu'à ce qu'il utilise la cuillère"], answer: 2, feedback: "Manger avec les doigts est une étape normale du développement. C'est une exploration sensorielle qui développe la motricité fine et l'autonomie. Ne pas réprimer." },
+  { q: "Le repas chez le jeune enfant est avant tout :", choices: ["Un moment d'apprentissage des bonnes manières","Un acte purement nutritionnel","Un moment de performance à évaluer","Un moment de lien, d'attachement et de découverte sensorielle"], answer: 3, feedback: "L'alimentation est un événement social et affectif majeur. Elle nourrit le corps mais aussi la relation. Le repas est une occasion de tisser du lien et de rassurer." },
+  { q: "Quelle affirmation sur la diversification est correcte ?", choices: ["Il faut attendre que l'enfant réclame","Le lait seul ne couvre plus les besoins après 6 mois","La diversification peut commencer dès 2 mois","Les enfants à risque allergique doivent attendre 12 mois"], answer: 1, feedback: "Après 6 mois, le lait seul ne suffit plus à couvrir les besoins en fer, zinc et autres nutriments essentiels." },
+  { q: "La relation alimentaire entre 0 et 3 mois est caractérisée par :", choices: ["L'apprentissage des goûts","La découverte des textures","L'autorégulation et la construction de la confiance","L'introduction des aliments solides"], answer: 2, feedback: "Entre 0 et 3 mois, l'enfant est dans une phase d'autorégulation. Répondre à ses signaux construit la confiance et les bases d'une relation saine à la nourriture." },
+  { q: "Une famille donne à son enfant des aliments différents de vos habitudes. Quelle est la bonne posture ?", choices: ["Refuser catégoriquement","Accepter sans rien dire","Juger les habitudes de la famille","Distinguer sécurité de l'enfant et préférences culturelles"], answer: 3, feedback: "La juste distance consiste à protéger l'enfant quand sa sécurité est en jeu, tout en respectant les pratiques familiales qui ne le mettent pas en danger." },
+  { q: "L'alimentation peut-elle être utilisée comme récompense ou punition ?", choices: ["Oui, c'est efficace","Oui pour les récompenses seulement","Non — cela crée un rapport problématique à la nourriture","Oui avec modération"], answer: 2, feedback: "Utiliser la nourriture comme récompense ou punition crée des associations émotionnelles néfastes. C'est une douce violence qui peut engendrer des troubles alimentaires." },
+  { q: "Quel est le rôle du professionnel pendant le repas ?", choices: ["S'assurer que l'enfant finit son assiette","Corriger les mauvaises habitudes familiales","Gérer plusieurs enfants sans s'attarder","Être présent, attentif, répondre aux signaux de l'enfant"], answer: 3, feedback: "Le repas en structure doit reproduire la qualité du lien que l'enfant vit à la maison. Présence, attention, réponse aux besoins — c'est cela qui fait du repas un moment de développement." },
+  { q: "'Finis ton assiette, il y a des enfants qui meurent de faim' est :", choices: ["Une façon légitime de sensibiliser","Un rappel utile","Une douce violence qui culpabilise l'enfant","Une phrase anodine"], answer: 2, feedback: "Cette phrase culpabilise l'enfant pour quelque chose dont il n'est pas responsable et l'empêche d'apprendre à gérer ses quantités selon ses vrais signaux de faim." }
+];
+
+const quizAlim2 = [
+  { q: "Pourquoi contracte-t-on un rhume ?", choices: ["Parce qu'on a eu froid","Parce qu'on n'a pas mis ses chaussettes","Parce qu'on a été en contact avec un virus","Parce qu'on est sorti les cheveux mouillés"], answer: 2, feedback: "On contracte un rhume uniquement en étant exposé à un virus. Le froid est un facteur aggravant mais pas la cause. On ne 'prend' pas froid — on contracte un virus." },
+  { q: "Quelle est la durée recommandée pour un lavage des mains efficace ?", choices: ["5 secondes","15 secondes","30 secondes","1 minute"], answer: 2, feedback: "30 secondes de friction avec du savon liquide sont nécessaires pour éliminer efficacement les germes. Il faut frotter paumes, dos des mains, ongles, jointures et poignets." },
+  { q: "Quelle est la Journée Mondiale du lavage des mains ?", choices: ["1er avril","15 septembre","15 octobre","1er novembre"], answer: 2, feedback: "La Journée Mondiale du lavage des mains est célébrée chaque année le 15 octobre. Elle vise à sensibiliser à cette mesure d'hygiène simple mais essentielle." },
+  { q: "Quand un enfant doit-il se laver les mains en priorité ?", choices: ["Uniquement après les toilettes","Seulement avant les repas","Après les toilettes, avant de manger, après avoir toussé, après avoir joué dehors","Une fois par jour le matin"], answer: 2, feedback: "Le lavage des mains chez l'enfant doit intervenir dans de nombreuses situations : après les toilettes, avant de manger, après avoir toussé, joué dehors ou touché un animal." },
+  { q: "Peut-on utiliser du gel hydroalcoolique à la place du savon chez l'enfant ?", choices: ["Oui, c'est plus pratique","Oui si on n'a pas accès à de l'eau","Oui pour les enfants de plus de 3 ans","Non — le gel hydroalcoolique est à proscrire chez l'enfant"], answer: 3, feedback: "Le gel hydroalcoolique est contre-indiqué chez l'enfant. Il peut être ingéré accidentellement et est irritant pour la peau. Le lavage à l'eau et au savon reste la seule méthode recommandée." },
+  { q: "Un enfant éternue sans se couvrir la bouche. Quelle est la meilleure réponse ?", choices: ["Le gronder devant les autres","Ignorer — c'est normal","Lui montrer le geste du coude de façon ludique et positive","L'isoler immédiatement"], answer: 2, feedback: "Les gestes d'hygiène s'apprennent progressivement. Montrer le geste, l'expliquer simplement, le valoriser quand il est bien fait — sans honte ni punition." },
+  { q: "Qu'est-ce qui permet réellement à notre corps de ne pas tomber malade ?", choices: ["Éviter le froid et l'humidité","Manger beaucoup de vitamine C","Un système immunitaire fonctionnel qui combat les agents pathogènes","Se laver les mains une fois par jour"], answer: 2, feedback: "C'est le système immunitaire qui décide si on contracte une maladie. Les gestes d'hygiène réduisent l'exposition aux agents pathogènes mais ne remplacent pas l'immunité." },
+  { q: "Comment rendre le lavage des mains attractif pour un enfant de 2 ans ?", choices: ["Le forcer en expliquant les microbes","Le laisser faire seul","Utiliser des menaces","En faire un jeu, chanter une comptine de 30 secondes"], answer: 3, feedback: "Transformer le lavage des mains en rituel ludique est beaucoup plus efficace que la contrainte. L'enfant intègre mieux ce qu'il fait avec plaisir." },
+  { q: "Renouveler régulièrement l'air d'une salle est utile pour :", choices: ["Éviter les mauvaises odeurs uniquement","Réduire la chaleur en été","Diminuer la concentration de virus et bactéries dans l'air","Ce n'est pas nécessaire si la pièce est propre"], answer: 2, feedback: "La ventilation régulière réduit significativement la concentration de micro-organismes dans l'air. C'est l'une des mesures barrières les plus simples et les plus efficaces." },
+  { q: "Enseigner les gestes d'hygiène aux enfants, c'est :", choices: ["Les traumatiser avec la peur des microbes","Une contrainte inutile avant 3 ans","Uniquement le rôle des parents","Leur donner des outils pour prendre soin d'eux-mêmes et construire leur autonomie"], answer: 3, feedback: "Les gestes d'hygiène sont des apprentissages fondamentaux pour l'autonomie et la santé. Le professionnel a un rôle clé dans leur transmission — c'est un cadeau pour la vie." }
+];
+
+const quizAlim3 = [
+  { q: "Qu'est-ce que la 'juste distance éducative' dans l'alimentation ?", choices: ["Imposer les habitudes de la structure","Ne jamais intervenir sur les pratiques familiales","Distinguer sécurité de l'enfant et préférences culturelles","Appliquer strictement les recommandations sans contexte"], answer: 2, feedback: "La juste distance consiste à protéger l'enfant quand sa sécurité est en jeu, tout en respectant les pratiques familiales qui ne le mettent pas en danger." },
+  { q: "Une famille a des pratiques alimentaires culturellement différentes des vôtres. Quelle posture ?", choices: ["Expliquer que ces pratiques ne sont pas adaptées","Accepter sans rien dire même si cela vous dérange","En parler au responsable pour les interdire","Accueillir avec bienveillance, sauf si l'enfant est en danger"], answer: 3, feedback: "Les pratiques alimentaires font partie de l'identité familiale et de l'enfant. Les accueillir avec respect, c'est aussi respecter l'enfant dans sa globalité." },
+  { q: "Pourquoi connaître son propre rapport à la nourriture est-il important professionnellement ?", choices: ["Pour conseiller les familles sur leur alimentation","Pour mieux contrôler les repas","Pour éviter de projeter ses propres habitudes sur l'enfant","Ce n'est pas utile professionnellement"], answer: 2, feedback: "Chacun porte une histoire alimentaire personnelle. Sans en prendre conscience, on peut influencer l'enfant négativement. Un professionnel qui se connaît protège l'enfant de ses projections." },
+  { q: "Quelle phrase illustre une communication bienveillante avec une famille ?", choices: ["'Votre enfant ne mange pas bien, il faut changer ses habitudes.'","'Dans notre structure on ne fait pas comme ça.'","'Il faut absolument diversifier maintenant.'","'J'ai remarqué que Lucas mange mieux quand il peut tenir sa cuillère seul.'"], answer: 3, feedback: "Partir d'une observation concrète plutôt que d'un jugement ouvre le dialogue. Les faits rassemblent, les injonctions divisent." },
+  { q: "Un parent demande de forcer son enfant à finir son assiette. Que faites-vous ?", choices: ["Vous obéissez — c'est le souhait du parent","Vous refusez sèchement","Vous ignorez la demande","Vous expliquez calmement pourquoi c'est contre-productif, tout en cherchant un compromis"], answer: 3, feedback: "Votre rôle est de protéger le bien-être de l'enfant, y compris face aux demandes des familles qui pourraient lui nuire — mais avec pédagogie et bienveillance, pas dans l'affrontement." },
+  { q: "Ce qui différencie une pratique professionnelle d'une habitude personnelle, c'est :", choices: ["La pratique professionnelle est toujours plus efficace","L'habitude vient de la formation initiale","La pratique peut être expliquée et repose sur des références pédagogiques","Il n'y a pas de différence"], answer: 2, feedback: "Si vous ne pouvez pas expliquer pourquoi vous faites quelque chose, c'est peut-être une habitude plutôt qu'une pratique professionnelle. Se poser cette question est un signe de maturité." },
+  { q: "L'alimentation en structure est régie par :", choices: ["Les préférences du professionnel","Les souhaits des familles uniquement","Un cadre légal et des recommandations officielles (OMS, PNNS)","Les habitudes locales et régionales"], answer: 2, feedback: "Le Programme National Nutrition Santé (PNNS) et les recommandations de l'OMS constituent le cadre de référence pour appuyer vos pratiques face aux familles." },
+  { q: "Un enfant refuse catégoriquement un aliment. La meilleure réaction est :", choices: ["Le forcer — il doit apprendre à tout manger","Supprimer définitivement cet aliment","Le gronder","Respecter le refus et continuer à proposer régulièrement sans pression"], answer: 3, feedback: "La néophobie alimentaire est normale entre 2 et 6 ans. Il faut parfois présenter un aliment 10 à 15 fois avant qu'un enfant l'accepte. La pression crée des aversions durables." },
+  { q: "Comment aborder une pratique d'hygiène préoccupante avec une famille ?", choices: ["Envoyer un message écrit impersonnel","En parler devant d'autres parents","Attendre que le problème s'aggrave","En tête à tête, avec des observations concrètes et sans jugement"], answer: 3, feedback: "Les sujets sensibles demandent du tact. Un moment privé, des faits observés, un ton bienveillant — c'est ce qui permet à la famille de s'ouvrir plutôt que de se défendre." },
+  { q: "La bientraitance dans le cadre de l'alimentation et de l'hygiène, c'est :", choices: ["Tout accepter sans poser de cadre","Appliquer des règles strictes sans explication","Faire exactement ce que les parents demandent","Répondre aux besoins de l'enfant avec bienveillance, dans le respect de sa famille"], answer: 3, feedback: "La bientraitance n'est pas l'absence de cadre — c'est la façon dont on répond aux besoins de l'enfant. Elle est à la fois exigeante et douce, professionnelle et humaine." }
+];
+
 function buildQuiz(id, questions) {
   return `
     <div id="quiz-${id}-questions">
@@ -7451,7 +7517,7 @@ const quizAnswers = {};
 function answerQuiz(id, qIdx, aIdx) {
   if (!quizAnswers[id]) quizAnswers[id] = {};
   quizAnswers[id][qIdx] = aIdx;
-  const questions = id === 'jeu' ? quizJeu : [];
+  const questions = id === 'jeu' ? quizJeu : id === 'alim1' ? quizAlim1 : id === 'alim2' ? quizAlim2 : quizAlim3;
   document.querySelectorAll(`[id^="btn-${id}-${qIdx}-"]`).forEach((btn, j) => {
     btn.style.borderColor = j === aIdx ? 'var(--accent)' : 'var(--border)';
     btn.style.background = j === aIdx ? 'var(--accent-lt)' : 'var(--surface2)';
@@ -7460,9 +7526,11 @@ function answerQuiz(id, qIdx, aIdx) {
 }
 
 function submitQuiz(id) {
-  const questions = id === 'jeu' ? quizJeu : [];
+  const questions = id === 'jeu' ? quizJeu : id === 'alim1' ? quizAlim1 : id === 'alim2' ? quizAlim2 : quizAlim3;
   const answers = quizAnswers[id] || {};
   let score = 0;
+  const activeColor = id === 'jeu' ? '#7B9E87' : '#D4922A';
+  const activeGradient = id === 'jeu' ? 'linear-gradient(135deg,#7B9E87,#5A7A65)' : 'linear-gradient(135deg,#D4922A,#B97A20)';
 
   questions.forEach((q, i) => {
     const userAnswer = answers[i];
@@ -7490,25 +7558,50 @@ function submitQuiz(id) {
 
   document.getElementById(`btn-submit-${id}`).style.display = 'none';
 
-  const pct = Math.round(score / questions.length * 100);
   const pass = score >= 7;
+  const titres = { jeu: '"Il ne fait que jouer…" — Le jeu libre', alim1: 'Nourrir et protéger — Module 1 : L\'alimentation', alim2: 'Nourrir et protéger — Module 2 : L\'hygiène', alim3: 'Nourrir et protéger — Module 3 : Ma posture professionnelle' };
   const result = document.getElementById(`quiz-${id}-result`);
   result.style.display = 'block';
   result.innerHTML = `
     <div style="font-size:3rem;margin-bottom:16px">${pass ? '🏅' : '📖'}</div>
-    <div style="font-size:2rem;font-weight:800;font-family:'Syne',sans-serif;color:${pass ? 'var(--green)' : 'var(--amber)'};margin-bottom:8px">${score} / ${questions.length}</div>
-    <div style="font-size:1rem;font-weight:700;margin-bottom:12px;color:${pass ? 'var(--green)' : 'var(--amber)'}">${pass ? '✅ Félicitations !' : '📚 Continuez !'}</div>
+    <div style="font-size:2rem;font-weight:800;font-family:'Syne',sans-serif;color:${pass ? '#7B9E87' : '#D4922A'};margin-bottom:8px">${score} / ${questions.length}</div>
+    <div style="font-size:1rem;font-weight:700;margin-bottom:12px;color:${pass ? '#7B9E87' : '#D4922A'}">${pass ? '✅ Félicitations !' : '📚 Continuez !'}</div>
     <p style="font-size:0.88rem;color:var(--ink2);max-width:400px;margin:0 auto 20px;line-height:1.7">
-      ${pass ? 'Vous maîtrisez parfaitement les fondamentaux du jeu et du développement. Votre attestation est disponible !' : 'Relisez les feedbacks des questions manquées pour consolider vos acquis avant de retenter.'}
+      ${pass ? 'Excellent résultat ! Votre attestation est disponible.' : 'Relisez les feedbacks des questions manquées pour consolider vos acquis avant de retenter.'}
     </p>
-    ${pass ? `<button onclick="genererAttestation('${id}')" style="background:linear-gradient(135deg,#7B9E87,#5A7A65);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:0.88rem">🏅 Télécharger mon attestation</button>` : `<button onclick="document.getElementById('quiz-${id}-result').style.display='none';document.getElementById('quiz-${id}-questions').querySelectorAll('button[id^=btn]').forEach(b=>{b.dataset.answered='';b.style.background='var(--surface2)';b.style.borderColor='var(--border)';b.style.color='var(--ink)';b.style.fontWeight='400'});quizAnswers['${id}']={};document.getElementById('btn-submit-${id}').style.display='block';document.querySelectorAll('[id^=feedback-${id}]').forEach(f=>f.style.display='none')" style="background:var(--accent);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:0.88rem">🔄 Réessayer</button>`}
+    ${pass
+      ? `<button onclick="genererAttestation('${id}')" style="background:${activeGradient};color:#fff;border:none;padding:12px 28px;border-radius:10px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:0.88rem">🏅 Télécharger mon attestation</button>`
+      : `<button onclick="resetQuiz('${id}')" style="background:var(--accent);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:0.88rem">🔄 Réessayer</button>`
+    }
   `;
   result.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+function resetQuiz(id) {
+  document.getElementById(`quiz-${id}-result`).style.display = 'none';
+  document.querySelectorAll(`[id^="btn-${id}-"]`).forEach(b => {
+    if (b.id.startsWith(`btn-${id}-`) && b.id !== `btn-submit-${id}`) {
+      b.dataset.answered = '';
+      b.style.background = 'var(--surface2)';
+      b.style.borderColor = 'var(--border)';
+      b.style.color = 'var(--ink)';
+      b.style.fontWeight = '400';
+    }
+  });
+  quizAnswers[id] = {};
+  document.getElementById(`btn-submit-${id}`).style.display = 'block';
+  document.querySelectorAll(`[id^="feedback-${id}"]`).forEach(f => f.style.display = 'none');
+}
+
 function genererAttestation(id) {
   const date = new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
-  const titre = id === 'jeu' ? '"Il ne fait que jouer…" — Le jeu libre' : 'Nourrir et protéger';
+  const titres = {
+    jeu: '"Il ne fait que jouer…" — Le jeu libre',
+    alim1: 'Nourrir et protéger — Module 1 : L\'alimentation',
+    alim2: 'Nourrir et protéger — Module 2 : L\'hygiène',
+    alim3: 'Nourrir et protéger — Module 3 : Ma posture professionnelle'
+  };
+  const titre = titres[id] || 'Formation petite enfance';
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Attestation</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@400;700&display=swap" rel="stylesheet">
