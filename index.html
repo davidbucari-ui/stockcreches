@@ -3687,31 +3687,40 @@ function logoutUser() {
 
 async function checkSession() {
   if (IS_LOCAL) { hideLoginScreen(); startApp(); return; }
-  // Laisser le login visible au minimum 300ms avant toute décision
-  const minDelay = new Promise(r => setTimeout(r, 300));
+
   const token = localStorage.getItem('sb_token');
-  if (token) {
-    try {
-      const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
-        headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token }
-      });
-      if (res.ok) {
-        currentUser = await res.json();
-        if (currentUser && currentUser.id) {
-          hideLoginScreen();
-          const btnLogout = document.getElementById('btn-logout');
-          if (btnLogout) btnLogout.style.display = 'flex';
-          startApp();
-          return;
-        }
-      }
-      localStorage.removeItem('sb_token');
-    } catch(e) {
-      localStorage.removeItem('sb_token');
-    }
+
+  // Pas de token → afficher le login directement, rien d'autre à faire
+  if (!token) {
+    showLoginScreen();
+    return;
   }
-  await minDelay;
+
+  // Token présent → vérifier sa validité silencieusement en arrière-plan
+  // Le login reste visible pendant la vérification
   showLoginScreen();
+
+  try {
+    const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (res.ok) {
+      currentUser = await res.json();
+      if (currentUser && currentUser.id) {
+        // Token valide → connexion silencieuse
+        hideLoginScreen();
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) btnLogout.style.display = 'flex';
+        startApp();
+        return;
+      }
+    }
+    // Token invalide → le supprimer, le login reste visible
+    localStorage.removeItem('sb_token');
+  } catch(e) {
+    // Erreur réseau → supprimer le token, le login reste visible
+    localStorage.removeItem('sb_token');
+  }
 }
 
 function showLoginScreen() {
@@ -7009,6 +7018,7 @@ function showImportResult(type, html) {
       <div>
         <label style="font-size:12px;font-weight:600;color:#44403C;display:block;margin-bottom:5px">Email</label>
         <input type="email" id="login-email" placeholder="votre@email.com"
+          autocomplete="username"
           style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #E7E5E0;font-size:14px;outline:none;font-family:'Instrument Sans',sans-serif"
           onfocus="this.style.borderColor='#6366F1'" onblur="this.style.borderColor='#E7E5E0'"
           onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
@@ -7016,6 +7026,7 @@ function showImportResult(type, html) {
       <div>
         <label style="font-size:12px;font-weight:600;color:#44403C;display:block;margin-bottom:5px">Mot de passe</label>
         <input type="password" id="login-password" placeholder="••••••••"
+          autocomplete="current-password"
           style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #E7E5E0;font-size:14px;outline:none;font-family:'Instrument Sans',sans-serif"
           onfocus="this.style.borderColor='#6366F1'" onblur="this.style.borderColor='#E7E5E0'"
           onkeydown="if(event.key==='Enter')loginUser()">
