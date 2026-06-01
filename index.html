@@ -895,6 +895,9 @@ textarea { resize: vertical; min-height: 72px; }
     <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="openScanner()">
       📷 Scanner un code-barres
     </button>
+    <button id="btn-logout" class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px;display:none;color:var(--ink3)" onclick="logoutUser()">
+      🚪 Déconnexion
+    </button>
   </div>
 </aside>
 
@@ -3676,8 +3679,16 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── AUTHENTIFICATION SUPABASE ─────────────────────────────────────
 let currentUser = null;
 
+function logoutUser() {
+  if (!confirm('Se déconnecter ?')) return;
+  localStorage.removeItem('sb_token');
+  location.reload();
+}
+
 async function checkSession() {
   if (IS_LOCAL) { hideLoginScreen(); startApp(); return; }
+  // Laisser le login visible au minimum 300ms avant toute décision
+  const minDelay = new Promise(r => setTimeout(r, 300));
   const token = localStorage.getItem('sb_token');
   if (token) {
     try {
@@ -3686,10 +3697,20 @@ async function checkSession() {
       });
       if (res.ok) {
         currentUser = await res.json();
-        if (currentUser && currentUser.id) { hideLoginScreen(); startApp(); return; }
+        if (currentUser && currentUser.id) {
+          hideLoginScreen();
+          const btnLogout = document.getElementById('btn-logout');
+          if (btnLogout) btnLogout.style.display = 'flex';
+          startApp();
+          return;
+        }
       }
-    } catch(e) {}
+      localStorage.removeItem('sb_token');
+    } catch(e) {
+      localStorage.removeItem('sb_token');
+    }
   }
+  await minDelay;
   showLoginScreen();
 }
 
@@ -3722,6 +3743,8 @@ async function loginUser() {
     localStorage.setItem('sb_token', data.access_token);
     currentUser = data.user;
     hideLoginScreen();
+    const btnLogout = document.getElementById('btn-logout');
+    if (btnLogout) btnLogout.style.display = 'flex';
     startApp();
   } catch(e) {
     showLoginError(e.message);
