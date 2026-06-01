@@ -873,42 +873,17 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item" onclick="window.open('notice.html','_blank')">
     <span class="nav-icon">📖</span> Notice d'utilisation
   </button>
+  <button class="nav-item" onclick="showPage('parametres', this)">
+    <span class="nav-icon">⚙️</span> Paramètres
+  </button>
 
   <div class="sidebar-section-title">Structures</div>
-  <div class="creche-badge active" onclick="filterCreche('all', this)">
-    <span class="creche-dot" style="background:#6366F1"></span>
-    <span class="creche-name">Toutes les crèches</span>
-    <span class="creche-count" id="cnt-all">0</span>
-  </div>
-  <div class="creche-badge" onclick="filterCreche('Brunet', this)">
-    <span class="creche-dot" style="background:#F59E0B"></span>
-    <span class="creche-name">Brunet</span>
-    <span class="creche-count" id="cnt-0">0</span>
-  </div>
-  <div class="creche-badge" onclick="filterCreche('Cuers', this)">
-    <span class="creche-dot" style="background:#10B981"></span>
-    <span class="creche-name">Cuers</span>
-    <span class="creche-count" id="cnt-1">0</span>
-  </div>
-  <div class="creche-badge" onclick="filterCreche('Ollioules', this)">
-    <span class="creche-dot" style="background:#EF4444"></span>
-    <span class="creche-name">Ollioules</span>
-    <span class="creche-count" id="cnt-2">0</span>
-  </div>
-  <div class="creche-badge" onclick="filterCreche('St Jean', this)">
-    <span class="creche-dot" style="background:#8B5CF6"></span>
-    <span class="creche-name">St Jean</span>
-    <span class="creche-count" id="cnt-3">0</span>
-  </div>
-  <div class="creche-badge" onclick="filterCreche('Picot 1', this)">
-    <span class="creche-dot" style="background:#0EA5E9"></span>
-    <span class="creche-name">Picot 1</span>
-    <span class="creche-count" id="cnt-4">0</span>
-  </div>
-  <div class="creche-badge" onclick="filterCreche('Picot 2', this)">
-    <span class="creche-dot" style="background:#F43F5E"></span>
-    <span class="creche-name">Picot 2</span>
-    <span class="creche-count" id="cnt-5">0</span>
+  <div id="sidebar-creches-container">
+    <div class="creche-badge active" onclick="filterCreche('all', this)">
+      <span class="creche-dot" style="background:#6366F1"></span>
+      <span class="creche-name">Toutes les crèches</span>
+      <span class="creche-count" id="cnt-all">0</span>
+    </div>
   </div>
 
   <div class="sidebar-creches">
@@ -1045,6 +1020,22 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
 
     <!-- ── PAGE INVENTAIRE ── -->
+    <div id="page-parametres" style="display:none">
+      <div style="padding:28px 24px;max-width:640px">
+        <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:4px">⚙️ Paramètres</div>
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:28px">Gérez les structures de votre réseau</div>
+
+        <!-- Liste des crèches -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Structures</div>
+        <div id="param-creches-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
+
+        <!-- Bouton ajouter -->
+        <button onclick="ajouterCreche()" style="background:var(--surface);border:2px dashed var(--border);border-radius:14px;padding:14px;width:100%;font-size:14px;color:var(--ink3);cursor:pointer;font-family:inherit;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink3)'">
+          + Ajouter une structure
+        </button>
+      </div>
+    </div>
+
     <div id="page-inventaire" style="display:none">
 
       <!-- STATS -->
@@ -1886,8 +1877,31 @@ const IS_LOCAL = (typeof location !== 'undefined') &&
 
 // ─── DATA ─────────────────────────────────────────────────────────────────
 
-const CRECHES = ['Brunet', 'Cuers', 'Ollioules', 'St Jean', 'Picot 1', 'Picot 2'];
-const CRECHE_COLORS = { 'Brunet': '#F59E0B', 'Cuers': '#10B981', 'Ollioules': '#EF4444', 'St Jean': '#8B5CF6', 'Picot 1': '#0EA5E9', 'Picot 2': '#F43F5E' };
+const CRECHES_DEFAUT = [
+  { nom: 'Crèche 1', color: '#F59E0B' },
+  { nom: 'Crèche 2', color: '#10B981' },
+  { nom: 'Crèche 3', color: '#EF4444' },
+  { nom: 'Crèche 4', color: '#8B5CF6' },
+  { nom: 'Crèche 5', color: '#0EA5E9' },
+  { nom: 'Crèche 6', color: '#F43F5E' },
+];
+let CRECHES_DATA = [];
+try {
+  const saved = localStorage.getItem('koala_creches');
+  CRECHES_DATA = saved ? JSON.parse(saved) : CRECHES_DEFAUT;
+} catch { CRECHES_DATA = CRECHES_DEFAUT; }
+
+// Rétro-compat : migration anciens noms vers nouveaux
+const OLD_NAMES = { 'Brunet':'Crèche 1','Cuers':'Crèche 2','Ollioules':'Crèche 3','St Jean':'Crèche 4','Picot 1':'Crèche 5','Picot 2':'Crèche 6' };
+
+let CRECHES = CRECHES_DATA.map(c => c.nom);
+let CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
+
+function sauverCreches() {
+  localStorage.setItem('koala_creches', JSON.stringify(CRECHES_DATA));
+  CRECHES = CRECHES_DATA.map(c => c.nom);
+  CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
+}
 const CAT_ICONS = { 'Sensoriel':'👂','Manipulation':'🤲','Construction':'🧱','Motricité':'🏃','Imitation':'🎭','Expression artistique':'🎨','Mobilier':'🪑','Puériculture':'🍼','Bureautique':'💻','Rangement':'🗂' };
 
 let ARTICLES = [
@@ -3009,6 +3023,80 @@ function renderHub() {
     dateEl.textContent = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   }
 }
+
+// ── PARAMÈTRES ────────────────────────────────────────────────────
+function renderParametres() {
+  const list = document.getElementById('param-creches-list');
+  if (!list) return;
+  list.innerHTML = CRECHES_DATA.map((c, i) => `
+    <div style="background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px">
+      <div style="width:32px;height:32px;border-radius:50%;background:${c.color};flex-shrink:0;cursor:pointer" onclick="document.getElementById('color-picker-${i}').click()" title="Changer la couleur"></div>
+      <input type="color" id="color-picker-${i}" value="${c.color}" style="display:none" onchange="changerCouleur(${i}, this.value)">
+      <input type="text" value="${c.nom}" id="creche-nom-${i}"
+        style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;background:var(--bg)"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+        onchange="changerNom(${i}, this.value)">
+      <button onclick="supprimerCreche(${i})" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:18px;padding:4px" title="Supprimer">🗑</button>
+    </div>`).join('');
+}
+
+function changerNom(i, val) {
+  const ancien = CRECHES_DATA[i].nom;
+  CRECHES_DATA[i].nom = val.trim() || ancien;
+  // Mettre à jour les articles existants
+  ARTICLES.forEach(a => { if (a.creche === ancien) a.creche = CRECHES_DATA[i].nom; });
+  UNIVERS.forEach(u => { if (u.creche === ancien) u.creche = CRECHES_DATA[i].nom; });
+  sauverCreches();
+  sauverLocal();
+  renderSidebarCreches();
+  showNotif('✅ Structure renommée');
+}
+
+function changerCouleur(i, color) {
+  CRECHES_DATA[i].color = color;
+  sauverCreches();
+  renderParametres();
+  renderSidebarCreches();
+  showNotif('✅ Couleur mise à jour');
+}
+
+function ajouterCreche() {
+  const n = CRECHES_DATA.length + 1;
+  CRECHES_DATA.push({ nom: `Crèche ${n}`, color: '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0') });
+  sauverCreches();
+  renderParametres();
+  renderSidebarCreches();
+  showNotif('✅ Structure ajoutée');
+}
+
+function supprimerCreche(i) {
+  if (CRECHES_DATA.length <= 1) { showNotif('⚠ Impossible — au moins une structure requise'); return; }
+  if (!confirm(`Supprimer "${CRECHES_DATA[i].nom}" ?`)) return;
+  CRECHES_DATA.splice(i, 1);
+  sauverCreches();
+  renderParametres();
+  renderSidebarCreches();
+  showNotif('🗑 Structure supprimée');
+}
+
+function renderSidebarCreches() {
+  const container = document.getElementById('sidebar-creches-container');
+  if (!container) return;
+  container.innerHTML =
+    `<div class="creche-badge ${currentCreche === 'all' ? 'active' : ''}" onclick="selectCreche('all', this)" style="border-left-color:var(--accent)">
+      <span class="creche-dot" style="background:var(--accent)"></span>
+      <span class="creche-name">Toutes les crèches</span>
+      <span class="creche-count">${ARTICLES.length}</span>
+    </div>` +
+    CRECHES_DATA.map(c =>
+      `<div class="creche-badge ${currentCreche === c.nom ? 'active' : ''}" onclick="selectCreche('${c.nom}', this)" style="border-left-color:${c.color}">
+        <span class="creche-dot" style="background:${c.color}"></span>
+        <span class="creche-name">${c.nom}</span>
+        <span class="creche-count">${ARTICLES.filter(a => a.creche === c.nom).length}</span>
+      </div>`
+    ).join('');
+}
+// ── FIN PARAMÈTRES ────────────────────────────────────────────────
 // ── FIN HUB ───────────────────────────────────────────────────────
 let dashCharts = {};
 
@@ -3223,6 +3311,9 @@ function init() {
 
   // Charger depuis localStorage (cache)
   loadLocalData();
+
+  // Sidebar créches dynamique
+  renderSidebarCreches();
 
   // Interface immédiate
   renderTable(); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique();
@@ -4196,6 +4287,7 @@ function showPage(page, btn) {
   if (page === 'entretien') { renderEntretien(); }
   if (page === 'historique') { renderHistorique(); }
   if (page === 'inventaire') { renderTable(); renderStats(); }
+  if (page === 'parametres') { renderParametres(); }
 }
 
 function showTab(tab, btn) {
