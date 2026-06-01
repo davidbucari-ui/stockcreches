@@ -3677,7 +3677,7 @@ document.addEventListener('DOMContentLoaded', () => {
 let currentUser = null;
 
 async function checkSession() {
-  if (IS_LOCAL) { startApp(); return; }
+  if (IS_LOCAL) { hideLoginScreen(); startApp(); return; }
   const token = localStorage.getItem('sb_token');
   if (token) {
     try {
@@ -3686,7 +3686,7 @@ async function checkSession() {
       });
       if (res.ok) {
         currentUser = await res.json();
-        if (currentUser && currentUser.id) { startApp(); return; }
+        if (currentUser && currentUser.id) { hideLoginScreen(); startApp(); return; }
       }
     } catch(e) {}
   }
@@ -3762,7 +3762,6 @@ function showLoginError(msg) {
 }
 
 function startApp() {
-  hideLoginScreen();
   const token = localStorage.getItem('sb_token');
   if (token && !IS_LOCAL) SUPA_HEADERS['Authorization'] = 'Bearer ' + token;
   appliquerPrefs();
