@@ -928,7 +928,7 @@ function patchFormationsPage() {
 // Surcharge de showPage pour déclencher le catalogue au bon moment
 const _origShowPage = typeof showPage === 'function' ? showPage : null;
 function showPage(page, btn) {
-  if (_origShowPage) _origShowPage(page, btn);
+ if (_origShowPage && showPage !== _origShowPage) _origShowPage(page, btn);
   if (page === 'formations') {
     setTimeout(() => renderFormationsCatalogue(), 50);
   }
