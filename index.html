@@ -5891,7 +5891,7 @@ let SUPA_RH_HEADERS = {
 // Tables hébergées dans le projet RH — routage automatique dans les helpers
 const RH_TABLES = new Set([
   'utilisateurs','recrutements','contrats','conges',
-  'formations_rh','documents_rh','stagiaires'
+  'formations_rh','documents_rh','stagiaires','planning'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
