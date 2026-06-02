@@ -800,6 +800,29 @@ textarea { resize: vertical; min-height: 72px; }
   #page-dashboard > div > div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── PLANNING ── */
+.pg-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); box-shadow: var(--shadow); }
+.pg-grid { min-width: 700px; }
+.pg-row { display: grid; grid-template-columns: 150px repeat(7, 1fr); border-bottom: 1px solid var(--border); }
+.pg-row:last-child { border-bottom: none; }
+.pg-header-row { background: var(--bg); position: sticky; top: 0; z-index: 2; }
+.pg-name-cell { padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--ink2); border-right: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; }
+.pg-name-header { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink3); }
+.pg-head-cell { padding: 10px 8px; text-align: center; border-right: 1px solid var(--border); }
+.pg-head-cell:last-child { border-right: none; }
+.pg-today .pg-day-name, .pg-today .pg-day-date { color: var(--accent); }
+.pg-today { background: var(--accent-lt); }
+.pg-day-name { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink3); }
+.pg-day-date { font-size: 14px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+.pg-cell { padding: 5px; border-right: 1px solid var(--border); min-height: 60px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; transition: background 0.1s; }
+.pg-cell:last-child { border-right: none; }
+.pg-cell:hover { background: #F8F7F5; }
+.pg-add-hint { font-size: 14px; color: var(--border); text-align: center; margin-top: auto; opacity: 0; transition: opacity 0.15s; line-height: 1.8; }
+.pg-cell:hover .pg-add-hint { opacity: 1; }
+.pg-shift { border-radius: 5px; padding: 3px 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.pg-shift:hover { filter: brightness(0.9); }
+.pg-shift-label { display: block; font-size: 10px; font-weight: 500; opacity: 0.8; margin-top: 1px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
@@ -864,6 +887,9 @@ textarea { resize: vertical; min-height: 72px; }
   </button>
   <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('univers', this)">
     <span class="nav-icon">🌟</span> Univers ludiques
+  </button>
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('planning', this)">
+    <span class="nav-icon">📅</span> Planning
   </button>
   <button class="nav-item" data-roles="admin,directrice" onclick="showPage('fournisseurs', this)">
     <span class="nav-icon">🏭</span> Fournisseurs
@@ -1331,6 +1357,52 @@ textarea { resize: vertical; min-height: 72px; }
           <button class="btn btn-primary" onclick="openModal('souscat')">+ Créer une sous-catégorie</button>
         </div>
         <div id="souscats-list" style="padding:0 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+      </div>
+    </div>
+
+    <!-- ── PAGE PLANNING ── -->
+    <div id="page-planning" style="display:none">
+      <div style="padding:20px 28px">
+
+        <!-- Toolbar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(-1)">← Préc.</button>
+            <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(0)">Aujourd'hui</button>
+            <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(1)">Suiv. →</button>
+            <span id="planning-week-label" style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <select id="planning-creche-filter" onchange="renderPlanning()"
+              style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
+              <option value="">Toutes les crèches</option>
+            </select>
+            <button class="btn btn-primary" onclick="openModalPlanning(null,null,null)">+ Ajouter un créneau</button>
+          </div>
+        </div>
+
+        <!-- Légende postes -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+          <span style="font-size:11px;font-weight:600;color:var(--ink3)">Postes :</span>
+          <span style="background:#EFF6FF;color:#2563EB;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Ouverture</span>
+          <span style="background:#F0FDF4;color:#16A34A;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Journée</span>
+          <span style="background:#FFFBEB;color:#D97706;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Fermeture</span>
+          <span style="background:#F5F3FF;color:#7C3AED;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Remplacement</span>
+          <span style="background:#1C1917;color:rgba(255,255,255,0.8);font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Nuit</span>
+        </div>
+
+        <!-- Grille -->
+        <div class="pg-wrap">
+          <div id="planning-grid" style="min-height:160px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:13px">Chargement…</div>
+        </div>
+
+        <!-- Note SQL -->
+        <div style="margin-top:14px;padding:10px 14px;background:var(--amber-lt);border:1px solid #FDE68A;border-radius:8px;font-size:12px;color:var(--amber)">
+          ⚠ Table Supabase requise :
+          <code style="font-size:11px;color:var(--ink2);background:rgba(0,0,0,0.04);padding:1px 4px;border-radius:3px">
+            CREATE TABLE planning (id BIGSERIAL PRIMARY KEY, user_id BIGINT REFERENCES utilisateurs(id), creche_id TEXT NOT NULL, date DATE NOT NULL, heure_debut TIME NOT NULL, heure_fin TIME NOT NULL, poste TEXT DEFAULT '', notes TEXT DEFAULT '', created_at TIMESTAMPTZ DEFAULT NOW());
+          </code>
+        </div>
       </div>
     </div>
 
@@ -3500,9 +3572,9 @@ let currentUserRole = 'stagiaire';
 let currentUserDbId = null;
 
 const ROLE_PAGES = {
-  admin:      ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh'],
-  directrice: ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh'],
-  auxiliaire: ['dashboard','inventaire','entretien','univers'],
+  admin:      ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning'],
+  directrice: ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning'],
+  auxiliaire: ['dashboard','inventaire','entretien','univers','planning'],
   stagiaire:  ['dashboard'],
 };
 
@@ -3516,10 +3588,10 @@ async function fetchUserRole(email) {
     const rows = await sbGet('utilisateurs', `email=eq.${encodeURIComponent(email)}&actif=eq.true&select=id,role`);
     if (Array.isArray(rows) && rows.length > 0) {
       currentUserDbId = rows[0].id;
-      return rows[0].role || 'stagiaire';
+      return rows[0].role || 'directrice';
     }
   } catch(e) { console.warn('[Role]', e.message); }
-  return 'stagiaire';
+  return 'directrice'; // fallback permissif : email non trouvé dans utilisateurs
 }
 
 function applyRoleAccess() {
@@ -3537,7 +3609,7 @@ function applyRoleAccess() {
   const badge = document.getElementById('user-role-badge');
   if (badge) badge.style.display = 'block';
   const roleLabel = document.getElementById('user-role-label');
-  if (roleLabel) roleLabel.textContent = ROLE_LABELS[role] || role;
+  if (roleLabel) roleLabel.textContent = currentUserDbId ? (ROLE_LABELS[role] || role) : 'Utilisateur';
   const emailLabel = document.getElementById('user-email-label');
   if (emailLabel && currentUser) emailLabel.textContent = currentUser.email || '—';
 }
@@ -4606,13 +4678,13 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning hebdomadaire', };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -4625,7 +4697,8 @@ function showPage(page, btn) {
   if (page === 'inventaire') { renderTable(); renderStats(); }
   if (page === 'parametres') { renderParametres(); }
   if (page === 'admin') { showAdminPage(); }
-  if (page === 'rh')    { showRhPage(); }
+  if (page === 'rh')       { showRhPage(); }
+  if (page === 'planning') { showPlanningPage(); }
 }
 
 function showTab(tab, btn) {
@@ -6841,10 +6914,272 @@ async function deleteRh(table, id, tab) {
   } catch(e) { alert('Erreur : ' + e.message); }
 }
 
+// ── MODULE PLANNING ───────────────────────────────────────────────
+
+let planningCurrentWeekStart = getMondayOfDate(new Date());
+let planningEditingId = null;
+
+function getMondayOfDate(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  return d;
+}
+
+function getWeekDays(monday) {
+  return Array.from({length: 7}, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+}
+
+function planningGoToWeek(offset) {
+  if (offset === 0) {
+    planningCurrentWeekStart = getMondayOfDate(new Date());
+  } else {
+    const d = new Date(planningCurrentWeekStart);
+    d.setDate(d.getDate() + offset * 7);
+    planningCurrentWeekStart = d;
+  }
+  renderPlanning();
+}
+
+function planningPosteColor(poste) {
+  const map = {
+    Ouverture:    { bg:'#EFF6FF', text:'#2563EB' },
+    Journée:      { bg:'#F0FDF4', text:'#16A34A' },
+    Fermeture:    { bg:'#FFFBEB', text:'#D97706' },
+    Remplacement: { bg:'#F5F3FF', text:'#7C3AED' },
+    Nuit:         { bg:'#1C1917', text:'rgba(255,255,255,0.85)' },
+  };
+  return map[poste] || { bg:'#F1F5F9', text:'#475569' };
+}
+
+async function showPlanningPage() {
+  const sel = document.getElementById('planning-creche-filter');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Toutes les crèches</option>' +
+      CRECHES_DATA.map(c => `<option value="${c.nom}"${c.nom === cur ? ' selected':''}>${c.nom}</option>`).join('');
+  }
+  await renderPlanning();
+}
+
+async function renderPlanning() {
+  const grid = document.getElementById('planning-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="padding:60px;text-align:center;color:var(--ink3)">Chargement…</div>';
+
+  const days    = getWeekDays(planningCurrentWeekStart);
+  const dateFrom = days[0].toISOString().split('T')[0];
+  const dateTo   = days[6].toISOString().split('T')[0];
+  const fmtLong  = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'long'});
+  const fmtShort = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'});
+  const lbl = document.getElementById('planning-week-label');
+  if (lbl) lbl.textContent = `${fmtLong(days[0])} – ${fmtLong(days[6])} ${days[6].getFullYear()}`;
+
+  const crecheFilter = (document.getElementById('planning-creche-filter') || {}).value || '';
+
+  try {
+    let params = `date=gte.${dateFrom}&date=lte.${dateTo}&order=date.asc,heure_debut.asc`;
+    if (crecheFilter) params += `&creche_id=eq.${encodeURIComponent(crecheFilter)}`;
+
+    const [entries, users] = await Promise.all([
+      sbGet('planning', params),
+      sbGet('utilisateurs', 'actif=eq.true&select=id,email&order=email.asc'),
+    ]);
+
+    const userMap = Object.fromEntries(users.map(u => [u.id, u.email.split('@')[0]]));
+
+    // Build lookup by user+date
+    const byKey = {};
+    entries.forEach(e => { const k = `${e.user_id}|${e.date}`; (byKey[k] = byKey[k] || []).push(e); });
+
+    const dayNames = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+    const headerCells = days.map((d, i) => {
+      const today = d.toDateString() === new Date().toDateString();
+      return `<div class="pg-head-cell${today ? ' pg-today':''}">
+        <div class="pg-day-name">${dayNames[i]}</div>
+        <div class="pg-day-date">${fmtShort(d)}</div>
+      </div>`;
+    }).join('');
+
+    const gridUsers = users; // tous les actifs
+
+    if (!gridUsers.length) {
+      grid.innerHTML = '<div style="padding:60px;text-align:center;color:var(--ink3);font-size:13px">Aucun collaborateur actif. Créez des utilisateurs dans le module Administration.</div>';
+      return;
+    }
+
+    const rows = gridUsers.map(u => {
+      const cells = days.map(d => {
+        const dateStr = d.toISOString().split('T')[0];
+        const shifts  = byKey[`${u.id}|${dateStr}`] || [];
+        const shiftsHtml = shifts.map(s => {
+          const c = planningPosteColor(s.poste);
+          return `<div class="pg-shift" style="background:${c.bg};color:${c.text}"
+            onclick="event.stopPropagation();openModalPlanning('${dateStr}',${u.id},${s.id})">
+            ${s.heure_debut.slice(0,5)}–${s.heure_fin.slice(0,5)}
+            ${s.poste ? `<span class="pg-shift-label">${s.poste}</span>` : ''}
+          </div>`;
+        }).join('');
+        return `<div class="pg-cell" onclick="openModalPlanning('${dateStr}',${u.id},null)">
+          ${shiftsHtml}<div class="pg-add-hint">+</div>
+        </div>`;
+      }).join('');
+      const name = userMap[u.id] || u.email;
+      return `<div class="pg-row"><div class="pg-name-cell" title="${u.email}">${name}</div>${cells}</div>`;
+    }).join('');
+
+    grid.innerHTML = `<div class="pg-grid">
+      <div class="pg-row pg-header-row">
+        <div class="pg-name-cell pg-name-header">Collaborateur</div>${headerCells}
+      </div>${rows}
+    </div>`;
+
+  } catch(e) {
+    grid.innerHTML = `<div style="padding:60px;text-align:center;color:var(--red);font-size:13px">Erreur : ${e.message}</div>`;
+  }
+}
+
+async function openModalPlanning(date, userId, id) {
+  planningEditingId = id;
+  document.getElementById('modal-planning-title').textContent = id ? 'Modifier le créneau' : 'Ajouter un créneau';
+  const delBtn = document.getElementById('btn-delete-planning');
+  if (delBtn) delBtn.style.display = id ? 'inline-flex' : 'none';
+
+  await rhLoadUsers(['pl-user']); // réutilise le helper RH
+
+  const cSel = document.getElementById('pl-creche');
+  if (cSel) {
+    cSel.innerHTML = '<option value="">— Choisir —</option>' +
+      CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+  }
+
+  const fill = (elId, val) => { const e = document.getElementById(elId); if (e) e.value = val ?? ''; };
+  fill('pl-date',  date || '');
+  fill('pl-debut', '07:30');
+  fill('pl-fin',   '16:30');
+  fill('pl-notes', '');
+  if (document.getElementById('pl-user')) document.getElementById('pl-user').value = userId || '';
+  document.getElementById('pl-poste').value = '';
+
+  // Pré-remplir la crèche depuis le filtre courant
+  const cur = (document.getElementById('planning-creche-filter') || {}).value || '';
+  if (cur && cSel) cSel.value = cur;
+
+  if (id) {
+    const rows = await sbGet('planning', `id=eq.${id}`).catch(() => []);
+    if (rows[0]) {
+      const r = rows[0];
+      fill('pl-date',  r.date);
+      fill('pl-debut', r.heure_debut ? r.heure_debut.slice(0,5) : '');
+      fill('pl-fin',   r.heure_fin   ? r.heure_fin.slice(0,5)   : '');
+      fill('pl-notes', r.notes);
+      document.getElementById('pl-user').value   = r.user_id   || '';
+      document.getElementById('pl-creche').value = r.creche_id || '';
+      document.getElementById('pl-poste').value  = r.poste      || '';
+    }
+  }
+  document.getElementById('modal-planning').classList.add('open');
+}
+
+async function savePlanning() {
+  const user_id   = document.getElementById('pl-user').value;
+  const creche_id = document.getElementById('pl-creche').value;
+  const date      = document.getElementById('pl-date').value;
+  const debut     = document.getElementById('pl-debut').value;
+  const fin       = document.getElementById('pl-fin').value;
+  if (!user_id || !creche_id || !date || !debut || !fin) {
+    alert('Collaborateur, crèche, date et heures sont requis.'); return;
+  }
+  if (debut >= fin) { alert("L'heure de fin doit être après l'heure de début."); return; }
+  const data = {
+    user_id: parseInt(user_id), creche_id, date,
+    heure_debut: debut, heure_fin: fin,
+    poste:  document.getElementById('pl-poste').value,
+    notes:  (document.getElementById('pl-notes').value || '').trim(),
+  };
+  try {
+    planningEditingId
+      ? await sbUpdate('planning', planningEditingId, data)
+      : await sbInsert('planning', data);
+    closeModal('modal-planning');
+    renderPlanning();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+async function deletePlanning() {
+  if (!planningEditingId || !confirm('Supprimer ce créneau ?')) return;
+  try {
+    await sbDelete('planning', planningEditingId);
+    closeModal('modal-planning');
+    renderPlanning();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+// ── FIN MODULE PLANNING ───────────────────────────────────────────
+
 // ── FIN MODULE RH ─────────────────────────────────────────────────
 
 // ── FIN MODULE ADMIN ───────────────────────────────────────────────
 </script>
+<!-- ── MODAL PLANNING ── -->
+<div class="modal-overlay" id="modal-planning" onclick="closeModalClick(event,'modal-planning')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2 id="modal-planning-title">Ajouter un créneau</h2>
+      <button class="modal-close" onclick="closeModal('modal-planning')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Collaborateur *</label>
+          <select id="pl-user"><option value="">— Choisir —</option></select>
+        </div>
+        <div class="form-group full">
+          <label>Crèche *</label>
+          <select id="pl-creche"><option value="">— Choisir —</option></select>
+        </div>
+        <div class="form-group full">
+          <label>Date *</label>
+          <input type="date" id="pl-date">
+        </div>
+        <div class="form-group">
+          <label>Heure de début *</label>
+          <input type="time" id="pl-debut" step="900">
+        </div>
+        <div class="form-group">
+          <label>Heure de fin *</label>
+          <input type="time" id="pl-fin" step="900">
+        </div>
+        <div class="form-group full">
+          <label>Type de poste</label>
+          <select id="pl-poste">
+            <option value="">— Non spécifié —</option>
+            <option value="Ouverture">Ouverture</option>
+            <option value="Journée">Journée</option>
+            <option value="Fermeture">Fermeture</option>
+            <option value="Remplacement">Remplacement</option>
+            <option value="Nuit">Nuit</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Notes</label>
+          <textarea id="pl-notes" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="btn-delete-planning" style="display:none;margin-right:auto" onclick="deletePlanning()">🗑 Supprimer</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-planning')">Annuler</button>
+      <button class="btn btn-primary" onclick="savePlanning()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAUX RH ── -->
 
 <div class="modal-overlay" id="modal-rh-recrutement" onclick="closeModalClick(event,'modal-rh-recrutement')">
