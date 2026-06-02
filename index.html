@@ -1407,22 +1407,22 @@ textarea { resize: vertical; min-height: 72px; }
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-label">Employés actifs</div>
-            <div class="stat-value" id="rh-stat-employes">—</div>
+            <div class="stat-value" id="rh-stat-employes">0</div>
             <div class="stat-sub">dans la table utilisateurs</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Congés en attente</div>
-            <div class="stat-value" id="rh-stat-conges">—</div>
+            <div class="stat-value" id="rh-stat-conges">0</div>
             <div class="stat-sub">à valider</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Postes ouverts</div>
-            <div class="stat-value" id="rh-stat-recru">—</div>
+            <div class="stat-value" id="rh-stat-recru">0</div>
             <div class="stat-sub">recrutements actifs</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Formations à renouveler</div>
-            <div class="stat-value" id="rh-stat-formations">—</div>
+            <div class="stat-value" id="rh-stat-formations">0</div>
             <div class="stat-sub">dans les 90 prochains jours</div>
           </div>
         </div>
@@ -6592,20 +6592,25 @@ function showRhTab(tab, btn) {
 }
 
 async function renderRhStats() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   try {
     const today = new Date().toISOString().split('T')[0];
     const d90 = new Date(); d90.setDate(d90.getDate() + 90);
     const d90str = d90.toISOString().split('T')[0];
     const [users, conges, recru, formations] = await Promise.all([
-      sbGet('utilisateurs', 'actif=eq.true&select=id'),
+      sbGet('utilisateurs', 'actif=eq.true&role=neq.admin&select=id'),
       sbGet('conges', 'statut=eq.en_attente&select=id'),
       sbGet('recrutements', 'statut=eq.ouvert&select=id'),
       sbGet('formations_rh', `renouvellement=lte.${d90str}&renouvellement=gte.${today}&select=id`),
     ]);
-    const s = (v, id) => { const el = document.getElementById(id); if (el) el.textContent = Array.isArray(v) ? v.length : '—'; };
-    s(users, 'rh-stat-employes'); s(conges, 'rh-stat-conges');
-    s(recru, 'rh-stat-recru');   s(formations, 'rh-stat-formations');
-  } catch(e) { console.warn('[RH stats]', e.message); }
+    set('rh-stat-employes',   Array.isArray(users)      ? users.length      : 0);
+    set('rh-stat-conges',     Array.isArray(conges)     ? conges.length     : 0);
+    set('rh-stat-recru',      Array.isArray(recru)      ? recru.length      : 0);
+    set('rh-stat-formations', Array.isArray(formations) ? formations.length : 0);
+  } catch(e) {
+    console.warn('[RH stats]', e.message);
+    ['rh-stat-employes','rh-stat-conges','rh-stat-recru','rh-stat-formations'].forEach(id => set(id, 0));
+  }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
