@@ -853,30 +853,33 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 
   <div class="sidebar-section-title">Navigation</div>
-  <button class="nav-item active" onclick="showPage('dashboard', this)">
+  <button class="nav-item active" data-roles="admin,directrice,auxiliaire,stagiaire" onclick="showPage('dashboard', this)">
     <span class="nav-icon">🏠</span> Tableau de bord
   </button>
-  <button class="nav-item" onclick="showPage('inventaire', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('inventaire', this)">
     <span class="nav-icon">📦</span> Stocks pédagogiques
   </button>
-  <button class="nav-item" onclick="showPage('entretien', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('entretien', this)">
     <span class="nav-icon">🧹</span> Stocks entretien
   </button>
-  <button class="nav-item" onclick="showPage('univers', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('univers', this)">
     <span class="nav-icon">🌟</span> Univers ludiques
   </button>
-  <button class="nav-item" onclick="showPage('fournisseurs', this)">
+  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('fournisseurs', this)">
     <span class="nav-icon">🏭</span> Fournisseurs
   </button>
-  <button class="nav-item" onclick="showPage('statistiques', this)">
+  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('statistiques', this)">
     <span class="nav-icon">📊</span> Statistiques
     <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
-  <button class="nav-item" onclick="window.open('notice.html','_blank')">
+  <button class="nav-item" data-roles="admin,directrice" onclick="window.open('notice.html','_blank')">
     <span class="nav-icon">📖</span> Notice d'utilisation
   </button>
-  <button class="nav-item" onclick="showPage('parametres', this)">
+  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('parametres', this)">
     <span class="nav-icon">⚙️</span> Paramètres
+  </button>
+  <button class="nav-item" data-roles="admin" onclick="showPage('admin', this)">
+    <span class="nav-icon">🔐</span> Administration
   </button>
 
   <div class="sidebar-section-title">Structures</div>
@@ -895,6 +898,10 @@ textarea { resize: vertical; min-height: 72px; }
     <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="openScanner()">
       📷 Scanner un code-barres
     </button>
+    <div id="user-role-badge" style="display:none;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.06);margin-top:8px">
+      <div id="user-role-label" style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:2px">—</div>
+      <div id="user-email-label" style="font-size:12px;color:rgba(255,255,255,0.7);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div>
+    </div>
     <button id="btn-logout" class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px;display:none;color:var(--ink3)" onclick="logoutUser()">
       🚪 Déconnexion
     </button>
@@ -988,6 +995,15 @@ textarea { resize: vertical; min-height: 72px; }
             <div style="font-size:32px;margin-bottom:10px">🧹</div>
             <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Stocks entretien</div>
             <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Nettoyage · Désinfection · Hygiène</div>
+          </button>
+
+          <button id="dashboard-card-rh" onclick="showPage('rh', null)" style="display:none;background:linear-gradient(135deg,#1A3A2A,#0D6B4A);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(13,107,74,0.3);position:relative;overflow:hidden"
+            onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(13,107,74,0.45)'"
+            onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(13,107,74,0.3)'">
+            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">🧑‍💼</div>
+            <div style="font-size:32px;margin-bottom:10px">🧑‍💼</div>
+            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Ressources humaines</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Contrats · Congés · Recrutement · Formation</div>
           </button>
 
         </div>
@@ -1315,6 +1331,141 @@ textarea { resize: vertical; min-height: 72px; }
           <button class="btn btn-primary" onclick="openModal('souscat')">+ Créer une sous-catégorie</button>
         </div>
         <div id="souscats-list" style="padding:0 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+      </div>
+    </div>
+
+    <!-- ── PAGE RH ── -->
+    <div id="page-rh" style="display:none">
+      <div style="padding:24px 28px 0">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Employés actifs</div>
+            <div class="stat-value" id="rh-stat-employes">—</div>
+            <div class="stat-sub">dans la table utilisateurs</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Congés en attente</div>
+            <div class="stat-value" id="rh-stat-conges">—</div>
+            <div class="stat-sub">à valider</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Postes ouverts</div>
+            <div class="stat-value" id="rh-stat-recru">—</div>
+            <div class="stat-sub">recrutements actifs</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Formations à renouveler</div>
+            <div class="stat-value" id="rh-stat-formations">—</div>
+            <div class="stat-sub">dans les 90 prochains jours</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px 28px 0">
+        <div class="tabs" id="rh-tabs">
+          <button class="tab-btn active" onclick="showRhTab('recrutement',this)">🎯 Recrutement</button>
+          <button class="tab-btn" onclick="showRhTab('contrats',this)">📄 Contrats</button>
+          <button class="tab-btn" onclick="showRhTab('conges',this)">🌴 Congés</button>
+          <button class="tab-btn" onclick="showRhTab('formations',this)">🎓 Formation</button>
+        </div>
+      </div>
+      <div style="padding:0 28px 28px">
+        <div id="rh-tab-recrutement">
+          <div class="section-header" style="padding-top:20px">
+            <div class="section-title">🎯 Recrutements en cours</div>
+            <button class="btn btn-primary" onclick="openModalRh('recrutement')">+ Nouveau poste</button>
+          </div>
+          <div class="table-wrap"><div id="rh-recrutement-list"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div></div>
+        </div>
+        <div id="rh-tab-contrats" style="display:none">
+          <div class="section-header" style="padding-top:20px">
+            <div class="section-title">📄 Contrats</div>
+            <button class="btn btn-primary" onclick="openModalRh('contrat')">+ Nouveau contrat</button>
+          </div>
+          <div class="table-wrap"><div id="rh-contrats-list"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div></div>
+        </div>
+        <div id="rh-tab-conges" style="display:none">
+          <div class="section-header" style="padding-top:20px">
+            <div class="section-title">🌴 Congés</div>
+            <button class="btn btn-primary" onclick="openModalRh('conge')">+ Nouvelle demande</button>
+          </div>
+          <div class="table-wrap"><div id="rh-conges-list"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div></div>
+        </div>
+        <div id="rh-tab-formations" style="display:none">
+          <div class="section-header" style="padding-top:20px">
+            <div class="section-title">🎓 Formations</div>
+            <button class="btn btn-primary" onclick="openModalRh('formation')">+ Ajouter formation</button>
+          </div>
+          <div class="table-wrap"><div id="rh-formations-list"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PAGE ADMIN ── -->
+    <div id="page-admin" style="display:none">
+      <div style="padding:28px 24px;max-width:900px">
+        <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:4px">🔐 Administration</div>
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:28px">Gestion des comptes utilisateurs</div>
+
+        <!-- Formulaire créer un compte -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px">
+          <div style="font-size:15px;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:16px">➕ Créer un compte</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+              <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Email</label>
+              <input type="email" id="admin-new-email" placeholder="prenom.nom@creche.fr"
+                style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg)"
+                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Mot de passe temporaire</label>
+              <input type="text" id="admin-new-password" placeholder="Temp@2024"
+                style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg)"
+                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Rôle</label>
+              <select id="admin-new-role"
+                style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
+                <option value="directrice">🌸 Directrice</option>
+                <option value="auxiliaire">🌿 Auxiliaire</option>
+                <option value="stagiaire">🎓 Stagiaire</option>
+                <option value="admin">👑 Admin</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Crèche assignée</label>
+              <select id="admin-new-creche"
+                style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
+                <option value="">— Toutes les crèches —</option>
+              </select>
+            </div>
+          </div>
+          <div id="admin-create-error" style="display:none;background:var(--red-lt);border:1px solid #FECACA;border-radius:8px;padding:9px 12px;font-size:13px;color:var(--red);margin-bottom:12px"></div>
+          <div id="admin-create-success" style="display:none;background:var(--green-lt);border:1px solid #86EFAC;border-radius:8px;padding:9px 12px;font-size:13px;color:var(--green);margin-bottom:12px"></div>
+          <button class="btn btn-primary" onclick="createAdminUser()" id="admin-create-btn">Créer le compte</button>
+          <div style="margin-top:10px;font-size:11px;color:var(--ink3)">⚠ La confirmation email doit être désactivée dans Supabase → Authentication → Settings pour un accès immédiat.</div>
+        </div>
+
+        <!-- Liste des utilisateurs -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;overflow:hidden">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:15px;font-weight:700;font-family:'Syne',sans-serif">👥 Utilisateurs</div>
+            <button class="btn btn-secondary" onclick="renderAdminUsers()" style="font-size:12px;padding:6px 12px">🔄 Actualiser</button>
+          </div>
+          <div id="admin-users-list">
+            <div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Chargement…</div>
+          </div>
+        </div>
+
+        <!-- Journal des connexions -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+            <div style="font-size:15px;font-weight:700;font-family:'Syne',sans-serif">🕐 Dernières connexions</div>
+          </div>
+          <div id="admin-connexions-list">
+            <div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Chargement…</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -3345,6 +3496,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── AUTHENTIFICATION SUPABASE ─────────────────────────────────────
 let currentUser = null;
+let currentUserRole = 'stagiaire';
+let currentUserDbId = null;
+
+const ROLE_PAGES = {
+  admin:      ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh'],
+  directrice: ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh'],
+  auxiliaire: ['dashboard','inventaire','entretien','univers'],
+  stagiaire:  ['dashboard'],
+};
+
+const ROLE_LABELS = {
+  admin: '👑 Admin', directrice: '🌸 Directrice',
+  auxiliaire: '🌿 Auxiliaire', stagiaire: '🎓 Stagiaire',
+};
+
+async function fetchUserRole(email) {
+  try {
+    const rows = await sbGet('utilisateurs', `email=eq.${encodeURIComponent(email)}&actif=eq.true&select=id,role`);
+    if (Array.isArray(rows) && rows.length > 0) {
+      currentUserDbId = rows[0].id;
+      return rows[0].role || 'stagiaire';
+    }
+  } catch(e) { console.warn('[Role]', e.message); }
+  return 'stagiaire';
+}
+
+function applyRoleAccess() {
+  const role = currentUserRole;
+  document.querySelectorAll('.nav-item[data-roles]').forEach(btn => {
+    const roles = btn.getAttribute('data-roles').split(',');
+    btn.style.display = roles.includes(role) ? '' : 'none';
+  });
+  const allowed = ROLE_PAGES[role] || ['dashboard'];
+  if (typeof currentPage !== 'undefined' && !allowed.includes(currentPage)) {
+    showPage('dashboard', document.querySelector('.nav-item[data-roles]'));
+  }
+  const rhCard = document.getElementById('dashboard-card-rh');
+  if (rhCard) rhCard.style.display = ['admin','directrice'].includes(role) ? '' : 'none';
+  const badge = document.getElementById('user-role-badge');
+  if (badge) badge.style.display = 'block';
+  const roleLabel = document.getElementById('user-role-label');
+  if (roleLabel) roleLabel.textContent = ROLE_LABELS[role] || role;
+  const emailLabel = document.getElementById('user-email-label');
+  if (emailLabel && currentUser) emailLabel.textContent = currentUser.email || '—';
+}
 
 function logoutUser() {
   if (!confirm('Se déconnecter ?')) return;
@@ -3387,6 +3583,10 @@ async function loginUser() {
     if (!res.ok || !data.access_token) throw new Error(data.error_description || 'Email ou mot de passe incorrect');
     localStorage.setItem('sb_token', data.access_token);
     currentUser = data.user;
+    currentUserRole = await fetchUserRole(email);
+    if (currentUserDbId) {
+      sbUpdate('utilisateurs', currentUserDbId, { derniere_connexion: new Date().toISOString() }).catch(() => {});
+    }
     hideLoginScreen();
     const btnLogout = document.getElementById('btn-logout');
     if (btnLogout) btnLogout.style.display = 'flex';
@@ -3430,10 +3630,12 @@ function showLoginError(msg) {
 }
 
 function startApp() {
+  if (IS_LOCAL) currentUserRole = 'admin';
   const token = localStorage.getItem('sb_token');
   if (token && !IS_LOCAL) SUPA_HEADERS['Authorization'] = 'Bearer ' + token;
   appliquerPrefs();
   init();
+  applyRoleAccess();
 }
 // ── FIN AUTH ─────────────────────────────────────────────────────
 
@@ -4404,13 +4606,13 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -4422,6 +4624,8 @@ function showPage(page, btn) {
   if (page === 'historique') { renderHistorique(); }
   if (page === 'inventaire') { renderTable(); renderStats(); }
   if (page === 'parametres') { renderParametres(); }
+  if (page === 'admin') { showAdminPage(); }
+  if (page === 'rh')    { showRhPage(); }
 }
 
 function showTab(tab, btn) {
@@ -6126,7 +6330,717 @@ try {
     console.warn('[Init] Erreur mineure ignorée:', e.message);
   }
 }
+
+// ── MODULE ADMIN ───────────────────────────────────────────────────
+
+async function showAdminPage() {
+  // Peupler le select crèche
+  const sel = document.getElementById('admin-new-creche');
+  if (sel) {
+    sel.innerHTML = '<option value="">— Toutes les crèches —</option>';
+    CRECHES_DATA.forEach(c => {
+      sel.innerHTML += `<option value="${c.nom}">${c.nom}</option>`;
+    });
+  }
+  await renderAdminUsers();
+  await renderConnexionLog();
+}
+
+async function renderAdminUsers() {
+  const el = document.getElementById('admin-users-list');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Chargement…</div>';
+  try {
+    const users = await sbGet('utilisateurs', 'order=id.asc');
+    if (!users.length) {
+      el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Aucun utilisateur enregistré.</div>';
+      return;
+    }
+    const roleBadge = r => {
+      const colors = { admin:'var(--purple)', directrice:'var(--accent)', auxiliaire:'var(--green)', stagiaire:'var(--amber)' };
+      const labels = { admin:'👑 Admin', directrice:'🌸 Directrice', auxiliaire:'🌿 Auxiliaire', stagiaire:'🎓 Stagiaire' };
+      return `<span style="background:${colors[r]||'var(--ink3)'};color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">${labels[r]||r}</span>`;
+    };
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:var(--bg)">
+        ${['Email','Rôle','Crèche','Statut','Action'].map(h =>
+          `<th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">${h}</th>`
+        ).join('')}
+      </tr></thead>
+      <tbody>${users.map((u, i) => `
+        <tr style="border-bottom:1px solid var(--border);background:${i%2?'var(--bg)':'var(--surface)'}">
+          <td style="padding:12px 16px;font-size:13px">${u.email}</td>
+          <td style="padding:12px 16px">${roleBadge(u.role)}</td>
+          <td style="padding:12px 16px;font-size:13px;color:var(--ink2)">${u.creche_id||'—'}</td>
+          <td style="padding:12px 16px">
+            <span style="background:${u.actif?'var(--green-lt)':'var(--red-lt)'};color:${u.actif?'var(--green)':'var(--red)'};font-size:12px;font-weight:600;padding:2px 8px;border-radius:20px">
+              ${u.actif?'Actif':'Désactivé'}
+            </span>
+          </td>
+          <td style="padding:12px 16px">
+            <button class="btn btn-secondary" style="font-size:12px;padding:5px 10px;color:${u.actif?'var(--red)':'var(--green)'}"
+              onclick="toggleAdminUser(${u.id}, ${u.actif})">
+              ${u.actif?'Désactiver':'Réactiver'}
+            </button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);font-size:13px">Erreur : ${e.message}</div>`;
+  }
+}
+
+async function createAdminUser() {
+  const email    = (document.getElementById('admin-new-email').value || '').trim();
+  const password = (document.getElementById('admin-new-password').value || '').trim();
+  const role     = document.getElementById('admin-new-role').value;
+  const creche   = document.getElementById('admin-new-creche').value;
+  const errEl    = document.getElementById('admin-create-error');
+  const okEl     = document.getElementById('admin-create-success');
+  const btn      = document.getElementById('admin-create-btn');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Email et mot de passe requis.'; errEl.style.display = 'block'; return; }
+  if (password.length < 6) { errEl.textContent = 'Le mot de passe doit faire au moins 6 caractères.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = '⏳ Création…';
+  try {
+    const res = await fetch(`${SUPA_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || 'Erreur Auth Supabase');
+    await sbInsert('utilisateurs', { email, role, creche_id: creche || null, actif: true });
+    okEl.textContent = `✅ Compte créé pour ${email}. L'utilisateur peut se connecter dès maintenant.`;
+    okEl.style.display = 'block';
+    document.getElementById('admin-new-email').value = '';
+    document.getElementById('admin-new-password').value = '';
+    await renderAdminUsers();
+  } catch(e) {
+    errEl.textContent = '⚠ ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Créer le compte';
+  }
+}
+
+async function toggleAdminUser(id, currentActif) {
+  if (!confirm(`${currentActif ? 'Désactiver' : 'Réactiver'} ce compte ?`)) return;
+  try {
+    await sbUpdate('utilisateurs', id, { actif: !currentActif });
+    await renderAdminUsers();
+  } catch(e) {
+    alert('Erreur : ' + e.message);
+  }
+}
+
+async function renderConnexionLog() {
+  const el = document.getElementById('admin-connexions-list');
+  if (!el) return;
+  try {
+    const users = await sbGet('utilisateurs', 'order=derniere_connexion.desc.nullslast&limit=20&select=email,role,derniere_connexion');
+    if (!users.length) {
+      el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Aucune connexion enregistrée.</div>';
+      return;
+    }
+    const fmt = d => d ? new Date(d).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    const labels = { admin:'👑 Admin', directrice:'🌸 Directrice', auxiliaire:'🌿 Auxiliaire', stagiaire:'🎓 Stagiaire' };
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:var(--bg)">
+        ${['Email','Rôle','Dernière connexion'].map(h =>
+          `<th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">${h}</th>`
+        ).join('')}
+      </tr></thead>
+      <tbody>${users.map((u, i) => `
+        <tr style="border-bottom:1px solid var(--border);background:${i%2?'var(--bg)':'var(--surface)'}">
+          <td style="padding:11px 16px;font-size:13px">${u.email}</td>
+          <td style="padding:11px 16px;font-size:13px;color:var(--ink2)">${labels[u.role]||u.role||'—'}</td>
+          <td style="padding:11px 16px;font-size:13px;color:${u.derniere_connexion?'var(--ink)':'var(--ink3)'}">${fmt(u.derniere_connexion)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    el.innerHTML = `<div style="padding:16px 20px;font-size:12px;color:var(--ink3)">
+      Journal indisponible — ajoutez la colonne <code>derniere_connexion TIMESTAMPTZ</code> à la table <code>utilisateurs</code> dans Supabase.<br>
+      <code style="font-size:11px;color:var(--ink2)">ALTER TABLE utilisateurs ADD COLUMN derniere_connexion TIMESTAMPTZ;</code>
+    </div>`;
+  }
+}
+
+// ── MODULE RH ─────────────────────────────────────────────────────
+
+let rhCurrentTab = 'recrutement';
+let rhEditingRecrutement = null;
+let rhEditingContrat = null;
+let rhEditingConge = null;
+let rhEditingFormation = null;
+
+async function showRhPage() {
+  renderRhStats();
+  const tabOrder = ['recrutement','contrats','conges','formations'];
+  const idx = tabOrder.indexOf(rhCurrentTab);
+  const btn = document.querySelectorAll('#rh-tabs .tab-btn')[idx] || null;
+  showRhTab(rhCurrentTab, btn);
+}
+
+function showRhTab(tab, btn) {
+  rhCurrentTab = tab;
+  ['recrutement','contrats','conges','formations'].forEach(t => {
+    const el = document.getElementById(`rh-tab-${t}`);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('#rh-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tab === 'recrutement') renderRecrutements();
+  if (tab === 'contrats')    renderContrats();
+  if (tab === 'conges')      renderConges();
+  if (tab === 'formations')  renderFormations();
+}
+
+async function renderRhStats() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const d90 = new Date(); d90.setDate(d90.getDate() + 90);
+    const d90str = d90.toISOString().split('T')[0];
+    const [users, conges, recru, formations] = await Promise.all([
+      sbGet('utilisateurs', 'actif=eq.true&select=id'),
+      sbGet('conges', 'statut=eq.en_attente&select=id'),
+      sbGet('recrutements', 'statut=eq.ouvert&select=id'),
+      sbGet('formations_rh', `renouvellement=lte.${d90str}&renouvellement=gte.${today}&select=id`),
+    ]);
+    const s = (v, id) => { const el = document.getElementById(id); if (el) el.textContent = Array.isArray(v) ? v.length : '—'; };
+    s(users, 'rh-stat-employes'); s(conges, 'rh-stat-conges');
+    s(recru, 'rh-stat-recru');   s(formations, 'rh-stat-formations');
+  } catch(e) { console.warn('[RH stats]', e.message); }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────
+function rhBadge(text, cls) {
+  return `<span class="badge badge-${cls}">${text}</span>`;
+}
+function rhEmpty(msg) {
+  return `<div style="padding:40px;text-align:center;color:var(--ink3);font-size:13px">${msg}</div>`;
+}
+function rhTable(headers, rows) {
+  return `<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function isExpiringSoon(dateStr) {
+  if (!dateStr) return false;
+  const delta = (new Date(dateStr) - new Date()) / 86400000;
+  return delta >= 0 && delta <= 90;
+}
+
+const RH_TYPE_COLOR    = { CDI:'blue', CDD:'amber', Alternance:'purple', Stage:'green', Interim:'gray' };
+const RH_STATUT_RECRU  = { ouvert:'green', en_cours:'amber', pourvu:'blue', annule:'gray' };
+const RH_LABEL_RECRU   = { ouvert:'Ouvert', en_cours:'En cours', pourvu:'Pourvu', annule:'Annulé' };
+const RH_STATUT_CONGE  = { en_attente:'amber', approuve:'green', refuse:'red' };
+const RH_LABEL_CONGE   = { en_attente:'En attente', approuve:'Approuvé', refuse:'Refusé' };
+
+async function rhLoadUsers(selIds) {
+  try {
+    const users = await sbGet('utilisateurs', 'actif=eq.true&order=email.asc&select=id,email');
+    selIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const cur = el.value;
+      el.innerHTML = '<option value="">— Choisir un collaborateur —</option>' +
+        users.map(u => `<option value="${u.id}"${u.id == cur ? ' selected' : ''}>${u.email}</option>`).join('');
+    });
+  } catch(e) { console.warn('[RH users]', e.message); }
+}
+
+// ── Recrutement ──────────────────────────────────────────────────
+
+async function renderRecrutements() {
+  const el = document.getElementById('rh-recrutement-list');
+  if (!el) return;
+  el.innerHTML = rhEmpty('Chargement…');
+  try {
+    const rows = await sbGet('recrutements', 'order=id.desc');
+    if (!rows.length) { el.innerHTML = rhEmpty('Aucun recrutement. Cliquez sur "+ Nouveau poste".'); return; }
+    el.innerHTML = rhTable(
+      ['Poste', 'Type', 'Statut', 'Candidat', 'Entretien', 'Actions'],
+      rows.map(r => `<tr>
+        <td><div class="item-name">${r.poste}</div></td>
+        <td>${rhBadge(r.type_contrat, RH_TYPE_COLOR[r.type_contrat] || 'gray')}</td>
+        <td>${rhBadge(RH_LABEL_RECRU[r.statut] || r.statut, RH_STATUT_RECRU[r.statut] || 'gray')}</td>
+        <td><div>${r.candidat_nom || '—'}</div><div class="item-ref">${r.candidat_email || ''}</div></td>
+        <td>${fmtDate(r.date_entretien)}</td>
+        <td><div class="action-btns">
+          <button class="btn btn-secondary btn-sm" onclick="openModalRh('recrutement',${r.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRh('recrutements',${r.id},'recrutement')">🗑</button>
+        </div></td>
+      </tr>`)
+    );
+  } catch(e) { el.innerHTML = rhEmpty('Erreur : ' + e.message); }
+}
+
+async function saveRhRecrutement() {
+  const poste = (document.getElementById('rh-r-poste').value || '').trim();
+  if (!poste) { alert('Le poste est requis.'); return; }
+  const data = {
+    poste,
+    type_contrat:   document.getElementById('rh-r-type').value,
+    statut:         document.getElementById('rh-r-statut').value,
+    date_entretien: document.getElementById('rh-r-entretien').value || null,
+    candidat_nom:   (document.getElementById('rh-r-candidat-nom').value || '').trim(),
+    candidat_email: (document.getElementById('rh-r-candidat-email').value || '').trim(),
+    notes:          (document.getElementById('rh-r-notes').value || '').trim(),
+  };
+  try {
+    rhEditingRecrutement ? await sbUpdate('recrutements', rhEditingRecrutement, data) : await sbInsert('recrutements', data);
+    closeModal('modal-rh-recrutement');
+    renderRecrutements(); renderRhStats();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+// ── Contrats ─────────────────────────────────────────────────────
+
+async function renderContrats() {
+  const el = document.getElementById('rh-contrats-list');
+  if (!el) return;
+  el.innerHTML = rhEmpty('Chargement…');
+  try {
+    const [rows, users] = await Promise.all([
+      sbGet('contrats', 'order=id.desc'),
+      sbGet('utilisateurs', 'select=id,email'),
+    ]);
+    const uMap = Object.fromEntries(users.map(u => [u.id, u.email]));
+    if (!rows.length) { el.innerHTML = rhEmpty('Aucun contrat enregistré.'); return; }
+    el.innerHTML = rhTable(
+      ['Collaborateur', 'Poste', 'Type', 'Début', 'Fin', 'H/sem', 'Actions'],
+      rows.map(r => `<tr>
+        <td class="item-name">${uMap[r.user_id] || r.user_id}</td>
+        <td>${r.poste}</td>
+        <td>${rhBadge(r.type, RH_TYPE_COLOR[r.type] || 'gray')}</td>
+        <td>${fmtDate(r.date_debut)}</td>
+        <td>${fmtDate(r.date_fin)}</td>
+        <td>${r.temps_travail || '—'}</td>
+        <td><div class="action-btns">
+          <button class="btn btn-secondary btn-sm" onclick="openModalRh('contrat',${r.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRh('contrats',${r.id},'contrats')">🗑</button>
+        </div></td>
+      </tr>`)
+    );
+  } catch(e) { el.innerHTML = rhEmpty('Erreur : ' + e.message); }
+}
+
+async function saveRhContrat() {
+  const user_id    = document.getElementById('rh-c-user').value;
+  const poste      = (document.getElementById('rh-c-poste').value || '').trim();
+  const date_debut = document.getElementById('rh-c-debut').value;
+  if (!user_id || !poste || !date_debut) { alert('Collaborateur, poste et date de début requis.'); return; }
+  const data = {
+    user_id: parseInt(user_id), poste,
+    type:          document.getElementById('rh-c-type').value,
+    date_debut,
+    date_fin:      document.getElementById('rh-c-fin').value || null,
+    temps_travail: parseFloat(document.getElementById('rh-c-temps').value) || null,
+    notes:         (document.getElementById('rh-c-notes').value || '').trim(),
+  };
+  try {
+    rhEditingContrat ? await sbUpdate('contrats', rhEditingContrat, data) : await sbInsert('contrats', data);
+    closeModal('modal-rh-contrat');
+    renderContrats();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+// ── Congés ───────────────────────────────────────────────────────
+
+async function renderConges() {
+  const el = document.getElementById('rh-conges-list');
+  if (!el) return;
+  el.innerHTML = rhEmpty('Chargement…');
+  try {
+    const [rows, users] = await Promise.all([
+      sbGet('conges', 'order=date_debut.desc'),
+      sbGet('utilisateurs', 'select=id,email'),
+    ]);
+    const uMap = Object.fromEntries(users.map(u => [u.id, u.email]));
+    if (!rows.length) { el.innerHTML = rhEmpty('Aucun congé enregistré.'); return; }
+    el.innerHTML = rhTable(
+      ['Collaborateur', 'Type', 'Du', 'Au', 'Statut', 'Solde CP', 'Actions'],
+      rows.map(r => `<tr>
+        <td class="item-name">${uMap[r.user_id] || r.user_id}</td>
+        <td>${r.type}</td>
+        <td>${fmtDate(r.date_debut)}</td>
+        <td>${fmtDate(r.date_fin)}</td>
+        <td>${rhBadge(RH_LABEL_CONGE[r.statut] || r.statut, RH_STATUT_CONGE[r.statut] || 'gray')}</td>
+        <td>${r.solde_cp != null ? r.solde_cp + ' j' : '—'}</td>
+        <td><div class="action-btns">
+          <button class="btn btn-secondary btn-sm" onclick="openModalRh('conge',${r.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRh('conges',${r.id},'conges')">🗑</button>
+        </div></td>
+      </tr>`)
+    );
+  } catch(e) { el.innerHTML = rhEmpty('Erreur : ' + e.message); }
+}
+
+async function saveRhConge() {
+  const user_id    = document.getElementById('rh-g-user').value;
+  const date_debut = document.getElementById('rh-g-debut').value;
+  const date_fin   = document.getElementById('rh-g-fin').value;
+  if (!user_id || !date_debut || !date_fin) { alert('Collaborateur et dates requis.'); return; }
+  const data = {
+    user_id: parseInt(user_id),
+    type:     document.getElementById('rh-g-type').value,
+    statut:   document.getElementById('rh-g-statut').value,
+    date_debut, date_fin,
+    solde_cp: parseFloat(document.getElementById('rh-g-solde').value) || null,
+  };
+  try {
+    rhEditingConge ? await sbUpdate('conges', rhEditingConge, data) : await sbInsert('conges', data);
+    closeModal('modal-rh-conge');
+    renderConges(); renderRhStats();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+// ── Formations ───────────────────────────────────────────────────
+
+async function renderFormations() {
+  const el = document.getElementById('rh-formations-list');
+  if (!el) return;
+  el.innerHTML = rhEmpty('Chargement…');
+  try {
+    const [rows, users] = await Promise.all([
+      sbGet('formations_rh', 'order=date.desc'),
+      sbGet('utilisateurs', 'select=id,email'),
+    ]);
+    const uMap = Object.fromEntries(users.map(u => [u.id, u.email]));
+    if (!rows.length) { el.innerHTML = rhEmpty('Aucune formation enregistrée.'); return; }
+    el.innerHTML = rhTable(
+      ['Collaborateur', 'Formation', 'Date', 'Obligatoire', 'Renouvellement', 'Attestation', 'Actions'],
+      rows.map(r => `<tr>
+        <td class="item-name">${uMap[r.user_id] || r.user_id}</td>
+        <td>${r.titre}</td>
+        <td>${fmtDate(r.date)}</td>
+        <td>${r.obligatoire ? rhBadge('Obligatoire', 'red') : rhBadge('Facultative', 'gray')}</td>
+        <td style="color:${isExpiringSoon(r.renouvellement) ? 'var(--amber)' : 'inherit'}">${fmtDate(r.renouvellement)}</td>
+        <td>${r.attestation_url ? `<a href="${r.attestation_url}" target="_blank" style="color:var(--accent);font-size:12px">📎 Voir</a>` : '—'}</td>
+        <td><div class="action-btns">
+          <button class="btn btn-secondary btn-sm" onclick="openModalRh('formation',${r.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRh('formations_rh',${r.id},'formations')">🗑</button>
+        </div></td>
+      </tr>`)
+    );
+  } catch(e) { el.innerHTML = rhEmpty('Erreur : ' + e.message); }
+}
+
+async function saveRhFormation() {
+  const user_id = document.getElementById('rh-f-user').value;
+  const titre   = (document.getElementById('rh-f-titre').value || '').trim();
+  if (!user_id || !titre) { alert('Collaborateur et titre requis.'); return; }
+  const data = {
+    user_id: parseInt(user_id), titre,
+    date:            document.getElementById('rh-f-date').value || null,
+    renouvellement:  document.getElementById('rh-f-renouvellement').value || null,
+    attestation_url: (document.getElementById('rh-f-attestation').value || '').trim(),
+    obligatoire:     document.getElementById('rh-f-obligatoire').checked,
+  };
+  try {
+    rhEditingFormation ? await sbUpdate('formations_rh', rhEditingFormation, data) : await sbInsert('formations_rh', data);
+    closeModal('modal-rh-formation');
+    renderFormations(); renderRhStats();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+// ── openModalRh (dispatch + pré-remplissage) ─────────────────────
+
+async function openModalRh(type, id = null) {
+  const fill = (elId, val) => { const e = document.getElementById(elId); if (e) e.value = val ?? ''; };
+  if (type === 'recrutement') {
+    rhEditingRecrutement = id;
+    document.getElementById('modal-rh-recrutement-title').textContent = id ? 'Modifier le recrutement' : 'Nouveau poste';
+    fill('rh-r-poste',''); fill('rh-r-entretien',''); fill('rh-r-candidat-nom','');
+    fill('rh-r-candidat-email',''); fill('rh-r-notes','');
+    document.getElementById('rh-r-type').value = 'CDI';
+    document.getElementById('rh-r-statut').value = 'ouvert';
+    if (id) {
+      const rows = await sbGet('recrutements', `id=eq.${id}`).catch(() => []);
+      if (rows[0]) {
+        const r = rows[0];
+        fill('rh-r-poste', r.poste); fill('rh-r-candidat-nom', r.candidat_nom);
+        fill('rh-r-candidat-email', r.candidat_email); fill('rh-r-notes', r.notes);
+        fill('rh-r-entretien', r.date_entretien ? r.date_entretien.slice(0,16) : '');
+        document.getElementById('rh-r-type').value   = r.type_contrat || 'CDI';
+        document.getElementById('rh-r-statut').value = r.statut       || 'ouvert';
+      }
+    }
+    document.getElementById('modal-rh-recrutement').classList.add('open');
+  } else if (type === 'contrat') {
+    rhEditingContrat = id;
+    document.getElementById('modal-rh-contrat-title').textContent = id ? 'Modifier le contrat' : 'Nouveau contrat';
+    await rhLoadUsers(['rh-c-user']);
+    fill('rh-c-poste',''); fill('rh-c-debut',''); fill('rh-c-fin',''); fill('rh-c-temps',''); fill('rh-c-notes','');
+    document.getElementById('rh-c-type').value = 'CDI';
+    if (id) {
+      const rows = await sbGet('contrats', `id=eq.${id}`).catch(() => []);
+      if (rows[0]) {
+        const r = rows[0];
+        document.getElementById('rh-c-user').value  = r.user_id  || '';
+        document.getElementById('rh-c-type').value  = r.type     || 'CDI';
+        fill('rh-c-poste', r.poste); fill('rh-c-debut', r.date_debut);
+        fill('rh-c-fin', r.date_fin); fill('rh-c-temps', r.temps_travail); fill('rh-c-notes', r.notes);
+      }
+    }
+    document.getElementById('modal-rh-contrat').classList.add('open');
+  } else if (type === 'conge') {
+    rhEditingConge = id;
+    document.getElementById('modal-rh-conge-title').textContent = id ? 'Modifier le congé' : 'Nouvelle demande de congé';
+    await rhLoadUsers(['rh-g-user']);
+    fill('rh-g-debut',''); fill('rh-g-fin',''); fill('rh-g-solde','');
+    document.getElementById('rh-g-type').value   = 'CP';
+    document.getElementById('rh-g-statut').value = 'en_attente';
+    if (id) {
+      const rows = await sbGet('conges', `id=eq.${id}`).catch(() => []);
+      if (rows[0]) {
+        const r = rows[0];
+        document.getElementById('rh-g-user').value   = r.user_id || '';
+        document.getElementById('rh-g-type').value   = r.type    || 'CP';
+        document.getElementById('rh-g-statut').value = r.statut  || 'en_attente';
+        fill('rh-g-debut', r.date_debut); fill('rh-g-fin', r.date_fin); fill('rh-g-solde', r.solde_cp);
+      }
+    }
+    document.getElementById('modal-rh-conge').classList.add('open');
+  } else if (type === 'formation') {
+    rhEditingFormation = id;
+    document.getElementById('modal-rh-formation-title').textContent = id ? 'Modifier la formation' : 'Ajouter une formation';
+    await rhLoadUsers(['rh-f-user']);
+    fill('rh-f-titre',''); fill('rh-f-date',''); fill('rh-f-renouvellement',''); fill('rh-f-attestation','');
+    document.getElementById('rh-f-obligatoire').checked = false;
+    if (id) {
+      const rows = await sbGet('formations_rh', `id=eq.${id}`).catch(() => []);
+      if (rows[0]) {
+        const r = rows[0];
+        document.getElementById('rh-f-user').value = r.user_id || '';
+        document.getElementById('rh-f-obligatoire').checked = !!r.obligatoire;
+        fill('rh-f-titre', r.titre); fill('rh-f-date', r.date);
+        fill('rh-f-renouvellement', r.renouvellement); fill('rh-f-attestation', r.attestation_url);
+      }
+    }
+    document.getElementById('modal-rh-formation').classList.add('open');
+  }
+}
+
+// ── DELETE ────────────────────────────────────────────────────────
+
+async function deleteRh(table, id, tab) {
+  if (!confirm('Supprimer cette entrée ?')) return;
+  try {
+    await sbDelete(table, id);
+    if (tab === 'recrutement') renderRecrutements();
+    if (tab === 'contrats')    renderContrats();
+    if (tab === 'conges')      renderConges();
+    if (tab === 'formations')  renderFormations();
+    renderRhStats();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+// ── FIN MODULE RH ─────────────────────────────────────────────────
+
+// ── FIN MODULE ADMIN ───────────────────────────────────────────────
 </script>
+<!-- ── MODAUX RH ── -->
+
+<div class="modal-overlay" id="modal-rh-recrutement" onclick="closeModalClick(event,'modal-rh-recrutement')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2 id="modal-rh-recrutement-title">Nouveau poste</h2>
+      <button class="modal-close" onclick="closeModal('modal-rh-recrutement')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Poste *</label>
+          <input type="text" id="rh-r-poste" placeholder="Ex : Auxiliaire de puériculture">
+        </div>
+        <div class="form-group">
+          <label>Type de contrat</label>
+          <select id="rh-r-type">
+            <option value="CDI">CDI</option><option value="CDD">CDD</option>
+            <option value="Alternance">Alternance</option><option value="Stage">Stage</option>
+            <option value="Interim">Intérim</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Statut</label>
+          <select id="rh-r-statut">
+            <option value="ouvert">Ouvert</option><option value="en_cours">En cours</option>
+            <option value="pourvu">Pourvu</option><option value="annule">Annulé</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date d'entretien</label>
+          <input type="datetime-local" id="rh-r-entretien">
+        </div>
+        <div class="form-group">
+          <label>Candidat — Nom</label>
+          <input type="text" id="rh-r-candidat-nom" placeholder="Nom du candidat">
+        </div>
+        <div class="form-group">
+          <label>Candidat — Email</label>
+          <input type="email" id="rh-r-candidat-email" placeholder="email@exemple.fr">
+        </div>
+        <div class="form-group full">
+          <label>Notes</label>
+          <textarea id="rh-r-notes" rows="3" placeholder="Notes sur le recrutement…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-rh-recrutement')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveRhRecrutement()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rh-contrat" onclick="closeModalClick(event,'modal-rh-contrat')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2 id="modal-rh-contrat-title">Nouveau contrat</h2>
+      <button class="modal-close" onclick="closeModal('modal-rh-contrat')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Collaborateur *</label>
+          <select id="rh-c-user"><option value="">— Choisir —</option></select>
+        </div>
+        <div class="form-group">
+          <label>Poste *</label>
+          <input type="text" id="rh-c-poste" placeholder="Intitulé du poste">
+        </div>
+        <div class="form-group">
+          <label>Type de contrat</label>
+          <select id="rh-c-type">
+            <option value="CDI">CDI</option><option value="CDD">CDD</option>
+            <option value="Alternance">Alternance</option><option value="Stage">Stage</option>
+            <option value="Interim">Intérim</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date de début *</label>
+          <input type="date" id="rh-c-debut">
+        </div>
+        <div class="form-group">
+          <label>Date de fin</label>
+          <input type="date" id="rh-c-fin">
+        </div>
+        <div class="form-group">
+          <label>Temps de travail (h/sem)</label>
+          <input type="number" id="rh-c-temps" min="0" max="40" step="0.5" placeholder="35">
+        </div>
+        <div class="form-group full">
+          <label>Notes</label>
+          <textarea id="rh-c-notes" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-rh-contrat')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveRhContrat()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rh-conge" onclick="closeModalClick(event,'modal-rh-conge')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2 id="modal-rh-conge-title">Nouvelle demande de congé</h2>
+      <button class="modal-close" onclick="closeModal('modal-rh-conge')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Collaborateur *</label>
+          <select id="rh-g-user"><option value="">— Choisir —</option></select>
+        </div>
+        <div class="form-group">
+          <label>Type de congé</label>
+          <select id="rh-g-type">
+            <option value="CP">Congés payés</option><option value="RTT">RTT</option>
+            <option value="Maladie">Maladie</option><option value="Maternité">Maternité</option>
+            <option value="Paternité">Paternité</option><option value="Sans solde">Sans solde</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Statut</label>
+          <select id="rh-g-statut">
+            <option value="en_attente">En attente</option>
+            <option value="approuve">Approuvé</option>
+            <option value="refuse">Refusé</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date de début *</label>
+          <input type="date" id="rh-g-debut">
+        </div>
+        <div class="form-group">
+          <label>Date de fin *</label>
+          <input type="date" id="rh-g-fin">
+        </div>
+        <div class="form-group">
+          <label>Solde CP (jours restants)</label>
+          <input type="number" id="rh-g-solde" min="0" step="0.5" placeholder="25">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-rh-conge')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveRhConge()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rh-formation" onclick="closeModalClick(event,'modal-rh-formation')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2 id="modal-rh-formation-title">Ajouter une formation</h2>
+      <button class="modal-close" onclick="closeModal('modal-rh-formation')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Collaborateur *</label>
+          <select id="rh-f-user"><option value="">— Choisir —</option></select>
+        </div>
+        <div class="form-group full">
+          <label>Titre de la formation *</label>
+          <input type="text" id="rh-f-titre" placeholder="Ex : Premiers secours PSC1">
+        </div>
+        <div class="form-group">
+          <label>Date de formation</label>
+          <input type="date" id="rh-f-date">
+        </div>
+        <div class="form-group">
+          <label>Date de renouvellement</label>
+          <input type="date" id="rh-f-renouvellement">
+        </div>
+        <div class="form-group full">
+          <label>URL attestation</label>
+          <input type="url" id="rh-f-attestation" placeholder="https://…">
+        </div>
+        <div class="form-group full">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+            <input type="checkbox" id="rh-f-obligatoire" style="width:16px;height:16px">
+            Formation obligatoire (réglementaire)
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-rh-formation')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveRhFormation()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAL IMPORT ── -->
 <div class="modal-overlay" id="modal-import" onclick="closeModalClick(event,'modal-import')">
   <div class="modal" style="max-width:500px">
