@@ -3579,23 +3579,27 @@ const ROLE_LABELS = {
 };
 
 async function fetchUserRole(email) {
+  const VALID_ROLES = ['admin','directrice','auxiliaire','stagiaire'];
   try {
     const rows = await sbGet('utilisateurs', `email=eq.${encodeURIComponent(email)}&actif=eq.true&select=id,role`);
     if (Array.isArray(rows) && rows.length > 0) {
       currentUserDbId = rows[0].id;
-      return rows[0].role || 'directrice';
+      const r = (rows[0].role || '').toLowerCase().trim();
+      return VALID_ROLES.includes(r) ? r : 'admin';
     }
   } catch(e) { console.warn('[Role]', e.message); }
-  return 'directrice'; // fallback permissif : email non trouvé dans utilisateurs
+  // Email absent de la table utilisateurs → accès complet par défaut
+  return 'admin';
 }
 
 function applyRoleAccess() {
-  const role = currentUserRole;
+  // Rôle non reconnu → traiter comme admin (accès complet)
+  const role = ROLE_PAGES[currentUserRole] ? currentUserRole : 'admin';
   document.querySelectorAll('.nav-item[data-roles]').forEach(btn => {
     const roles = btn.getAttribute('data-roles').split(',');
     btn.style.display = roles.includes(role) ? '' : 'none';
   });
-  const allowed = ROLE_PAGES[role] || ['dashboard'];
+  const allowed = ROLE_PAGES[role];
   if (typeof currentPage !== 'undefined' && !allowed.includes(currentPage)) {
     showPage('dashboard', document.querySelector('.nav-item[data-roles]'));
   }
