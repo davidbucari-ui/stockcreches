@@ -869,9 +869,6 @@ textarea { resize: vertical; min-height: 72px; }
     <span class="nav-icon">📊</span> Statistiques
     <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
-  <button class="nav-item" onclick="showPage('formations', this)">
-    <span class="nav-icon">🎓</span> Formations
-  </button>
   <button class="nav-item" onclick="window.open('notice.html','_blank')">
     <span class="nav-icon">📖</span> Notice d'utilisation
   </button>
@@ -981,15 +978,6 @@ textarea { resize: vertical; min-height: 72px; }
             <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Protocoles · Documents RH</div>
           </button>
 
-          <button onclick="showPage('formations', document.querySelectorAll('.nav-item')[5])"
-            style="background:linear-gradient(135deg,#1E1B4B,#4338CA);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(0,0,0,0.2);position:relative;overflow:hidden"
-            onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
-            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">🎓</div>
-            <div style="font-size:32px;margin-bottom:10px">🎓</div>
-            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Formations</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Vidéos · Fiches · Documents · Liens</div>
-          </button>
-
           <button onclick="showPage('entretien', document.querySelectorAll('.nav-item')[2])"
             style="background:linear-gradient(135deg,#134E4A,#0D9488);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(13,148,136,0.3);position:relative;overflow:hidden"
             onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
@@ -1000,232 +988,6 @@ textarea { resize: vertical; min-height: 72px; }
           </button>
 
         </div>
-      </div>
-    </div>
-    <!-- ── PAGE FORMATIONS ── -->
-    <div id="page-formations" style="display:none">
-      <div style="padding:28px 24px;max-width:1100px">
-
-        <!-- Vue catalogue / vue détail -->
-        <div id="f-catalogue">
-
-          <!-- EN-TÊTE -->
-          <div style="margin-bottom:32px">
-            <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:6px">🎓 Formations Petite Enfance</div>
-            <div style="font-size:13px;color:var(--ink3)">Catalogue complet · En ligne & Animées par David Bucari</div>
-          </div>
-
-          <!-- ONGLETS TYPE -->
-          <div style="display:flex;gap:8px;margin-bottom:28px;border-bottom:2px solid var(--border);padding-bottom:0">
-            <button id="tab-enligne" onclick="switchCatalogue('enligne')"
-              style="background:none;border:none;border-bottom:3px solid var(--accent);margin-bottom:-2px;padding:10px 20px;font-family:'Instrument Sans',sans-serif;font-weight:800;font-size:0.88rem;color:var(--accent);cursor:pointer">
-              📱 En ligne
-            </button>
-            <button id="tab-animee" onclick="switchCatalogue('animee')"
-              style="background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;padding:10px 20px;font-family:'Instrument Sans',sans-serif;font-weight:600;font-size:0.88rem;color:var(--ink3);cursor:pointer">
-              🎤 Animées par David Bucari
-            </button>
-          </div>
-
-          <!-- ══ SECTION EN LIGNE ══ -->
-          <div id="cat-enligne">
-            <div style="background:var(--accent-lt);border-radius:12px;padding:14px 18px;margin-bottom:24px;border-left:4px solid var(--accent)">
-              <div style="font-weight:700;font-size:0.85rem;margin-bottom:4px">📱 Formations 100% en ligne</div>
-              <div style="font-size:0.8rem;color:var(--ink2)">Accès immédiat · À votre rythme · Quiz interactif · Attestation automatique · Accès à vie</div>
-            </div>
-            <!-- Catalogue dynamique chargé depuis Supabase -->
-            <div id="cat-enligne-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:36px">
-              <div style="text-align:center;padding:40px;color:var(--ink3);grid-column:1/-1">⏳ Chargement des formations…</div>
-            </div>
-          </div>
-
-          <!-- ══ SECTION ANIMÉES ══ -->
-          <div id="cat-animee" style="display:none">
-
-            <!-- Bandeau formateur -->
-            <div style="background:linear-gradient(135deg,#2C2C2C,#3d3530);border-radius:16px;padding:24px 28px;margin-bottom:28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-              <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#7B9E87,#D4922A);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">👨‍🏫</div>
-              <div style="flex:1;min-width:200px">
-                <div style="font-weight:800;color:#fff;font-family:'Syne',sans-serif;font-size:1rem;margin-bottom:4px">David Bucari — Éducateur de jeunes enfants</div>
-                <div style="font-size:0.8rem;color:rgba(255,255,255,0.6)">Formateur petite enfance · Coordinateur pédagogique · Présentiel & Visioconférence</div>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);font-size:0.7rem;font-weight:700;padding:4px 12px;border-radius:20px">🏢 Présentiel</span>
-                <span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);font-size:0.7rem;font-weight:700;padding:4px 12px;border-radius:20px">💻 Visio</span>
-                <span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);font-size:0.7rem;font-weight:700;padding:4px 12px;border-radius:20px">👥 Sur mesure</span>
-              </div>
-            </div>
-
-            <!-- Grille formations animées — catalogue dynamique -->
-            <div id="cat-animee-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:32px">
-
-              <!-- Carte 1 — Conflits et agressivité -->
-              <div style="background:var(--surface2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lg);transition:transform 0.2s"
-                   onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
-                <div style="background:linear-gradient(135deg,#7C3AED,#5B21B6);padding:24px 20px 20px;position:relative;overflow:hidden">
-                  <div style="position:absolute;right:-8px;bottom:-8px;font-size:70px;opacity:0.12">🎭</div>
-                  <div style="font-size:2rem;margin-bottom:10px">🎭</div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px">1 journée</span>
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px">Présentiel / Visio</span>
-                  </div>
-                  <h3 style="margin:0 0 5px;color:#fff;font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;line-height:1.3">Conflits et agressivité</h3>
-                  <p style="margin:0;color:rgba(255,255,255,0.75);font-size:0.78rem;font-style:italic">Comprendre et agir face aux comportements difficiles</p>
-                </div>
-                <div style="padding:18px 20px">
-                  <div style="font-size:0.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Programme</div>
-                  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#7C3AED;font-weight:700">→</span> Comprendre l'agressivité chez le jeune enfant</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#7C3AED;font-weight:700">→</span> Gérer les conflits entre enfants</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#7C3AED;font-weight:700">→</span> Posture professionnelle en situation de crise</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#7C3AED;font-weight:700">→</span> Développement de l'enfant et agressivité</div>
-                  </div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-                    <span style="background:#7C3AED15;color:#5B21B6;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px">Pros terrain</span>
-                    <span style="background:#7C3AED15;color:#5B21B6;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px">Direction</span>
-                    <span style="background:#7C3AED15;color:#5B21B6;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px">Équipes</span>
-                  </div>
-                  <button onclick="demanderFormation('Conflits et agressivité')"
-                    style="width:100%;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;padding:11px;border-radius:10px;font-weight:700;font-size:0.83rem;cursor:pointer;font-family:'Instrument Sans',sans-serif">
-                    Demander cette formation →
-                  </button>
-                </div>
-              </div>
-
-              <!-- Carte 2 — Développement, jeu et écrans -->
-              <div style="background:var(--surface2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lg);transition:transform 0.2s"
-                   onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
-                <div style="background:linear-gradient(135deg,#0EA5E9,#0284C7);padding:24px 20px 20px;position:relative;overflow:hidden">
-                  <div style="position:absolute;right:-8px;bottom:-8px;font-size:70px;opacity:0.12">🧠</div>
-                  <div style="font-size:2rem;margin-bottom:10px">🧠</div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px">1 journée</span>
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px">Présentiel / Visio</span>
-                  </div>
-                  <h3 style="margin:0 0 5px;color:#fff;font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;line-height:1.3">Développement, jeu et écrans</h3>
-                  <p style="margin:0;color:rgba(255,255,255,0.75);font-size:0.78rem;font-style:italic">Comprendre l'enfant pour mieux l'accompagner</p>
-                </div>
-                <div style="padding:18px 20px">
-                  <div style="font-size:0.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Programme</div>
-                  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#0EA5E9;font-weight:700">→</span> Le développement global de l'enfant 0-6 ans</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#0EA5E9;font-weight:700">→</span> Le rôle du jeu dans le développement</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#0EA5E9;font-weight:700">→</span> Écrans et petite enfance : impacts et posture</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#0EA5E9;font-weight:700">→</span> Alternatives et accompagnement des familles</div>
-                  </div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-                    <span style="background:#0EA5E915;color:#0284C7;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px">Tous pros PE</span>
-                    <span style="background:#0EA5E915;color:#0284C7;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px">Parents</span>
-                  </div>
-                  <button onclick="demanderFormation('Développement, jeu et écrans')"
-                    style="width:100%;background:linear-gradient(135deg,#0EA5E9,#0284C7);color:#fff;border:none;padding:11px;border-radius:10px;font-weight:700;font-size:0.83rem;cursor:pointer;font-family:'Instrument Sans',sans-serif">
-                    Demander cette formation →
-                  </button>
-                </div>
-              </div>
-
-              <!-- Carte 3 — Les émotions -->
-              <div style="background:var(--surface2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lg);transition:transform 0.2s"
-                   onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
-                <div style="background:linear-gradient(135deg,#F43F5E,#BE123C);padding:24px 20px 20px;position:relative;overflow:hidden">
-                  <div style="position:absolute;right:-8px;bottom:-8px;font-size:70px;opacity:0.12">💛</div>
-                  <div style="font-size:2rem;margin-bottom:10px">💛</div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px">1/2 journée</span>
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px">Présentiel / Visio</span>
-                  </div>
-                  <h3 style="margin:0 0 5px;color:#fff;font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;line-height:1.3">Les émotions du jeune enfant</h3>
-                  <p style="margin:0;color:rgba(255,255,255,0.75);font-size:0.78rem;font-style:italic">Comprendre, accueillir, accompagner</p>
-                </div>
-                <div style="padding:18px 20px">
-                  <div style="font-size:0.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Programme</div>
-                  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#F43F5E;font-weight:700">→</span> Le développement émotionnel 0-3 ans</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#F43F5E;font-weight:700">→</span> Accueillir les émotions sans les minimiser</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#F43F5E;font-weight:700">→</span> Posture professionnelle et régulation émotionnelle</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#F43F5E;font-weight:700">→</span> Mon propre rapport aux émotions</div>
-                  </div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-                    <span style="background:#F43F5E15;color:#BE123C;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px">Pros terrain</span>
-                    <span style="background:#F43F5E15;color:#BE123C;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px">Assistantes mat.</span>
-                  </div>
-                  <button onclick="demanderFormation('Les émotions du jeune enfant')"
-                    style="width:100%;background:linear-gradient(135deg,#F43F5E,#BE123C);color:#fff;border:none;padding:11px;border-radius:10px;font-weight:700;font-size:0.83rem;cursor:pointer;font-family:'Instrument Sans',sans-serif">
-                    Demander cette formation →
-                  </button>
-                </div>
-              </div>
-
-              <!-- Carte 4 — Maltraitance et douces violences -->
-              <div style="background:var(--surface2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-lg);transition:transform 0.2s"
-                   onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
-                <div style="background:linear-gradient(135deg,#374151,#1F2937);padding:24px 20px 20px;position:relative;overflow:hidden">
-                  <div style="position:absolute;right:-8px;bottom:-8px;font-size:70px;opacity:0.12">🛡️</div>
-                  <div style="font-size:2rem;margin-bottom:10px">🛡️</div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px">1 journée</span>
-                    <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px">Présentiel / Visio</span>
-                  </div>
-                  <h3 style="margin:0 0 5px;color:#fff;font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;line-height:1.3">Maltraitance et douces violences</h3>
-                  <p style="margin:0;color:rgba(255,255,255,0.75);font-size:0.78rem;font-style:italic">Reconnaître, prévenir, agir — vers la bientraitance</p>
-                </div>
-                <div style="padding:18px 20px">
-                  <div style="font-size:0.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Programme</div>
-                  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#6B7280;font-weight:700">→</span> Définitions et cadre légal (loi 2007)</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#6B7280;font-weight:700">→</span> Les douces violences au quotidien</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#6B7280;font-weight:700">→</span> Signaux d'alerte et procédure de signalement</div>
-                    <div style="font-size:0.8rem;color:var(--ink2);display:flex;gap:8px"><span style="color:#6B7280;font-weight:700">→</span> La bientraitance comme démarche collective</div>
-                  </div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-                    <span style="background:#37415115;color:#374151;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px">Tous pros PE</span>
-                    <span style="background:#37415115;color:#374151;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px">Direction</span>
-                  </div>
-                  <button onclick="demanderFormation('Maltraitance et douces violences')"
-                    style="width:100%;background:linear-gradient(135deg,#374151,#1F2937);color:#fff;border:none;padding:11px;border-radius:10px;font-weight:700;font-size:0.83rem;cursor:pointer;font-family:'Instrument Sans',sans-serif">
-                    Demander cette formation →
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Bandeau contact -->
-            <div style="background:var(--surface2);border-radius:14px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;box-shadow:var(--shadow);border:1px solid var(--border)">
-              <div>
-                <div style="font-weight:800;font-size:0.93rem;margin-bottom:4px">Une formation sur mesure pour votre structure ?</div>
-                <div style="font-size:0.82rem;color:var(--ink2)">Toutes les formations sont adaptables en durée, contenu et format selon vos besoins.</div>
-              </div>
-              <button onclick="demanderFormation('Formation sur mesure')"
-                style="background:var(--accent);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:'Instrument Sans',sans-serif;white-space:nowrap">
-                Nous contacter →
-              </button>
-            </div>
-
-          </div>
-
-        </div>
-
-        <!-- MODAL DEMANDE DE FORMATION -->
-        <div id="modal-demande" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
-          <div style="background:var(--surface2);border-radius:20px;padding:36px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-            <h3 style="font-family:'Syne',sans-serif;font-size:1.2rem;margin:0 0 6px" id="modal-titre-form">Demander une formation</h3>
-            <p style="font-size:0.83rem;color:var(--ink2);margin:0 0 20px">Laissez vos coordonnées, David Bucari vous contactera sous 48h.</p>
-            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
-              <input id="dem-nom" placeholder="Votre nom / structure" style="border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'Instrument Sans',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--surface);outline:none">
-              <input id="dem-email" placeholder="Email de contact" style="border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'Instrument Sans',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--surface);outline:none">
-              <input id="dem-tel" placeholder="Téléphone (facultatif)" style="border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'Instrument Sans',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--surface);outline:none">
-              <textarea id="dem-message" placeholder="Votre message (nombre de participants, date souhaitée, format…)" rows="3" style="border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'Instrument Sans',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--surface);outline:none;resize:vertical"></textarea>
-            </div>
-            <div style="display:flex;gap:10px">
-              <button onclick="envoyerDemande()" style="flex:1;background:var(--accent);color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;font-size:0.88rem;cursor:pointer;font-family:'Instrument Sans',sans-serif">Envoyer la demande</button>
-              <button onclick="fermerModalDemande()" style="background:var(--surface);border:1.5px solid var(--border);color:var(--ink2);padding:12px 20px;border-radius:10px;font-weight:600;font-size:0.88rem;cursor:pointer;font-family:'Instrument Sans',sans-serif">Annuler</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── VUE DÉTAIL FORMATION JEU LIBRE ── -->
-
       </div>
     </div>
 
@@ -4639,13 +4401,13 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','formations'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', formations:'Formations' };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -4657,7 +4419,6 @@ function showPage(page, btn) {
   if (page === 'historique') { renderHistorique(); }
   if (page === 'inventaire') { renderTable(); renderStats(); }
   if (page === 'parametres') { renderParametres(); }
-  if (page === 'formations') { if (typeof renderFormationsCatalogue === 'function') setTimeout(renderFormationsCatalogue, 50); }
 }
 
 function showTab(tab, btn) {
@@ -6883,7 +6644,7 @@ function showImportResult(type, html) {
   <div style="background:#fff;border-radius:24px;padding:40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
     <div style="text-align:center;margin-bottom:32px">
       <div style="font-size:48px;margin-bottom:12px">🐨</div>
-      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#1C1917">Evlae</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#1C1917">Orevy</div>
       <div style="font-size:13px;color:#A8A29E;margin-top:4px">Stocks Pédagogiques</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
@@ -6916,88 +6677,13 @@ function showImportResult(type, html) {
       </div>
     </div>
     <div style="text-align:center;margin-top:20px;font-size:12px;color:#A8A29E">
-      Evlae · Accès réservé
+      Orevy · Accès réservé
     </div>
   </div>
 </div>
 
 <script>
-// ─── CATALOGUE FORMATIONS ──────────────────────────────────────────────────
-
-function switchCatalogue(type) {
-  const enligne = document.getElementById('cat-enligne');
-  const animee = document.getElementById('cat-animee');
-  const tabEn = document.getElementById('tab-enligne');
-  const tabAn = document.getElementById('tab-animee');
-  if (type === 'enligne') {
-    enligne.style.display = 'block';
-    animee.style.display = 'none';
-    tabEn.style.borderBottomColor = 'var(--accent)';
-    tabEn.style.color = 'var(--accent)';
-    tabEn.style.fontWeight = '800';
-    tabAn.style.borderBottomColor = 'transparent';
-    tabAn.style.color = 'var(--ink3)';
-    tabAn.style.fontWeight = '600';
-  } else {
-    enligne.style.display = 'none';
-    animee.style.display = 'block';
-    tabAn.style.borderBottomColor = 'var(--accent)';
-    tabAn.style.color = 'var(--accent)';
-    tabAn.style.fontWeight = '800';
-    tabEn.style.borderBottomColor = 'transparent';
-    tabEn.style.color = 'var(--ink3)';
-    tabEn.style.fontWeight = '600';
-  }
-}
-
-function demanderFormation(titre) {
-  const modal = document.getElementById('modal-demande');
-  document.getElementById('modal-titre-form').textContent = '📋 ' + titre;
-  document.getElementById('dem-nom').value = '';
-  document.getElementById('dem-email').value = '';
-  document.getElementById('dem-tel').value = '';
-  document.getElementById('dem-message').value = '';
-  modal.style.display = 'flex';
-}
-
-function fermerModalDemande() {
-  document.getElementById('modal-demande').style.display = 'none';
-}
-
-function envoyerDemande() {
-  const nom = document.getElementById('dem-nom').value.trim();
-  const email = document.getElementById('dem-email').value.trim();
-  const titre = document.getElementById('modal-titre-form').textContent;
-  if (!nom || !email) { showNotif('⚠️ Nom et email requis'); return; }
-  const sujet = encodeURIComponent('Demande de formation — ' + titre);
-  const corps = encodeURIComponent(
-    'Bonjour David,\n\nJe souhaite obtenir des informations sur la formation : ' + titre +
-    '\n\nNom / Structure : ' + nom +
-    '\nEmail : ' + email +
-    '\nTéléphone : ' + (document.getElementById('dem-tel').value || 'Non renseigné') +
-    '\n\nMessage :\n' + (document.getElementById('dem-message').value || 'Aucun message') +
-    '\n\nCordialement,\n' + nom
-  );
-  window.location.href = 'mailto:david.bucari@gmail.com?subject=' + sujet + '&body=' + corps;
-  fermerModalDemande();
-  showNotif('✅ Votre messagerie va s\'ouvrir pour envoyer la demande');
-}
-
-// ─── FORMATIONS ────────────────────────────────────────────────────────────
-
-// showFormation et showSeq sont désormais gérés par formations-data.js (Supabase)
-// Ces stubs évitent les erreurs si d'anciennes références existent
-function showFormation(slug) {
-  if (typeof window._showFormationSupabase === 'function') {
-    window._showFormationSupabase(slug);
-  }
-}
-function showSeq() {} // géré dynamiquement dans formations-data.js
-
 </script>
-
-<!-- ── CONTENU PÉDAGOGIQUE FORMATIONS (éditable séparément) ── -->
-<script src="formations-data.js"></script>
 
 </body>
 </html>
