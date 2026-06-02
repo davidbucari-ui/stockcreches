@@ -908,6 +908,15 @@ textarea { resize: vertical; min-height: 72px; }
     <span class="nav-icon">🔐</span> Administration
   </button>
 
+  <div style="padding:8px 16px 4px">
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="openModal('add')">
+      + Ajouter un article
+    </button>
+    <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="openScanner()">
+      📷 Scanner un code-barres
+    </button>
+  </div>
+
   <div class="sidebar-section-title">Structures</div>
   <div id="sidebar-creches-container">
     <div class="creche-badge active" onclick="filterCreche('all', this)">
@@ -918,12 +927,6 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 
   <div class="sidebar-creches">
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="openModal('add')">
-      + Ajouter un article
-    </button>
-    <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="openScanner()">
-      📷 Scanner un code-barres
-    </button>
     <div id="user-role-badge" style="display:none;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.06);margin-top:8px">
       <div id="user-role-label" style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:2px">—</div>
       <div id="user-email-label" style="font-size:12px;color:rgba(255,255,255,0.7);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div>
@@ -3601,7 +3604,7 @@ function applyRoleAccess() {
   const badge = document.getElementById('user-role-badge');
   if (badge) badge.style.display = 'block';
   const roleLabel = document.getElementById('user-role-label');
-  if (roleLabel) roleLabel.textContent = currentUserDbId ? (ROLE_LABELS[role] || role) : 'Utilisateur';
+  if (roleLabel) roleLabel.textContent = currentUserDbId ? (role.charAt(0).toUpperCase() + role.slice(1)) : 'Utilisateur';
   const emailLabel = document.getElementById('user-email-label');
   if (emailLabel && currentUser) emailLabel.textContent = currentUser.email || '—';
 }
@@ -5861,6 +5864,7 @@ async function removeArticlePhoto(id) {
 
 // ─── SUPABASE CLOUD SYNC ──────────────────────────────────────────────────
 
+// ── Projet Stocks (articles, commandes, fournisseurs, historique, univers, planning)
 const SUPA_URL = 'https://drxqjeilbunpfqyecpdg.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyeHFqZWlsYnVucGZxeWVjcGRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ2MzgsImV4cCI6MjA5NTQ2MDYzOH0.vTQZwnbrmL6zaUxYb3qzMMWp3Jhs-fWeSJiBdmn_6m8';
 let SUPA_HEADERS = {
@@ -5869,6 +5873,25 @@ let SUPA_HEADERS = {
   'Authorization': 'Bearer ' + SUPA_KEY,
   'Prefer': 'return=minimal',
 };
+
+// ── Projet RH (utilisateurs, recrutements, contrats, congés, formations, documents, stagiaires)
+const SUPA_RH_URL = 'https://gokfxejoffzttzvdkoll.supabase.co';
+const SUPA_RH_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTY0NDQsImV4cCI6MjA5NTg5MjQ0NH0.2oghhJNpqeh-zLUjHE0iAJLK_eJX40_ZRuQTaQFGzhw';
+let SUPA_RH_HEADERS = {
+  'Content-Type': 'application/json',
+  'apikey': SUPA_RH_KEY,
+  'Authorization': 'Bearer ' + SUPA_RH_KEY,
+  'Prefer': 'return=minimal',
+};
+
+// Tables hébergées dans le projet RH — routage automatique dans les helpers
+const RH_TABLES = new Set([
+  'utilisateurs','recrutements','contrats','conges',
+  'formations_rh','documents_rh','stagiaires'
+]);
+
+function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
+function _sbHeaders(table) { return RH_TABLES.has(table) ? SUPA_RH_HEADERS : SUPA_HEADERS; }
 
 // ── FIX : Supabase en mode dégradé si la clé ne fonctionne pas ──────────
 // L'app fonctionne avec les données d'exemple si Supabase est inaccessible
@@ -5960,17 +5983,17 @@ window.addEventListener('online', () => {
 // ── API helpers ────────────────────────────────────────────────────────────
 
 async function sbGet(table, params='') {
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${params}&order=id.asc`, {
-    headers: { ...SUPA_HEADERS, 'Prefer': 'return=representation' }
+  const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}?${params}&order=id.asc`, {
+    headers: { ..._sbHeaders(table), 'Prefer': 'return=representation' }
   });
   if (!r.ok) throw new Error(`GET ${table} : ${r.status}`);
   return r.json();
 }
 
 async function sbInsert(table, data) {
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+  const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}`, {
     method: 'POST',
-    headers: { ...SUPA_HEADERS, 'Prefer': 'return=representation' },
+    headers: { ..._sbHeaders(table), 'Prefer': 'return=representation' },
     body: JSON.stringify(data),
   });
   if (!r.ok) throw new Error(`INSERT ${table} : ${r.status}`);
@@ -5978,21 +6001,22 @@ async function sbInsert(table, data) {
 }
 
 async function sbUpdate(table, id, data) {
-  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
+  const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}?id=eq.${id}`, {
     method: 'PATCH',
-    headers: SUPA_HEADERS,
+    headers: _sbHeaders(table),
     body: JSON.stringify(data),
   });
   if (!r.ok) throw new Error(`UPDATE ${table} : ${r.status}`);
 }
 
 async function sbDelete(table, id) {
-  const url = id === 'all'
-    ? `${SUPA_URL}/rest/v1/${table}?id=neq.0`
-    : `${SUPA_URL}/rest/v1/${table}?id=eq.${id}`;
+  const base = _sbUrl(table);
+  const url  = id === 'all'
+    ? `${base}/rest/v1/${table}?id=neq.0`
+    : `${base}/rest/v1/${table}?id=eq.${id}`;
   const r = await fetch(url, {
     method: 'DELETE',
-    headers: SUPA_HEADERS,
+    headers: _sbHeaders(table),
   });
   if (!r.ok) throw new Error(`DELETE ${table} : ${r.status}`);
 }
