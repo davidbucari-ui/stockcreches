@@ -923,13 +923,12 @@ function patchFormationsPage() {
     header.style.position = 'relative';
     header.appendChild(btn);
   }
-}
 
-// Surcharge de showPage pour déclencher le catalogue au bon moment
-const _origShowPage = typeof showPage === 'function' ? showPage : null;
-function showPage(page, btn) {
- if (_origShowPage && showPage !== _origShowPage) _origShowPage(page, btn);
-  if (page === 'formations') {
-    setTimeout(() => renderFormationsCatalogue(), 50);
+// Déclenchement du catalogue formations
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-page="formations"], .nav-btn');
+  if (btn && (btn.dataset.page === 'formations' || btn.textContent.includes('Formations'))) {
+    setTimeout(() => renderFormationsCatalogue(), 100);
   }
+});
 }
