@@ -1149,6 +1149,13 @@ textarea { resize: vertical; min-height: 72px; }
           + Ajouter une structure
         </button>
 
+        <!-- SECTION 5 : Planning — Horaires -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Planning — Horaires</div>
+        <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:28px;box-shadow:var(--shadow)">
+          <div style="font-size:13px;color:var(--ink2);margin-bottom:16px;line-height:1.5">Configurez les heures de début et de fin de chaque horaire. Ces valeurs s'appliquent automatiquement lors de l'ajout d'un créneau.</div>
+          <div id="planning-horaires-config"></div>
+        </div>
+
       </div>
     </div>
 
@@ -1367,37 +1374,34 @@ textarea { resize: vertical; min-height: 72px; }
     <div id="page-planning" style="display:none">
       <div style="padding:20px 28px">
 
-        <!-- Toolbar -->
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(-1)">← Préc.</button>
-            <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(0)">Aujourd'hui</button>
-            <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(1)">Suiv. →</button>
-            <span id="planning-week-label" style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap"></span>
+        <!-- En-tête -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span id="planning-week-label" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap"></span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(-1)">← Préc.</button>
+              <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(0)">Aujourd'hui</button>
+              <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(1)">Suiv. →</button>
+            </div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <select id="planning-creche-filter" onchange="renderPlanning()"
-              style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
-              <option value="">Toutes les crèches</option>
-            </select>
-            <button class="btn btn-primary" onclick="openModalPlanning(null,null,null)">+ Ajouter un créneau</button>
+          <select id="planning-creche-filter" onchange="renderPlanning()"
+            style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
+            <option value="">Toutes les crèches</option>
+          </select>
+        </div>
+
+        <!-- Grille horaires × jours -->
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
+          <div id="planning-grid">
+            <div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div>
           </div>
         </div>
 
-        <!-- Légende postes -->
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
-          <span style="font-size:11px;font-weight:600;color:var(--ink3)">Postes :</span>
-          <span style="background:#EFF6FF;color:#2563EB;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 1</span>
-          <span style="background:#F0FDF4;color:#16A34A;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 2</span>
-          <span style="background:#FFFBEB;color:#D97706;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 3</span>
-          <span style="background:#F5F3FF;color:#7C3AED;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 4</span>
-          <span style="background:#1C1917;color:rgba(255,255,255,0.8);font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 5</span>
+        <!-- Footer -->
+        <div style="display:flex;justify-content:flex-end;margin-top:14px">
+          <button class="btn btn-primary" onclick="openModalPlanning(null,null,null)">+ Ajouter un créneau</button>
         </div>
 
-        <!-- Grille -->
-        <div class="pg-wrap">
-          <div id="planning-grid" style="min-height:160px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:13px">Chargement…</div>
-        </div>
       </div>
     </div>
 
@@ -3347,6 +3351,7 @@ function renderParametres() {
         onchange="changerNom(${i}, this.value)">
       <button onclick="supprimerCreche(${i})" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:18px;padding:4px" title="Supprimer">🗑</button>
     </div>`).join('');
+  if (typeof renderPlanningParamHoraires === 'function') renderPlanningParamHoraires();
 }
 
 function setAccentColor(color) {
@@ -6944,6 +6949,30 @@ async function deleteRh(table, id, tab) {
 let planningCurrentWeekStart = getMondayOfDate(new Date());
 let planningEditingId = null;
 
+const PLG_COLORS = [
+  { bg:'#EFF6FF', text:'#2563EB', border:'#BFDBFE' },
+  { bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0' },
+  { bg:'#FFFBEB', text:'#D97706', border:'#FDE68A' },
+  { bg:'#F5F3FF', text:'#7C3AED', border:'#DDD6FE' },
+  { bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3' },
+];
+
+const PLG_HORAIRES_KEY = 'planning_horaires_config';
+const PLG_DEFAULT_HORAIRES = [
+  { name:'Horaire 1', debut:'07:30', fin:'15:30' },
+  { name:'Horaire 2', debut:'08:30', fin:'16:30' },
+  { name:'Horaire 3', debut:'09:00', fin:'17:00' },
+  { name:'Horaire 4', debut:'10:30', fin:'18:30' },
+  { name:'Horaire 5', debut:'11:00', fin:'19:00' },
+];
+
+function getPlanningHoraires() {
+  try {
+    const s = localStorage.getItem(PLG_HORAIRES_KEY);
+    return s ? JSON.parse(s) : PLG_DEFAULT_HORAIRES.map(h => ({...h}));
+  } catch { return PLG_DEFAULT_HORAIRES.map(h => ({...h})); }
+}
+
 function getMondayOfDate(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -6960,6 +6989,14 @@ function getWeekDays(monday) {
   });
 }
 
+function getISOWeekNumber(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const w1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - w1) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7);
+}
+
 function planningGoToWeek(offset) {
   if (offset === 0) {
     planningCurrentWeekStart = getMondayOfDate(new Date());
@@ -6971,23 +7008,12 @@ function planningGoToWeek(offset) {
   renderPlanning();
 }
 
-function planningPosteColor(poste) {
-  const map = {
-    'Horaire 1': { bg:'#EFF6FF', text:'#2563EB' },
-    'Horaire 2': { bg:'#F0FDF4', text:'#16A34A' },
-    'Horaire 3': { bg:'#FFFBEB', text:'#D97706' },
-    'Horaire 4': { bg:'#F5F3FF', text:'#7C3AED' },
-    'Horaire 5': { bg:'#1C1917', text:'rgba(255,255,255,0.85)' },
-  };
-  return map[poste] || { bg:'#F1F5F9', text:'#475569' };
-}
-
 async function showPlanningPage() {
   const sel = document.getElementById('planning-creche-filter');
   if (sel) {
     const cur = sel.value;
     sel.innerHTML = '<option value="">Toutes les crèches</option>' +
-      CRECHES_DATA.map(c => `<option value="${c.nom}"${c.nom === cur ? ' selected':''}>${c.nom}</option>`).join('');
+      CRECHES_DATA.map(c => `<option value="${c.nom}"${c.nom===cur?' selected':''}>${c.nom}</option>`).join('');
   }
   await renderPlanning();
 }
@@ -6995,17 +7021,22 @@ async function showPlanningPage() {
 async function renderPlanning() {
   const grid = document.getElementById('planning-grid');
   if (!grid) return;
-  grid.innerHTML = '<div style="padding:60px;text-align:center;color:var(--ink3)">Chargement…</div>';
+  grid.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div>';
 
-  const days    = getWeekDays(planningCurrentWeekStart);
+  const days     = getWeekDays(planningCurrentWeekStart);
   const dateFrom = days[0].toISOString().split('T')[0];
   const dateTo   = days[6].toISOString().split('T')[0];
-  const fmtLong  = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'long'});
+  const todayStr = new Date().toDateString();
+  const weekNum  = getISOWeekNumber(planningCurrentWeekStart);
+  const fmtD     = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'long'});
   const fmtShort = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'});
-  const lbl = document.getElementById('planning-week-label');
-  if (lbl) lbl.textContent = `${fmtLong(days[0])} – ${fmtLong(days[6])} ${days[6].getFullYear()}`;
+  const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const horaires = getPlanningHoraires();
 
-  const crecheFilter = (document.getElementById('planning-creche-filter') || {}).value || '';
+  const lbl = document.getElementById('planning-week-label');
+  if (lbl) lbl.textContent = `Semaine ${weekNum} — ${fmtD(days[0])} au ${fmtD(days[6])} ${days[6].getFullYear()}`;
+
+  const crecheFilter = (document.getElementById('planning-creche-filter')||{}).value||'';
 
   try {
     let params = `date=gte.${dateFrom}&date=lte.${dateTo}&order=date.asc,heure_debut.asc`;
@@ -7018,64 +7049,74 @@ async function renderPlanning() {
 
     const userMap = Object.fromEntries(users.map(u => [u.id, u.email.split('@')[0]]));
 
-    // Build lookup by user+date
+    // Lookup: "Horaire X|YYYY-MM-DD" → entries[]
     const byKey = {};
-    entries.forEach(e => { const k = `${e.user_id}|${e.date}`; (byKey[k] = byKey[k] || []).push(e); });
+    entries.forEach(e => {
+      const k = `${e.poste}|${e.date}`;
+      (byKey[k] = byKey[k] || []).push(e);
+    });
 
-    const dayNames = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-    const headerCells = days.map((d, i) => {
-      const today = d.toDateString() === new Date().toDateString();
-      return `<div class="pg-head-cell${today ? ' pg-today':''}">
-        <div class="pg-day-name">${dayNames[i]}</div>
-        <div class="pg-day-date">${fmtShort(d)}</div>
-      </div>`;
+    const thDays = days.map((d, i) => {
+      const isToday = d.toDateString() === todayStr;
+      return `<th style="padding:10px 6px;text-align:center;background:${isToday?'var(--accent-lt)':'var(--bg)'};min-width:100px;${isToday?'border-bottom:2px solid var(--accent)':''}">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${isToday?'var(--accent)':'var(--ink3)'}">${DAY_NAMES[i]}</div>
+        <div style="font-size:14px;font-weight:800;color:${isToday?'var(--accent)':'var(--ink)'};margin-top:2px">${fmtShort(d)}</div>
+      </th>`;
     }).join('');
 
-    const gridUsers = users; // tous les actifs
-
-    if (!gridUsers.length) {
-      grid.innerHTML = '<div style="padding:60px;text-align:center;color:var(--ink3);font-size:13px">Aucun collaborateur actif. Créez des utilisateurs dans le module Administration.</div>';
-      return;
-    }
-
-    const rows = gridUsers.map(u => {
-      const cells = days.map(d => {
-        const dateStr = d.toISOString().split('T')[0];
-        const shifts  = byKey[`${u.id}|${dateStr}`] || [];
-        const shiftsHtml = shifts.map(s => {
-          const c = planningPosteColor(s.poste);
-          return `<div class="pg-shift" style="background:${c.bg};color:${c.text}"
-            onclick="event.stopPropagation();openModalPlanning('${dateStr}',${u.id},${s.id})">
-            ${s.heure_debut.slice(0,5)}–${s.heure_fin.slice(0,5)}
-            ${s.poste ? `<span class="pg-shift-label">${s.poste}</span>` : ''}
-          </div>`;
-        }).join('');
-        return `<div class="pg-cell" onclick="openModalPlanning('${dateStr}',${u.id},null)">
-          ${shiftsHtml}<div class="pg-add-hint">+</div>
-        </div>`;
+    const tbodyRows = horaires.map((h, hi) => {
+      const c = PLG_COLORS[hi] || PLG_COLORS[0];
+      const tds = days.map(d => {
+        const dateStr     = d.toISOString().split('T')[0];
+        const isToday     = d.toDateString() === todayStr;
+        const cellEntries = byKey[`${h.name}|${dateStr}`] || [];
+        const badges = cellEntries.map(e =>
+          `<span onclick="event.stopPropagation();openModalPlanning('${dateStr}','${h.name}',${e.id})"
+            style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;background:${c.bg};color:${c.text};border:1px solid ${c.border};margin:2px;white-space:nowrap"
+            title="Modifier">${userMap[e.user_id]||'#'+e.user_id}</span>`
+        ).join('');
+        return `<td style="padding:5px 6px;vertical-align:top;background:${isToday?'var(--accent-lt)':''};min-height:52px">
+          <div style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:1px;min-height:32px">
+            ${badges}
+            <button onclick="openModalPlanning('${dateStr}','${h.name}',null)"
+              style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:1.5px dashed var(--border);background:none;color:var(--ink3);font-size:14px;line-height:1;cursor:pointer;flex-shrink:0;margin:2px;transition:all 0.15s"
+              onmouseover="this.style.background='var(--accent)';this.style.color='#fff';this.style.borderColor='var(--accent)'"
+              onmouseout="this.style.background='none';this.style.color='var(--ink3)';this.style.borderColor='var(--border)'">+</button>
+          </div>
+        </td>`;
       }).join('');
-      const name = userMap[u.id] || u.email;
-      return `<div class="pg-row"><div class="pg-name-cell" title="${u.email}">${name}</div>${cells}</div>`;
+
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:10px 14px;background:var(--bg);white-space:nowrap;border-right:2px solid var(--border)">
+          <div style="font-size:12px;font-weight:700;color:${c.text}">${h.name}</div>
+          <div style="font-size:10px;color:var(--ink3);margin-top:2px">${h.debut}–${h.fin}</div>
+        </td>
+        ${tds}
+      </tr>`;
     }).join('');
 
-    grid.innerHTML = `<div class="pg-grid">
-      <div class="pg-row pg-header-row">
-        <div class="pg-name-cell pg-name-header">Collaborateur</div>${headerCells}
-      </div>${rows}
-    </div>`;
+    grid.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="padding:10px 14px;text-align:left;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);min-width:120px;border-right:2px solid var(--border)">Horaire</th>
+          ${thDays}
+        </tr>
+      </thead>
+      <tbody>${tbodyRows}</tbody>
+    </table>`;
 
   } catch(e) {
     grid.innerHTML = `<div style="padding:60px;text-align:center;color:var(--red);font-size:13px">Erreur : ${e.message}</div>`;
   }
 }
 
-async function openModalPlanning(date, userId, id) {
+async function openModalPlanning(date, horaire, id) {
   planningEditingId = id;
   document.getElementById('modal-planning-title').textContent = id ? 'Modifier le créneau' : 'Ajouter un créneau';
   const delBtn = document.getElementById('btn-delete-planning');
   if (delBtn) delBtn.style.display = id ? 'inline-flex' : 'none';
 
-  await rhLoadUsers(['pl-user']); // réutilise le helper RH
+  await rhLoadUsers(['pl-user']);
 
   const cSel = document.getElementById('pl-creche');
   if (cSel) {
@@ -7083,29 +7124,30 @@ async function openModalPlanning(date, userId, id) {
       CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
   }
 
-  const fill = (elId, val) => { const e = document.getElementById(elId); if (e) e.value = val ?? ''; };
-  fill('pl-date',  date || '');
-  fill('pl-debut', '07:30');
-  fill('pl-fin',   '16:30');
-  fill('pl-notes', '');
-  if (document.getElementById('pl-user')) document.getElementById('pl-user').value = userId || '';
-  document.getElementById('pl-poste').value = '';
+  const hSel = document.getElementById('pl-horaire');
+  if (hSel) {
+    const horaires = getPlanningHoraires();
+    hSel.innerHTML = '<option value="">— Choisir —</option>' +
+      horaires.map(h => `<option value="${h.name}">${h.name} (${h.debut}–${h.fin})</option>`).join('');
+  }
 
-  // Pré-remplir la crèche depuis le filtre courant
-  const cur = (document.getElementById('planning-creche-filter') || {}).value || '';
-  if (cur && cSel) cSel.value = cur;
+  const fill = (elId, val) => { const e = document.getElementById(elId); if (e) e.value = val ?? ''; };
+  fill('pl-date', date || '');
+  fill('pl-notes', '');
+  if (horaire && hSel) hSel.value = horaire;
+
+  const curCreche = (document.getElementById('planning-creche-filter')||{}).value||'';
+  if (curCreche && cSel) cSel.value = curCreche;
 
   if (id) {
     const rows = await sbGet('planning', `id=eq.${id}`).catch(() => []);
     if (rows[0]) {
       const r = rows[0];
-      fill('pl-date',  r.date);
-      fill('pl-debut', r.heure_debut ? r.heure_debut.slice(0,5) : '');
-      fill('pl-fin',   r.heure_fin   ? r.heure_fin.slice(0,5)   : '');
+      fill('pl-date', r.date);
       fill('pl-notes', r.notes);
-      document.getElementById('pl-user').value   = r.user_id   || '';
-      document.getElementById('pl-creche').value = r.creche_id || '';
-      document.getElementById('pl-poste').value  = r.poste      || '';
+      if (document.getElementById('pl-user')) document.getElementById('pl-user').value = r.user_id||'';
+      if (cSel) cSel.value = r.creche_id||'';
+      if (hSel) hSel.value = r.poste||'';
     }
   }
   document.getElementById('modal-planning').classList.add('open');
@@ -7115,16 +7157,18 @@ async function savePlanning() {
   const user_id   = document.getElementById('pl-user').value;
   const creche_id = document.getElementById('pl-creche').value;
   const date      = document.getElementById('pl-date').value;
-  const debut     = document.getElementById('pl-debut').value;
-  const fin       = document.getElementById('pl-fin').value;
-  if (!user_id || !creche_id || !date || !debut || !fin) {
-    alert('Collaborateur, crèche, date et heures sont requis.'); return;
+  const horaire   = document.getElementById('pl-horaire').value;
+  if (!user_id || !creche_id || !date || !horaire) {
+    alert('Collaborateur, crèche, date et horaire sont requis.'); return;
   }
-  if (debut >= fin) { alert("L'heure de fin doit être après l'heure de début."); return; }
+  const horaires = getPlanningHoraires();
+  const h = horaires.find(x => x.name === horaire) || { debut:'00:00', fin:'23:59' };
   const data = {
-    user_id: parseInt(user_id), creche_id, date,
-    heure_debut: debut, heure_fin: fin,
-    poste:  document.getElementById('pl-poste').value,
+    user_id: parseInt(user_id),
+    creche_id, date,
+    heure_debut: h.debut,
+    heure_fin:   h.fin,
+    poste:  horaire,
     notes:  (document.getElementById('pl-notes').value || '').trim(),
   };
   try {
@@ -7145,6 +7189,38 @@ async function deletePlanning() {
   } catch(e) { alert('Erreur : ' + e.message); }
 }
 
+function renderPlanningParamHoraires() {
+  const el = document.getElementById('planning-horaires-config');
+  if (!el) return;
+  const horaires = getPlanningHoraires();
+  el.innerHTML = horaires.map((h, i) => {
+    const c = PLG_COLORS[i] || PLG_COLORS[0];
+    return `<div style="display:grid;grid-template-columns:1fr 130px 130px;gap:10px;align-items:center;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:${c.text};background:${c.bg};padding:7px 12px;border-radius:8px;border:1px solid ${c.border}">${h.name}</div>
+      <div>
+        <label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Début</label>
+        <input type="time" value="${h.debut}" step="900"
+          style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+          onchange="savePlanningHoraireParam(${i},'debut',this.value)">
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Fin</label>
+        <input type="time" value="${h.fin}" step="900"
+          style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+          onchange="savePlanningHoraireParam(${i},'fin',this.value)">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function savePlanningHoraireParam(idx, field, val) {
+  const horaires = getPlanningHoraires();
+  horaires[idx][field] = val;
+  localStorage.setItem(PLG_HORAIRES_KEY, JSON.stringify(horaires));
+}
+
 // ── FIN MODULE PLANNING ───────────────────────────────────────────
 
 // ── FIN MODULE RH ─────────────────────────────────────────────────
@@ -7153,7 +7229,7 @@ async function deletePlanning() {
 </script>
 <!-- ── MODAL PLANNING ── -->
 <div class="modal-overlay" id="modal-planning" onclick="closeModalClick(event,'modal-planning')">
-  <div class="modal" style="max-width:480px">
+  <div class="modal" style="max-width:460px">
     <div class="modal-header">
       <h2 id="modal-planning-title">Ajouter un créneau</h2>
       <button class="modal-close" onclick="closeModal('modal-planning')">✕</button>
@@ -7172,24 +7248,9 @@ async function deletePlanning() {
           <label>Date *</label>
           <input type="date" id="pl-date">
         </div>
-        <div class="form-group">
-          <label>Heure de début *</label>
-          <input type="time" id="pl-debut" step="900">
-        </div>
-        <div class="form-group">
-          <label>Heure de fin *</label>
-          <input type="time" id="pl-fin" step="900">
-        </div>
         <div class="form-group full">
-          <label>Type de poste</label>
-          <select id="pl-poste">
-            <option value="">— Non spécifié —</option>
-            <option value="Horaire 1">Horaire 1</option>
-            <option value="Horaire 2">Horaire 2</option>
-            <option value="Horaire 3">Horaire 3</option>
-            <option value="Horaire 4">Horaire 4</option>
-            <option value="Horaire 5">Horaire 5</option>
-          </select>
+          <label>Horaire *</label>
+          <select id="pl-horaire"><option value="">— Choisir —</option></select>
         </div>
         <div class="form-group full">
           <label>Notes</label>
