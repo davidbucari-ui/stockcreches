@@ -1387,11 +1387,11 @@ textarea { resize: vertical; min-height: 72px; }
         <!-- Légende postes -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
           <span style="font-size:11px;font-weight:600;color:var(--ink3)">Postes :</span>
-          <span style="background:#EFF6FF;color:#2563EB;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Ouverture</span>
-          <span style="background:#F0FDF4;color:#16A34A;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Journée</span>
-          <span style="background:#FFFBEB;color:#D97706;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Fermeture</span>
-          <span style="background:#F5F3FF;color:#7C3AED;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Remplacement</span>
-          <span style="background:#1C1917;color:rgba(255,255,255,0.8);font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Nuit</span>
+          <span style="background:#EFF6FF;color:#2563EB;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 1</span>
+          <span style="background:#F0FDF4;color:#16A34A;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 2</span>
+          <span style="background:#FFFBEB;color:#D97706;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 3</span>
+          <span style="background:#F5F3FF;color:#7C3AED;font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 4</span>
+          <span style="background:#1C1917;color:rgba(255,255,255,0.8);font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px">Horaire 5</span>
         </div>
 
         <!-- Grille -->
@@ -6973,11 +6973,11 @@ function planningGoToWeek(offset) {
 
 function planningPosteColor(poste) {
   const map = {
-    Ouverture:    { bg:'#EFF6FF', text:'#2563EB' },
-    Journée:      { bg:'#F0FDF4', text:'#16A34A' },
-    Fermeture:    { bg:'#FFFBEB', text:'#D97706' },
-    Remplacement: { bg:'#F5F3FF', text:'#7C3AED' },
-    Nuit:         { bg:'#1C1917', text:'rgba(255,255,255,0.85)' },
+    'Horaire 1': { bg:'#EFF6FF', text:'#2563EB' },
+    'Horaire 2': { bg:'#F0FDF4', text:'#16A34A' },
+    'Horaire 3': { bg:'#FFFBEB', text:'#D97706' },
+    'Horaire 4': { bg:'#F5F3FF', text:'#7C3AED' },
+    'Horaire 5': { bg:'#1C1917', text:'rgba(255,255,255,0.85)' },
   };
   return map[poste] || { bg:'#F1F5F9', text:'#475569' };
 }
@@ -7184,11 +7184,11 @@ async function deletePlanning() {
           <label>Type de poste</label>
           <select id="pl-poste">
             <option value="">— Non spécifié —</option>
-            <option value="Ouverture">Ouverture</option>
-            <option value="Journée">Journée</option>
-            <option value="Fermeture">Fermeture</option>
-            <option value="Remplacement">Remplacement</option>
-            <option value="Nuit">Nuit</option>
+            <option value="Horaire 1">Horaire 1</option>
+            <option value="Horaire 2">Horaire 2</option>
+            <option value="Horaire 3">Horaire 3</option>
+            <option value="Horaire 4">Horaire 4</option>
+            <option value="Horaire 5">Horaire 5</option>
           </select>
         </div>
         <div class="form-group full">
