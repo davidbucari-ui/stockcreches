@@ -8565,8 +8565,28 @@ function showImportResult(type, html) {
           </div>
         </div>
         <div class="form-group full">
-          <label>Pause (optionnelle, ex: 12h–12h30)</label>
-          <input type="text" id="ps-pause" placeholder="12h–12h30">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="ps-pause-active" onchange="psTogglePause()" style="accent-color:var(--accent);width:15px;height:15px">
+            Pause ?
+          </label>
+          <div id="ps-pause-steppers" style="display:none;gap:16px;margin-top:8px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:4px">Début pause</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button type="button" onclick="psAdjustPause('debut',-15)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+                <span id="ps-pause-deb-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:52px;text-align:center">12h00</span>
+                <button type="button" onclick="psAdjustPause('debut',15)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:4px">Fin pause</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button type="button" onclick="psAdjustPause('fin',-15)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+                <span id="ps-pause-fin-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:52px;text-align:center">12h30</span>
+                <button type="button" onclick="psAdjustPause('fin',15)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+              </div>
+            </div>
+          </div>
         </div>
         <!-- champ horaire caché pour compatibilité avec savePSCreneau() -->
         <input type="hidden" id="ps-horaire">
@@ -8959,8 +8979,10 @@ let psEditingId  = null;
 let psDayView    = null;
 
 /* ── Steppers Planning salarié ── */
-let psDebut = 7*60+30;
-let psFin   = 15*60+30;
+let psDebut      = 7*60+30;
+let psFin        = 15*60+30;
+let psPauseDebut = 12*60;
+let psPauseFin   = 12*60+30;
 const PS_HORAIRES_DEFAULTS = {
   h1: { debut: 7*60+30,  fin: 15*60+30 },
   h2: { debut: 8*60+30,  fin: 16*60+30 },
@@ -8990,6 +9012,28 @@ function psRefreshSteppers() {
   const label = colorKey.toUpperCase();
   const hid = document.getElementById('ps-horaire');
   if (hid) hid.value = `${label} · ${psFmt(psDebut)}–${psFmt(psFin)}`;
+}
+function psTogglePause() {
+  const active = document.getElementById('ps-pause-active')?.checked;
+  const div    = document.getElementById('ps-pause-steppers');
+  if (div) div.style.display = active ? 'flex' : 'none';
+  if (active) psRefreshPause();
+}
+function psAdjustPause(field, delta) {
+  const MIN = 6*60, MAX = 21*60;
+  if (field === 'debut') {
+    psPauseDebut = Math.min(MAX-15, Math.max(MIN, psPauseDebut + delta));
+    if (psPauseFin <= psPauseDebut) psPauseFin = Math.min(MAX, psPauseDebut + 15);
+  } else {
+    psPauseFin = Math.min(MAX, Math.max(psPauseDebut+15, psPauseFin + delta));
+  }
+  psRefreshPause();
+}
+function psRefreshPause() {
+  const dd = document.getElementById('ps-pause-deb-display');
+  const fd = document.getElementById('ps-pause-fin-display');
+  if (dd) dd.textContent = psFmt(psPauseDebut);
+  if (fd) fd.textContent = psFmt(psPauseFin);
 }
 function psColorChanged() {
   const colorKey = document.getElementById('ps-color')?.value || 'h1';
@@ -9261,7 +9305,11 @@ function openModalPS(collabPreset, jourPreset) {
   psDebut = PS_HORAIRES_DEFAULTS.h1.debut;
   psFin   = PS_HORAIRES_DEFAULTS.h1.fin;
   psRefreshSteppers();
-  document.getElementById('ps-pause').value   = '';
+  psPauseDebut = Math.min(20*60+45, Math.max(6*60, psDebut + 3*60));
+  psPauseFin   = Math.min(21*60, psPauseDebut + 30);
+  const pauseCb = document.getElementById('ps-pause-active');
+  if (pauseCb) { pauseCb.checked = false; psTogglePause(); }
+  psRefreshPause();
   document.getElementById('ps-color').value   = 'h1';
   // Reset récurrence
   const recCb = document.getElementById('ps-recurrence-active');
@@ -9298,7 +9346,20 @@ function editPSCreneau(key, id) {
   }
   psRefreshSteppers();
   document.getElementById('ps-horaire').value = c.horaire; // garder valeur brute
-  document.getElementById('ps-pause').value   = c.pause || '';
+  const pauseCbEdit = document.getElementById('ps-pause-active');
+  if (c.pause) {
+    const pp = c.pause.match(/(\d+)h(\d*)[–\-](\d+)h(\d*)/);
+    if (pp) {
+      psPauseDebut = parseInt(pp[1])*60 + (parseInt(pp[2])||0);
+      psPauseFin   = parseInt(pp[3])*60 + (parseInt(pp[4])||0);
+    }
+    if (pauseCbEdit) { pauseCbEdit.checked = true; psTogglePause(); }
+  } else {
+    psPauseDebut = Math.min(20*60+45, Math.max(6*60, psDebut + 3*60));
+    psPauseFin   = Math.min(21*60, psPauseDebut + 30);
+    if (pauseCbEdit) { pauseCbEdit.checked = false; psTogglePause(); }
+  }
+  psRefreshPause();
   document.getElementById('ps-color').value   = c.color  || 'h1';
   document.getElementById('modal-ps').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -9319,7 +9380,7 @@ function savePSCreneau() {
     collab,
     jour:    parseInt(document.getElementById('ps-jour').value),
     horaire: document.getElementById('ps-horaire').value.trim(),
-    pause:   document.getElementById('ps-pause').value.trim(),
+    pause:   document.getElementById('ps-pause-active')?.checked ? `${psFmt(psPauseDebut)}–${psFmt(psPauseFin)}` : '',
     color:   document.getElementById('ps-color').value,
   };
   if (!creneau.horaire) { showNotif('⚠ Horaire obligatoire'); return; }
