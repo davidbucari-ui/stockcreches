@@ -3889,9 +3889,15 @@ function filterCreche(creche, el) {
   currentCreche = creche;
   const sel = document.getElementById('creche-select-sidebar');
   if (sel) sel.value = creche;
+  // Sync planning creche select
+  const peSel = document.getElementById('pe-creche');
+  if (peSel && creche && creche !== 'all') {
+    if ([...peSel.options].some(o => o.value === creche)) peSel.value = creche;
+  }
   if (currentPage === 'inventaire') renderTable();
   else if (currentPage === 'commandes') renderCommandes();
   else if (currentPage === 'historique') renderHistorique();
+  else if (currentPage === 'planning') renderActiveTab();
   renderStats();
   updateCounts();
 }
@@ -7075,6 +7081,11 @@ function pePopulateCreches(selId) {
 
 function showPlanningEquipePage() {
   pePopulateCreches('pe-creche');
+  // Pre-select sidebar creche
+  const peSel = document.getElementById('pe-creche');
+  if (peSel && typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all') {
+    if ([...peSel.options].some(o => o.value === currentCreche)) peSel.value = currentCreche;
+  }
   switchPlanningTab(pePlanningTab || 'gantt');
 }
 
@@ -7169,13 +7180,20 @@ function renderPlanningEquipe() {
     return;
   }
 
-  // Timeline config
+  // Timeline config — calcul dynamique de la largeur des colonnes
   const T_START = 7;   // 7h
   const T_END   = 20;  // 20h
   const T_TOTAL = T_END - T_START; // 13h
-  const COL_W   = 52;  // px per hour
   const ROW_H   = 52;  // px per row
-  const LABEL_W = 110; // px for name column
+  const LABEL_W = 120; // px for name column
+
+  // Mesure la largeur réelle du container parent
+  const containerW = grid.parentElement ? grid.parentElement.clientWidth || 900 : 900;
+  const timelineW  = Math.max(containerW - LABEL_W - 4, T_TOTAL * 60); // au moins 60px/h
+  const COL_W      = timelineW / T_TOTAL; // px par heure, calculé dynamiquement
+
+  const startMin = T_START * 60;
+  const endMin   = T_END   * 60;
 
   // Hours header
   const hoursHeader = Array.from({length: T_TOTAL + 1}, (_, i) => {
@@ -7193,8 +7211,6 @@ function renderPlanningEquipe() {
   // Current time line
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const startMin = T_START * 60;
-  const endMin   = T_END   * 60;
   const timeLine = (nowMin > startMin && nowMin < endMin)
     ? `<div style="position:absolute;left:${LABEL_W + (nowMin - startMin) / 60 * COL_W}px;top:0;bottom:0;width:2px;background:var(--red);z-index:10">
          <div style="position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--red)"></div>
@@ -7297,7 +7313,7 @@ function renderPlanningEquipe() {
     return `<div style="position:absolute;left:${left}px;top:0;width:${COL_W/2}px;text-align:center;font-size:10px;font-weight:700;color:${color}">${count>0?count:''}</div>`;
   }).join('');
 
-  grid.style.cssText = `position:relative;height:${totalH + 4}px;min-width:${LABEL_W + T_TOTAL * COL_W + 20}px`;
+  grid.style.cssText = `position:relative;height:${totalH + 4}px;width:100%;min-width:${LABEL_W + T_TOTAL * 60}px`;
   grid.innerHTML = `
     <!-- Header hours -->
     <div style="position:absolute;left:0;top:0;right:0;height:28px;background:var(--bg);border-bottom:2px solid var(--border)">
