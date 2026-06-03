@@ -1369,10 +1369,6 @@ textarea { resize: vertical; min-height: 72px; }
             <span id="pe-week-label" style="font-size:13px;font-weight:600;color:var(--ink3)"></span>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <select id="pe-creche" onchange="renderActiveTab()"
-              style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
-              <option value="">Toutes les crèches</option>
-            </select>
             <button class="btn btn-primary" id="pe-add-btn" onclick="openModalPE(null,null)">+ Ajouter</button>
             <button class="btn btn-secondary" onclick="exportPlanningPDF()">🖨 PDF</button>
           </div>
@@ -7200,7 +7196,7 @@ function renderPlanningEquipe() {
          <div style="position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--red)"></div>
        </div>` : '';
 
-  const totalH = allPros.length * ROW_H + 28 + 30; // header + taux rows
+  const totalH = allPros.length * ROW_H + 28 + 26; // header + taux row
 
   // Rows per pro
   const fmtHHMM = s => { if (!s) return 0; const [h,m] = s.split(':').map(Number); return h*60+(m||0); };
@@ -7297,7 +7293,7 @@ function renderPlanningEquipe() {
     return `<div style="position:absolute;left:${left}px;top:0;width:${COL_W/2}px;text-align:center;font-size:10px;font-weight:700;color:${color}">${count>0?count:''}</div>`;
   }).join('');
 
-  grid.style.cssText = `position:relative;height:${totalH + 52}px;min-width:${LABEL_W + T_TOTAL * COL_W + 20}px`;
+  grid.style.cssText = `position:relative;height:${totalH + 4}px;min-width:${LABEL_W + T_TOTAL * COL_W + 20}px`;
   grid.innerHTML = `
     <!-- Header hours -->
     <div style="position:absolute;left:0;top:0;right:0;height:28px;background:var(--bg);border-bottom:2px solid var(--border)">
@@ -7316,15 +7312,6 @@ function renderPlanningEquipe() {
     </div>
     <div style="position:absolute;left:${LABEL_W}px;top:${tauxTop}px;right:0;height:26px;background:var(--bg);border-top:2px solid var(--border)">
       ${tauxCells}
-    </div>
-    <!-- Add button per day -->
-    <div style="position:absolute;left:${LABEL_W + 8}px;top:${tauxTop + 26}px;padding-top:10px">
-      <button onclick="openModalPE(null,${peGanttDay},null)"
-        style="border:1.5px dashed var(--border);background:none;color:var(--ink3);font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;cursor:pointer;font-family:inherit;transition:all 0.15s"
-        onmouseover="this.style.background='var(--accent)';this.style.color='#fff';this.style.borderColor='var(--accent)'"
-        onmouseout="this.style.background='none';this.style.color='var(--ink3)';this.style.borderColor='var(--border)'">
-        + Ajouter un créneau ce jour
-      </button>
     </div>
   `;
 }
