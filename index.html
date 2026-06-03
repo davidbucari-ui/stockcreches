@@ -3472,7 +3472,7 @@ function renderSidebarCreches() {
   const sel = document.getElementById('creche-select-sidebar');
   if (!sel) return;
   sel.innerHTML =
-    `<option value="all" ${currentCreche === 'all' ? 'selected' : ''}>Toutes les crèches (${ARTICLES.length})</option>` +
+    `<option value="all" ${currentCreche === 'all' ? 'selected' : ''}>Toutes les crèches</option>` +
     CRECHES_DATA.map(c => {
       const cnt = ARTICLES.filter(a => a.creche === c.nom).length;
       return `<option value="${c.nom}" ${currentCreche === c.nom ? 'selected' : ''}>${c.nom} (${cnt})</option>`;
@@ -6622,7 +6622,8 @@ async function renderRhStats() {
       sbGet('recrutements', 'statut=eq.ouvert&select=id'),
       sbGet('formations_rh', `renouvellement=lte.${d90str}&renouvellement=gte.${today}&select=id`),
     ]);
-    set('rh-stat-employes',   Array.isArray(users)      ? users.length      : 0);
+    loadSalaries();
+    set('rh-stat-employes', SALARIES.filter(s => s.statut === 'actif').length || (Array.isArray(users) ? users.length : 0));
     set('rh-stat-conges',     Array.isArray(conges)     ? conges.length     : 0);
     set('rh-stat-recru',      Array.isArray(recru)      ? recru.length      : 0);
     set('rh-stat-formations', Array.isArray(formations) ? formations.length : 0);
@@ -8690,6 +8691,13 @@ function _salPopulateCreche() {
     CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
 }
 
+function _salPopulateCreche() {
+  const sel = document.getElementById('sal-creche');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Choisir —</option>' +
+    CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
 function openModalSalarie() {
   salEditingId = null;
   document.getElementById('modal-salarie-title').textContent = '👤 Nouveau salarié';
@@ -8740,7 +8748,7 @@ function editSalarie(id) {
 function saveSalarie() {
   const prenom = document.getElementById('sal-prenom').value.trim();
   const nom    = document.getElementById('sal-nom').value.trim();
-  if (!prenom || !nom) { showNotif('⚠ Prénom et nom requis'); return; }
+  if (!prenom || !nom) { showNotif('⚠ Prénom et nom obligatoires'); return; }
   const s = {
     id:         salEditingId || 'sal_' + Date.now(),
     prenom, nom,
@@ -8777,8 +8785,10 @@ function saveSalarie() {
 }
 
 function deleteSalarie() {
-  if (!salEditingId || !confirm('Supprimer cette fiche salarié ?')) return;
+  if (!salEditingId) return;
   loadSalaries();
+  const s = SALARIES.find(x => x.id === salEditingId);
+  if (!confirm(`Supprimer la fiche de ${s?.prenom||''} ${s?.nom||''} ?`)) return;
   SALARIES = SALARIES.filter(x => x.id !== salEditingId);
   saveSalaries();
   closeModal('modal-salarie');
