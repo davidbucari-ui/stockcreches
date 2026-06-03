@@ -1094,7 +1094,27 @@ textarea { resize: vertical; min-height: 72px; }
           </button>
         </div>
 
-        <!-- SECTION 3 : Export -->
+        <!-- SECTION 3 : Type de structure -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Type de structure</div>
+        <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:12px;color:var(--ink3)">Définit le taux d'encadrement réglementaire utilisé dans le planning salarié.</div>
+          <label id="param-struct-micro-label" style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);transition:border-color 0.15s">
+            <input type="radio" name="structure_type" id="param-struct-micro" value="micro" onchange="setStructureType('micro')" style="margin-top:2px;accent-color:var(--accent)">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--ink)">Micro-crèche</div>
+              <div style="font-size:12px;color:var(--ink3);margin-top:2px">1 professionnel pour 6 enfants (tous âges)</div>
+            </div>
+          </label>
+          <label id="param-struct-classique-label" style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);transition:border-color 0.15s">
+            <input type="radio" name="structure_type" id="param-struct-classique" value="classique" onchange="setStructureType('classique')" style="margin-top:2px;accent-color:var(--accent)">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--ink)">Crèche classique</div>
+              <div style="font-size:12px;color:var(--ink3);margin-top:2px">1 pro / 5 non marcheurs · 1 pro / 8 marcheurs</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- SECTION 4 : Export -->
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Données</div>
         <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">
           <div style="font-size:13px;color:var(--ink2);line-height:1.6">Exportez ou restaurez l'intégralité de vos données en un clic.</div>
@@ -1410,6 +1430,28 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
 
           <div id="ps-banner" style="background:var(--bg);border-radius:8px;padding:9px 14px;font-size:11.5px;letter-spacing:0.06em;color:var(--ink3);font-weight:600;margin-bottom:14px"></div>
+
+          <!-- Saisie enfants — micro -->
+          <div id="ps-enf-micro" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:8px">
+              Enfants présents
+              <input type="number" id="ps-enf-total" min="0" max="99" value="6" onchange="renderPlanningSalarie()"
+                style="width:70px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
+            </label>
+          </div>
+          <!-- Saisie enfants — classique -->
+          <div id="ps-enf-classique" style="display:none;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:8px">
+              Enfants non marcheurs
+              <input type="number" id="ps-enf-nm" min="0" max="99" value="0" onchange="renderPlanningSalarie()"
+                style="width:70px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
+            </label>
+            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:8px">
+              Enfants marcheurs
+              <input type="number" id="ps-enf-m" min="0" max="99" value="0" onchange="renderPlanningSalarie()"
+                style="width:70px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
+            </label>
+          </div>
 
           <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
             <div id="ps-grid"></div>
@@ -3368,6 +3410,7 @@ function renderParametres() {
   if (nomInput) nomInput.value = prefs.nomReseau || '';
   if (seuilInput) seuilInput.value = prefs.seuilStock || 2;
   if (peremptionInput) peremptionInput.value = prefs.seuilPeremption || 30;
+  updateStructureUI();
 
   // Générer les cercles de couleur
   const colorsEl = document.getElementById('param-colors');
@@ -6615,6 +6658,28 @@ async function showRhPage() {
   showRhTab(rhCurrentTab, btn);
 }
 
+function setStructureType(type) {
+  localStorage.setItem('structure_type', type);
+  updateStructureUI();
+  renderPlanningSalarie();
+}
+
+function updateStructureUI() {
+  const type = localStorage.getItem('structure_type') || 'micro';
+  const microRadio      = document.getElementById('param-struct-micro');
+  const classiqueRadio  = document.getElementById('param-struct-classique');
+  if (microRadio)     microRadio.checked     = type === 'micro';
+  if (classiqueRadio) classiqueRadio.checked = type === 'classique';
+  const microLabel     = document.getElementById('param-struct-micro-label');
+  const classiqueLabel = document.getElementById('param-struct-classique-label');
+  if (microLabel)     microLabel.style.borderColor     = type === 'micro'      ? 'var(--accent)' : 'var(--border)';
+  if (classiqueLabel) classiqueLabel.style.borderColor = type === 'classique'  ? 'var(--accent)' : 'var(--border)';
+  const microDiv     = document.getElementById('ps-enf-micro');
+  const classiqueDiv = document.getElementById('ps-enf-classique');
+  if (microDiv)     microDiv.style.display     = type === 'micro'      ? 'flex' : 'none';
+  if (classiqueDiv) classiqueDiv.style.display = type === 'classique'  ? 'flex' : 'none';
+}
+
 function showSalarieTab(tab, btn) {
   ['planning','taux'].forEach(t => {
     const el = document.getElementById('salarie-tab-' + t);
@@ -8955,6 +9020,7 @@ function psPopulateCreches() {
 }
 
 function renderPlanningSalarie() {
+  updateStructureUI();
   psPopulateCreches();
   const monday  = psGetMonday(psWeekOffset);
   const weekNum = psISOWeek(monday);
@@ -9029,32 +9095,32 @@ function renderPlanningSalarie() {
     </tr>`;
   }).join('');
 
+  const structType = localStorage.getItem('structure_type') || 'micro';
+  const enfNM      = parseInt(document.getElementById('ps-enf-nm')?.value) || 0;
+  const enfM       = parseInt(document.getElementById('ps-enf-m')?.value) || 0;
+  const enfTotal   = parseInt(document.getElementById('ps-enf-total')?.value) || 6;
+  const requis     = structType === 'micro'
+    ? Math.ceil(enfTotal / 6)
+    : Math.ceil(enfNM / 5) + Math.ceil(enfM / 8);
+  const enfDetail  = structType === 'micro'
+    ? `${enfTotal} enf.`
+    : `${enfNM} NM · ${enfM} M`;
+
   const tauxCells = days.map((d, di) => {
     const dt = new Date(monday); dt.setDate(monday.getDate()+di);
-    const isToday      = dt.getTime() === today.getTime();
-    const presentCount = (week.creneaux||[]).filter(c => c.jour===di).length;
-    const pauseGroups  = {};
-    (week.creneaux||[]).filter(c => c.jour===di && c.pause).forEach(c => {
-      pauseGroups[c.pause] = (pauseGroups[c.pause] || 0) + 1;
-    });
-    const badges = [];
-    const hpCount   = presentCount;
-    const ratio     = hpCount > 0 ? `1/${Math.ceil(12/hpCount)}` : '—';
-    const ratioNum  = hpCount > 0 ? Math.ceil(12/hpCount) : 0;
-    const ratioClass = ratioNum <= 4 ? 'ok' : ratioNum <= 6 ? 'limit' : 'bad';
-    const ratioColors = { ok:'#F0FDF4,#16A34A,✓', limit:'#FFFBEB,#D97706,!', bad:'#FEF2F2,#DC2626,✗' };
-    const [rbg,rclr,rico] = (ratioColors[ratioClass]||ratioColors.ok).split(',');
-    if (hpCount > 0) badges.push(`<div style="background:${rbg};color:${rclr};border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;margin:2px;display:inline-flex;flex-direction:column;align-items:center;line-height:1.4">${ratio} ${rico}<span style="font-size:10px;font-weight:400">hors pause</span></div>`);
-    Object.entries(pauseGroups).forEach(([p, cnt]) => {
-      if (cnt >= 2) {
-        const denom      = presentCount - cnt || 1;
-        const simultRatio = `1/${Math.ceil(12/denom)}`;
-        badges.push(`<div style="background:#FFFBEB;color:#D97706;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;margin:2px;display:inline-flex;flex-direction:column;align-items:center;line-height:1.4">${simultRatio} !<span style="font-size:10px;font-weight:400">${p}</span></div>`);
-      } else {
-        badges.push(`<div style="background:#F0FDF4;color:#16A34A;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;margin:2px;display:inline-flex;flex-direction:column;align-items:center;line-height:1.4">${ratio} ✓<span style="font-size:10px;font-weight:400">pauses décalées</span></div>`);
-      }
-    });
-    return `<td style="padding:8px;border-right:1px solid var(--border);text-align:center;${isToday?'background:#F5F9FF':'background:var(--bg)'}">${badges.join('')||'—'}</td>`;
+    const isToday = dt.getTime() === today.getTime();
+    const pros    = (week.creneaux||[]).filter(c => c.jour===di).length;
+    let ico, bg, clr;
+    if (pros >= requis)        { ico = '✓'; bg = '#F0FDF4'; clr = '#16A34A'; }
+    else if (pros === requis - 1) { ico = '!'; bg = '#FFFBEB'; clr = '#D97706'; }
+    else                       { ico = '✗'; bg = '#FEF2F2'; clr = '#DC2626'; }
+    const badge = pros > 0
+      ? `<div style="background:${bg};color:${clr};border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;margin:2px;display:inline-flex;flex-direction:column;align-items:center;line-height:1.4">
+           ${pros} pros / ${requis} req. ${ico}
+           <span style="font-size:10px;font-weight:400">${enfDetail}</span>
+         </div>`
+      : '—';
+    return `<td style="padding:8px;border-right:1px solid var(--border);text-align:center;${isToday?'background:#F5F9FF':'background:var(--bg)'}">${badge}</td>`;
   }).join('');
 
   grid.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:700px">
