@@ -8428,7 +8428,7 @@ function showImportResult(type, html) {
       <div class="form-grid">
         <div class="form-group">
           <label>Collaborateur</label>
-          <input type="text" id="ps-collab-input" placeholder="Prénom Nom du collaborateur" style="width:100%">
+          <select id="ps-collab" style="width:100%"></select>
         </div>
         <div class="form-group">
           <label>Jour</label>
@@ -9053,8 +9053,13 @@ function openModalPS(collabPreset, jourPreset) {
   document.getElementById('ps-delete-btn').style.display = 'none';
 
   const crecheId = document.getElementById('ps-creche')?.value || 'all';
-  const key  = psWeekKey(psWeekOffset, crecheId);
-  document.getElementById('ps-collab-input').value = collabPreset || '';
+  loadSalaries();
+  const sel = document.getElementById('ps-collab');
+  sel.innerHTML = SALARIES.map(s => `<option value="${s.id}">${s.prenom} ${s.nom}</option>`).join('');
+  if (collabPreset) {
+    const found = SALARIES.find(s => `${s.prenom} ${s.nom}` === collabPreset);
+    if (found) sel.value = found.id;
+  }
   if (jourPreset !== undefined) document.getElementById('ps-jour').value = jourPreset;
   psDebut = PS_HORAIRES_DEFAULTS.h1.debut;
   psFin   = PS_HORAIRES_DEFAULTS.h1.fin;
@@ -9074,7 +9079,11 @@ function editPSCreneau(key, id) {
   psEditingId = { key, id };
   document.getElementById('modal-ps-title').textContent = '✏️ Modifier le créneau';
   document.getElementById('ps-delete-btn').style.display = 'inline-flex';
-  document.getElementById('ps-collab-input').value = c.collab || '';
+  loadSalaries();
+  const sel = document.getElementById('ps-collab');
+  sel.innerHTML = SALARIES.map(s => `<option value="${s.id}">${s.prenom} ${s.nom}</option>`).join('');
+  const found = SALARIES.find(s => `${s.prenom} ${s.nom}` === c.collab);
+  if (found) sel.value = found.id;
   document.getElementById('ps-jour').value    = c.jour;
   // Tenter de parser l'horaire existant (ex: "H1 · 07h30–15h30")
   const pm = (c.horaire||'').match(/(\d+)h(\d+)[–\-](\d+)h(\d+)/);
@@ -9099,8 +9108,10 @@ function savePSCreneau() {
   const data = psLoad();
   if (!data[key]) data[key] = { collaborateurs:[], creneaux:[] };
   const week = data[key];
-  const collab = document.getElementById('ps-collab-input').value.trim();
-  if (!collab) { showNotif('⚠ Saisissez le nom du collaborateur'); return; }
+  const selId  = document.getElementById('ps-collab').value;
+  const sal    = SALARIES.find(s => String(s.id) === String(selId));
+  const collab = sal ? `${sal.prenom} ${sal.nom}` : '';
+  if (!collab) { showNotif('⚠ Sélectionnez un collaborateur'); return; }
   const creneau = {
     id:      psEditingId ? psEditingId.id : 'ps_' + Date.now(),
     collab,
