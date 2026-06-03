@@ -1354,8 +1354,8 @@ textarea { resize: vertical; min-height: 72px; }
       <!-- Onglets -->
       <div style="padding:16px 28px 0">
         <div class="tabs" id="salarie-tabs">
-          <button class="tab-btn active" onclick="showSalarieTab('planning',this)">📅 Planning hebdomadaire</button>
-          <button class="tab-btn" onclick="showSalarieTab('taux',this)">👥 Taux d'encadrement</button>
+          <button onclick="showSalarieTab('planning',this)" style="flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);transition:all 0.2s">📅 Planning hebdomadaire</button>
+          <button onclick="showSalarieTab('taux',this)" style="flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s">👥 Taux d'encadrement</button>
         </div>
       </div>
 
@@ -6620,10 +6620,16 @@ function showSalarieTab(tab, btn) {
     const el = document.getElementById('salarie-tab-' + t);
     if (el) el.style.display = t === tab ? '' : 'none';
   });
-  document.querySelectorAll('#salarie-tabs .tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', (tab === 'planning' && i === 0) || (tab === 'taux' && i === 1));
-  });
-  if (btn) { document.querySelectorAll('#salarie-tabs .tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+  const [planningBtn, tauxBtn] = document.querySelectorAll('#salarie-tabs button');
+  if (planningBtn && tauxBtn) {
+    if (tab === 'planning') {
+      planningBtn.style.cssText = "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);transition:all 0.2s";
+      tauxBtn.style.cssText = "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s";
+    } else {
+      tauxBtn.style.cssText = "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 3px 10px rgba(5,150,105,0.4);transition:all 0.2s";
+      planningBtn.style.cssText = "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s";
+    }
+  }
   if (tab === 'planning') showPlanningPage();
   if (tab === 'taux')     renderPlanningSalarie();
 }
@@ -7095,7 +7101,7 @@ async function renderPlanning() {
       sbGet('utilisateurs', 'actif=eq.true&select=id,email&order=email.asc'),
     ]);
 
-    const userMap = Object.fromEntries(users.map(u => [u.id, u.email.split('@')[0]]));
+    const userMap = Object.fromEntries(users.map(u => [String(u.id), u.email.split('@')[0]]));
 
     // Lookup: "Horaire X|YYYY-MM-DD" → entries[]
     const byKey = {};
@@ -7121,7 +7127,7 @@ async function renderPlanning() {
         const badges = cellEntries.map(e =>
           `<span onclick="event.stopPropagation();openModalPlanning('${dateStr}','${h.name}',${e.id})"
             style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;background:${c.bg};color:${c.text};border:1px solid ${c.border};margin:2px;white-space:nowrap"
-            title="Modifier">${userMap[e.user_id]||'#'+e.user_id}</span>`
+            title="Modifier">${userMap[String(e.user_id)]||userMap[e.user_id]||'#'+e.user_id}</span>`
         ).join('');
         return `<td style="padding:5px 6px;vertical-align:top;background:${isToday?'var(--accent-lt)':''};min-height:52px">
           <div style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:1px;min-height:32px">
