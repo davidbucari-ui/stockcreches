@@ -9312,7 +9312,64 @@ function deletePSCreneau() {
 }
 
 function exportPlanningPDF() {
-  window.print();
+  const root = document.documentElement;
+  const cv   = v => getComputedStyle(root).getPropertyValue(v).trim();
+  const cssVars = [
+    '--border','--surface2','--surface','--ink','--ink2','--ink3','--bg','--accent','--accent-lt'
+  ];
+
+  let ganttHTML = document.getElementById('ps-grid').innerHTML;
+  cssVars.forEach(k => { const val = cv(k); if (val) ganttHTML = ganttHTML.split(`var(${k})`).join(val); });
+  ganttHTML = ganttHTML.replace(/ on\w+="[^"]*"/g, '');
+
+  const monday     = psGetMonday(psWeekOffset);
+  const weekNum    = psISOWeek(monday);
+  const di         = psDayView ?? 0;
+  const dt         = new Date(monday); dt.setDate(monday.getDate() + di);
+  const dayLabel   = dt.toLocaleDateString('fr-FR', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
+  const crecheLabel = (() => {
+    const sel = document.getElementById('ps-creche');
+    return sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].text : 'Toutes crèches';
+  })();
+  const title = `Planning salarié — Semaine ${weekNum} · ${crecheLabel}`;
+
+  const win = window.open('', '_blank');
+  if (!win) { showNotif('⚠ Autorisez les popups pour exporter le PDF'); return; }
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>${title}</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm 12mm; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #1E293B; background: #fff; margin: 0; padding: 0; }
+  h1 { font-size: 15px; font-weight: 800; margin: 0 0 3px; }
+  .subtitle { font-size: 11px; color: #64748B; margin-bottom: 12px; }
+  button { display: none !important; }
+  #ps-grid > div:first-child { display: none !important; }
+  [style*="min-width:500px"] { min-width: 0 !important; }
+  [style*="overflow:hidden"] { overflow: visible !important; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 10px; color: #64748B; align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+</style>
+</head>
+<body>
+<h1>${title}</h1>
+<div class="subtitle">${dayLabel}</div>
+<div id="ps-grid">${ganttHTML}</div>
+<div class="legend">
+  <span><span style="background:#D1FAE5;color:#065F46;padding:1px 8px;border-radius:20px;font-size:9px;font-weight:700">✓</span> Taux OK</span>
+  <span><span style="background:#FEF3C7;color:#92400E;padding:1px 8px;border-radius:20px;font-size:9px;font-weight:700">!</span> Taux limite</span>
+  <span><span style="background:#FEE2E2;color:#991B1B;padding:1px 8px;border-radius:20px;font-size:9px;font-weight:700">✗</span> Non conforme</span>
+  <span><span style="border-top:2px dashed #94A3B8;border-bottom:2px dashed #94A3B8;padding:1px 8px;font-size:9px">⏸</span> Créneau de pause</span>
+</div>
+</body>
+</html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); win.close(); }, 700);
 }
 </script>
 
