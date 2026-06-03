@@ -190,31 +190,6 @@ body {
   border-top: 1px solid rgba(255,255,255,0.08);
 }
 
-.creche-badge {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s;
-  margin-bottom: 4px;
-  font-size: 12px;
-}
-
-.creche-badge:hover { background: rgba(255,255,255,0.07); }
-.creche-badge.active { background: rgba(255,255,255,0.12); }
-
-.creche-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.creche-name { color: rgba(255,255,255,0.7); font-weight: 500; }
-.creche-badge.active .creche-name { color: #fff; }
-.creche-count { margin-left: auto; color: rgba(255,255,255,0.35); font-size: 11px; }
 
 /* ── MAIN ── */
 .main { display: flex; flex-direction: column; min-height: 100vh; }
@@ -911,13 +886,12 @@ textarea { resize: vertical; min-height: 72px; }
     <span class="nav-icon">🔐</span> Administration
   </button>
 
-  <div class="sidebar-section-title">Structures</div>
-  <div id="sidebar-creches-container">
-    <div class="creche-badge active" onclick="filterCreche('all', this)">
-      <span class="creche-dot" style="background:#6366F1"></span>
-      <span class="creche-name">Toutes les crèches</span>
-      <span class="creche-count" id="cnt-all">0</span>
-    </div>
+  <div style="padding:0 16px 16px">
+    <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Structure</div>
+    <select id="creche-select-sidebar" onchange="filterCrecheFromSelect(this.value)"
+      style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;cursor:pointer">
+      <option value="all">Toutes les crèches</option>
+    </select>
   </div>
 
   <div class="sidebar-creches">
@@ -3483,21 +3457,14 @@ function supprimerCreche(i) {
 }
 
 function renderSidebarCreches() {
-  const container = document.getElementById('sidebar-creches-container');
-  if (!container) return;
-  container.innerHTML =
-    `<div class="creche-badge ${currentCreche === 'all' ? 'active' : ''}" onclick="selectCreche('all', this)" style="border-left-color:var(--accent)">
-      <span class="creche-dot" style="background:var(--accent)"></span>
-      <span class="creche-name">Toutes les crèches</span>
-      <span class="creche-count">${ARTICLES.length}</span>
-    </div>` +
-    CRECHES_DATA.map(c =>
-      `<div class="creche-badge ${currentCreche === c.nom ? 'active' : ''}" onclick="selectCreche('${c.nom}', this)" style="border-left-color:${c.color}">
-        <span class="creche-dot" style="background:${c.color}"></span>
-        <span class="creche-name">${c.nom}</span>
-        <span class="creche-count">${ARTICLES.filter(a => a.creche === c.nom).length}</span>
-      </div>`
-    ).join('');
+  const sel = document.getElementById('creche-select-sidebar');
+  if (!sel) return;
+  sel.innerHTML =
+    `<option value="all" ${currentCreche === 'all' ? 'selected' : ''}>Toutes les crèches (${ARTICLES.length})</option>` +
+    CRECHES_DATA.map(c => {
+      const cnt = ARTICLES.filter(a => a.creche === c.nom).length;
+      return `<option value="${c.nom}" ${currentCreche === c.nom ? 'selected' : ''}>${c.nom} (${cnt})</option>`;
+    }).join('');
 }
 // ── FIN PARAMÈTRES ────────────────────────────────────────────────
 // ── FIN HUB ───────────────────────────────────────────────────────
@@ -3899,29 +3866,7 @@ function renderStats() {
 }
 
 function updateCounts() {
-  const page = typeof currentPage !== 'undefined' ? currentPage : 'inventaire';
-  const el = document.getElementById('cnt-all');
-  if (page === 'univers') {
-    if (el) el.textContent = UNIVERS.length;
-    CRECHES.forEach((c,i) => {
-      const el2 = document.getElementById('cnt-'+i);
-      if (el2) el2.textContent = UNIVERS.filter(u => u.creche === c).length;
-    });
-  } else if (page === 'commandes') {
-    const crecheFilter = currentCreche !== 'all' ? currentCreche : null;
-    const enCours = COMMANDES.filter(c => c.status === 'en-cours' && (!crecheFilter || c.creche === crecheFilter));
-    if (el) el.textContent = enCours.length;
-    CRECHES.forEach((c,i) => {
-      const el2 = document.getElementById('cnt-'+i);
-      if (el2) el2.textContent = COMMANDES.filter(cmd => cmd.creche === c && cmd.status === 'en-cours').length;
-    });
-  } else {
-    if (el) el.textContent = ARTICLES.length;
-    CRECHES.forEach((c,i) => {
-      const el2 = document.getElementById('cnt-'+i);
-      if (el2) el2.textContent = ARTICLES.filter(a => a.creche === c).length;
-    });
-  }
+  renderSidebarCreches();
 }
 
 // ─── FILTERS ──────────────────────────────────────────────────────────────
@@ -3934,13 +3879,17 @@ function filterCat(cat, el) {
 
 function filterCreche(creche, el) {
   currentCreche = creche;
-  document.querySelectorAll('.creche-badge').forEach(e => e.classList.remove('active'));
-  if (el) el.classList.add('active');
+  const sel = document.getElementById('creche-select-sidebar');
+  if (sel) sel.value = creche;
   if (currentPage === 'inventaire') renderTable();
   else if (currentPage === 'commandes') renderCommandes();
   else if (currentPage === 'historique') renderHistorique();
   renderStats();
   updateCounts();
+}
+
+function filterCrecheFromSelect(val) {
+  filterCreche(val, null);
 }
 
 function filterTable() { renderTable(); }
