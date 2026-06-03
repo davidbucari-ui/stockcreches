@@ -867,11 +867,8 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('univers', this)">
     <span class="nav-icon">🌟</span> Univers ludiques
   </button>
-  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('planning', this)">
-    <span class="nav-icon">📅</span> Planning équipe
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('salarie', this)">
-    <span class="nav-icon">👤</span> Planning hebdomadaire
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('planning', this)">
+    <span class="nav-icon">📅</span> Planning
   </button>
   <button class="nav-item" data-roles="admin,directrice" onclick="showPage('fournisseurs', this)">
     <span class="nav-icon">🏭</span> Fournisseurs
@@ -1005,6 +1002,15 @@ textarea { resize: vertical; min-height: 72px; }
             <div style="font-size:32px;margin-bottom:10px">🧑‍💼</div>
             <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Ressources humaines</div>
             <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Contrats · Congés · Recrutement · Formation</div>
+          </button>
+
+          <button id="dashboard-card-planning" onclick="showPage('planning', null)" style="display:none;background:linear-gradient(135deg,#1e3a5f,#2563EB);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(37,99,235,0.3);position:relative;overflow:hidden"
+            onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(37,99,235,0.45)'"
+            onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(37,99,235,0.3)'">
+            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">📅</div>
+            <div style="font-size:32px;margin-bottom:10px">📅</div>
+            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Planning</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Gantt · Taux d'encadrement · Horaires</div>
           </button>
 
         </div>
@@ -1352,73 +1358,64 @@ textarea { resize: vertical; min-height: 72px; }
     <div id="page-planning" style="display:none">
       <div style="padding:20px 28px">
 
-        <!-- En-tête -->
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <!-- En-tête commun -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--ink)">📅 Planning équipe</span>
-            <span id="pe-week-label" style="font-size:13px;font-weight:600;color:var(--ink3)"></span>
             <div style="display:flex;gap:6px">
               <button class="btn btn-secondary btn-sm" onclick="peGoWeek(-1)">← Préc.</button>
               <button class="btn btn-secondary btn-sm" onclick="peGoWeek(0)">Aujourd'hui</button>
               <button class="btn btn-secondary btn-sm" onclick="peGoWeek(1)">Suiv. →</button>
             </div>
+            <span id="pe-week-label" style="font-size:13px;font-weight:600;color:var(--ink3)"></span>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <select id="pe-creche" onchange="renderPlanningEquipe()"
+            <select id="pe-creche" onchange="renderActiveTab()"
               style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
               <option value="">Toutes les crèches</option>
             </select>
-            <button class="btn btn-primary" onclick="openModalPE(null,null)">+ Ajouter une pro</button>
-          </div>
-        </div>
-
-        <!-- Grille Horaire × Jours -->
-        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
-          <div id="pe-grid"><div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div></div>
-        </div>
-
-        <!-- Légende taux -->
-        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:12px;color:var(--ink3)">
-          <span style="background:#F0FDF4;color:#16A34A;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">✓ Conforme</span>
-          <span style="background:#FFFBEB;color:#D97706;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">! Limite</span>
-          <span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">✗ Non conforme</span>
-          <span style="color:var(--ink3);font-size:11px">— Taux calculé selon type de structure (Paramètres)</span>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ── PAGE PLANNING HEBDOMADAIRE ── -->
-    <div id="page-salarie" style="display:none">
-      <div style="padding:20px 28px">
-
-        <!-- En-tête -->
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--ink)">👤 Planning hebdomadaire</span>
-            <span id="ph-week-label" style="font-size:13px;font-weight:600;color:var(--ink3)"></span>
-            <div style="display:flex;gap:6px">
-              <button class="btn btn-secondary btn-sm" onclick="peGoWeek(-1);renderPlanningHebdo()">← Préc.</button>
-              <button class="btn btn-secondary btn-sm" onclick="peGoWeek(0);renderPlanningHebdo()">Aujourd'hui</button>
-              <button class="btn btn-secondary btn-sm" onclick="peGoWeek(1);renderPlanningHebdo()">Suiv. →</button>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <select id="ph-creche" onchange="renderPlanningHebdo()"
-              style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
-              <option value="">Toutes les crèches</option>
-            </select>
+            <button class="btn btn-primary" id="pe-add-btn" onclick="openModalPE(null,null)">+ Ajouter</button>
             <button class="btn btn-secondary" onclick="exportPlanningPDF()">🖨 PDF</button>
           </div>
         </div>
 
-        <!-- Grille par salarié -->
-        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
-          <div id="ph-grid"><div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div></div>
+        <!-- Onglets -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
+          <button id="pe-tab-gantt" onclick="switchPlanningTab('gantt')"
+            style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer">
+            📊 Gantt équipe
+          </button>
+          <button id="pe-tab-hebdo" onclick="switchPlanningTab('hebdo')"
+            style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
+            👤 Par salarié
+          </button>
+        </div>
+
+        <!-- Vue Gantt -->
+        <div id="pe-view-gantt">
+          <!-- Sélecteur jour -->
+          <div id="pe-day-pills" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap"></div>
+          <!-- Gantt -->
+          <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
+            <div id="pe-grid"></div>
+          </div>
+          <!-- Légende -->
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11px;color:var(--ink3)">
+            <span style="background:#F0FDF4;color:#16A34A;padding:2px 8px;border-radius:12px;font-weight:600">✓ Conforme</span>
+            <span style="background:#FFFBEB;color:#D97706;padding:2px 8px;border-radius:12px;font-weight:600">! Limite</span>
+            <span style="background:#FEF2F2;color:#DC2626;padding:2px 8px;border-radius:12px;font-weight:600">✗ Non conforme</span>
+          </div>
+        </div>
+
+        <!-- Vue Par salarié -->
+        <div id="pe-view-hebdo" style="display:none">
+          <div id="ph-grid"></div>
         </div>
 
       </div>
     </div>
+
+    <!-- page-salarie kept as hidden alias so old refs don't break -->
+    <div id="page-salarie" style="display:none"></div>
 
     <!-- ── PAGE RH ── -->
     <div id="page-rh" style="display:none">
@@ -3632,6 +3629,8 @@ function applyRoleAccess() {
   }
   const rhCard = document.getElementById('dashboard-card-rh');
   if (rhCard) rhCard.style.display = ['admin','directrice'].includes(role) ? '' : 'none';
+  const planningCard = document.getElementById('dashboard-card-planning');
+  if (planningCard) planningCard.style.display = ['admin','directrice','auxiliaire'].includes(role) ? '' : 'none';
   const badge = document.getElementById('user-role-badge');
   if (badge) badge.style.display = 'block';
   const roleLabel = document.getElementById('user-role-label');
@@ -4692,7 +4691,7 @@ function showPage(page, btn) {
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning équipe', salarie:'Planning hebdomadaire', };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -4707,7 +4706,7 @@ function showPage(page, btn) {
   if (page === 'admin') { showAdminPage(); }
   if (page === 'rh')       { showRhPage(); }
   if (page === 'planning') { showPlanningEquipePage(); }
-  if (page === 'salarie')  { showPlanningHebdoPage(); }
+  if (page === 'salarie')  { showPage('planning', null); }
 }
 
 function showTab(tab, btn) {
@@ -7015,13 +7014,9 @@ function peGetMonday() {
 }
 
 function peGoWeek(dir) {
-  if (dir === 0) peWeekOffset = 0;
-  else peWeekOffset += dir;
-  // Refresh whichever page is visible
-  const pagePl = document.getElementById('page-planning');
-  const pageSal = document.getElementById('page-salarie');
-  if (pagePl && pagePl.style.display !== 'none') renderPlanningEquipe();
-  if (pageSal && pageSal.style.display !== 'none') renderPlanningHebdo();
+  if (dir === 0) { peWeekOffset = 0; peGanttDay = -1; }
+  else { peWeekOffset += dir; peGanttDay = 0; }
+  renderActiveTab();
 }
 
 // ── Source de données (localStorage) ──────────────────────────────
@@ -7082,15 +7077,41 @@ function pePopulateCreches(selId) {
 
 function showPlanningEquipePage() {
   pePopulateCreches('pe-creche');
-  renderPlanningEquipe();
-}
-
-function showPlanningHebdoPage() {
-  pePopulateCreches('ph-creche');
-  renderPlanningHebdo();
+  switchPlanningTab(pePlanningTab || 'gantt');
 }
 
 // ── PLANNING ÉQUIPE (Horaire × Jours) ─────────────────────────────
+let pePlanningTab = 'gantt'; // 'gantt' | 'hebdo'
+let peGanttDay = -1; // -1 = jour courant ou lundi
+
+function switchPlanningTab(tab) {
+  pePlanningTab = tab;
+  const ganttBtn = document.getElementById('pe-tab-gantt');
+  const hebdoBtn = document.getElementById('pe-tab-hebdo');
+  const ganttView = document.getElementById('pe-view-gantt');
+  const hebdoView = document.getElementById('pe-view-hebdo');
+  const addBtn    = document.getElementById('pe-add-btn');
+  if (ganttBtn) {
+    ganttBtn.style.color        = tab==='gantt' ? 'var(--accent)' : 'var(--ink3)';
+    ganttBtn.style.borderBottom = tab==='gantt' ? '2px solid var(--accent)' : '2px solid transparent';
+  }
+  if (hebdoBtn) {
+    hebdoBtn.style.color        = tab==='hebdo' ? 'var(--accent)' : 'var(--ink3)';
+    hebdoBtn.style.borderBottom = tab==='hebdo' ? '2px solid var(--accent)' : '2px solid transparent';
+  }
+  if (ganttView) ganttView.style.display = tab==='gantt' ? '' : 'none';
+  if (hebdoView) hebdoView.style.display = tab==='hebdo' ? '' : 'none';
+  if (addBtn)    addBtn.style.display    = tab==='gantt' ? '' : 'none';
+  if (tab === 'gantt') renderPlanningEquipe();
+  else renderPlanningHebdo();
+}
+
+function renderActiveTab() {
+  if (pePlanningTab === 'gantt') renderPlanningEquipe();
+  else renderPlanningHebdo();
+}
+
+// ── GANTT PAR SALARIÉ (vue principale) ────────────────────────────
 function renderPlanningEquipe() {
   const grid = document.getElementById('pe-grid');
   if (!grid) return;
@@ -7099,83 +7120,213 @@ function renderPlanningEquipe() {
   const weekNum = getISOWeekNumber(monday);
   const today   = new Date(); today.setHours(0,0,0,0);
   const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
-  const horaires = getPlanningHoraires();
-  const crecheId = document.getElementById('pe-creche')?.value || '';
+  const horaires  = getPlanningHoraires();
+  const crecheId  = document.getElementById('pe-creche')?.value || '';
 
+  // Week label (shared header)
   const lbl = document.getElementById('pe-week-label');
   const fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
   const endFri = new Date(monday); endFri.setDate(monday.getDate()+4);
-  if (lbl) lbl.textContent = `Semaine ${weekNum} — ${fmtD(monday)} au ${fmtD(endFri)} ${endFri.getFullYear()}`;
+  if (lbl) lbl.textContent = `S${weekNum} — ${fmtD(monday)} au ${fmtD(endFri)} ${endFri.getFullYear()}`;
+
+  // Day pills (Lun-Ven selector)
+  const pillsEl = document.getElementById('pe-day-pills');
+  if (pillsEl) {
+    // Default to today's day index (0=Lun…4=Ven) or 0
+    if (peGanttDay === -1) {
+      const d = today.getDay();
+      peGanttDay = (d >= 1 && d <= 5) ? d - 1 : 0;
+    }
+    pillsEl.innerHTML = DAY_NAMES.map((name, i) => {
+      const dt = new Date(monday); dt.setDate(monday.getDate()+i);
+      const dayNum = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+      const isActive = peGanttDay === i;
+      const isToday  = dt.getTime() === today.getTime();
+      return `<button onclick="peGanttDay=${i};renderPlanningEquipe()"
+        style="padding:7px 14px;border-radius:20px;border:2px solid ${isActive?'var(--accent)':isToday?'var(--accent)':'var(--border)'};
+               background:${isActive?'var(--accent)':'var(--surface2)'};color:${isActive?'#fff':isToday?'var(--accent)':'var(--ink)'};
+               font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s">
+        ${name} ${dayNum}
+      </button>`;
+    }).join('');
+  }
 
   const week = peGetWeek(crecheId);
 
-  // Headers jours
-  const thDays = DAY_NAMES.map((name, i) => {
-    const dt = new Date(monday); dt.setDate(monday.getDate()+i);
-    const isToday = dt.getTime() === today.getTime();
-    const dayNum  = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
-    return `<th style="padding:10px 8px;text-align:center;min-width:130px;background:${isToday?'var(--accent-lt)':'var(--bg)'};border-bottom:2px solid var(--border);border-right:1px solid var(--border);${isToday?'border-bottom-color:var(--accent)':''}">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${isToday?'var(--accent)':'var(--ink3)'}">${name}</div>
-      <div style="font-size:14px;font-weight:800;color:${isToday?'var(--accent)':'var(--ink)'};margin-top:2px">${dayNum}</div>
-    </th>`;
+  // Collect all pros (from RH + creneaux)
+  let salaries = [];
+  try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
+  const rhNames  = salaries.map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
+  const crNames  = (week.creneaux||[]).map(c => c.pro);
+  const allPros  = [...new Set([...rhNames, ...crNames])].sort();
+
+  if (allPros.length === 0) {
+    grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:32px;margin-bottom:10px">📅</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucune collaboratrice</div>
+      <div style="font-size:13px">Ajoutez des salariées dans RH → Salariés, puis cliquez "+ Ajouter".</div>
+    </div>`;
+    return;
+  }
+
+  // Timeline config
+  const T_START = 7;   // 7h
+  const T_END   = 20;  // 20h
+  const T_TOTAL = T_END - T_START; // 13h
+  const COL_W   = 52;  // px per hour
+  const ROW_H   = 52;  // px per row
+  const LABEL_W = 110; // px for name column
+
+  // Hours header
+  const hoursHeader = Array.from({length: T_TOTAL + 1}, (_, i) => {
+    const h = T_START + i;
+    const left = LABEL_W + i * COL_W;
+    return `<div style="position:absolute;left:${left}px;top:0;width:${COL_W}px;font-size:10px;font-weight:700;color:var(--ink3);text-align:center;padding-top:6px">${h}h</div>`;
   }).join('');
 
-  // Lignes horaires
-  const rows = horaires.map((h, hi) => {
-    const c = PE_COLORS[hi] || PE_COLORS[0];
-    const tds = DAY_NAMES.map((_, di) => {
-      const dt = new Date(monday); dt.setDate(monday.getDate()+di);
-      const isToday = dt.getTime() === today.getTime();
-      const cellCreneaux = (week.creneaux||[]).filter(cr => cr.horaire_idx === hi && cr.jour === di);
+  // Grid lines
+  const gridLines = Array.from({length: T_TOTAL}, (_, i) => {
+    const left = LABEL_W + i * COL_W;
+    return `<div style="position:absolute;left:${left}px;top:0;bottom:0;width:1px;background:var(--border)"></div>`;
+  }).join('');
 
-      const prosHtml = cellCreneaux.map(cr =>
-        `<div onclick="openModalPE(${hi},${di},'${cr.id}')"
-          style="display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;background:${c.bg};border:1px solid ${c.border};margin-bottom:3px;cursor:pointer;transition:opacity 0.15s"
-          onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-          <span style="font-size:13px;font-weight:700;color:${c.text};flex:1">${cr.pro}</span>
-          ${cr.pause ? `<span style="font-size:10px;color:var(--ink3);white-space:nowrap">⏸${cr.pause}</span>` : ''}
-          <span style="font-size:10px;color:${c.text};opacity:0.6">✕</span>
-        </div>`
-      ).join('');
+  // Current time line
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const startMin = T_START * 60;
+  const endMin   = T_END   * 60;
+  const timeLine = (nowMin > startMin && nowMin < endMin)
+    ? `<div style="position:absolute;left:${LABEL_W + (nowMin - startMin) / 60 * COL_W}px;top:0;bottom:0;width:2px;background:var(--red);z-index:10">
+         <div style="position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--red)"></div>
+       </div>` : '';
 
-      // Badge taux : nombre de pros présentes sur ce créneau/jour
-      const nb = cellCreneaux.length;
-      const taux = calcTaux(nb);
-      const tc = TAUX_COLORS[taux.state];
-      const tauxBadge = nb > 0
-        ? `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:12px;background:${tc.bg};color:${tc.color}">${tc.icon} ${taux.label}</span>`
-        : '';
+  const totalH = allPros.length * ROW_H + 28 + 30; // header + taux rows
 
-      return `<td style="padding:7px 8px;vertical-align:top;background:${isToday?'var(--accent-lt)':''};border-right:1px solid var(--border);min-height:60px">
-        <div style="min-height:36px">${prosHtml}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
-          ${tauxBadge}
-          <button onclick="openModalPE(${hi},${di},null)"
-            style="width:22px;height:22px;border-radius:50%;border:1.5px dashed var(--border);background:none;color:var(--ink3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;margin-left:auto"
-            onmouseover="this.style.background='var(--accent)';this.style.color='#fff';this.style.borderColor='var(--accent)'"
-            onmouseout="this.style.background='none';this.style.color='var(--ink3)';this.style.borderColor='var(--border)'">+</button>
-        </div>
-      </td>`;
+  // Rows per pro
+  const fmtHHMM = s => { if (!s) return 0; const [h,m] = s.split(':').map(Number); return h*60+(m||0); };
+
+  const proRows = allPros.map((pro, pi) => {
+    const creneaux = (week.creneaux||[]).filter(cr => cr.pro === pro && cr.jour === peGanttDay);
+    const top = 28 + pi * ROW_H;
+
+    // Name label
+    const initial = pro.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
+    const label = `<div style="position:absolute;left:0;top:${top}px;width:${LABEL_W}px;height:${ROW_H}px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);background:var(--surface2)">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initial}</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink);line-height:1.2">${pro.split(' ')[0]}</div>
+        <div style="font-size:10px;color:var(--ink3)">${pro.split(' ').slice(1).join(' ')}</div>
+      </div>
+    </div>`;
+
+    // Row background
+    const rowBg = `<div style="position:absolute;left:${LABEL_W}px;top:${top}px;right:0;height:${ROW_H}px;background:${pi%2===0?'var(--surface2)':'var(--bg)'};border-bottom:1px solid var(--border)"></div>`;
+
+    // Créneau bars
+    const bars = creneaux.map(cr => {
+      const h = horaires[cr.horaire_idx] || {};
+      const c = PE_COLORS[cr.horaire_idx] || PE_COLORS[0];
+      const debutMin = fmtHHMM(h.debut);
+      const finMin   = fmtHHMM(h.fin);
+      if (!debutMin || !finMin) return '';
+      const barLeft  = LABEL_W + (debutMin - startMin) / 60 * COL_W;
+      const barWidth = (finMin - debutMin) / 60 * COL_W;
+      const barTop   = top + 8;
+      const barH     = ROW_H - 16;
+
+      // Pause cutout
+      let pauseHtml = '';
+      if (cr.pause) {
+        const pm = cr.pause.match(/(\d+)h?:?(\d*)\s*[–-]\s*(\d+)h?:?(\d*)/);
+        if (pm) {
+          const pdebut = parseInt(pm[1])*60 + (parseInt(pm[2])||0);
+          const pfin   = parseInt(pm[3])*60 + (parseInt(pm[4])||0);
+          const pl = (pdebut - startMin) / 60 * COL_W;
+          const pw = (pfin - pdebut) / 60 * COL_W;
+          const relLeft = pl - (debutMin - startMin) / 60 * COL_W;
+          pauseHtml = `<div style="position:absolute;left:${relLeft}px;top:0;width:${pw}px;bottom:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 3px,transparent 3px,transparent 7px);border-left:1px dashed ${c.border};border-right:1px dashed ${c.border}"></div>`;
+        }
+      }
+
+      const label = creneaux.length < 3 ? `<span style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.debut||''}–${h.fin||''}</span>` : '';
+
+      return `<div onclick="openModalPE(${cr.horaire_idx},${peGanttDay},'${cr.id}')"
+        style="position:absolute;left:${barLeft}px;top:${barTop}px;width:${barWidth}px;height:${barH}px;
+               background:${c.bg};border:1.5px solid ${c.border};border-radius:8px;
+               display:flex;align-items:center;justify-content:center;overflow:hidden;
+               cursor:pointer;transition:opacity 0.15s"
+        onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+        ${pauseHtml}
+        <div style="color:${c.text};padding:0 8px;z-index:1;position:relative">${label}</div>
+      </div>`;
     }).join('');
 
-    return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:11px 14px;background:var(--bg);white-space:nowrap;border-right:2px solid var(--border);min-width:130px">
-        <div style="font-size:12px;font-weight:700;color:${c.text}">${h.name}</div>
-        <div style="font-size:10px;color:var(--ink3);margin-top:2px">${h.debut}–${h.fin}</div>
-      </td>
-      ${tds}
-    </tr>`;
+    return label + rowBg + bars;
   }).join('');
 
-  grid.innerHTML = `<table style="width:100%;border-collapse:collapse">
-    <thead>
-      <tr>
-        <th style="padding:10px 14px;text-align:left;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);border-right:2px solid var(--border);border-bottom:2px solid var(--border)">Horaire</th>
-        ${thDays}
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  // Taux row (nb de pros présentes par heure)
+  const tauxTop = 28 + allPros.length * ROW_H;
+  const enfantsTop = tauxTop + 26;
+
+  // Build taux per 30-min slot
+  const slots = Array.from({length: T_TOTAL * 2}, (_, i) => {
+    const slotStart = startMin + i * 30;
+    const slotEnd   = slotStart + 30;
+    let count = 0;
+    (week.creneaux||[]).filter(cr => cr.jour === peGanttDay).forEach(cr => {
+      const h = horaires[cr.horaire_idx] || {};
+      const d = fmtHHMM(h.debut), f = fmtHHMM(h.fin);
+      // Check pause
+      let inPause = false;
+      if (cr.pause) {
+        const pm = cr.pause.match(/(\d+)h?:?(\d*)\s*[–-]\s*(\d+)h?:?(\d*)/);
+        if (pm) {
+          const pd = parseInt(pm[1])*60+(parseInt(pm[2])||0);
+          const pf = parseInt(pm[3])*60+(parseInt(pm[4])||0);
+          if (slotStart >= pd && slotEnd <= pf) inPause = true;
+        }
+      }
+      if (d && f && slotStart >= d && slotEnd <= f && !inPause) count++;
+    });
+    return count;
+  });
+
+  const tauxCells = slots.map((count, i) => {
+    const left = LABEL_W + i * (COL_W / 2);
+    const color = count === 0 ? 'var(--ink3)' : count >= 3 ? 'var(--green)' : count === 2 ? 'var(--amber)' : 'var(--red)';
+    return `<div style="position:absolute;left:${left}px;top:0;width:${COL_W/2}px;text-align:center;font-size:10px;font-weight:700;color:${color}">${count>0?count:''}</div>`;
+  }).join('');
+
+  grid.style.cssText = `position:relative;height:${totalH + 52}px;min-width:${LABEL_W + T_TOTAL * COL_W + 20}px`;
+  grid.innerHTML = `
+    <!-- Header hours -->
+    <div style="position:absolute;left:0;top:0;right:0;height:28px;background:var(--bg);border-bottom:2px solid var(--border)">
+      <div style="position:absolute;left:0;top:0;width:${LABEL_W}px;height:28px;background:var(--bg);z-index:2;display:flex;align-items:center;padding-left:10px">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3)">Collaborateur</span>
+      </div>
+      ${hoursHeader}
+    </div>
+    <!-- Grid lines -->
+    <div style="position:absolute;left:${LABEL_W}px;top:28px;right:0;bottom:52px">${gridLines}${timeLine}</div>
+    <!-- Pro rows -->
+    ${proRows}
+    <!-- Taux row label -->
+    <div style="position:absolute;left:0;top:${tauxTop}px;width:${LABEL_W}px;height:26px;background:var(--bg);border-top:2px solid var(--border);display:flex;align-items:center;padding-left:10px">
+      <span style="font-size:10px;font-weight:700;color:var(--ink3)">Salariés présents</span>
+    </div>
+    <div style="position:absolute;left:${LABEL_W}px;top:${tauxTop}px;right:0;height:26px;background:var(--bg);border-top:2px solid var(--border)">
+      ${tauxCells}
+    </div>
+    <!-- Add button per day -->
+    <div style="position:absolute;left:${LABEL_W + 8}px;top:${tauxTop + 26}px;padding-top:10px">
+      <button onclick="openModalPE(null,${peGanttDay},null)"
+        style="border:1.5px dashed var(--border);background:none;color:var(--ink3);font-size:12px;font-weight:600;padding:6px 14px;border-radius:20px;cursor:pointer;font-family:inherit;transition:all 0.15s"
+        onmouseover="this.style.background='var(--accent)';this.style.color='#fff';this.style.borderColor='var(--accent)'"
+        onmouseout="this.style.background='none';this.style.color='var(--ink3)';this.style.borderColor='var(--border)'">
+        + Ajouter un créneau ce jour
+      </button>
+    </div>
+  `;
 }
 
 // ── PLANNING HEBDOMADAIRE (Salarié × Jours) ────────────────────────
@@ -7189,9 +7340,9 @@ function renderPlanningHebdo() {
   const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
   const DAY_FULL  = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
   const horaires  = getPlanningHoraires();
-  const crecheId  = document.getElementById('ph-creche')?.value || '';
+  const crecheId  = document.getElementById('pe-creche')?.value || '';
 
-  const lbl = document.getElementById('ph-week-label');
+  const lbl = document.getElementById('pe-week-label');
   const fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
   const endFri = new Date(monday); endFri.setDate(monday.getDate()+4);
   if (lbl) lbl.textContent = `Semaine ${weekNum} — ${fmtD(monday)} au ${fmtD(endFri)} ${endFri.getFullYear()}`;
@@ -7272,6 +7423,34 @@ function renderPlanningHebdo() {
   grid.innerHTML = `<div style="padding:16px 18px">${cards}</div>`;
 }
 
+// ── Steppers pause modal PE ────────────────────────────────────────
+let pePauseDebut = 12 * 60;
+let pePauseFin   = 12 * 60 + 30;
+
+function peFmtMin(m) {
+  return `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`;
+}
+
+function peAdjustPause(field, delta) {
+  if (field === 'debut') {
+    pePauseDebut = Math.max(7*60, Math.min(19*60, pePauseDebut + delta));
+    if (pePauseFin <= pePauseDebut) pePauseFin = Math.min(20*60, pePauseDebut + 15);
+  } else {
+    pePauseFin = Math.max(pePauseDebut + 15, Math.min(20*60, pePauseFin + delta));
+  }
+  peRefreshPause();
+}
+
+function peRefreshPause() {
+  const active = document.getElementById('pe-pause-active')?.checked;
+  const row    = document.getElementById('pe-pause-row');
+  const d      = document.getElementById('pe-pause-debut-display');
+  const f      = document.getElementById('pe-pause-fin-display');
+  if (row) { row.style.opacity = active ? '1' : '0.35'; row.style.pointerEvents = active ? 'auto' : 'none'; }
+  if (d) d.textContent = peFmtMin(pePauseDebut);
+  if (f) f.textContent = peFmtMin(pePauseFin);
+}
+
 // ── MODAL Planning équipe ──────────────────────────────────────────
 let peEditingId = null;
 let peModalHoraireIdx = null;
@@ -7313,6 +7492,12 @@ function openModalPE(horaireIdx, jour, id) {
 
   if (horaireIdx !== null) hSel.value = horaireIdx;
 
+  // Pause init
+  const pauseEl = document.getElementById('pe-pause-active');
+  if (pauseEl) pauseEl.checked = false;
+  pePauseDebut = 12 * 60;
+  pePauseFin   = 12 * 60 + 30;
+
   // Fill if editing
   if (id) {
     const cr = (week.creneaux||[]).find(c => c.id === id);
@@ -7320,12 +7505,18 @@ function openModalPE(horaireIdx, jour, id) {
       hSel.value = cr.horaire_idx;
       jSel.value = cr.jour;
       if ([...prosSet].includes(cr.pro)) sel.value = cr.pro; else sel.value = cr.pro;
-      document.getElementById('pe-pause').value = cr.pause || '';
+      if (cr.pause) {
+        const pm = cr.pause.match(/(\d+)h(\d*)[–-](\d+)h(\d*)/);
+        if (pm && pauseEl) {
+          pePauseDebut = parseInt(pm[1])*60 + (parseInt(pm[2])||0);
+          pePauseFin   = parseInt(pm[3])*60 + (parseInt(pm[4])||0);
+          pauseEl.checked = true;
+        }
+      }
     }
-  } else {
-    document.getElementById('pe-pause').value = '';
   }
 
+  peRefreshPause();
   document.getElementById('modal-pe').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -7335,13 +7526,15 @@ function saveModalPE() {
   const week     = peGetWeek(crecheId);
 
   let pro = document.getElementById('pe-pro-sel').value;
+  if (!pro || pro === '') { showNotif('⚠ Choisissez une collaboratrice'); return; }
   if (pro === '__new__') {
     pro = prompt('Prénom et nom de la collaboratrice :')?.trim();
     if (!pro) return;
   }
-  const horaireIdx = parseInt(document.getElementById('pe-horaire-sel').value);
-  const jour       = parseInt(document.getElementById('pe-jour-sel').value);
-  const pause      = document.getElementById('pe-pause').value.trim();
+  const horaireIdx  = parseInt(document.getElementById('pe-horaire-sel').value);
+  const jour        = parseInt(document.getElementById('pe-jour-sel').value);
+  const pauseActive = document.getElementById('pe-pause-active')?.checked;
+  const pause       = pauseActive ? `${peFmtMin(pePauseDebut)}–${peFmtMin(pePauseFin)}` : '';
 
   if (!pro) { showNotif('⚠ Nom obligatoire'); return; }
 
@@ -7363,10 +7556,7 @@ function saveModalPE() {
 
   peSaveWeek(week, crecheId);
   closeModal('modal-pe');
-  renderPlanningEquipe();
-  // Also refresh hebdo if visible
-  const pageSal = document.getElementById('page-salarie');
-  if (pageSal && pageSal.style.display !== 'none') renderPlanningHebdo();
+  renderActiveTab();
   showNotif(peEditingId ? '✅ Créneau mis à jour' : '✅ Créneau ajouté');
 }
 
@@ -7377,7 +7567,7 @@ function deleteModalPE() {
   week.creneaux  = (week.creneaux||[]).filter(c => c.id !== peEditingId);
   peSaveWeek(week, crecheId);
   closeModal('modal-pe');
-  renderPlanningEquipe();
+  renderActiveTab();
   showNotif('🗑 Créneau supprimé');
 }
 
@@ -7633,8 +7823,35 @@ async function enregistrerPointage(type) {
           </select>
         </div>
         <div class="form-group full">
-          <label>Pause <span style="font-weight:400;font-size:11px;color:var(--ink3)">(optionnel, ex : 12h–12h30)</span></label>
-          <input type="text" id="pe-pause" placeholder="12h–12h30">
+          <label style="display:flex;align-items:center;gap:8px">
+            Pause
+            <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:12px;color:var(--ink3);cursor:pointer">
+              <input type="checkbox" id="pe-pause-active" onchange="peRefreshPause()"> activer
+            </label>
+          </label>
+          <div id="pe-pause-row" style="opacity:0.35;pointer-events:none;margin-top:6px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:6px">
+                <button type="button" onclick="peAdjustPause('debut',-15)"
+                  style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background 0.15s"
+                  onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
+                <span id="pe-pause-debut-display" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;min-width:52px;text-align:center">12h00</span>
+                <button type="button" onclick="peAdjustPause('debut',15)"
+                  style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background 0.15s"
+                  onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
+              </div>
+              <span style="color:var(--ink3);font-size:13px;font-weight:600">→</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <button type="button" onclick="peAdjustPause('fin',-15)"
+                  style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background 0.15s"
+                  onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
+                <span id="pe-pause-fin-display" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;min-width:52px;text-align:center">12h30</span>
+                <button type="button" onclick="peAdjustPause('fin',15)"
+                  style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background 0.15s"
+                  onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
