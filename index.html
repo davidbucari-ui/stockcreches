@@ -1429,6 +1429,10 @@ textarea { resize: vertical; min-height: 72px; }
             </div>
           </div>
 
+          <div style="margin-bottom:10px">
+            <button class="btn btn-secondary btn-sm" onclick="openRecurrenceManager()">🔁 Gérer les récurrences</button>
+          </div>
+
           <div id="ps-banner" style="background:var(--bg);border-radius:8px;padding:9px 14px;font-size:11.5px;letter-spacing:0.06em;color:var(--ink3);font-weight:600;margin-bottom:14px"></div>
 
           <!-- Saisie enfants — micro -->
@@ -8567,6 +8571,35 @@ function showImportResult(type, html) {
         <!-- champ horaire caché pour compatibilité avec savePSCreneau() -->
         <input type="hidden" id="ps-horaire">
       </div>
+
+      <!-- ── Récurrence ── -->
+      <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink)">
+          <input type="checkbox" id="ps-recurrence-active" onchange="psToggleRecurrence()" style="accent-color:var(--accent);width:16px;height:16px">
+          🔁 Répéter ce créneau
+        </label>
+        <div id="ps-recurrence-options" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;flex-direction:column;gap:10px">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px">Jours de répétition</div>
+            <div style="display:flex;gap:6px">
+              <input type="checkbox" id="ps-rec-jour-0" style="display:none">
+              <button type="button" id="ps-rec-jour-0-btn" onclick="psToggleRecJour(0)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">L</button>
+              <input type="checkbox" id="ps-rec-jour-1" style="display:none">
+              <button type="button" id="ps-rec-jour-1-btn" onclick="psToggleRecJour(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">M</button>
+              <input type="checkbox" id="ps-rec-jour-2" style="display:none">
+              <button type="button" id="ps-rec-jour-2-btn" onclick="psToggleRecJour(2)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">M</button>
+              <input type="checkbox" id="ps-rec-jour-3" style="display:none">
+              <button type="button" id="ps-rec-jour-3-btn" onclick="psToggleRecJour(3)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">J</button>
+              <input type="checkbox" id="ps-rec-jour-4" style="display:none">
+              <button type="button" id="ps-rec-jour-4-btn" onclick="psToggleRecJour(4)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">V</button>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:6px">Nombre de semaines</label>
+            <input type="number" id="ps-rec-weeks" min="1" max="52" value="4" style="width:80px;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
+          </div>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-ps')">Annuler</button>
@@ -9230,6 +9263,11 @@ function openModalPS(collabPreset, jourPreset) {
   psRefreshSteppers();
   document.getElementById('ps-pause').value   = '';
   document.getElementById('ps-color').value   = 'h1';
+  // Reset récurrence
+  const recCb = document.getElementById('ps-recurrence-active');
+  if (recCb) { recCb.checked = false; psToggleRecurrence(); }
+  const jourDi = jourPreset !== undefined ? parseInt(jourPreset) : 0;
+  [0,1,2,3,4].forEach(d => psSetRecJour(d, d === jourDi));
   document.getElementById('modal-ps').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -9292,10 +9330,40 @@ function savePSCreneau() {
   } else {
     week.creneaux.push(creneau);
   }
+  // ── Récurrence (ajout uniquement) ──────────────────────────────────
+  let recCount = 0;
+  if (!psEditingId && document.getElementById('ps-recurrence-active')?.checked) {
+    const recWeeks   = parseInt(document.getElementById('ps-rec-weeks')?.value) || 4;
+    const joursCoches = [0,1,2,3,4].filter(d => document.getElementById(`ps-rec-jour-${d}`)?.checked);
+    const exceptions  = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
+    for (let w = 1; w <= recWeeks; w++) {
+      for (const di of joursCoches) {
+        const offset      = psWeekOffset + w;
+        const wMonday     = psGetMonday(offset);
+        const slotDate    = new Date(wMonday); slotDate.setDate(wMonday.getDate() + di);
+        const slotDateStr = slotDate.toISOString().split('T')[0];
+        if (exceptions.some(e => e.collab===collab && e.date===slotDateStr)) continue;
+        const wkey = psWeekKey(offset, crecheId);
+        if (!data[wkey]) data[wkey] = { collaborateurs:[], creneaux:[] };
+        const wk = data[wkey];
+        if (!wk.collaborateurs.includes(collab)) wk.collaborateurs.push(collab);
+        wk.creneaux.push({
+          id:      'ps_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+          collab,  jour: di,
+          horaire: creneau.horaire, pause: creneau.pause, color: creneau.color,
+        });
+        recCount++;
+      }
+    }
+  }
+
   psSave(data);
   closeModal('modal-ps');
   renderPlanningSalarie();
-  showNotif(psEditingId ? '✅ Créneau mis à jour' : '✅ Créneau ajouté');
+  const notifMsg = psEditingId ? '✅ Créneau mis à jour'
+    : recCount > 0 ? `✅ ${recCount + 1} créneaux créés (récurrence)`
+    : '✅ Créneau ajouté';
+  showNotif(notifMsg);
 }
 
 function deletePSCreneau() {
@@ -9371,7 +9439,200 @@ function exportPlanningPDF() {
   win.focus();
   setTimeout(() => { win.print(); win.close(); }, 700);
 }
+
+// ── Récurrence : helpers modal-ps ──────────────────────────────────────────
+
+function psToggleRecurrence() {
+  const active = document.getElementById('ps-recurrence-active')?.checked;
+  const opts   = document.getElementById('ps-recurrence-options');
+  if (opts) opts.style.display = active ? 'flex' : 'none';
+}
+
+function psToggleRecJour(di) {
+  const cb  = document.getElementById(`ps-rec-jour-${di}`);
+  const btn = document.getElementById(`ps-rec-jour-${di}-btn`);
+  if (!cb || !btn) return;
+  cb.checked = !cb.checked;
+  btn.style.background  = cb.checked ? '#2563EB' : 'var(--surface)';
+  btn.style.color       = cb.checked ? '#fff'    : 'var(--ink2)';
+  btn.style.borderColor = cb.checked ? '#2563EB' : 'var(--border)';
+}
+
+function psSetRecJour(di, checked) {
+  const cb  = document.getElementById(`ps-rec-jour-${di}`);
+  const btn = document.getElementById(`ps-rec-jour-${di}-btn`);
+  if (!cb || !btn) return;
+  cb.checked = checked;
+  btn.style.background  = checked ? '#2563EB' : 'var(--surface)';
+  btn.style.color       = checked ? '#fff'    : 'var(--ink2)';
+  btn.style.borderColor = checked ? '#2563EB' : 'var(--border)';
+}
+
+// ── Gestionnaire de récurrences ────────────────────────────────────────────
+
+function openRecurrenceManager() {
+  const crecheId   = document.getElementById('ps-creche')?.value || 'all';
+  const key        = psWeekKey(psWeekOffset, crecheId);
+  const data       = psLoad();
+  const week       = data[key] || { collaborateurs:[], creneaux:[] };
+  const exceptions = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
+  const dayNames   = ['L','M','M','J','V'];
+  const dayFull    = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+
+  const collabRows = week.collaborateurs.map(collab => {
+    const safeCollab = collab.replace(/"/g, '&quot;');
+    const pills = [0,1,2,3,4].map(di => {
+      const active  = (week.creneaux||[]).some(c => c.collab===collab && c.jour===di);
+      const horaire = (week.creneaux||[]).find(c => c.collab===collab && c.jour===di)?.horaire || '';
+      const style   = active
+        ? 'background:#2563EB;color:#fff;border-color:#2563EB'
+        : 'background:var(--surface2);color:var(--ink3);border-color:var(--border)';
+      return `<button type="button" data-collab="${safeCollab}" data-di="${di}" data-active="${active}"
+        onclick="recMgrToggleDay(this)" title="${dayFull[di]}${horaire?' — '+horaire:''}"
+        style="width:30px;height:30px;border-radius:50%;border:1.5px solid;cursor:pointer;font-size:11px;font-weight:700;transition:all 0.15s;${style}">${dayNames[di]}</button>`;
+    }).join('');
+    const horaireEx = (week.creneaux||[]).find(c=>c.collab===collab)?.horaire || '—';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <div style="min-width:130px;font-weight:700;font-size:13px;color:var(--ink)">${collab}</div>
+      <div style="display:flex;gap:4px">${pills}</div>
+      <div style="font-size:11px;color:var(--ink3)">${horaireEx}</div>
+    </div>`;
+  }).join('') || `<div style="color:var(--ink3);font-size:13px;padding:12px 0">Aucun collaborateur cette semaine.</div>`;
+
+  const exceptionsHTML = renderRecExceptions(exceptions);
+
+  document.getElementById('modal-recurrence-body').innerHTML = `
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:10px">Collaborateurs — Semaine courante</div>
+      ${collabRows}
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:600;color:var(--ink)">Appliquer sur</span>
+      <input type="number" id="rec-mgr-weeks" min="1" max="52" value="4"
+        style="width:60px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
+      <span style="font-size:13px;font-weight:600;color:var(--ink)">semaines suivantes</span>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:8px">Exceptions</div>
+      <div id="rec-mgr-exceptions-list">${exceptionsHTML}</div>
+      <div id="rec-mgr-add-form" style="display:none;margin-top:10px;background:var(--surface2);border-radius:10px;padding:12px;flex-direction:column;gap:8px">
+        <input type="text" id="rec-mgr-ex-collab" placeholder="Nom du collaborateur"
+          style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;font-family:inherit;outline:none;background:var(--bg)">
+        <input type="date" id="rec-mgr-ex-date"
+          style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;font-family:inherit;outline:none;background:var(--bg)">
+        <input type="text" id="rec-mgr-ex-raison" placeholder="Raison (optionnelle)"
+          style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;font-family:inherit;outline:none;background:var(--bg)">
+        <div style="display:flex;gap:8px">
+          <button onclick="recMgrAddException()" class="btn btn-primary btn-sm">Ajouter</button>
+          <button onclick="document.getElementById('rec-mgr-add-form').style.display='none'" class="btn btn-secondary btn-sm">Annuler</button>
+        </div>
+      </div>
+      <button onclick="document.getElementById('rec-mgr-add-form').style.display='flex'" class="btn btn-secondary btn-sm" style="margin-top:8px">+ Ajouter exception</button>
+    </div>`;
+
+  document.getElementById('modal-recurrence').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function renderRecExceptions(exceptions) {
+  if (!exceptions.length) return `<div style="color:var(--ink3);font-size:12px;padding:6px 0">Aucune exception.</div>`;
+  return exceptions.map((ex, i) =>
+    `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-size:12px"><strong>${ex.collab}</strong> · ${ex.date}${ex.raison?' · <em>'+ex.raison+'</em>':''}</span>
+      <button onclick="recMgrDeleteException(${i})" style="background:#FEF2F2;color:#DC2626;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">✕</button>
+    </div>`
+  ).join('');
+}
+
+function recMgrToggleDay(btn) {
+  const active = btn.dataset.active === 'true';
+  btn.dataset.active    = !active;
+  btn.style.background  = !active ? '#2563EB' : 'var(--surface2)';
+  btn.style.color       = !active ? '#fff'    : 'var(--ink3)';
+  btn.style.borderColor = !active ? '#2563EB' : 'var(--border)';
+}
+
+function recMgrDeleteException(idx) {
+  const exceptions = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
+  exceptions.splice(idx, 1);
+  localStorage.setItem('ps_exceptions', JSON.stringify(exceptions));
+  document.getElementById('rec-mgr-exceptions-list').innerHTML = renderRecExceptions(exceptions);
+}
+
+function recMgrAddException() {
+  const collab = document.getElementById('rec-mgr-ex-collab')?.value.trim();
+  const date   = document.getElementById('rec-mgr-ex-date')?.value;
+  const raison = document.getElementById('rec-mgr-ex-raison')?.value.trim();
+  if (!collab || !date) { showNotif('⚠ Collaborateur et date requis'); return; }
+  const exceptions = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
+  exceptions.push({ collab, date, raison });
+  localStorage.setItem('ps_exceptions', JSON.stringify(exceptions));
+  document.getElementById('rec-mgr-exceptions-list').innerHTML = renderRecExceptions(exceptions);
+  document.getElementById('rec-mgr-add-form').style.display = 'none';
+  document.getElementById('rec-mgr-ex-collab').value = '';
+  document.getElementById('rec-mgr-ex-date').value   = '';
+  document.getElementById('rec-mgr-ex-raison').value = '';
+}
+
+function applyRecurrenceManager() {
+  const crecheId   = document.getElementById('ps-creche')?.value || 'all';
+  const weeks      = parseInt(document.getElementById('rec-mgr-weeks')?.value) || 4;
+  const exceptions = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
+  const srcKey     = psWeekKey(psWeekOffset, crecheId);
+  const data       = psLoad();
+  const srcWeek    = data[srcKey] || { collaborateurs:[], creneaux:[] };
+  let count = 0;
+
+  document.querySelectorAll('#modal-recurrence-body button[data-collab]').forEach(btn => {
+    if (btn.dataset.active !== 'true') return;
+    const collab      = btn.dataset.collab;
+    const di          = parseInt(btn.dataset.di);
+    const srcCreneaux = (srcWeek.creneaux||[]).filter(c => c.collab===collab && c.jour===di);
+    if (!srcCreneaux.length) return;
+    for (let w = 1; w <= weeks; w++) {
+      const offset     = psWeekOffset + w;
+      const wMonday    = psGetMonday(offset);
+      const slotDate   = new Date(wMonday); slotDate.setDate(wMonday.getDate() + di);
+      const slotDateStr = slotDate.toISOString().split('T')[0];
+      if (exceptions.some(e => e.collab===collab && e.date===slotDateStr)) continue;
+      const wkey = psWeekKey(offset, crecheId);
+      if (!data[wkey]) data[wkey] = { collaborateurs:[], creneaux:[] };
+      const wk = data[wkey];
+      if (!wk.collaborateurs.includes(collab)) wk.collaborateurs.push(collab);
+      srcCreneaux.forEach(c => {
+        wk.creneaux.push({
+          id:      'ps_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+          collab,  jour: di,
+          horaire: c.horaire, pause: c.pause, color: c.color,
+        });
+        count++;
+      });
+    }
+  });
+
+  psSave(data);
+  closeModal('modal-recurrence');
+  renderPlanningSalarie();
+  showNotif(`✅ ${count} créneau${count>1?'x':''} propagé${count>1?'s':''}`);
+}
 </script>
+
+<!-- ── MODAL Récurrences ── -->
+<div class="modal-overlay" id="modal-recurrence" onclick="closeModalClick(event,'modal-recurrence')">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h2>🔁 Gérer les récurrences</h2>
+      <button class="modal-close" onclick="closeModal('modal-recurrence')">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+      <div id="modal-recurrence-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-recurrence')">Fermer</button>
+      <button class="btn btn-primary" onclick="applyRecurrenceManager()">✅ Appliquer</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
