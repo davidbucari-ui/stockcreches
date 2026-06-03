@@ -9061,7 +9061,9 @@ function openModalPS(collabPreset, jourPreset) {
   sel.innerHTML += '<option value="__new__">+ Nouveau collaborateur…</option>';
   if (collabPreset) sel.value = collabPreset;
   if (jourPreset !== undefined) document.getElementById('ps-jour').value = jourPreset;
-  document.getElementById('ps-horaire').value = '';
+  psDebut = PS_HORAIRES_DEFAULTS.h1.debut;
+  psFin   = PS_HORAIRES_DEFAULTS.h1.fin;
+  psRefreshSteppers();
   document.getElementById('ps-pause').value   = '';
   document.getElementById('ps-color').value   = 'h1';
   document.getElementById('modal-ps').classList.add('open');
@@ -9082,7 +9084,17 @@ function editPSCreneau(key, id) {
   sel.innerHTML += '<option value="__new__">+ Nouveau collaborateur…</option>';
   sel.value = c.collab;
   document.getElementById('ps-jour').value    = c.jour;
-  document.getElementById('ps-horaire').value = c.horaire;
+  // Tenter de parser l'horaire existant (ex: "H1 · 07h30–15h30")
+  const pm = (c.horaire||'').match(/(\d+)h(\d+)[–\-](\d+)h(\d+)/);
+  if (pm) {
+    psDebut = parseInt(pm[1])*60 + parseInt(pm[2]);
+    psFin   = parseInt(pm[3])*60 + parseInt(pm[4]);
+  } else {
+    psDebut = PS_HORAIRES_DEFAULTS.h1.debut;
+    psFin   = PS_HORAIRES_DEFAULTS.h1.fin;
+  }
+  psRefreshSteppers();
+  document.getElementById('ps-horaire').value = c.horaire; // garder valeur brute
   document.getElementById('ps-pause').value   = c.pause || '';
   document.getElementById('ps-color').value   = c.color  || 'h1';
   document.getElementById('modal-ps').classList.add('open');
