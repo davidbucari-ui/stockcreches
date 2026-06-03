@@ -1376,6 +1376,7 @@ textarea { resize: vertical; min-height: 72px; }
         <div class="tabs" id="salarie-tabs">
           <button onclick="showSalarieTab('planning',this)" style="flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);transition:all 0.2s">📅 Planning hebdomadaire</button>
           <button onclick="showSalarieTab('taux',this)" style="flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s">👥 Taux d'encadrement</button>
+          <button id="stab-equipes" onclick="showSalarieTab('equipes',this)" style="flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s">🗓 Planning équipes</button>
         </div>
       </div>
 
@@ -1468,6 +1469,31 @@ textarea { resize: vertical; min-height: 72px; }
             <div style="display:flex;align-items:center;gap:6px"><span style="border:1px solid var(--border);padding:3px 8px;border-radius:6px;font-size:11px;color:var(--ink3)">pause xx–xx</span> Créneau de pause</div>
             <div style="margin-top:4px;width:100%;font-size:11px;color:var(--ink3)">Les pauses simultanées sont détectées automatiquement.</div>
           </div>
+
+        </div>
+      </div>
+
+      <!-- ── Onglet Planning équipes ── -->
+      <div id="salarie-panel-equipes" style="display:none">
+        <div style="padding:20px 28px">
+
+          <!-- Toolbar -->
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+            <div style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;border:1px solid var(--border)">
+              <button onclick="equipesVue='multi';equipesOffset=0;renderPlanningEquipes()" id="equipes-btn-multi"
+                style="padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:#2563EB;color:#fff;transition:all 0.15s">Multi-semaines</button>
+              <button onclick="equipesVue='mensuel';equipesOffset=0;renderPlanningEquipes()" id="equipes-btn-mensuel"
+                style="padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:transparent;color:var(--ink2);transition:all 0.15s">Mensuel</button>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="equipesOffset-=(equipesVue==='multi'?6:4);renderPlanningEquipes()">← Préc.</button>
+            <span id="equipes-period-lbl" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;white-space:nowrap;color:var(--ink)"></span>
+            <button class="btn btn-secondary btn-sm" onclick="equipesOffset+=(equipesVue==='multi'?6:4);renderPlanningEquipes()">Suiv. →</button>
+            <button class="btn btn-secondary btn-sm" onclick="equipesOffset=0;renderPlanningEquipes()">Aujourd'hui</button>
+            <button onclick="equipesAutoRotate()" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,0.3)">🔄 Rotation auto</button>
+          </div>
+
+          <div id="equipes-table-wrap" style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)"></div>
+          <div id="equipes-legend" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:11px"></div>
 
         </div>
       </div>
@@ -6689,18 +6715,25 @@ function showSalarieTab(tab, btn) {
     const el = document.getElementById('salarie-tab-' + t);
     if (el) el.style.display = t === tab ? '' : 'none';
   });
-  const [planningBtn, tauxBtn] = document.querySelectorAll('#salarie-tabs button');
-  if (planningBtn && tauxBtn) {
-    if (tab === 'planning') {
-      planningBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);transition:all 0.2s");
-      tauxBtn.setAttribute('style',    "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s");
-    } else {
-      tauxBtn.setAttribute('style',    "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 3px 10px rgba(5,150,105,0.4);transition:all 0.2s");
-      planningBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s");
-    }
-  }
+  const ep = document.getElementById('salarie-panel-equipes');
+  if (ep) ep.style.display = tab === 'equipes' ? '' : 'none';
+
+  const inactiveStyle = "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s";
+  const [planningBtn, tauxBtn, equipesBtn] = document.querySelectorAll('#salarie-tabs button');
+  if (planningBtn) planningBtn.setAttribute('style', inactiveStyle);
+  if (tauxBtn)     tauxBtn.setAttribute('style', inactiveStyle);
+  if (equipesBtn)  equipesBtn.setAttribute('style', inactiveStyle);
+
+  if (tab === 'planning' && planningBtn)
+    planningBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);transition:all 0.2s");
+  if (tab === 'taux' && tauxBtn)
+    tauxBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 3px 10px rgba(5,150,105,0.4);transition:all 0.2s");
+  if (tab === 'equipes' && equipesBtn)
+    equipesBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,0.35);transition:all 0.2s");
+
   if (tab === 'planning') showPlanningPage();
   if (tab === 'taux')     renderPlanningSalarie();
+  if (tab === 'equipes')  renderPlanningEquipes();
 }
 
 function showRhTab(tab, btn) {
@@ -8974,9 +9007,11 @@ function deleteSalarie() {
 
 <script>
 /* ── Planning salarié ── */
-let psWeekOffset = 0;
-let psEditingId  = null;
-let psDayView    = null;
+let psWeekOffset  = 0;
+let psEditingId   = null;
+let psDayView     = null;
+let equipesVue    = 'multi';
+let equipesOffset = 0;
 
 /* ── Steppers Planning salarié ── */
 let psDebut      = 7*60+30;
@@ -9675,6 +9710,153 @@ function applyRecurrenceManager() {
   closeModal('modal-recurrence');
   renderPlanningSalarie();
   showNotif(`✅ ${count} créneau${count>1?'x':''} propagé${count>1?'s':''}`);
+}
+
+// ── Planning équipes ────────────────────────────────────────────────────────
+
+const EQUIPES_PALETTE = [
+  {bg:'#DBEAFE',c:'#1E40AF'},
+  {bg:'#D1FAE5',c:'#065F46'},
+  {bg:'#FCA5A5',c:'#7F1D1D'},
+  {bg:'#FDE68A',c:'#92400E'},
+  {bg:'#DDD6FE',c:'#4C1D95'},
+  {bg:'#FED7AA',c:'#9A3412'},
+];
+
+function isJourFerie(date) {
+  const d = date.getDate(), m = date.getMonth()+1;
+  return (m===1&&d===1)||(m===5&&d===1)||(m===5&&d===8)||(m===7&&d===14)||
+         (m===8&&d===15)||(m===11&&d===1)||(m===11&&d===11)||(m===12&&d===25);
+}
+
+function equipesSalaries() {
+  const crecheId = document.getElementById('ps-creche')?.value || 'all';
+  const data = psLoad();
+  const seen = new Set();
+  const nbWeeks = equipesVue === 'multi' ? 6 : 4;
+  for (let w = equipesOffset; w < equipesOffset + nbWeeks; w++) {
+    const wk = data[psWeekKey(w, crecheId)];
+    if (wk?.collaborateurs) wk.collaborateurs.forEach(c => seen.add(c));
+  }
+  if (!seen.size) { loadSalaries(); SALARIES.forEach(s => seen.add(`${s.prenom} ${s.nom}`)); }
+  return [...seen];
+}
+
+function equipesGetSal(weekIdx, horaireIdx, dayIdx, salaries, overrides) {
+  const key = equipesVue === 'mensuel' ? `${weekIdx}_${horaireIdx}_${dayIdx}` : `${weekIdx}_${horaireIdx}`;
+  const nbSal = salaries.length || 1;
+  const salIdx = overrides[key] !== undefined
+    ? overrides[key]
+    : (weekIdx + horaireIdx + dayIdx) % nbSal;
+  return { name: salaries[salIdx % nbSal] || '—', salIdx: salIdx % nbSal, key };
+}
+
+function equipesClickCell(key, salIdx, nbSal) {
+  const overrides = JSON.parse(localStorage.getItem('ps_equipes_overrides') || '{}');
+  overrides[key] = (salIdx + 1) % nbSal;
+  localStorage.setItem('ps_equipes_overrides', JSON.stringify(overrides));
+  renderPlanningEquipes();
+}
+
+function equipesAutoRotate() {
+  localStorage.removeItem('ps_equipes_overrides');
+  renderPlanningEquipes();
+}
+
+function renderPlanningEquipes() {
+  const wrap     = document.getElementById('equipes-table-wrap');
+  const legend   = document.getElementById('equipes-legend');
+  const lbl      = document.getElementById('equipes-period-lbl');
+  if (!wrap) return;
+
+  // Toggle vue buttons
+  const bm = document.getElementById('equipes-btn-multi');
+  const bM = document.getElementById('equipes-btn-mensuel');
+  if (bm) { bm.style.background = equipesVue==='multi' ? '#2563EB' : 'transparent'; bm.style.color = equipesVue==='multi' ? '#fff' : 'var(--ink2)'; }
+  if (bM) { bM.style.background = equipesVue==='mensuel' ? '#2563EB' : 'transparent'; bM.style.color = equipesVue==='mensuel' ? '#fff' : 'var(--ink2)'; }
+
+  const horaires  = getPlanningHoraires();
+  const salaries  = equipesSalaries();
+  const nbSal     = salaries.length || 1;
+  const overrides = JSON.parse(localStorage.getItem('ps_equipes_overrides') || '{}');
+  const fmtWk     = w => { const m = psGetMonday(w); return `S${psISOWeek(m)} ${m.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}`; };
+  const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
+  const thBase    = 'padding:8px 10px;font-size:11px;font-weight:600;text-align:center;background:var(--bg);border-bottom:1px solid var(--border);border-right:1px solid var(--border);color:var(--ink3);white-space:nowrap';
+  const tdName    = 'padding:8px 12px;font-size:12px;font-weight:700;background:var(--surface2);border-right:1px solid var(--border);white-space:nowrap;color:var(--ink)';
+
+  if (equipesVue === 'multi') {
+    const nbWeeks = 6;
+    const weekIdxs = Array.from({length:nbWeeks}, (_,i) => equipesOffset + i);
+    if (lbl) {
+      const m1 = psGetMonday(weekIdxs[0]), m2 = psGetMonday(weekIdxs[weekIdxs.length-1]);
+      lbl.textContent = `${m1.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} – ${m2.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}`;
+    }
+    const headers = weekIdxs.map(w => `<th style="${thBase}">${fmtWk(w)}</th>`).join('');
+    const rows = horaires.map((h, hi) =>
+      `<tr>
+        <td style="${tdName}">${h.name}</td>
+        ${weekIdxs.map(w => {
+          const {name, salIdx, key} = equipesGetSal(w, hi, 0, salaries, overrides);
+          const pal = EQUIPES_PALETTE[salIdx % 6];
+          return `<td style="padding:6px;border-right:1px solid var(--border);text-align:center;cursor:pointer" onclick="equipesClickCell('${key}',${salIdx},${nbSal})">
+            <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${pal.bg};color:${pal.c};white-space:nowrap">${name}</span>
+          </td>`;
+        }).join('')}
+      </tr>`
+    ).join('');
+    wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:600px">
+      <thead><tr><th style="${thBase};text-align:left">Horaire</th>${headers}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  } else {
+    const nbWeeks = 4;
+    const weekIdxs = Array.from({length:nbWeeks}, (_,i) => equipesOffset + i);
+    if (lbl) {
+      const m1 = psGetMonday(weekIdxs[0]);
+      lbl.textContent = `${m1.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}`;
+    }
+    const blocks = weekIdxs.map(w => {
+      const monday = psGetMonday(w);
+      const weekLabel = `Sem. ${psISOWeek(monday)} — ${monday.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}`;
+      const dayHeaders = DAY_NAMES.map((d, di) => {
+        const dt = new Date(monday); dt.setDate(monday.getDate()+di);
+        const ferie = isJourFerie(dt);
+        return `<th style="${thBase};${ferie?'color:#DC2626;background:#FEF2F2':''}">${d}<br><span style="font-size:10px">${dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}</span></th>`;
+      }).join('');
+      const rows = horaires.map((h, hi) =>
+        `<tr>
+          <td style="${tdName}">${h.name}</td>
+          ${DAY_NAMES.map((_, di) => {
+            const dt = new Date(monday); dt.setDate(monday.getDate()+di);
+            const ferie = isJourFerie(dt);
+            if (ferie) return `<td style="padding:6px;border-right:1px solid var(--border);background:#FEF2F2;text-align:center"><span style="font-size:11px;color:#DC2626">Férié</span></td>`;
+            const {name, salIdx, key} = equipesGetSal(w, hi, di, salaries, overrides);
+            const pal = EQUIPES_PALETTE[salIdx % 6];
+            return `<td style="padding:4px;border-right:1px solid var(--border);text-align:center;cursor:pointer" onclick="equipesClickCell('${key}',${salIdx},${nbSal})">
+              <span style="display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;background:${pal.bg};color:${pal.c};white-space:nowrap">${name}</span>
+            </td>`;
+          }).join('')}
+        </tr>`
+      ).join('');
+      return `<div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border)">${weekLabel}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr><th style="${thBase};text-align:left">Horaire</th>${dayHeaders}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }).join('');
+    wrap.innerHTML = blocks;
+  }
+
+  // Légende salariés
+  if (legend) {
+    legend.innerHTML = salaries.map((name, i) => {
+      const pal = EQUIPES_PALETTE[i % 6];
+      return `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${pal.bg};color:${pal.c}">${name}</span>`;
+    }).join('');
+  }
 }
 </script>
 
