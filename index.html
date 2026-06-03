@@ -6520,7 +6520,21 @@ async function createAdminUser() {
     const data = await res.json();
     if (!res.ok) {
       console.error('[createAdminUser] Supabase Auth error:', data);
-      throw new Error(data.message || data.msg || data.error_description || `Erreur ${res.status}`);
+      const msg = data.message || data.msg || data.error_description || '';
+      if (res.status === 400 && msg.toLowerCase().includes('already registered')) {
+        // L'utilisateur Auth existe déjà — on insère quand même en table utilisateurs
+        await sbInsert('utilisateurs', { email, role, creche_id: creche || null, actif: true });
+        okEl.textContent = `✅ Utilisateur déjà inscrit — fiche ajoutée pour ${email}.`;
+        okEl.style.display = 'block';
+        document.getElementById('admin-new-email').value = '';
+        document.getElementById('admin-new-password').value = '';
+        await renderAdminUsers();
+        return;
+      }
+      if (res.status === 400 && msg.toLowerCase().includes('confirmation')) {
+        throw new Error('⚠ Confirmations email activées sur Supabase. Allez dans Authentication → Settings et désactivez "Enable email confirmations".');
+      }
+      throw new Error(msg || `Erreur ${res.status}`);
     }
     await sbInsert('utilisateurs', { email, role, creche_id: creche || null, actif: true });
     okEl.textContent = `✅ Compte créé pour ${email}. L'utilisateur peut se connecter dès maintenant.`;
