@@ -6623,11 +6623,11 @@ function showSalarieTab(tab, btn) {
   const [planningBtn, tauxBtn] = document.querySelectorAll('#salarie-tabs button');
   if (planningBtn && tauxBtn) {
     if (tab === 'planning') {
-      planningBtn.style.cssText = "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);transition:all 0.2s";
-      tauxBtn.style.cssText = "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s";
+      planningBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);transition:all 0.2s");
+      tauxBtn.setAttribute('style',    "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s");
     } else {
-      tauxBtn.style.cssText = "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 3px 10px rgba(5,150,105,0.4);transition:all 0.2s";
-      planningBtn.style.cssText = "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s";
+      tauxBtn.setAttribute('style',    "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 3px 10px rgba(5,150,105,0.4);transition:all 0.2s");
+      planningBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s");
     }
   }
   if (tab === 'planning') showPlanningPage();
