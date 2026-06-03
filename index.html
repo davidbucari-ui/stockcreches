@@ -7187,8 +7187,9 @@ function renderPlanningHebdo() {
   const weekNum = getISOWeekNumber(monday);
   const today   = new Date(); today.setHours(0,0,0,0);
   const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
-  const horaires = getPlanningHoraires();
-  const crecheId = document.getElementById('ph-creche')?.value || '';
+  const DAY_FULL  = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+  const horaires  = getPlanningHoraires();
+  const crecheId  = document.getElementById('ph-creche')?.value || '';
 
   const lbl = document.getElementById('ph-week-label');
   const fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
@@ -7197,75 +7198,78 @@ function renderPlanningHebdo() {
 
   const week = peGetWeek(crecheId);
 
-  // Reconstruire la liste des pros depuis les creneaux
-  const prosSet = new Set((week.creneaux||[]).map(c => c.pro));
-  const pros = [...prosSet].sort();
+  // Liste des pros depuis RH + creneaux
+  let salaries = [];
+  try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
+  const rhNames = salaries.map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
+  const crNames = (week.creneaux||[]).map(c => c.pro);
+  const pros = [...new Set([...rhNames, ...crNames])].sort();
 
   if (pros.length === 0) {
     grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
-      <div style="font-size:32px;margin-bottom:10px">📅</div>
-      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucun planning pour cette semaine</div>
-      <div style="font-size:13px">Remplissez d'abord le Planning équipe pour voir le récapitulatif ici.</div>
+      <div style="font-size:32px;margin-bottom:10px">👤</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucune collaboratrice enregistrée</div>
+      <div style="font-size:13px">Ajoutez des salariées dans RH → Salariés, puis remplissez le Planning équipe.</div>
     </div>`;
     return;
   }
 
-  const thDays = DAY_NAMES.map((name, i) => {
-    const dt = new Date(monday); dt.setDate(monday.getDate()+i);
-    const isToday = dt.getTime() === today.getTime();
-    const dayNum  = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
-    return `<th style="padding:10px 8px;text-align:center;min-width:130px;background:${isToday?'var(--accent-lt)':'var(--bg)'};border-bottom:2px solid var(--border);border-right:1px solid var(--border);${isToday?'color:var(--accent)':'color:var(--ink3)'}">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">${name}</div>
-      <div style="font-size:14px;font-weight:800;margin-top:2px;color:${isToday?'var(--accent)':'var(--ink)'}">${dayNum}</div>
-    </th>`;
-  }).join('');
+  // Une carte par pro
+  const fmtMin = m => `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`;
 
-  const rows = pros.map(pro => {
+  const cards = pros.map(pro => {
     let totalMin = 0;
-    const tds = DAY_NAMES.map((_, di) => {
+    const days = DAY_NAMES.map((dayName, di) => {
       const dt = new Date(monday); dt.setDate(monday.getDate()+di);
       const isToday = dt.getTime() === today.getTime();
+      const dayNum  = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
       const creneaux = (week.creneaux||[]).filter(cr => cr.pro === pro && cr.jour === di);
 
-      const content = creneaux.map(cr => {
+      let dayMin = 0;
+      const slots = creneaux.map(cr => {
         const h = horaires[cr.horaire_idx] || {};
         const c = PE_COLORS[cr.horaire_idx] || PE_COLORS[0];
-        // Add to total
         if (h.debut && h.fin) {
-          const [dh, dm] = h.debut.split(':').map(Number);
-          const [fh, fm] = h.fin.split(':').map(Number);
-          totalMin += (fh*60+fm) - (dh*60+dm);
+          const [dh,dm] = h.debut.split(':').map(Number);
+          const [fh,fm] = h.fin.split(':').map(Number);
+          dayMin += (fh*60+fm) - (dh*60+dm);
         }
-        return `<div style="padding:5px 9px;border-radius:8px;background:${c.bg};border:1px solid ${c.border};margin-bottom:3px">
-          <div style="font-size:11px;font-weight:700;color:${c.text}">${h.name||'?'}</div>
-          <div style="font-size:10px;color:var(--ink3);margin-top:1px">${h.debut||''}–${h.fin||''}${cr.pause?` ⏸${cr.pause}`:''}</div>
-        </div>`;
-      }).join('') || `<div style="font-size:11px;color:var(--ink3);text-align:center;padding:8px 0">—</div>`;
+        return `<div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:${c.text};line-height:1.2">${h.debut||''}–${h.fin||''}</div>
+          ${cr.pause ? `<div style="font-size:10px;color:var(--ink3);margin-top:1px">⏸ ${cr.pause}</div>` : ''}`;
+      }).join('');
 
-      return `<td style="padding:7px 8px;vertical-align:top;border-right:1px solid var(--border);${isToday?'background:var(--accent-lt)':''}">${content}</td>`;
+      totalMin += dayMin;
+
+      const bg = isToday ? 'var(--accent-lt)' : creneaux.length ? 'var(--surface2)' : 'var(--bg)';
+      const border = isToday ? '2px solid var(--accent)' : '1px solid var(--border)';
+
+      return `<div style="flex:1;min-width:90px;border-radius:8px;padding:9px 10px;background:${bg};border:${border};text-align:center">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${isToday?'var(--accent)':'var(--ink3)'};margin-bottom:3px">${dayName} ${dayNum}</div>
+        ${slots || `<div style="font-size:18px;color:var(--border);line-height:2">—</div>`}
+        ${dayMin > 0 ? `<div style="font-size:10px;color:var(--ink3);margin-top:4px;font-weight:600">${fmtMin(dayMin)}</div>` : ''}
+      </div>`;
     }).join('');
 
-    const totalH = Math.floor(totalMin/60);
-    const totalM = totalMin%60;
-    const totalStr = totalMin > 0 ? `${totalH}h${String(totalM).padStart(2,'0')}` : '—';
+    const totalH = fmtMin(totalMin);
+    const initial = pro.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
 
-    return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:11px 14px;font-weight:700;font-size:13px;border-right:2px solid var(--border);white-space:nowrap;background:var(--surface2);color:var(--ink)">${pro}</td>
-      ${tds}
-      <td style="padding:11px 10px;text-align:center;background:var(--surface2);font-weight:700;font-size:13px;color:var(--accent);white-space:nowrap">${totalStr}</td>
-    </tr>`;
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;box-shadow:var(--shadow)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initial}</div>
+        <div style="flex:1">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--ink)">${pro}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px">Semaine ${weekNum}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3)">Total semaine</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:${totalMin>0?'var(--accent)':'var(--ink3)'}">${totalMin>0?totalH:'—'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${days}</div>
+    </div>`;
   }).join('');
 
-  grid.innerHTML = `<table style="width:100%;border-collapse:collapse">
-    <thead>
-      <tr>
-        <th style="padding:10px 14px;text-align:left;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);border-right:2px solid var(--border);border-bottom:2px solid var(--border);min-width:130px">Collaboratrice</th>
-        ${thDays}
-        <th style="padding:10px 8px;text-align:center;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);border-bottom:2px solid var(--border)">Total</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  grid.innerHTML = `<div style="padding:16px 18px">${cards}</div>`;
 }
 
 // ── MODAL Planning équipe ──────────────────────────────────────────
