@@ -867,8 +867,11 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('univers', this)">
     <span class="nav-icon">🌟</span> Univers ludiques
   </button>
+  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('planning', this)">
+    <span class="nav-icon">📅</span> Planning équipe
+  </button>
   <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('salarie', this)">
-    <span class="nav-icon">📅</span> Planning salarié
+    <span class="nav-icon">👤</span> Planning hebdomadaire
   </button>
   <button class="nav-item" data-roles="admin,directrice" onclick="showPage('fournisseurs', this)">
     <span class="nav-icon">🏭</span> Fournisseurs
@@ -1094,27 +1097,7 @@ textarea { resize: vertical; min-height: 72px; }
           </button>
         </div>
 
-        <!-- SECTION 3 : Type de structure -->
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Type de structure</div>
-        <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">
-          <div style="font-size:12px;color:var(--ink3)">Définit le taux d'encadrement réglementaire utilisé dans le planning salarié.</div>
-          <label id="param-struct-micro-label" style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);transition:border-color 0.15s">
-            <input type="radio" name="structure_type" id="param-struct-micro" value="micro" onchange="setStructureType('micro')" style="margin-top:2px;accent-color:var(--accent)">
-            <div>
-              <div style="font-size:13px;font-weight:700;color:var(--ink)">Micro-crèche</div>
-              <div style="font-size:12px;color:var(--ink3);margin-top:2px">1 professionnel pour 6 enfants (tous âges)</div>
-            </div>
-          </label>
-          <label id="param-struct-classique-label" style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);transition:border-color 0.15s">
-            <input type="radio" name="structure_type" id="param-struct-classique" value="classique" onchange="setStructureType('classique')" style="margin-top:2px;accent-color:var(--accent)">
-            <div>
-              <div style="font-size:13px;font-weight:700;color:var(--ink)">Crèche classique</div>
-              <div style="font-size:12px;color:var(--ink3);margin-top:2px">1 pro / 5 non marcheurs · 1 pro / 8 marcheurs</div>
-            </div>
-          </label>
-        </div>
-
-        <!-- SECTION 4 : Export -->
+        <!-- SECTION 3 : Export -->
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Données</div>
         <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">
           <div style="font-size:13px;color:var(--ink2);line-height:1.6">Exportez ou restaurez l'intégralité de vos données en un clic.</div>
@@ -1365,139 +1348,76 @@ textarea { resize: vertical; min-height: 72px; }
       </div>
     </div>
 
-    <!-- ── PAGE PLANNING (contenu déplacé dans page-salarie) ── -->
-    <div id="page-planning" style="display:none"></div>
+    <!-- ── PAGE PLANNING ── -->
+    <div id="page-planning" style="display:none">
+      <div style="padding:20px 28px">
 
-    <!-- ── PAGE PLANNING SALARIÉ ── -->
-    <div id="page-salarie" style="display:none">
-
-      <!-- Onglets -->
-      <div style="padding:16px 28px 0">
-        <div class="tabs" id="salarie-tabs">
-          <button onclick="showSalarieTab('planning',this)" style="flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);transition:all 0.2s">📅 Planning hebdomadaire</button>
-          <button onclick="showSalarieTab('taux',this)" style="flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s">👥 Taux d'encadrement</button>
-          <button id="stab-equipes" onclick="showSalarieTab('equipes',this)" style="flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s">🗓 Planning équipes</button>
-        </div>
-      </div>
-
-      <!-- ── Onglet Planning hebdomadaire ── -->
-      <div id="salarie-tab-planning">
-        <div style="padding:20px 28px">
-
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-              <span id="planning-week-label" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap"></span>
-              <div style="display:flex;gap:6px">
-                <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(-1)">← Préc.</button>
-                <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(0)">Aujourd'hui</button>
-                <button class="btn btn-secondary btn-sm" onclick="planningGoToWeek(1)">Suiv. →</button>
-              </div>
+        <!-- En-tête -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--ink)">📅 Planning équipe</span>
+            <span id="pe-week-label" style="font-size:13px;font-weight:600;color:var(--ink3)"></span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm" onclick="peGoWeek(-1)">← Préc.</button>
+              <button class="btn btn-secondary btn-sm" onclick="peGoWeek(0)">Aujourd'hui</button>
+              <button class="btn btn-secondary btn-sm" onclick="peGoWeek(1)">Suiv. →</button>
             </div>
-            <select id="planning-creche-filter" onchange="renderPlanning()"
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="pe-creche" onchange="renderPlanningEquipe()"
               style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
               <option value="">Toutes les crèches</option>
             </select>
+            <button class="btn btn-primary" onclick="openModalPE(null,null)">+ Ajouter une pro</button>
           </div>
+        </div>
 
-          <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
-            <div id="planning-grid">
-              <div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div>
+        <!-- Grille Horaire × Jours -->
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
+          <div id="pe-grid"><div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div></div>
+        </div>
+
+        <!-- Légende taux -->
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:12px;color:var(--ink3)">
+          <span style="background:#F0FDF4;color:#16A34A;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">✓ Conforme</span>
+          <span style="background:#FFFBEB;color:#D97706;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">! Limite</span>
+          <span style="background:#FEF2F2;color:#DC2626;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">✗ Non conforme</span>
+          <span style="color:var(--ink3);font-size:11px">— Taux calculé selon type de structure (Paramètres)</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── PAGE PLANNING HEBDOMADAIRE ── -->
+    <div id="page-salarie" style="display:none">
+      <div style="padding:20px 28px">
+
+        <!-- En-tête -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--ink)">👤 Planning hebdomadaire</span>
+            <span id="ph-week-label" style="font-size:13px;font-weight:600;color:var(--ink3)"></span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-secondary btn-sm" onclick="peGoWeek(-1);renderPlanningHebdo()">← Préc.</button>
+              <button class="btn btn-secondary btn-sm" onclick="peGoWeek(0);renderPlanningHebdo()">Aujourd'hui</button>
+              <button class="btn btn-secondary btn-sm" onclick="peGoWeek(1);renderPlanningHebdo()">Suiv. →</button>
             </div>
           </div>
-
-          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
-            <button class="btn btn-secondary" onclick="openScanner()">📷 Scanner pour pointer</button>
-            <button class="btn btn-primary" onclick="openModalPlanning(null,null,null)">+ Ajouter un créneau</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="ph-creche" onchange="renderPlanningHebdo()"
+              style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
+              <option value="">Toutes les crèches</option>
+            </select>
+            <button class="btn btn-secondary" onclick="exportPlanningPDF()">🖨 PDF</button>
           </div>
-
         </div>
-      </div>
 
-      <!-- ── Onglet Taux d'encadrement ── -->
-      <div id="salarie-tab-taux" style="display:none">
-        <div style="padding:20px 28px">
-
-          <div class="section-header" style="padding-top:4px;flex-wrap:wrap;gap:12px;margin-bottom:14px">
-            <div class="section-title">👥 Planning salarié — Taux d'encadrement</div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <select id="ps-creche" onchange="renderPlanningSalarie()" style="padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none"></select>
-              <button class="btn btn-secondary btn-sm" onclick="psGoWeek(-1)">← Préc.</button>
-              <span id="ps-week-label" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;white-space:nowrap"></span>
-              <button class="btn btn-secondary btn-sm" onclick="psGoWeek(1)">Suiv. →</button>
-              <button class="btn btn-secondary btn-sm" onclick="psGoWeek(0)">Aujourd'hui</button>
-              <button class="btn btn-primary btn-sm" onclick="openModalPS()">+ Ajouter un créneau</button>
-              <button class="btn btn-secondary btn-sm" onclick="exportPlanningPDF()">🖨 PDF</button>
-            </div>
-          </div>
-
-          <div style="margin-bottom:10px">
-            <button class="btn btn-secondary btn-sm" onclick="openRecurrenceManager()">🔁 Gérer les récurrences</button>
-          </div>
-
-          <div id="ps-banner" style="background:var(--bg);border-radius:8px;padding:9px 14px;font-size:11.5px;letter-spacing:0.06em;color:var(--ink3);font-weight:600;margin-bottom:14px"></div>
-
-          <!-- Saisie enfants — micro -->
-          <div id="ps-enf-micro" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:8px">
-              Enfants présents
-              <input type="number" id="ps-enf-total" min="0" max="99" value="6" onchange="renderPlanningSalarie()"
-                style="width:70px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
-            </label>
-          </div>
-          <!-- Saisie enfants — classique -->
-          <div id="ps-enf-classique" style="display:none;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:8px">
-              Enfants non marcheurs
-              <input type="number" id="ps-enf-nm" min="0" max="99" value="0" onchange="renderPlanningSalarie()"
-                style="width:70px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
-            </label>
-            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:8px">
-              Enfants marcheurs
-              <input type="number" id="ps-enf-m" min="0" max="99" value="0" onchange="renderPlanningSalarie()"
-                style="width:70px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
-            </label>
-          </div>
-
-          <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
-            <div id="ps-grid"></div>
-          </div>
-
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:14px;font-size:12px;color:var(--ink3)">
-            <div style="display:flex;align-items:center;gap:6px"><span style="background:#F0FDF4;color:#16A34A;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">✓ 1/4</span> Taux OK</div>
-            <div style="display:flex;align-items:center;gap:6px"><span style="background:#FFFBEB;color:#D97706;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">! 1/6</span> Taux limite</div>
-            <div style="display:flex;align-items:center;gap:6px"><span style="background:#FEF2F2;color:#DC2626;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">✗</span> Non conforme</div>
-            <div style="display:flex;align-items:center;gap:6px"><span style="border:1px solid var(--border);padding:3px 8px;border-radius:6px;font-size:11px;color:var(--ink3)">pause xx–xx</span> Créneau de pause</div>
-            <div style="margin-top:4px;width:100%;font-size:11px;color:var(--ink3)">Les pauses simultanées sont détectées automatiquement.</div>
-          </div>
-
+        <!-- Grille par salarié -->
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
+          <div id="ph-grid"><div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div></div>
         </div>
+
       </div>
-
-      <!-- ── Onglet Planning équipes ── -->
-      <div id="salarie-panel-equipes" style="display:none">
-        <div style="padding:20px 28px">
-
-          <!-- Toolbar -->
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-            <div style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;border:1px solid var(--border)">
-              <button onclick="equipesVue='multi';equipesOffset=0;renderPlanningEquipes()" id="equipes-btn-multi"
-                style="padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:#2563EB;color:#fff;transition:all 0.15s">Multi-semaines</button>
-              <button onclick="equipesVue='mensuel';equipesOffset=0;renderPlanningEquipes()" id="equipes-btn-mensuel"
-                style="padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;background:transparent;color:var(--ink2);transition:all 0.15s">Mensuel</button>
-            </div>
-            <button class="btn btn-secondary btn-sm" onclick="equipesOffset-=(equipesVue==='multi'?6:4);renderPlanningEquipes()">← Préc.</button>
-            <span id="equipes-period-lbl" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;white-space:nowrap;color:var(--ink)"></span>
-            <button class="btn btn-secondary btn-sm" onclick="equipesOffset+=(equipesVue==='multi'?6:4);renderPlanningEquipes()">Suiv. →</button>
-            <button class="btn btn-secondary btn-sm" onclick="equipesOffset=0;renderPlanningEquipes()">Aujourd'hui</button>
-            <button onclick="equipesAutoRotate()" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,0.3)">🔄 Rotation auto</button>
-          </div>
-
-          <div id="equipes-table-wrap" style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)"></div>
-          <div id="equipes-legend" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:11px"></div>
-
-        </div>
-      </div>
-
     </div>
 
     <!-- ── PAGE RH ── -->
@@ -3440,7 +3360,6 @@ function renderParametres() {
   if (nomInput) nomInput.value = prefs.nomReseau || '';
   if (seuilInput) seuilInput.value = prefs.seuilStock || 2;
   if (peremptionInput) peremptionInput.value = prefs.seuilPeremption || 30;
-  updateStructureUI();
 
   // Générer les cercles de couleur
   const colorsEl = document.getElementById('param-colors');
@@ -3675,9 +3594,9 @@ let currentUserRole = 'stagiaire';
 let currentUserDbId = null;
 
 const ROLE_PAGES = {
-  admin:      ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','salarie'],
-  directrice: ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','salarie'],
-  auxiliaire: ['dashboard','inventaire','entretien','univers','salarie'],
+  admin:      ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie'],
+  directrice: ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie'],
+  auxiliaire: ['dashboard','inventaire','entretien','univers','planning'],
   stagiaire:  ['dashboard'],
 };
 
@@ -4773,7 +4692,7 @@ function showPage(page, btn) {
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning hebdomadaire', salarie:'Planning salarié', };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning équipe', salarie:'Planning hebdomadaire', };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -4787,8 +4706,8 @@ function showPage(page, btn) {
   if (page === 'parametres') { renderParametres(); }
   if (page === 'admin') { showAdminPage(); }
   if (page === 'rh')       { showRhPage(); }
-  if (page === 'planning') { showPage('salarie', btn); showSalarieTab('planning'); return; }
-  if (page === 'salarie')  { showSalarieTab('taux'); }
+  if (page === 'planning') { showPlanningEquipePage(); }
+  if (page === 'salarie')  { showPlanningHebdoPage(); }
 }
 
 function showTab(tab, btn) {
@@ -6387,7 +6306,7 @@ function saveCrecheName() {
   renderTable();
   renderStats();
 }
-const LS_KEY = 'stocks-solo-v2';
+const LS_KEY = 'stocks-solo-v1';
 
 function saveData() {
   try {
@@ -6599,21 +6518,7 @@ async function createAdminUser() {
     const data = await res.json();
     if (!res.ok) {
       console.error('[createAdminUser] Supabase Auth error:', data);
-      const msg = data.message || data.msg || data.error_description || '';
-      if (res.status === 400 && msg.toLowerCase().includes('already registered')) {
-        // L'utilisateur Auth existe déjà — on insère quand même en table utilisateurs
-        await sbInsert('utilisateurs', { email, role, creche_id: creche || null, actif: true });
-        okEl.textContent = `✅ Utilisateur déjà inscrit — fiche ajoutée pour ${email}.`;
-        okEl.style.display = 'block';
-        document.getElementById('admin-new-email').value = '';
-        document.getElementById('admin-new-password').value = '';
-        await renderAdminUsers();
-        return;
-      }
-      if (res.status === 400 && msg.toLowerCase().includes('confirmation')) {
-        throw new Error('⚠ Confirmations email activées sur Supabase. Allez dans Authentication → Settings et désactivez "Enable email confirmations".');
-      }
-      throw new Error(msg || `Erreur ${res.status}`);
+      throw new Error(data.message || data.msg || data.error_description || `Erreur ${res.status}`);
     }
     await sbInsert('utilisateurs', { email, role, creche_id: creche || null, actif: true });
     okEl.textContent = `✅ Compte créé pour ${email}. L'utilisateur peut se connecter dès maintenant.`;
@@ -6686,54 +6591,6 @@ async function showRhPage() {
   const idx = tabOrder.indexOf(rhCurrentTab);
   const btn = document.querySelectorAll('#rh-tabs .tab-btn')[idx] || null;
   showRhTab(rhCurrentTab, btn);
-}
-
-function setStructureType(type) {
-  localStorage.setItem('structure_type', type);
-  updateStructureUI();
-  renderPlanningSalarie();
-}
-
-function updateStructureUI() {
-  const type = localStorage.getItem('structure_type') || 'micro';
-  const microRadio      = document.getElementById('param-struct-micro');
-  const classiqueRadio  = document.getElementById('param-struct-classique');
-  if (microRadio)     microRadio.checked     = type === 'micro';
-  if (classiqueRadio) classiqueRadio.checked = type === 'classique';
-  const microLabel     = document.getElementById('param-struct-micro-label');
-  const classiqueLabel = document.getElementById('param-struct-classique-label');
-  if (microLabel)     microLabel.style.borderColor     = type === 'micro'      ? 'var(--accent)' : 'var(--border)';
-  if (classiqueLabel) classiqueLabel.style.borderColor = type === 'classique'  ? 'var(--accent)' : 'var(--border)';
-  const microDiv     = document.getElementById('ps-enf-micro');
-  const classiqueDiv = document.getElementById('ps-enf-classique');
-  if (microDiv)     microDiv.style.display     = type === 'micro'      ? 'flex' : 'none';
-  if (classiqueDiv) classiqueDiv.style.display = type === 'classique'  ? 'flex' : 'none';
-}
-
-function showSalarieTab(tab, btn) {
-  ['planning','taux'].forEach(t => {
-    const el = document.getElementById('salarie-tab-' + t);
-    if (el) el.style.display = t === tab ? '' : 'none';
-  });
-  const ep = document.getElementById('salarie-panel-equipes');
-  if (ep) ep.style.display = tab === 'equipes' ? '' : 'none';
-
-  const inactiveStyle = "flex:1;padding:12px 18px;border-radius:10px;border:2px solid var(--border);cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);box-shadow:none;transition:all 0.2s";
-  const [planningBtn, tauxBtn, equipesBtn] = document.querySelectorAll('#salarie-tabs button');
-  if (planningBtn) planningBtn.setAttribute('style', inactiveStyle);
-  if (tauxBtn)     tauxBtn.setAttribute('style', inactiveStyle);
-  if (equipesBtn)  equipesBtn.setAttribute('style', inactiveStyle);
-
-  if (tab === 'planning' && planningBtn)
-    planningBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,0.4);transition:all 0.2s");
-  if (tab === 'taux' && tauxBtn)
-    tauxBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 3px 10px rgba(5,150,105,0.4);transition:all 0.2s");
-  if (tab === 'equipes' && equipesBtn)
-    equipesBtn.setAttribute('style', "flex:1;padding:12px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,0.35);transition:all 0.2s");
-
-  if (tab === 'planning') showPlanningPage();
-  if (tab === 'taux')     renderPlanningSalarie();
-  if (tab === 'equipes')  renderPlanningEquipes();
 }
 
 function showRhTab(tab, btn) {
@@ -7102,10 +6959,10 @@ async function deleteRh(table, id, tab) {
 
 // ── MODULE PLANNING ───────────────────────────────────────────────
 
-let planningCurrentWeekStart = getMondayOfDate(new Date());
-let planningEditingId = null;
+// Shared week offset (used by both Planning équipe and Hebdo)
+let peWeekOffset = 0;
 
-const PLG_COLORS = [
+const PE_COLORS = [
   { bg:'#EFF6FF', text:'#2563EB', border:'#BFDBFE' },
   { bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0' },
   { bg:'#FFFBEB', text:'#D97706', border:'#FDE68A' },
@@ -7113,6 +6970,8 @@ const PLG_COLORS = [
   { bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3' },
 ];
 
+
+// ── Données horaires depuis Paramètres ──────────────────────────────
 const PLG_HORAIRES_KEY = 'planning_horaires_config';
 const PLG_DEFAULT_HORAIRES = [
   { name:'Horaire 1', debut:'07:30', fin:'15:30' },
@@ -7129,20 +6988,13 @@ function getPlanningHoraires() {
   } catch { return PLG_DEFAULT_HORAIRES.map(h => ({...h})); }
 }
 
+// ── Utilitaires dates ──────────────────────────────────────────────
 function getMondayOfDate(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   const day = d.getDay();
   d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
   return d;
-}
-
-function getWeekDays(monday) {
-  return Array.from({length: 7}, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(d.getDate() + i);
-    return d;
-  });
 }
 
 function getISOWeekNumber(date) {
@@ -7153,281 +7005,382 @@ function getISOWeekNumber(date) {
   return 1 + Math.round(((d - w1) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7);
 }
 
-function planningGoToWeek(offset) {
-  if (offset === 0) {
-    planningCurrentWeekStart = getMondayOfDate(new Date());
-  } else {
-    const d = new Date(planningCurrentWeekStart);
-    d.setDate(d.getDate() + offset * 7);
-    planningCurrentWeekStart = d;
-  }
-  renderPlanning();
+function peGetMonday() {
+  const now = new Date();
+  const day = now.getDay() || 7;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - day + 1 + peWeekOffset * 7);
+  mon.setHours(0,0,0,0);
+  return mon;
 }
 
-async function showPlanningPage() {
-  const sel = document.getElementById('planning-creche-filter');
-  if (sel) {
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">Toutes les crèches</option>' +
-      CRECHES_DATA.map(c => `<option value="${c.nom}"${c.nom===cur?' selected':''}>${c.nom}</option>`).join('');
-  }
-  await renderPlanning();
+function peGoWeek(dir) {
+  if (dir === 0) peWeekOffset = 0;
+  else peWeekOffset += dir;
+  // Refresh whichever page is visible
+  const pagePl = document.getElementById('page-planning');
+  const pageSal = document.getElementById('page-salarie');
+  if (pagePl && pagePl.style.display !== 'none') renderPlanningEquipe();
+  if (pageSal && pageSal.style.display !== 'none') renderPlanningHebdo();
 }
 
-async function renderPlanning() {
-  const grid = document.getElementById('planning-grid');
+// ── Source de données (localStorage) ──────────────────────────────
+function peLoad()  { try { return JSON.parse(localStorage.getItem('orevy_planning_equipe') || '{}'); } catch { return {}; } }
+function peSave(d) { localStorage.setItem('orevy_planning_equipe', JSON.stringify(d)); }
+
+function peWeekKey(crecheId) {
+  const mon = peGetMonday();
+  return `${mon.getFullYear()}-W${String(getISOWeekNumber(mon)).padStart(2,'0')}-${crecheId||'all'}`;
+}
+
+function peGetWeek(crecheId) {
+  const data = peLoad();
+  const key  = peWeekKey(crecheId);
+  // creneaux: [ { id, horaire_idx, jour (0-4), pro, pause } ]
+  return data[key] || { pros: [], creneaux: [] };
+}
+
+function peSaveWeek(week, crecheId) {
+  const data = peLoad();
+  data[peWeekKey(crecheId)] = week;
+  peSave(data);
+}
+
+// ── Taux d'encadrement ─────────────────────────────────────────────
+function getStructureType() {
+  try { return localStorage.getItem('orevy_structure_type') || 'classique'; } catch { return 'classique'; }
+}
+
+function calcTaux(nbPros) {
+  // Retourne { label, ok } en logique simplifiée (sans distinction NM/marcheurs ici)
+  const type = getStructureType();
+  if (nbPros === 0) return { label: '—', state: 'empty' };
+  if (type === 'micro') {
+    // 1 pro / 6 enfants max — on affiche juste le nombre de pros
+    return { label: `${nbPros} pro${nbPros>1?'s':''}`, state: 'ok' };
+  }
+  // Classique: on affiche le nombre de pros présents
+  return { label: `${nbPros} pro${nbPros>1?'s':''}`, state: nbPros >= 2 ? 'ok' : nbPros === 1 ? 'limit' : 'bad' };
+}
+
+const TAUX_COLORS = {
+  ok:    { bg:'#F0FDF4', color:'#16A34A', icon:'✓' },
+  limit: { bg:'#FFFBEB', color:'#D97706', icon:'!' },
+  bad:   { bg:'#FEF2F2', color:'#DC2626', icon:'✗' },
+  empty: { bg:'var(--bg)', color:'var(--ink3)', icon:'' },
+};
+
+// ── Initialisation pages ───────────────────────────────────────────
+function pePopulateCreches(selId) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Toutes les crèches</option>' +
+    (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+  if (prev) sel.value = prev;
+}
+
+function showPlanningEquipePage() {
+  pePopulateCreches('pe-creche');
+  renderPlanningEquipe();
+}
+
+function showPlanningHebdoPage() {
+  pePopulateCreches('ph-creche');
+  renderPlanningHebdo();
+}
+
+// ── PLANNING ÉQUIPE (Horaire × Jours) ─────────────────────────────
+function renderPlanningEquipe() {
+  const grid = document.getElementById('pe-grid');
   if (!grid) return;
-  grid.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div>';
 
-  const days     = getWeekDays(planningCurrentWeekStart);
-  const dateFrom = days[0].toISOString().split('T')[0];
-  const dateTo   = days[6].toISOString().split('T')[0];
-  const todayStr = new Date().toDateString();
-  const weekNum  = getISOWeekNumber(planningCurrentWeekStart);
-  const fmtD     = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'long'});
-  const fmtShort = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'});
-  const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const monday  = peGetMonday();
+  const weekNum = getISOWeekNumber(monday);
+  const today   = new Date(); today.setHours(0,0,0,0);
+  const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
+  const horaires = getPlanningHoraires();
+  const crecheId = document.getElementById('pe-creche')?.value || '';
+
+  const lbl = document.getElementById('pe-week-label');
+  const fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
+  const endFri = new Date(monday); endFri.setDate(monday.getDate()+4);
+  if (lbl) lbl.textContent = `Semaine ${weekNum} — ${fmtD(monday)} au ${fmtD(endFri)} ${endFri.getFullYear()}`;
+
+  const week = peGetWeek(crecheId);
+
+  // Headers jours
+  const thDays = DAY_NAMES.map((name, i) => {
+    const dt = new Date(monday); dt.setDate(monday.getDate()+i);
+    const isToday = dt.getTime() === today.getTime();
+    const dayNum  = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+    return `<th style="padding:10px 8px;text-align:center;min-width:130px;background:${isToday?'var(--accent-lt)':'var(--bg)'};border-bottom:2px solid var(--border);border-right:1px solid var(--border);${isToday?'border-bottom-color:var(--accent)':''}">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${isToday?'var(--accent)':'var(--ink3)'}">${name}</div>
+      <div style="font-size:14px;font-weight:800;color:${isToday?'var(--accent)':'var(--ink)'};margin-top:2px">${dayNum}</div>
+    </th>`;
+  }).join('');
+
+  // Lignes horaires
+  const rows = horaires.map((h, hi) => {
+    const c = PE_COLORS[hi] || PE_COLORS[0];
+    const tds = DAY_NAMES.map((_, di) => {
+      const dt = new Date(monday); dt.setDate(monday.getDate()+di);
+      const isToday = dt.getTime() === today.getTime();
+      const cellCreneaux = (week.creneaux||[]).filter(cr => cr.horaire_idx === hi && cr.jour === di);
+
+      const prosHtml = cellCreneaux.map(cr =>
+        `<div onclick="openModalPE(${hi},${di},'${cr.id}')"
+          style="display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;background:${c.bg};border:1px solid ${c.border};margin-bottom:3px;cursor:pointer;transition:opacity 0.15s"
+          onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+          <span style="font-size:13px;font-weight:700;color:${c.text};flex:1">${cr.pro}</span>
+          ${cr.pause ? `<span style="font-size:10px;color:var(--ink3);white-space:nowrap">⏸${cr.pause}</span>` : ''}
+          <span style="font-size:10px;color:${c.text};opacity:0.6">✕</span>
+        </div>`
+      ).join('');
+
+      // Badge taux : nombre de pros présentes sur ce créneau/jour
+      const nb = cellCreneaux.length;
+      const taux = calcTaux(nb);
+      const tc = TAUX_COLORS[taux.state];
+      const tauxBadge = nb > 0
+        ? `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:12px;background:${tc.bg};color:${tc.color}">${tc.icon} ${taux.label}</span>`
+        : '';
+
+      return `<td style="padding:7px 8px;vertical-align:top;background:${isToday?'var(--accent-lt)':''};border-right:1px solid var(--border);min-height:60px">
+        <div style="min-height:36px">${prosHtml}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+          ${tauxBadge}
+          <button onclick="openModalPE(${hi},${di},null)"
+            style="width:22px;height:22px;border-radius:50%;border:1.5px dashed var(--border);background:none;color:var(--ink3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;margin-left:auto"
+            onmouseover="this.style.background='var(--accent)';this.style.color='#fff';this.style.borderColor='var(--accent)'"
+            onmouseout="this.style.background='none';this.style.color='var(--ink3)';this.style.borderColor='var(--border)'">+</button>
+        </div>
+      </td>`;
+    }).join('');
+
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:11px 14px;background:var(--bg);white-space:nowrap;border-right:2px solid var(--border);min-width:130px">
+        <div style="font-size:12px;font-weight:700;color:${c.text}">${h.name}</div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:2px">${h.debut}–${h.fin}</div>
+      </td>
+      ${tds}
+    </tr>`;
+  }).join('');
+
+  grid.innerHTML = `<table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr>
+        <th style="padding:10px 14px;text-align:left;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);border-right:2px solid var(--border);border-bottom:2px solid var(--border)">Horaire</th>
+        ${thDays}
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── PLANNING HEBDOMADAIRE (Salarié × Jours) ────────────────────────
+function renderPlanningHebdo() {
+  const grid = document.getElementById('ph-grid');
+  if (!grid) return;
+
+  const monday  = peGetMonday();
+  const weekNum = getISOWeekNumber(monday);
+  const today   = new Date(); today.setHours(0,0,0,0);
+  const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
+  const horaires = getPlanningHoraires();
+  const crecheId = document.getElementById('ph-creche')?.value || '';
+
+  const lbl = document.getElementById('ph-week-label');
+  const fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
+  const endFri = new Date(monday); endFri.setDate(monday.getDate()+4);
+  if (lbl) lbl.textContent = `Semaine ${weekNum} — ${fmtD(monday)} au ${fmtD(endFri)} ${endFri.getFullYear()}`;
+
+  const week = peGetWeek(crecheId);
+
+  // Reconstruire la liste des pros depuis les creneaux
+  const prosSet = new Set((week.creneaux||[]).map(c => c.pro));
+  const pros = [...prosSet].sort();
+
+  if (pros.length === 0) {
+    grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:32px;margin-bottom:10px">📅</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucun planning pour cette semaine</div>
+      <div style="font-size:13px">Remplissez d'abord le Planning équipe pour voir le récapitulatif ici.</div>
+    </div>`;
+    return;
+  }
+
+  const thDays = DAY_NAMES.map((name, i) => {
+    const dt = new Date(monday); dt.setDate(monday.getDate()+i);
+    const isToday = dt.getTime() === today.getTime();
+    const dayNum  = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+    return `<th style="padding:10px 8px;text-align:center;min-width:130px;background:${isToday?'var(--accent-lt)':'var(--bg)'};border-bottom:2px solid var(--border);border-right:1px solid var(--border);${isToday?'color:var(--accent)':'color:var(--ink3)'}">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">${name}</div>
+      <div style="font-size:14px;font-weight:800;margin-top:2px;color:${isToday?'var(--accent)':'var(--ink)'}">${dayNum}</div>
+    </th>`;
+  }).join('');
+
+  const rows = pros.map(pro => {
+    let totalMin = 0;
+    const tds = DAY_NAMES.map((_, di) => {
+      const dt = new Date(monday); dt.setDate(monday.getDate()+di);
+      const isToday = dt.getTime() === today.getTime();
+      const creneaux = (week.creneaux||[]).filter(cr => cr.pro === pro && cr.jour === di);
+
+      const content = creneaux.map(cr => {
+        const h = horaires[cr.horaire_idx] || {};
+        const c = PE_COLORS[cr.horaire_idx] || PE_COLORS[0];
+        // Add to total
+        if (h.debut && h.fin) {
+          const [dh, dm] = h.debut.split(':').map(Number);
+          const [fh, fm] = h.fin.split(':').map(Number);
+          totalMin += (fh*60+fm) - (dh*60+dm);
+        }
+        return `<div style="padding:5px 9px;border-radius:8px;background:${c.bg};border:1px solid ${c.border};margin-bottom:3px">
+          <div style="font-size:11px;font-weight:700;color:${c.text}">${h.name||'?'}</div>
+          <div style="font-size:10px;color:var(--ink3);margin-top:1px">${h.debut||''}–${h.fin||''}${cr.pause?` ⏸${cr.pause}`:''}</div>
+        </div>`;
+      }).join('') || `<div style="font-size:11px;color:var(--ink3);text-align:center;padding:8px 0">—</div>`;
+
+      return `<td style="padding:7px 8px;vertical-align:top;border-right:1px solid var(--border);${isToday?'background:var(--accent-lt)':''}">${content}</td>`;
+    }).join('');
+
+    const totalH = Math.floor(totalMin/60);
+    const totalM = totalMin%60;
+    const totalStr = totalMin > 0 ? `${totalH}h${String(totalM).padStart(2,'0')}` : '—';
+
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:11px 14px;font-weight:700;font-size:13px;border-right:2px solid var(--border);white-space:nowrap;background:var(--surface2);color:var(--ink)">${pro}</td>
+      ${tds}
+      <td style="padding:11px 10px;text-align:center;background:var(--surface2);font-weight:700;font-size:13px;color:var(--accent);white-space:nowrap">${totalStr}</td>
+    </tr>`;
+  }).join('');
+
+  grid.innerHTML = `<table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr>
+        <th style="padding:10px 14px;text-align:left;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);border-right:2px solid var(--border);border-bottom:2px solid var(--border);min-width:130px">Collaboratrice</th>
+        ${thDays}
+        <th style="padding:10px 8px;text-align:center;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);border-bottom:2px solid var(--border)">Total</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── MODAL Planning équipe ──────────────────────────────────────────
+let peEditingId = null;
+let peModalHoraireIdx = null;
+let peModalJour = null;
+
+function openModalPE(horaireIdx, jour, id) {
+  peEditingId = id || null;
+  peModalHoraireIdx = horaireIdx;
+  peModalJour = jour;
+
+  const crecheId = document.getElementById('pe-creche')?.value || '';
+  const week     = peGetWeek(crecheId);
   const horaires = getPlanningHoraires();
 
-  const lbl = document.getElementById('planning-week-label');
-  if (lbl) lbl.textContent = `Semaine ${weekNum} — ${fmtD(days[0])} au ${fmtD(days[6])} ${days[6].getFullYear()}`;
+  document.getElementById('modal-pe-title').textContent = id ? '✏️ Modifier le créneau' : '➕ Ajouter une pro';
+  document.getElementById('modal-pe-delete').style.display = id ? 'inline-flex' : 'none';
 
-  const crecheFilter = (document.getElementById('planning-creche-filter')||{}).value||'';
+  // Populate pros list (existing + new)
+  const prosSet = new Set((week.creneaux||[]).map(c => c.pro));
+  const sel = document.getElementById('pe-pro-sel');
+  sel.innerHTML = [...prosSet].sort().map(p => `<option value="${p}">${p}</option>`).join('') +
+    '<option value="__new__">+ Nouvelle collaboratrice…</option>';
 
-  try {
-    let params = `date=gte.${dateFrom}&date=lte.${dateTo}&order=date.asc,heure_debut.asc`;
-    if (crecheFilter) params += `&creche_id=eq.${encodeURIComponent(crecheFilter)}`;
+  // Horaire select
+  const hSel = document.getElementById('pe-horaire-sel');
+  hSel.innerHTML = horaires.map((h,i) => {
+    const c = PE_COLORS[i]||PE_COLORS[0];
+    return `<option value="${i}" style="color:${c.text}">${h.name} · ${h.debut}–${h.fin}</option>`;
+  }).join('');
 
-    const [entries, users] = await Promise.all([
-      sbGet('planning', params),
-      sbGet('utilisateurs', 'select=id,email&order=email.asc'),
-    ]);
+  // Jour select
+  const jSel = document.getElementById('pe-jour-sel');
+  jSel.value = jour !== null ? jour : 0;
 
-    const userMap = {};
-    users.forEach(u => {
-      userMap[u.id] = u.email.split('@')[0];
-      userMap[String(u.id)] = u.email.split('@')[0];
-    });
+  if (horaireIdx !== null) hSel.value = horaireIdx;
 
-    // Lookup: "Horaire X|YYYY-MM-DD" → entries[]
-    const byKey = {};
-    entries.forEach(e => {
-      const k = `${e.poste}|${e.date}`;
-      (byKey[k] = byKey[k] || []).push(e);
-    });
-
-    const thDays = days.map((d, i) => {
-      const isToday = d.toDateString() === todayStr;
-      return `<th style="padding:10px 6px;text-align:center;background:${isToday?'var(--accent-lt)':'var(--bg)'};min-width:100px;${isToday?'border-bottom:2px solid var(--accent)':''}">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${isToday?'var(--accent)':'var(--ink3)'}">${DAY_NAMES[i]}</div>
-        <div style="font-size:14px;font-weight:800;color:${isToday?'var(--accent)':'var(--ink)'};margin-top:2px">${fmtShort(d)}</div>
-      </th>`;
-    }).join('');
-
-    const tbodyRows = horaires.map((h, hi) => {
-      const c = PLG_COLORS[hi] || PLG_COLORS[0];
-      const tds = days.map(d => {
-        const dateStr     = d.toISOString().split('T')[0];
-        const isToday     = d.toDateString() === todayStr;
-        const cellEntries = byKey[`${h.name}|${dateStr}`] || [];
-        const badges = cellEntries.map(e =>
-          `<span onclick="event.stopPropagation();openModalPlanning('${dateStr}','${h.name}',${e.id})"
-            style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;background:${c.bg};color:${c.text};border:1px solid ${c.border};margin:2px;white-space:nowrap"
-            title="Modifier">${userMap[String(e.user_id)] || userMap[e.user_id] || e.user_id}</span>`
-        ).join('');
-        return `<td style="padding:5px 6px;vertical-align:top;background:${isToday?'var(--accent-lt)':''};min-height:52px">
-          <div style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:1px;min-height:32px">
-            ${badges}
-            <button onclick="openModalPlanning('${dateStr}','${h.name}',null)"
-              style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:1.5px dashed var(--border);background:none;color:var(--ink3);font-size:14px;line-height:1;cursor:pointer;flex-shrink:0;margin:2px;transition:all 0.15s"
-              onmouseover="this.style.background='var(--accent)';this.style.color='#fff';this.style.borderColor='var(--accent)'"
-              onmouseout="this.style.background='none';this.style.color='var(--ink3)';this.style.borderColor='var(--border)'">+</button>
-          </div>
-        </td>`;
-      }).join('');
-
-      return `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:10px 14px;background:var(--bg);white-space:nowrap;border-right:2px solid var(--border)">
-          <div style="font-size:12px;font-weight:700;color:${c.text}">${h.name}</div>
-          <div style="font-size:10px;color:var(--ink3);margin-top:2px">${h.debut}–${h.fin}</div>
-        </td>
-        ${tds}
-      </tr>`;
-    }).join('');
-
-    grid.innerHTML = `<table style="width:100%;border-collapse:collapse">
-      <thead>
-        <tr style="border-bottom:2px solid var(--border)">
-          <th style="padding:10px 14px;text-align:left;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);min-width:120px;border-right:2px solid var(--border)">Horaire</th>
-          ${thDays}
-        </tr>
-      </thead>
-      <tbody>${tbodyRows}</tbody>
-    </table>`;
-
-  } catch(e) {
-    grid.innerHTML = `<div style="padding:60px;text-align:center;color:var(--red);font-size:13px">Erreur : ${e.message}</div>`;
-  }
-}
-
-// ── Steppers horaire planning ──
-let plDebut      = 7*60+30;
-let plFin        = 15*60+30;
-let plPauseDebut = 12*60;
-let plPauseFin   = 12*60+30;
-
-function plFmt(min) {
-  return `${String(Math.floor(min/60)).padStart(2,'0')}h${String(min%60).padStart(2,'0')}`;
-}
-function plToHHMM(min) {
-  return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
-}
-function plFromHHMM(s) {
-  const [h, m] = (s || '00:00').split(':').map(Number);
-  return h * 60 + (m || 0);
-}
-function plFromHhmm(s) {
-  const mt = (s || '').match(/(\d+)h(\d+)/);
-  return mt ? parseInt(mt[1]) * 60 + parseInt(mt[2]) : 0;
-}
-function plAdjust(field, delta) {
-  const MIN = 6*60, MAX = 22*60;
-  if (field === 'debut') {
-    plDebut = Math.min(MAX - 30, Math.max(MIN, plDebut + delta));
-    if (plFin <= plDebut) plFin = Math.min(MAX, plDebut + 30);
-  } else if (field === 'fin') {
-    plFin = Math.min(MAX, Math.max(plDebut + 30, plFin + delta));
-  } else if (field === 'pause-debut') {
-    plPauseDebut = Math.min(plFin - 30, Math.max(plDebut, plPauseDebut + delta));
-    if (plPauseFin <= plPauseDebut) plPauseFin = Math.min(plFin, plPauseDebut + 30);
-  } else if (field === 'pause-fin') {
-    plPauseFin = Math.min(plFin, Math.max(plPauseDebut + 30, plPauseFin + delta));
-  }
-  plRefreshDisplay();
-}
-function plRefreshDisplay() {
-  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-  set('pl-debut-display',       plFmt(plDebut));
-  set('pl-fin-display',         plFmt(plFin));
-  set('pl-pause-debut-display', plFmt(plPauseDebut));
-  set('pl-pause-fin-display',   plFmt(plPauseFin));
-  // Durée nette
-  const pauseActive = document.getElementById('pl-pause-active')?.checked;
-  const pauseDur = pauseActive ? (plPauseFin - plPauseDebut) : 0;
-  const workMin  = plFin - plDebut - pauseDur;
-  const wh = Math.floor(workMin / 60), wm = workMin % 60;
-  const durStr = wh > 0 && wm > 0 ? `(${wh}h${String(wm).padStart(2,'0')})`
-               : wh > 0 ? `(${wh}h00)` : `(${wm}min)`;
-  set('pl-duration', durStr);
-  // Toggle pause row
-  const pauseRow = document.getElementById('pl-pause-row');
-  if (pauseRow) {
-    pauseRow.style.opacity       = pauseActive ? '1'    : '0.35';
-    pauseRow.style.pointerEvents = pauseActive ? 'auto' : 'none';
-  }
-}
-
-async function openModalPlanning(date, horaire, id) {
-  planningEditingId = id;
-  document.getElementById('modal-planning-title').textContent = id ? 'Modifier le créneau' : 'Ajouter un créneau';
-  const delBtn = document.getElementById('btn-delete-planning');
-  if (delBtn) delBtn.style.display = id ? 'inline-flex' : 'none';
-
-  await rhLoadUsers(['pl-user']);
-
-  const cSel = document.getElementById('pl-creche');
-  if (cSel) {
-    cSel.innerHTML = '<option value="">— Choisir —</option>' +
-      CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
-  }
-
-  // Initialise les steppers depuis la config horaire
-  const horaires  = getPlanningHoraires();
-  const hConfig   = horaire ? horaires.find(h => h.name === horaire) : null;
-  plDebut      = hConfig ? plFromHHMM(hConfig.debut) : 7*60+30;
-  plFin        = hConfig ? plFromHHMM(hConfig.fin)   : 15*60+30;
-  plPauseDebut = Math.round((plDebut + plFin) / 2 / 30) * 30;
-  plPauseFin   = Math.min(plFin - 30, plPauseDebut + 30);
-  const pauseEl = document.getElementById('pl-pause-active');
-  if (pauseEl) pauseEl.checked = false;
-
-  const fill = (elId, val) => { const e = document.getElementById(elId); if (e) e.value = val ?? ''; };
-  fill('pl-date', date || '');
-  fill('pl-notes', '');
-
-  const curCreche = (document.getElementById('planning-creche-filter')||{}).value||'';
-  if (curCreche && cSel) cSel.value = curCreche;
-
+  // Fill if editing
   if (id) {
-    const rows = await sbGet('planning', `id=eq.${id}`).catch(() => []);
-    if (rows[0]) {
-      const r = rows[0];
-      fill('pl-date', r.date);
-      fill('pl-notes', r.notes);
-      if (document.getElementById('pl-user')) document.getElementById('pl-user').value = r.user_id||'';
-      if (cSel) cSel.value = r.creche_id||'';
-      if (r.heure_debut) plDebut = plFromHHMM(r.heure_debut);
-      if (r.heure_fin)   plFin   = plFromHHMM(r.heure_fin);
-      const pauseMatch = (r.poste||'').match(/⏸(\d+h\d+)–(\d+h\d+)/);
-      if (pauseMatch && pauseEl) {
-        plPauseDebut = plFromHhmm(pauseMatch[1]);
-        plPauseFin   = plFromHhmm(pauseMatch[2]);
-        pauseEl.checked = true;
-      }
+    const cr = (week.creneaux||[]).find(c => c.id === id);
+    if (cr) {
+      hSel.value = cr.horaire_idx;
+      jSel.value = cr.jour;
+      if ([...prosSet].includes(cr.pro)) sel.value = cr.pro;
+      document.getElementById('pe-pause').value = cr.pause || '';
     }
+  } else {
+    document.getElementById('pe-pause').value = '';
   }
-  plRefreshDisplay();
-  document.getElementById('modal-planning').classList.add('open');
+
+  document.getElementById('modal-pe').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
-async function savePlanning() {
-  const user_id   = document.getElementById('pl-user').value;
-  const creche_id = document.getElementById('pl-creche').value;
-  const date      = document.getElementById('pl-date').value;
-  if (!user_id || !creche_id || !date) {
-    alert('Collaborateur, crèche et date sont requis.'); return;
+function saveModalPE() {
+  const crecheId = document.getElementById('pe-creche')?.value || '';
+  const week     = peGetWeek(crecheId);
+
+  let pro = document.getElementById('pe-pro-sel').value;
+  if (pro === '__new__') {
+    pro = prompt('Prénom et nom de la collaboratrice :')?.trim();
+    if (!pro) return;
   }
-  if (plFin <= plDebut) {
-    alert('L\'heure de fin doit être après l\'heure de début.'); return;
-  }
-  const pauseActive = document.getElementById('pl-pause-active')?.checked;
-  if (pauseActive && (plPauseDebut < plDebut || plPauseFin > plFin)) {
-    alert('La pause doit être incluse dans le créneau de travail.'); return;
-  }
-  let poste = `${plFmt(plDebut)}–${plFmt(plFin)}`;
-  if (pauseActive) poste += ` ⏸${plFmt(plPauseDebut)}–${plFmt(plPauseFin)}`;
-  const data = {
-    user_id: parseInt(user_id),
-    creche_id, date,
-    heure_debut: plToHHMM(plDebut),
-    heure_fin:   plToHHMM(plFin),
-    poste,
-    notes: (document.getElementById('pl-notes').value || '').trim(),
+  const horaireIdx = parseInt(document.getElementById('pe-horaire-sel').value);
+  const jour       = parseInt(document.getElementById('pe-jour-sel').value);
+  const pause      = document.getElementById('pe-pause').value.trim();
+
+  if (!pro) { showNotif('⚠ Nom obligatoire'); return; }
+
+  const creneau = {
+    id:          peEditingId || 'pe_' + Date.now(),
+    pro, horaireIdx, horaire_idx: horaireIdx, jour, pause,
   };
-  try {
-    planningEditingId
-      ? await sbUpdate('planning', planningEditingId, data)
-      : await sbInsert('planning', data);
-    closeModal('modal-planning');
-    renderPlanning();
-  } catch(e) { alert('Erreur : ' + e.message); }
+
+  if (!week.creneaux) week.creneaux = [];
+  if (!week.pros) week.pros = [];
+
+  if (peEditingId) {
+    const idx = week.creneaux.findIndex(c => c.id === peEditingId);
+    if (idx >= 0) week.creneaux[idx] = creneau; else week.creneaux.push(creneau);
+  } else {
+    week.creneaux.push(creneau);
+  }
+  if (!week.pros.includes(pro)) week.pros.push(pro);
+
+  peSaveWeek(week, crecheId);
+  closeModal('modal-pe');
+  renderPlanningEquipe();
+  // Also refresh hebdo if visible
+  const pageSal = document.getElementById('page-salarie');
+  if (pageSal && pageSal.style.display !== 'none') renderPlanningHebdo();
+  showNotif(peEditingId ? '✅ Créneau mis à jour' : '✅ Créneau ajouté');
 }
 
-async function deletePlanning() {
-  if (!planningEditingId || !confirm('Supprimer ce créneau ?')) return;
-  try {
-    await sbDelete('planning', planningEditingId);
-    closeModal('modal-planning');
-    renderPlanning();
-  } catch(e) { alert('Erreur : ' + e.message); }
+function deleteModalPE() {
+  if (!peEditingId || !confirm('Supprimer ce créneau ?')) return;
+  const crecheId = document.getElementById('pe-creche')?.value || '';
+  const week     = peGetWeek(crecheId);
+  week.creneaux  = (week.creneaux||[]).filter(c => c.id !== peEditingId);
+  peSaveWeek(week, crecheId);
+  closeModal('modal-pe');
+  renderPlanningEquipe();
+  showNotif('🗑 Créneau supprimé');
 }
 
+function exportPlanningPDF() { window.print(); }
+
+// Stub pour compatibilité Paramètres
 function renderPlanningParamHoraires() {
   const el = document.getElementById('planning-horaires-config');
   if (!el) return;
   const horaires = getPlanningHoraires();
   el.innerHTML = horaires.map((h, i) => {
-    const c = PLG_COLORS[i] || PLG_COLORS[0];
+    const c = PE_COLORS[i] || PE_COLORS[0];
     return `<div style="display:grid;grid-template-columns:1fr 130px 130px;gap:10px;align-items:center;margin-bottom:10px">
       <div style="font-size:13px;font-weight:700;color:${c.text};background:${c.bg};padding:7px 12px;border-radius:8px;border:1px solid ${c.border}">${h.name}</div>
       <div>
@@ -7643,93 +7596,43 @@ async function enregistrerPointage(type) {
 
 // ── FIN MODULE ADMIN ───────────────────────────────────────────────
 </script>
-<!-- ── MODAL PLANNING ── -->
-<div class="modal-overlay" id="modal-planning" onclick="closeModalClick(event,'modal-planning')">
-  <div class="modal" style="max-width:460px">
+<!-- ── MODAL PLANNING ÉQUIPE ── -->
+<div class="modal-overlay" id="modal-pe" onclick="closeModalClick(event,'modal-pe')">
+  <div class="modal" style="max-width:420px">
     <div class="modal-header">
-      <h2 id="modal-planning-title">Ajouter un créneau</h2>
-      <button class="modal-close" onclick="closeModal('modal-planning')">✕</button>
+      <h2 id="modal-pe-title">➕ Ajouter une pro</h2>
+      <button class="modal-close" onclick="closeModal('modal-pe')">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group full">
-          <label>Collaborateur *</label>
-          <select id="pl-user"><option value="">— Choisir —</option></select>
+          <label>Collaboratrice *</label>
+          <select id="pe-pro-sel" style="width:100%"></select>
+        </div>
+        <div class="form-group">
+          <label>Horaire *</label>
+          <select id="pe-horaire-sel" style="width:100%"></select>
+        </div>
+        <div class="form-group">
+          <label>Jour *</label>
+          <select id="pe-jour-sel" style="width:100%">
+            <option value="0">Lundi</option>
+            <option value="1">Mardi</option>
+            <option value="2">Mercredi</option>
+            <option value="3">Jeudi</option>
+            <option value="4">Vendredi</option>
+          </select>
         </div>
         <div class="form-group full">
-          <label>Crèche *</label>
-          <select id="pl-creche"><option value="">— Choisir —</option></select>
-        </div>
-        <div class="form-group full">
-          <label>Date *</label>
-          <input type="date" id="pl-date">
-        </div>
-        <!-- Heure de début -->
-        <div class="form-group full">
-          <label>Heure de début *</label>
-          <div style="display:flex;align-items:center;gap:10px">
-            <button type="button" onclick="plAdjust('debut',-30)"
-              style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
-              onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
-            <span id="pl-debut-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:60px;text-align:center">07h30</span>
-            <button type="button" onclick="plAdjust('debut',30)"
-              style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
-              onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
-          </div>
-        </div>
-        <!-- Heure de fin -->
-        <div class="form-group full">
-          <label>Heure de fin * <span id="pl-duration" style="font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:400;color:var(--ink3)"></span></label>
-          <div style="display:flex;align-items:center;gap:10px">
-            <button type="button" onclick="plAdjust('fin',-30)"
-              style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
-              onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
-            <span id="pl-fin-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:60px;text-align:center">15h30</span>
-            <button type="button" onclick="plAdjust('fin',30)"
-              style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
-              onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
-          </div>
-        </div>
-        <!-- Pause (optionnel) -->
-        <div class="form-group full">
-          <label style="display:flex;align-items:center;gap:8px">
-            Pause
-            <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:12px;color:var(--ink3);cursor:pointer">
-              <input type="checkbox" id="pl-pause-active" onchange="plRefreshDisplay()"> activer
-            </label>
-          </label>
-          <div id="pl-pause-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;opacity:0.35;pointer-events:none;margin-top:4px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <button type="button" onclick="plAdjust('pause-debut',-30)"
-                style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
-                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
-              <span id="pl-pause-debut-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:60px;text-align:center">12h00</span>
-              <button type="button" onclick="plAdjust('pause-debut',30)"
-                style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
-                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
-            </div>
-            <span style="color:var(--ink3);font-size:13px;font-weight:600">→</span>
-            <div style="display:flex;align-items:center;gap:6px">
-              <button type="button" onclick="plAdjust('pause-fin',-30)"
-                style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
-                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
-              <span id="pl-pause-fin-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:60px;text-align:center">12h30</span>
-              <button type="button" onclick="plAdjust('pause-fin',30)"
-                style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
-                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
-            </div>
-          </div>
-        </div>
-        <div class="form-group full">
-          <label>Notes</label>
-          <textarea id="pl-notes" rows="2"></textarea>
+          <label>Pause <span style="font-weight:400;font-size:11px;color:var(--ink3)">(optionnel, ex : 12h–12h30)</span></label>
+          <input type="text" id="pe-pause" placeholder="12h–12h30">
         </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" id="btn-delete-planning" style="display:none;margin-right:auto" onclick="deletePlanning()">🗑 Supprimer</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-planning')">Annuler</button>
-      <button class="btn btn-primary" onclick="savePlanning()">💾 Enregistrer</button>
+      <button class="btn btn-danger btn-sm" id="modal-pe-delete" style="display:none;margin-right:auto" onclick="deleteModalPE()">🗑 Supprimer</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-pe')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveModalPE()">💾 Enregistrer</button>
     </div>
   </div>
 </div>
@@ -8548,119 +8451,6 @@ function showImportResult(type, html) {
   </div>
 </div>
 
-<!-- ── MODAL Planning salarié ── -->
-<div class="modal-overlay" id="modal-ps" onclick="closeModalClick(event,'modal-ps')">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-header">
-      <h2 id="modal-ps-title">➕ Ajouter un créneau</h2>
-      <button class="modal-close" onclick="closeModal('modal-ps')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Collaborateur</label>
-          <select id="ps-collab" style="width:100%"></select>
-        </div>
-        <div class="form-group">
-          <label>Jour</label>
-          <select id="ps-jour">
-            <option value="0">Lundi</option>
-            <option value="1">Mardi</option>
-            <option value="2">Mercredi</option>
-            <option value="3">Jeudi</option>
-            <option value="4">Vendredi</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Couleur / Horaire type</label>
-          <select id="ps-color" onchange="psColorChanged()">
-            <option value="h1">H1 — Bleu</option>
-            <option value="h2">H2 — Vert</option>
-            <option value="h3">H3 — Orange</option>
-            <option value="h4">H4 — Violet</option>
-            <option value="h5">H5 — Jaune</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Heure de début</label>
-          <div style="display:flex;align-items:center;gap:8px">
-            <button type="button" onclick="psAdjust('debut',-30)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-            <span id="ps-debut-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:52px;text-align:center">07h30</span>
-            <button type="button" onclick="psAdjust('debut',30)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Heure de fin</label>
-          <div style="display:flex;align-items:center;gap:8px">
-            <button type="button" onclick="psAdjust('fin',-30)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-            <span id="ps-fin-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:52px;text-align:center">15h30</span>
-            <button type="button" onclick="psAdjust('fin',30)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
-          </div>
-        </div>
-        <div class="form-group full">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" id="ps-pause-active" onchange="psTogglePause()" style="accent-color:var(--accent);width:15px;height:15px">
-            Pause ?
-          </label>
-          <div id="ps-pause-steppers" style="display:none;gap:16px;margin-top:8px;flex-wrap:wrap">
-            <div>
-              <div style="font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:4px">Début pause</div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <button type="button" onclick="psAdjustPause('debut',-15)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-                <span id="ps-pause-deb-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:52px;text-align:center">12h00</span>
-                <button type="button" onclick="psAdjustPause('debut',15)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
-              </div>
-            </div>
-            <div>
-              <div style="font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:4px">Fin pause</div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <button type="button" onclick="psAdjustPause('fin',-15)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-                <span id="ps-pause-fin-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:52px;text-align:center">12h30</span>
-                <button type="button" onclick="psAdjustPause('fin',15)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- champ horaire caché pour compatibilité avec savePSCreneau() -->
-        <input type="hidden" id="ps-horaire">
-      </div>
-
-      <!-- ── Récurrence ── -->
-      <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink)">
-          <input type="checkbox" id="ps-recurrence-active" onchange="psToggleRecurrence()" style="accent-color:var(--accent);width:16px;height:16px">
-          🔁 Répéter ce créneau
-        </label>
-        <div id="ps-recurrence-options" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;flex-direction:column;gap:10px">
-          <div>
-            <div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px">Jours de répétition</div>
-            <div style="display:flex;gap:6px">
-              <input type="checkbox" id="ps-rec-jour-0" style="display:none">
-              <button type="button" id="ps-rec-jour-0-btn" onclick="psToggleRecJour(0)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">L</button>
-              <input type="checkbox" id="ps-rec-jour-1" style="display:none">
-              <button type="button" id="ps-rec-jour-1-btn" onclick="psToggleRecJour(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">M</button>
-              <input type="checkbox" id="ps-rec-jour-2" style="display:none">
-              <button type="button" id="ps-rec-jour-2-btn" onclick="psToggleRecJour(2)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">M</button>
-              <input type="checkbox" id="ps-rec-jour-3" style="display:none">
-              <button type="button" id="ps-rec-jour-3-btn" onclick="psToggleRecJour(3)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">J</button>
-              <input type="checkbox" id="ps-rec-jour-4" style="display:none">
-              <button type="button" id="ps-rec-jour-4-btn" onclick="psToggleRecJour(4)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s">V</button>
-            </div>
-          </div>
-          <div>
-            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:6px">Nombre de semaines</label>
-            <input type="number" id="ps-rec-weeks" min="1" max="52" value="4" style="width:80px;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-ps')">Annuler</button>
-      <button id="ps-delete-btn" class="btn btn-danger" style="display:none" onclick="deletePSCreneau()">🗑 Supprimer</button>
-      <button class="btn btn-primary" onclick="savePSCreneau()">💾 Enregistrer</button>
-    </div>
-  </div>
-</div>
 
 <!-- ── MODAL FICHE SALARIÉ ── -->
 <div class="modal-overlay" id="modal-salarie" onclick="closeModalClick(event,'modal-salarie')">
@@ -9005,877 +8795,6 @@ function deleteSalarie() {
 }
 </script>
 
-<script>
-/* ── Planning salarié ── */
-let psWeekOffset  = 0;
-let psEditingId   = null;
-let psDayView     = null;
-let equipesVue    = 'multi';
-let equipesOffset = 0;
-
-/* ── Steppers Planning salarié ── */
-let psDebut      = 7*60+30;
-let psFin        = 15*60+30;
-let psPauseDebut = 12*60;
-let psPauseFin   = 12*60+30;
-const PS_HORAIRES_DEFAULTS = {
-  h1: { debut: 7*60+30,  fin: 15*60+30 },
-  h2: { debut: 8*60+30,  fin: 16*60+30 },
-  h3: { debut: 9*60,     fin: 17*60    },
-  h4: { debut: 10*60+30, fin: 18*60+30 },
-  h5: { debut: 11*60,    fin: 19*60    },
-};
-function psFmt(min) {
-  return `${String(Math.floor(min/60)).padStart(2,'0')}h${String(min%60).padStart(2,'0')}`;
-}
-function psAdjust(field, delta) {
-  const MIN = 6*60, MAX = 22*60;
-  if (field === 'debut') {
-    psDebut = Math.min(MAX-30, Math.max(MIN, psDebut + delta));
-    if (psFin <= psDebut) psFin = Math.min(MAX, psDebut + 30);
-  } else {
-    psFin = Math.min(MAX, Math.max(psDebut+30, psFin + delta));
-  }
-  psRefreshSteppers();
-}
-function psRefreshSteppers() {
-  const ds = document.getElementById('ps-debut-display');
-  const fs = document.getElementById('ps-fin-display');
-  if (ds) ds.textContent = psFmt(psDebut);
-  if (fs) fs.textContent = psFmt(psFin);
-  const colorKey = document.getElementById('ps-color')?.value || 'h1';
-  const label = colorKey.toUpperCase();
-  const hid = document.getElementById('ps-horaire');
-  if (hid) hid.value = `${label} · ${psFmt(psDebut)}–${psFmt(psFin)}`;
-}
-function psTogglePause() {
-  const active = document.getElementById('ps-pause-active')?.checked;
-  const div    = document.getElementById('ps-pause-steppers');
-  if (div) div.style.display = active ? 'flex' : 'none';
-  if (active) psRefreshPause();
-}
-function psAdjustPause(field, delta) {
-  const MIN = 6*60, MAX = 21*60;
-  if (field === 'debut') {
-    psPauseDebut = Math.min(MAX-15, Math.max(MIN, psPauseDebut + delta));
-    if (psPauseFin <= psPauseDebut) psPauseFin = Math.min(MAX, psPauseDebut + 15);
-  } else {
-    psPauseFin = Math.min(MAX, Math.max(psPauseDebut+15, psPauseFin + delta));
-  }
-  psRefreshPause();
-}
-function psRefreshPause() {
-  const dd = document.getElementById('ps-pause-deb-display');
-  const fd = document.getElementById('ps-pause-fin-display');
-  if (dd) dd.textContent = psFmt(psPauseDebut);
-  if (fd) fd.textContent = psFmt(psPauseFin);
-}
-function psColorChanged() {
-  const colorKey = document.getElementById('ps-color')?.value || 'h1';
-  const def = PS_HORAIRES_DEFAULTS[colorKey];
-  if (def) { psDebut = def.debut; psFin = def.fin; }
-  psRefreshSteppers();
-}
-
-const PS_COLORS = {
-  h1: { bg:'#DBEAFE', color:'#1D4ED8' },
-  h2: { bg:'#D1FAE5', color:'#065F46' },
-  h3: { bg:'#FED7AA', color:'#92400E' },
-  h4: { bg:'#EDE9FE', color:'#5B21B6' },
-  h5: { bg:'#FEF3C7', color:'#78350F' },
-};
-
-function psGetMonday(offset) {
-  const now    = new Date();
-  const day    = now.getDay() || 7;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - day + 1 + offset * 7);
-  monday.setHours(0,0,0,0);
-  return monday;
-}
-
-function psISOWeek(d) {
-  const tmp = new Date(d.getTime());
-  tmp.setHours(0,0,0,0);
-  tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay()+6)%7));
-  const week1 = new Date(tmp.getFullYear(),0,4);
-  return 1 + Math.round(((tmp - week1)/86400000 - 3 + ((week1.getDay()+6)%7)) / 7);
-}
-
-function psLoad()  { try { return JSON.parse(localStorage.getItem('orevy_planning_salarie') || '{}'); } catch { return {}; } }
-function psSave(d) { localStorage.setItem('orevy_planning_salarie', JSON.stringify(d)); }
-
-function psWeekKey(offset, crecheId) {
-  const mon = psGetMonday(offset);
-  return `${mon.getFullYear()}-W${String(psISOWeek(mon)).padStart(2,'0')}-${crecheId||'all'}`;
-}
-
-function psGoWeek(dir) {
-  if (dir === 0) psWeekOffset = 0;
-  else psWeekOffset += dir;
-  renderPlanningSalarie();
-}
-
-function psPopulateCreches() {
-  const sel = document.getElementById('ps-creche');
-  if (!sel) return;
-  const prev = sel.value;
-  sel.innerHTML = '<option value="">Toutes les crèches</option>';
-  if (typeof CRECHES_DATA !== 'undefined') {
-    CRECHES_DATA.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.id || c.nom;
-      opt.textContent = c.nom;
-      sel.appendChild(opt);
-    });
-  }
-  if (prev) sel.value = prev;
-}
-
-function renderPlanningSalarie() {
-  updateStructureUI();
-  psPopulateCreches();
-  const monday  = psGetMonday(psWeekOffset);
-  const weekNum = psISOWeek(monday);
-  const days    = ['Lun','Mar','Mer','Jeu','Ven'];
-  const today   = new Date(); today.setHours(0,0,0,0);
-  const nowDate = new Date();
-
-  if (psDayView === null) {
-    const dow = nowDate.getDay();
-    psDayView = (dow >= 1 && dow <= 5) ? dow - 1 : 0;
-  }
-
-  const endFri = new Date(monday); endFri.setDate(monday.getDate()+4);
-  const fmt    = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-
-  const lbl = document.getElementById('ps-week-label');
-  if (lbl) lbl.textContent = `Semaine ${weekNum}`;
-
-  const crecheLabel = (() => {
-    const sel = document.getElementById('ps-creche');
-    return sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].text.toUpperCase() : 'TOUTES CRÈCHES';
-  })();
-  const banner = document.getElementById('ps-banner');
-  if (banner) {
-    const dateRange = `${monday.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'})} AU ${fmt(endFri)}`;
-    banner.textContent = `SEMAINE ${weekNum} — ${dateRange.toUpperCase()} · ${crecheLabel}`;
-  }
-
-  const crecheId = document.getElementById('ps-creche')?.value || 'all';
-  const key  = psWeekKey(psWeekOffset, crecheId);
-  const data = psLoad();
-  const week = data[key] || { collaborateurs: [], creneaux: [] };
-
-  const grid = document.getElementById('ps-grid');
-  if (!grid) return;
-
-  if (!week.collaborateurs || week.collaborateurs.length === 0) {
-    grid.innerHTML = `
-      <div style="padding:48px;text-align:center;color:var(--ink3)">
-        <div style="font-size:36px;margin-bottom:10px">👥</div>
-        <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucun planning pour cette semaine</div>
-        <div style="font-size:13px;margin-bottom:16px">Cliquez sur "+ Ajouter un créneau" pour commencer</div>
-        <button class="btn btn-primary" onclick="openModalPS()">+ Ajouter un créneau</button>
-      </div>`;
-    return;
-  }
-
-  const GS = 7 * 60, GE = 20 * 60, GR = GE - GS;
-  const clamp = m => Math.max(GS, Math.min(GE, m));
-  const toP = m => ((clamp(m) - GS) / GR * 100).toFixed(2) + '%';
-  const toW = (a, b) => ((clamp(b) - clamp(a)) / GR * 100).toFixed(2) + '%';
-
-  const parseRange = str => {
-    if (!str) return null;
-    const m = str.match(/(\d+)h(\d*)[–\-](\d+)h(\d*)/);
-    if (!m) return null;
-    return { debut: parseInt(m[1])*60+(parseInt(m[2])||0), fin: parseInt(m[3])*60+(parseInt(m[4])||0) };
-  };
-
-  // ── Navigation par jour (pills) ──────────────────────────────────
-  const pills = days.map((d, di) => {
-    const dt = new Date(monday); dt.setDate(monday.getDate()+di);
-    const isToday  = dt.getTime() === today.getTime();
-    const isActive = di === psDayView;
-    const dayNum   = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
-    const bg     = isActive ? '#2563EB' : 'var(--surface2)';
-    const color  = isActive ? '#fff' : 'var(--ink2)';
-    const border = isActive ? 'none' : isToday ? '2px solid #2563EB' : '1px solid var(--border)';
-    return `<button onclick="psDayView=${di};renderPlanningSalarie()" style="padding:6px 14px;border-radius:20px;border:${border};background:${bg};color:${color};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">${d} ${dayNum}</button>`;
-  }).join('');
-
-  // ── Labels d'heures ──────────────────────────────────────────────
-  const hourLabels = Array.from({length:14},(_,i)=>i+7).map(h =>
-    `<span style="position:absolute;left:${toP(h*60)};transform:translateX(-50%);font-size:10px;color:var(--ink3);top:8px;user-select:none">${h}h</span>`
-  ).join('');
-
-  // ── Lignes de grille verticales ──────────────────────────────────
-  const gridLines = Array.from({length:14},(_,i)=>i+7).map(h =>
-    `<div style="position:absolute;top:0;bottom:0;left:${toP(h*60)};width:1px;background:var(--border);opacity:0.4;pointer-events:none"></div>`
-  ).join('');
-
-  // ── Ligne rouge heure actuelle ────────────────────────────────────
-  const nowMin = nowDate.getHours()*60 + nowDate.getMinutes();
-  const dtActive = new Date(monday); dtActive.setDate(monday.getDate()+psDayView);
-  const isActiveToday = dtActive.getTime() === today.getTime();
-  const redLine = (isActiveToday && nowMin >= GS && nowMin <= GE)
-    ? `<div style="position:absolute;top:0;bottom:0;left:${toP(nowMin)};width:2px;background:#EF4444;z-index:10;pointer-events:none"></div>`
-    : '';
-
-  // ── Lignes collaborateurs (Gantt) ─────────────────────────────────
-  const rows = week.collaborateurs.map(collab => {
-    const creneaux = (week.creneaux||[]).filter(c => c.collab===collab && c.jour===psDayView);
-    const bars = creneaux.map(c => {
-      const col = PS_COLORS[c.color] || PS_COLORS.h1;
-      const hr  = parseRange(c.horaire);
-      const pau = parseRange(c.pause);
-      if (!hr || hr.debut >= hr.fin) return '';
-      const deb = Math.max(hr.debut, GS), fin = Math.min(hr.fin, GE);
-      if (deb >= fin) return '';
-
-      if (!pau) {
-        return `<div onclick="editPSCreneau('${key}','${c.id}')" title="${c.horaire}"
-          style="position:absolute;top:9px;left:${toP(deb)};width:${toW(deb,fin)};height:26px;
-          background:${col.bg};border-radius:6px;cursor:pointer;display:flex;align-items:center;
-          justify-content:center;font-size:10px;font-weight:700;color:${col.color};
-          overflow:hidden;border:1px solid ${col.color}33;box-sizing:border-box">
-          <span style="padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.horaire||''}</span>
-        </div>`;
-      }
-      const pdeb = Math.max(pau.debut, GS), pfin = Math.min(pau.fin, GE);
-      const s1e = Math.min(pdeb, fin), s2s = Math.max(pfin, deb);
-      const seg1 = deb < s1e
-        ? `<div onclick="editPSCreneau('${key}','${c.id}')" title="${c.horaire}"
-            style="position:absolute;top:9px;left:${toP(deb)};width:${toW(deb,s1e)};height:26px;
-            background:${col.bg};border-radius:6px 0 0 6px;cursor:pointer;
-            border:1px solid ${col.color}33;border-right:none;box-sizing:border-box"></div>` : '';
-      const gap = pdeb < pfin && pdeb < GE && pfin > GS
-        ? `<div style="position:absolute;top:9px;left:${toP(pdeb)};width:${toW(pdeb,pfin)};height:26px;
-            background:var(--surface2);border-top:2px dashed ${col.color};border-bottom:2px dashed ${col.color};
-            box-sizing:border-box;display:flex;align-items:center;justify-content:center">
-            <span style="font-size:9px;color:${col.color};font-weight:600;white-space:nowrap">⏸ ${c.pause}</span>
-           </div>` : '';
-      const seg2 = s2s < fin
-        ? `<div onclick="editPSCreneau('${key}','${c.id}')" title="${c.horaire}"
-            style="position:absolute;top:9px;left:${toP(s2s)};width:${toW(s2s,fin)};height:26px;
-            background:${col.bg};border-radius:0 6px 6px 0;cursor:pointer;
-            border:1px solid ${col.color}33;border-left:none;box-sizing:border-box"></div>` : '';
-      return seg1 + gap + seg2;
-    }).join('');
-
-    const plusBtn = creneaux.length === 0
-      ? `<span onclick="openModalPS('${collab}',${psDayView})" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;color:var(--border);cursor:pointer">+</span>`
-      : '';
-
-    return `<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--border)">
-      <div style="width:140px;flex-shrink:0;padding:8px 12px;font-weight:700;font-size:13px;color:var(--ink);display:flex;align-items:center;border-right:1px solid var(--border);background:var(--surface2)">${collab}</div>
-      <div style="flex:1;position:relative;height:44px;min-width:500px;overflow:hidden">${gridLines}${redLine}${bars}${plusBtn}</div>
-    </div>`;
-  }).join('');
-
-  // ── Présents hors pause (tranches 30min · 7h–20h) ─────────────────
-  const slots = Array.from({length:26},(_,i)=>GS+i*30);
-  const slotBadges = slots.map(slotStart => {
-    const slotEnd = slotStart + 30;
-    const count = (week.creneaux||[]).filter(c => {
-      if (c.jour !== psDayView) return false;
-      const hr = parseRange(c.horaire);
-      if (!hr || hr.debut > slotStart || hr.fin < slotEnd) return false;
-      const pau = parseRange(c.pause);
-      return !(pau && pau.debut <= slotStart && pau.fin >= slotEnd);
-    }).length;
-    if (!count) return '';
-    const [bg,clr] = count >= 3 ? ['#D1FAE5','#065F46'] : count === 2 ? ['#FEF3C7','#92400E'] : ['#FEE2E2','#991B1B'];
-    return `<div style="position:absolute;top:5px;left:${toP(slotStart)};width:${toW(slotStart,slotEnd)};height:30px;background:${bg};display:flex;align-items:center;justify-content:center;border-radius:3px;font-size:10px;font-weight:700;color:${clr};box-sizing:border-box">${count}</div>`;
-  }).join('');
-
-  // ── Taux d'encadrement du jour ────────────────────────────────────
-  const structType = localStorage.getItem('structure_type') || 'micro';
-  const enfNM    = parseInt(document.getElementById('ps-enf-nm')?.value) || 0;
-  const enfM     = parseInt(document.getElementById('ps-enf-m')?.value) || 0;
-  const enfTotal = parseInt(document.getElementById('ps-enf-total')?.value) || 6;
-  const requis   = structType === 'micro' ? Math.ceil(enfTotal/6) : Math.ceil(enfNM/5)+Math.ceil(enfM/8);
-  const enfDetail = structType === 'micro' ? `${enfTotal} enf.` : `${enfNM} NM · ${enfM} M`;
-  const pros = (week.creneaux||[]).filter(c => c.jour===psDayView).length;
-  let ico, tbg, tclr;
-  if (pros >= requis)         { ico='✓'; tbg='#F0FDF4'; tclr='#16A34A'; }
-  else if (pros === requis-1) { ico='!'; tbg='#FFFBEB'; tclr='#D97706'; }
-  else                        { ico='✗'; tbg='#FEF2F2'; tclr='#DC2626'; }
-  const tauxBadge = pros > 0
-    ? `<span style="background:${tbg};color:${tclr};border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700">${pros} pros / ${requis} req. ${ico} · ${enfDetail}</span>`
-    : `<span style="color:var(--ink3);font-size:12px">Aucun créneau ce jour</span>`;
-
-  grid.innerHTML = `
-    <div style="padding:10px 12px 8px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border)">${pills}</div>
-    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg)">
-      <div style="width:140px;flex-shrink:0;border-right:1px solid var(--border)"></div>
-      <div style="flex:1;position:relative;height:28px;min-width:500px">${hourLabels}</div>
-    </div>
-    ${rows}
-    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg)">
-      <div style="width:140px;flex-shrink:0;padding:6px 12px;font-size:11px;color:var(--ink3);font-weight:600;border-right:1px solid var(--border);display:flex;align-items:center">Présents hors pause</div>
-      <div style="flex:1;position:relative;height:40px;min-width:500px">${slotBadges}</div>
-    </div>
-    <div style="padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:11px;color:var(--ink3);font-weight:600">Taux d'encadrement :</span>
-      ${tauxBadge}
-    </div>`;
-}
-
-function openModalPS(collabPreset, jourPreset) {
-  psEditingId = null;
-  document.getElementById('modal-ps-title').textContent = '➕ Ajouter un créneau';
-  document.getElementById('ps-delete-btn').style.display = 'none';
-
-  const crecheId = document.getElementById('ps-creche')?.value || 'all';
-  loadSalaries();
-  const sel = document.getElementById('ps-collab');
-  sel.innerHTML = SALARIES.map(s => `<option value="${s.id}">${s.prenom} ${s.nom}</option>`).join('');
-  if (collabPreset) {
-    const found = SALARIES.find(s => `${s.prenom} ${s.nom}` === collabPreset);
-    if (found) sel.value = found.id;
-  }
-  if (jourPreset !== undefined) document.getElementById('ps-jour').value = jourPreset;
-  psDebut = PS_HORAIRES_DEFAULTS.h1.debut;
-  psFin   = PS_HORAIRES_DEFAULTS.h1.fin;
-  psRefreshSteppers();
-  psPauseDebut = Math.min(20*60+45, Math.max(6*60, psDebut + 3*60));
-  psPauseFin   = Math.min(21*60, psPauseDebut + 30);
-  const pauseCb = document.getElementById('ps-pause-active');
-  if (pauseCb) { pauseCb.checked = false; psTogglePause(); }
-  psRefreshPause();
-  document.getElementById('ps-color').value   = 'h1';
-  // Reset récurrence
-  const recCb = document.getElementById('ps-recurrence-active');
-  if (recCb) { recCb.checked = false; psToggleRecurrence(); }
-  const jourDi = jourPreset !== undefined ? parseInt(jourPreset) : 0;
-  [0,1,2,3,4].forEach(d => psSetRecJour(d, d === jourDi));
-  document.getElementById('modal-ps').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function editPSCreneau(key, id) {
-  const data = psLoad();
-  const week = data[key];
-  if (!week) return;
-  const c = week.creneaux.find(x => x.id === id);
-  if (!c) return;
-  psEditingId = { key, id };
-  document.getElementById('modal-ps-title').textContent = '✏️ Modifier le créneau';
-  document.getElementById('ps-delete-btn').style.display = 'inline-flex';
-  loadSalaries();
-  const sel = document.getElementById('ps-collab');
-  sel.innerHTML = SALARIES.map(s => `<option value="${s.id}">${s.prenom} ${s.nom}</option>`).join('');
-  const found = SALARIES.find(s => `${s.prenom} ${s.nom}` === c.collab);
-  if (found) sel.value = found.id;
-  document.getElementById('ps-jour').value    = c.jour;
-  // Tenter de parser l'horaire existant (ex: "H1 · 07h30–15h30")
-  const pm = (c.horaire||'').match(/(\d+)h(\d+)[–\-](\d+)h(\d+)/);
-  if (pm) {
-    psDebut = parseInt(pm[1])*60 + parseInt(pm[2]);
-    psFin   = parseInt(pm[3])*60 + parseInt(pm[4]);
-  } else {
-    psDebut = PS_HORAIRES_DEFAULTS.h1.debut;
-    psFin   = PS_HORAIRES_DEFAULTS.h1.fin;
-  }
-  psRefreshSteppers();
-  document.getElementById('ps-horaire').value = c.horaire; // garder valeur brute
-  const pauseCbEdit = document.getElementById('ps-pause-active');
-  if (c.pause) {
-    const pp = c.pause.match(/(\d+)h(\d*)[–\-](\d+)h(\d*)/);
-    if (pp) {
-      psPauseDebut = parseInt(pp[1])*60 + (parseInt(pp[2])||0);
-      psPauseFin   = parseInt(pp[3])*60 + (parseInt(pp[4])||0);
-    }
-    if (pauseCbEdit) { pauseCbEdit.checked = true; psTogglePause(); }
-  } else {
-    psPauseDebut = Math.min(20*60+45, Math.max(6*60, psDebut + 3*60));
-    psPauseFin   = Math.min(21*60, psPauseDebut + 30);
-    if (pauseCbEdit) { pauseCbEdit.checked = false; psTogglePause(); }
-  }
-  psRefreshPause();
-  document.getElementById('ps-color').value   = c.color  || 'h1';
-  document.getElementById('modal-ps').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function savePSCreneau() {
-  const crecheId = document.getElementById('ps-creche')?.value || 'all';
-  const key  = psWeekKey(psWeekOffset, crecheId);
-  const data = psLoad();
-  if (!data[key]) data[key] = { collaborateurs:[], creneaux:[] };
-  const week = data[key];
-  const selId  = document.getElementById('ps-collab').value;
-  const sal    = SALARIES.find(s => String(s.id) === String(selId));
-  const collab = sal ? `${sal.prenom} ${sal.nom}` : '';
-  if (!collab) { showNotif('⚠ Sélectionnez un collaborateur'); return; }
-  const creneau = {
-    id:      psEditingId ? psEditingId.id : 'ps_' + Date.now(),
-    collab,
-    jour:    parseInt(document.getElementById('ps-jour').value),
-    horaire: document.getElementById('ps-horaire').value.trim(),
-    pause:   document.getElementById('ps-pause-active')?.checked ? `${psFmt(psPauseDebut)}–${psFmt(psPauseFin)}` : '',
-    color:   document.getElementById('ps-color').value,
-  };
-  if (!creneau.horaire) { showNotif('⚠ Horaire obligatoire'); return; }
-  if (!week.collaborateurs.includes(collab)) week.collaborateurs.push(collab);
-  if (psEditingId) {
-    const idx = week.creneaux.findIndex(x => x.id === psEditingId.id);
-    if (idx >= 0) week.creneaux[idx] = creneau; else week.creneaux.push(creneau);
-  } else {
-    week.creneaux.push(creneau);
-  }
-  // ── Récurrence (ajout uniquement) ──────────────────────────────────
-  let recCount = 0;
-  if (!psEditingId && document.getElementById('ps-recurrence-active')?.checked) {
-    const recWeeks   = parseInt(document.getElementById('ps-rec-weeks')?.value) || 4;
-    const joursCoches = [0,1,2,3,4].filter(d => document.getElementById(`ps-rec-jour-${d}`)?.checked);
-    const exceptions  = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
-    for (let w = 1; w <= recWeeks; w++) {
-      for (const di of joursCoches) {
-        const offset      = psWeekOffset + w;
-        const wMonday     = psGetMonday(offset);
-        const slotDate    = new Date(wMonday); slotDate.setDate(wMonday.getDate() + di);
-        const slotDateStr = slotDate.toISOString().split('T')[0];
-        if (exceptions.some(e => e.collab===collab && e.date===slotDateStr)) continue;
-        const wkey = psWeekKey(offset, crecheId);
-        if (!data[wkey]) data[wkey] = { collaborateurs:[], creneaux:[] };
-        const wk = data[wkey];
-        if (!wk.collaborateurs.includes(collab)) wk.collaborateurs.push(collab);
-        wk.creneaux.push({
-          id:      'ps_' + Date.now() + '_' + Math.random().toString(36).slice(2),
-          collab,  jour: di,
-          horaire: creneau.horaire, pause: creneau.pause, color: creneau.color,
-        });
-        recCount++;
-      }
-    }
-  }
-
-  psSave(data);
-  closeModal('modal-ps');
-  renderPlanningSalarie();
-  const notifMsg = psEditingId ? '✅ Créneau mis à jour'
-    : recCount > 0 ? `✅ ${recCount + 1} créneaux créés (récurrence)`
-    : '✅ Créneau ajouté';
-  showNotif(notifMsg);
-}
-
-function deletePSCreneau() {
-  if (!psEditingId) return;
-  if (!confirm('Supprimer ce créneau ?')) return;
-  const data = psLoad();
-  const week = data[psEditingId.key];
-  if (!week) return;
-  week.creneaux = week.creneaux.filter(x => x.id !== psEditingId.id);
-  psSave(data);
-  closeModal('modal-ps');
-  renderPlanningSalarie();
-  showNotif('🗑 Créneau supprimé');
-}
-
-function exportPlanningPDF() {
-  const root = document.documentElement;
-  const cv   = v => getComputedStyle(root).getPropertyValue(v).trim();
-  const cssVars = [
-    '--border','--surface2','--surface','--ink','--ink2','--ink3','--bg','--accent','--accent-lt'
-  ];
-
-  let ganttHTML = document.getElementById('ps-grid').innerHTML;
-  cssVars.forEach(k => { const val = cv(k); if (val) ganttHTML = ganttHTML.split(`var(${k})`).join(val); });
-  ganttHTML = ganttHTML.replace(/ on\w+="[^"]*"/g, '');
-
-  const monday     = psGetMonday(psWeekOffset);
-  const weekNum    = psISOWeek(monday);
-  const di         = psDayView ?? 0;
-  const dt         = new Date(monday); dt.setDate(monday.getDate() + di);
-  const dayLabel   = dt.toLocaleDateString('fr-FR', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
-  const crecheLabel = (() => {
-    const sel = document.getElementById('ps-creche');
-    return sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].text : 'Toutes crèches';
-  })();
-  const title = `Planning salarié — Semaine ${weekNum} · ${crecheLabel}`;
-
-  const win = window.open('', '_blank');
-  if (!win) { showNotif('⚠ Autorisez les popups pour exporter le PDF'); return; }
-
-  win.document.write(`<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<title>${title}</title>
-<style>
-  @page { size: A4 landscape; margin: 10mm 12mm; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #1E293B; background: #fff; margin: 0; padding: 0; }
-  h1 { font-size: 15px; font-weight: 800; margin: 0 0 3px; }
-  .subtitle { font-size: 11px; color: #64748B; margin-bottom: 12px; }
-  button { display: none !important; }
-  #ps-grid > div:first-child { display: none !important; }
-  [style*="min-width:500px"] { min-width: 0 !important; }
-  [style*="overflow:hidden"] { overflow: visible !important; }
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 10px; color: #64748B; align-items: center; }
-  .legend span { display: inline-flex; align-items: center; gap: 5px; }
-</style>
-</head>
-<body>
-<h1>${title}</h1>
-<div class="subtitle">${dayLabel}</div>
-<div id="ps-grid">${ganttHTML}</div>
-<div class="legend">
-  <span><span style="background:#D1FAE5;color:#065F46;padding:1px 8px;border-radius:20px;font-size:9px;font-weight:700">✓</span> Taux OK</span>
-  <span><span style="background:#FEF3C7;color:#92400E;padding:1px 8px;border-radius:20px;font-size:9px;font-weight:700">!</span> Taux limite</span>
-  <span><span style="background:#FEE2E2;color:#991B1B;padding:1px 8px;border-radius:20px;font-size:9px;font-weight:700">✗</span> Non conforme</span>
-  <span><span style="border-top:2px dashed #94A3B8;border-bottom:2px dashed #94A3B8;padding:1px 8px;font-size:9px">⏸</span> Créneau de pause</span>
-</div>
-</body>
-</html>`);
-  win.document.close();
-  win.focus();
-  setTimeout(() => { win.print(); win.close(); }, 700);
-}
-
-// ── Récurrence : helpers modal-ps ──────────────────────────────────────────
-
-function psToggleRecurrence() {
-  const active = document.getElementById('ps-recurrence-active')?.checked;
-  const opts   = document.getElementById('ps-recurrence-options');
-  if (opts) opts.style.display = active ? 'flex' : 'none';
-}
-
-function psToggleRecJour(di) {
-  const cb  = document.getElementById(`ps-rec-jour-${di}`);
-  const btn = document.getElementById(`ps-rec-jour-${di}-btn`);
-  if (!cb || !btn) return;
-  cb.checked = !cb.checked;
-  btn.style.background  = cb.checked ? '#2563EB' : 'var(--surface)';
-  btn.style.color       = cb.checked ? '#fff'    : 'var(--ink2)';
-  btn.style.borderColor = cb.checked ? '#2563EB' : 'var(--border)';
-}
-
-function psSetRecJour(di, checked) {
-  const cb  = document.getElementById(`ps-rec-jour-${di}`);
-  const btn = document.getElementById(`ps-rec-jour-${di}-btn`);
-  if (!cb || !btn) return;
-  cb.checked = checked;
-  btn.style.background  = checked ? '#2563EB' : 'var(--surface)';
-  btn.style.color       = checked ? '#fff'    : 'var(--ink2)';
-  btn.style.borderColor = checked ? '#2563EB' : 'var(--border)';
-}
-
-// ── Gestionnaire de récurrences ────────────────────────────────────────────
-
-function openRecurrenceManager() {
-  const crecheId   = document.getElementById('ps-creche')?.value || 'all';
-  const key        = psWeekKey(psWeekOffset, crecheId);
-  const data       = psLoad();
-  const week       = data[key] || { collaborateurs:[], creneaux:[] };
-  const exceptions = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
-  const dayNames   = ['L','M','M','J','V'];
-  const dayFull    = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-
-  const collabRows = week.collaborateurs.map(collab => {
-    const safeCollab = collab.replace(/"/g, '&quot;');
-    const pills = [0,1,2,3,4].map(di => {
-      const active  = (week.creneaux||[]).some(c => c.collab===collab && c.jour===di);
-      const horaire = (week.creneaux||[]).find(c => c.collab===collab && c.jour===di)?.horaire || '';
-      const style   = active
-        ? 'background:#2563EB;color:#fff;border-color:#2563EB'
-        : 'background:var(--surface2);color:var(--ink3);border-color:var(--border)';
-      return `<button type="button" data-collab="${safeCollab}" data-di="${di}" data-active="${active}"
-        onclick="recMgrToggleDay(this)" title="${dayFull[di]}${horaire?' — '+horaire:''}"
-        style="width:30px;height:30px;border-radius:50%;border:1.5px solid;cursor:pointer;font-size:11px;font-weight:700;transition:all 0.15s;${style}">${dayNames[di]}</button>`;
-    }).join('');
-    const horaireEx = (week.creneaux||[]).find(c=>c.collab===collab)?.horaire || '—';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
-      <div style="min-width:130px;font-weight:700;font-size:13px;color:var(--ink)">${collab}</div>
-      <div style="display:flex;gap:4px">${pills}</div>
-      <div style="font-size:11px;color:var(--ink3)">${horaireEx}</div>
-    </div>`;
-  }).join('') || `<div style="color:var(--ink3);font-size:13px;padding:12px 0">Aucun collaborateur cette semaine.</div>`;
-
-  const exceptionsHTML = renderRecExceptions(exceptions);
-
-  document.getElementById('modal-recurrence-body').innerHTML = `
-    <div style="margin-bottom:18px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:10px">Collaborateurs — Semaine courante</div>
-      ${collabRows}
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap">
-      <span style="font-size:13px;font-weight:600;color:var(--ink)">Appliquer sur</span>
-      <input type="number" id="rec-mgr-weeks" min="1" max="52" value="4"
-        style="width:60px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
-      <span style="font-size:13px;font-weight:600;color:var(--ink)">semaines suivantes</span>
-    </div>
-    <div>
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:8px">Exceptions</div>
-      <div id="rec-mgr-exceptions-list">${exceptionsHTML}</div>
-      <div id="rec-mgr-add-form" style="display:none;margin-top:10px;background:var(--surface2);border-radius:10px;padding:12px;flex-direction:column;gap:8px">
-        <input type="text" id="rec-mgr-ex-collab" placeholder="Nom du collaborateur"
-          style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;font-family:inherit;outline:none;background:var(--bg)">
-        <input type="date" id="rec-mgr-ex-date"
-          style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;font-family:inherit;outline:none;background:var(--bg)">
-        <input type="text" id="rec-mgr-ex-raison" placeholder="Raison (optionnelle)"
-          style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;font-family:inherit;outline:none;background:var(--bg)">
-        <div style="display:flex;gap:8px">
-          <button onclick="recMgrAddException()" class="btn btn-primary btn-sm">Ajouter</button>
-          <button onclick="document.getElementById('rec-mgr-add-form').style.display='none'" class="btn btn-secondary btn-sm">Annuler</button>
-        </div>
-      </div>
-      <button onclick="document.getElementById('rec-mgr-add-form').style.display='flex'" class="btn btn-secondary btn-sm" style="margin-top:8px">+ Ajouter exception</button>
-    </div>`;
-
-  document.getElementById('modal-recurrence').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function renderRecExceptions(exceptions) {
-  if (!exceptions.length) return `<div style="color:var(--ink3);font-size:12px;padding:6px 0">Aucune exception.</div>`;
-  return exceptions.map((ex, i) =>
-    `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
-      <span style="flex:1;font-size:12px"><strong>${ex.collab}</strong> · ${ex.date}${ex.raison?' · <em>'+ex.raison+'</em>':''}</span>
-      <button onclick="recMgrDeleteException(${i})" style="background:#FEF2F2;color:#DC2626;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">✕</button>
-    </div>`
-  ).join('');
-}
-
-function recMgrToggleDay(btn) {
-  const active = btn.dataset.active === 'true';
-  btn.dataset.active    = !active;
-  btn.style.background  = !active ? '#2563EB' : 'var(--surface2)';
-  btn.style.color       = !active ? '#fff'    : 'var(--ink3)';
-  btn.style.borderColor = !active ? '#2563EB' : 'var(--border)';
-}
-
-function recMgrDeleteException(idx) {
-  const exceptions = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
-  exceptions.splice(idx, 1);
-  localStorage.setItem('ps_exceptions', JSON.stringify(exceptions));
-  document.getElementById('rec-mgr-exceptions-list').innerHTML = renderRecExceptions(exceptions);
-}
-
-function recMgrAddException() {
-  const collab = document.getElementById('rec-mgr-ex-collab')?.value.trim();
-  const date   = document.getElementById('rec-mgr-ex-date')?.value;
-  const raison = document.getElementById('rec-mgr-ex-raison')?.value.trim();
-  if (!collab || !date) { showNotif('⚠ Collaborateur et date requis'); return; }
-  const exceptions = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
-  exceptions.push({ collab, date, raison });
-  localStorage.setItem('ps_exceptions', JSON.stringify(exceptions));
-  document.getElementById('rec-mgr-exceptions-list').innerHTML = renderRecExceptions(exceptions);
-  document.getElementById('rec-mgr-add-form').style.display = 'none';
-  document.getElementById('rec-mgr-ex-collab').value = '';
-  document.getElementById('rec-mgr-ex-date').value   = '';
-  document.getElementById('rec-mgr-ex-raison').value = '';
-}
-
-function applyRecurrenceManager() {
-  const crecheId   = document.getElementById('ps-creche')?.value || 'all';
-  const weeks      = parseInt(document.getElementById('rec-mgr-weeks')?.value) || 4;
-  const exceptions = JSON.parse(localStorage.getItem('ps_exceptions') || '[]');
-  const srcKey     = psWeekKey(psWeekOffset, crecheId);
-  const data       = psLoad();
-  const srcWeek    = data[srcKey] || { collaborateurs:[], creneaux:[] };
-  let count = 0;
-
-  document.querySelectorAll('#modal-recurrence-body button[data-collab]').forEach(btn => {
-    if (btn.dataset.active !== 'true') return;
-    const collab      = btn.dataset.collab;
-    const di          = parseInt(btn.dataset.di);
-    const srcCreneaux = (srcWeek.creneaux||[]).filter(c => c.collab===collab && c.jour===di);
-    if (!srcCreneaux.length) return;
-    for (let w = 1; w <= weeks; w++) {
-      const offset     = psWeekOffset + w;
-      const wMonday    = psGetMonday(offset);
-      const slotDate   = new Date(wMonday); slotDate.setDate(wMonday.getDate() + di);
-      const slotDateStr = slotDate.toISOString().split('T')[0];
-      if (exceptions.some(e => e.collab===collab && e.date===slotDateStr)) continue;
-      const wkey = psWeekKey(offset, crecheId);
-      if (!data[wkey]) data[wkey] = { collaborateurs:[], creneaux:[] };
-      const wk = data[wkey];
-      if (!wk.collaborateurs.includes(collab)) wk.collaborateurs.push(collab);
-      srcCreneaux.forEach(c => {
-        wk.creneaux.push({
-          id:      'ps_' + Date.now() + '_' + Math.random().toString(36).slice(2),
-          collab,  jour: di,
-          horaire: c.horaire, pause: c.pause, color: c.color,
-        });
-        count++;
-      });
-    }
-  });
-
-  psSave(data);
-  closeModal('modal-recurrence');
-  renderPlanningSalarie();
-  showNotif(`✅ ${count} créneau${count>1?'x':''} propagé${count>1?'s':''}`);
-}
-
-// ── Planning équipes ────────────────────────────────────────────────────────
-
-const EQUIPES_PALETTE = [
-  {bg:'#DBEAFE',c:'#1E40AF'},
-  {bg:'#D1FAE5',c:'#065F46'},
-  {bg:'#FCA5A5',c:'#7F1D1D'},
-  {bg:'#FDE68A',c:'#92400E'},
-  {bg:'#DDD6FE',c:'#4C1D95'},
-  {bg:'#FED7AA',c:'#9A3412'},
-];
-
-function isJourFerie(date) {
-  const d = date.getDate(), m = date.getMonth()+1;
-  return (m===1&&d===1)||(m===5&&d===1)||(m===5&&d===8)||(m===7&&d===14)||
-         (m===8&&d===15)||(m===11&&d===1)||(m===11&&d===11)||(m===12&&d===25);
-}
-
-function equipesSalaries() {
-  const crecheId = document.getElementById('ps-creche')?.value || 'all';
-  const data = psLoad();
-  const seen = new Set();
-  const nbWeeks = equipesVue === 'multi' ? 6 : 4;
-  for (let w = equipesOffset; w < equipesOffset + nbWeeks; w++) {
-    const wk = data[psWeekKey(w, crecheId)];
-    if (wk?.collaborateurs) wk.collaborateurs.forEach(c => seen.add(c));
-  }
-  if (!seen.size) { loadSalaries(); SALARIES.forEach(s => seen.add(`${s.prenom} ${s.nom}`)); }
-  return [...seen];
-}
-
-function equipesGetSal(weekIdx, horaireIdx, dayIdx, salaries, overrides) {
-  const key = equipesVue === 'mensuel' ? `${weekIdx}_${horaireIdx}_${dayIdx}` : `${weekIdx}_${horaireIdx}`;
-  const nbSal = salaries.length || 1;
-  const salIdx = overrides[key] !== undefined
-    ? overrides[key]
-    : (weekIdx + horaireIdx + dayIdx) % nbSal;
-  return { name: salaries[salIdx % nbSal] || '—', salIdx: salIdx % nbSal, key };
-}
-
-function equipesClickCell(key, salIdx, nbSal) {
-  const overrides = JSON.parse(localStorage.getItem('ps_equipes_overrides') || '{}');
-  overrides[key] = (salIdx + 1) % nbSal;
-  localStorage.setItem('ps_equipes_overrides', JSON.stringify(overrides));
-  renderPlanningEquipes();
-}
-
-function equipesAutoRotate() {
-  localStorage.removeItem('ps_equipes_overrides');
-  renderPlanningEquipes();
-}
-
-function renderPlanningEquipes() {
-  const wrap     = document.getElementById('equipes-table-wrap');
-  const legend   = document.getElementById('equipes-legend');
-  const lbl      = document.getElementById('equipes-period-lbl');
-  if (!wrap) return;
-
-  // Toggle vue buttons
-  const bm = document.getElementById('equipes-btn-multi');
-  const bM = document.getElementById('equipes-btn-mensuel');
-  if (bm) { bm.style.background = equipesVue==='multi' ? '#2563EB' : 'transparent'; bm.style.color = equipesVue==='multi' ? '#fff' : 'var(--ink2)'; }
-  if (bM) { bM.style.background = equipesVue==='mensuel' ? '#2563EB' : 'transparent'; bM.style.color = equipesVue==='mensuel' ? '#fff' : 'var(--ink2)'; }
-
-  const horaires  = getPlanningHoraires();
-  const salaries  = equipesSalaries();
-  const nbSal     = salaries.length || 1;
-  const overrides = JSON.parse(localStorage.getItem('ps_equipes_overrides') || '{}');
-  const fmtWk     = w => { const m = psGetMonday(w); return `S${psISOWeek(m)} ${m.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}`; };
-  const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
-  const thBase    = 'padding:8px 10px;font-size:11px;font-weight:600;text-align:center;background:var(--bg);border-bottom:1px solid var(--border);border-right:1px solid var(--border);color:var(--ink3);white-space:nowrap';
-  const tdName    = 'padding:8px 12px;font-size:12px;font-weight:700;background:var(--surface2);border-right:1px solid var(--border);white-space:nowrap;color:var(--ink)';
-
-  if (equipesVue === 'multi') {
-    const nbWeeks = 6;
-    const weekIdxs = Array.from({length:nbWeeks}, (_,i) => equipesOffset + i);
-    if (lbl) {
-      const m1 = psGetMonday(weekIdxs[0]), m2 = psGetMonday(weekIdxs[weekIdxs.length-1]);
-      lbl.textContent = `${m1.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} – ${m2.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}`;
-    }
-    const headers = weekIdxs.map(w => `<th style="${thBase}">${fmtWk(w)}</th>`).join('');
-    const rows = horaires.map((h, hi) =>
-      `<tr>
-        <td style="${tdName}">${h.name}</td>
-        ${weekIdxs.map(w => {
-          const {name, salIdx, key} = equipesGetSal(w, hi, 0, salaries, overrides);
-          const pal = EQUIPES_PALETTE[salIdx % 6];
-          return `<td style="padding:6px;border-right:1px solid var(--border);text-align:center;cursor:pointer" onclick="equipesClickCell('${key}',${salIdx},${nbSal})">
-            <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${pal.bg};color:${pal.c};white-space:nowrap">${name}</span>
-          </td>`;
-        }).join('')}
-      </tr>`
-    ).join('');
-    wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:600px">
-      <thead><tr><th style="${thBase};text-align:left">Horaire</th>${headers}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-
-  } else {
-    const nbWeeks = 4;
-    const weekIdxs = Array.from({length:nbWeeks}, (_,i) => equipesOffset + i);
-    if (lbl) {
-      const m1 = psGetMonday(weekIdxs[0]);
-      lbl.textContent = `${m1.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}`;
-    }
-    const blocks = weekIdxs.map(w => {
-      const monday = psGetMonday(w);
-      const weekLabel = `Sem. ${psISOWeek(monday)} — ${monday.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}`;
-      const dayHeaders = DAY_NAMES.map((d, di) => {
-        const dt = new Date(monday); dt.setDate(monday.getDate()+di);
-        const ferie = isJourFerie(dt);
-        return `<th style="${thBase};${ferie?'color:#DC2626;background:#FEF2F2':''}">${d}<br><span style="font-size:10px">${dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}</span></th>`;
-      }).join('');
-      const rows = horaires.map((h, hi) =>
-        `<tr>
-          <td style="${tdName}">${h.name}</td>
-          ${DAY_NAMES.map((_, di) => {
-            const dt = new Date(monday); dt.setDate(monday.getDate()+di);
-            const ferie = isJourFerie(dt);
-            if (ferie) return `<td style="padding:6px;border-right:1px solid var(--border);background:#FEF2F2;text-align:center"><span style="font-size:11px;color:#DC2626">Férié</span></td>`;
-            const {name, salIdx, key} = equipesGetSal(w, hi, di, salaries, overrides);
-            const pal = EQUIPES_PALETTE[salIdx % 6];
-            return `<td style="padding:4px;border-right:1px solid var(--border);text-align:center;cursor:pointer" onclick="equipesClickCell('${key}',${salIdx},${nbSal})">
-              <span style="display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;background:${pal.bg};color:${pal.c};white-space:nowrap">${name}</span>
-            </td>`;
-          }).join('')}
-        </tr>`
-      ).join('');
-      return `<div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border)">${weekLabel}</div>
-        <table style="width:100%;border-collapse:collapse">
-          <thead><tr><th style="${thBase};text-align:left">Horaire</th>${dayHeaders}</tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-    }).join('');
-    wrap.innerHTML = blocks;
-  }
-
-  // Légende salariés
-  if (legend) {
-    legend.innerHTML = salaries.map((name, i) => {
-      const pal = EQUIPES_PALETTE[i % 6];
-      return `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${pal.bg};color:${pal.c}">${name}</span>`;
-    }).join('');
-  }
-}
-</script>
-
-<!-- ── MODAL Récurrences ── -->
-<div class="modal-overlay" id="modal-recurrence" onclick="closeModalClick(event,'modal-recurrence')">
-  <div class="modal" style="max-width:600px">
-    <div class="modal-header">
-      <h2>🔁 Gérer les récurrences</h2>
-      <button class="modal-close" onclick="closeModal('modal-recurrence')">✕</button>
-    </div>
-    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
-      <div id="modal-recurrence-body"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-recurrence')">Fermer</button>
-      <button class="btn btn-primary" onclick="applyRecurrenceManager()">✅ Appliquer</button>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
