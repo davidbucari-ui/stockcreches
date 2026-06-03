@@ -8923,6 +8923,7 @@ function deleteSalarie() {
 /* ── Planning salarié ── */
 let psWeekOffset = 0;
 let psEditingId  = null;
+let psDayView    = null;
 
 /* ── Steppers Planning salarié ── */
 let psDebut = 7*60+30;
@@ -9026,9 +9027,15 @@ function renderPlanningSalarie() {
   const weekNum = psISOWeek(monday);
   const days    = ['Lun','Mar','Mer','Jeu','Ven'];
   const today   = new Date(); today.setHours(0,0,0,0);
+  const nowDate = new Date();
 
-  const endFri  = new Date(monday); endFri.setDate(monday.getDate()+4);
-  const fmt     = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  if (psDayView === null) {
+    const dow = nowDate.getDay();
+    psDayView = (dow >= 1 && dow <= 5) ? dow - 1 : 0;
+  }
+
+  const endFri = new Date(monday); endFri.setDate(monday.getDate()+4);
+  const fmt    = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
 
   const lbl = document.getElementById('ps-week-label');
   if (lbl) lbl.textContent = `Semaine ${weekNum}`;
@@ -9062,84 +9069,146 @@ function renderPlanningSalarie() {
     return;
   }
 
-  const dayHeaders = days.map((d, i) => {
-    const dt = new Date(monday); dt.setDate(monday.getDate()+i);
-    const isToday = dt.getTime() === today.getTime();
-    const dayNum  = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
-    return `<th style="padding:10px 8px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-right:1px solid var(--border);${isToday?'background:var(--accent-lt);color:var(--accent)':'background:var(--bg);color:var(--ink3)'}">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px">${d}</div>
-      <div style="font-size:14px;font-weight:700;margin-top:2px">${dayNum}</div>
-    </th>`;
+  const GS = 7 * 60, GE = 20 * 60, GR = GE - GS;
+  const clamp = m => Math.max(GS, Math.min(GE, m));
+  const toP = m => ((clamp(m) - GS) / GR * 100).toFixed(2) + '%';
+  const toW = (a, b) => ((clamp(b) - clamp(a)) / GR * 100).toFixed(2) + '%';
+
+  const parseRange = str => {
+    if (!str) return null;
+    const m = str.match(/(\d+)h(\d*)[–\-](\d+)h(\d*)/);
+    if (!m) return null;
+    return { debut: parseInt(m[1])*60+(parseInt(m[2])||0), fin: parseInt(m[3])*60+(parseInt(m[4])||0) };
+  };
+
+  // ── Navigation par jour (pills) ──────────────────────────────────
+  const pills = days.map((d, di) => {
+    const dt = new Date(monday); dt.setDate(monday.getDate()+di);
+    const isToday  = dt.getTime() === today.getTime();
+    const isActive = di === psDayView;
+    const dayNum   = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+    const bg     = isActive ? '#2563EB' : 'var(--surface2)';
+    const color  = isActive ? '#fff' : 'var(--ink2)';
+    const border = isActive ? 'none' : isToday ? '2px solid #2563EB' : '1px solid var(--border)';
+    return `<button onclick="psDayView=${di};renderPlanningSalarie()" style="padding:6px 14px;border-radius:20px;border:${border};background:${bg};color:${color};font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">${d} ${dayNum}</button>`;
   }).join('');
 
+  // ── Labels d'heures ──────────────────────────────────────────────
+  const hourLabels = Array.from({length:14},(_,i)=>i+7).map(h =>
+    `<span style="position:absolute;left:${toP(h*60)};transform:translateX(-50%);font-size:10px;color:var(--ink3);top:8px;user-select:none">${h}h</span>`
+  ).join('');
+
+  // ── Lignes de grille verticales ──────────────────────────────────
+  const gridLines = Array.from({length:14},(_,i)=>i+7).map(h =>
+    `<div style="position:absolute;top:0;bottom:0;left:${toP(h*60)};width:1px;background:var(--border);opacity:0.4;pointer-events:none"></div>`
+  ).join('');
+
+  // ── Ligne rouge heure actuelle ────────────────────────────────────
+  const nowMin = nowDate.getHours()*60 + nowDate.getMinutes();
+  const dtActive = new Date(monday); dtActive.setDate(monday.getDate()+psDayView);
+  const isActiveToday = dtActive.getTime() === today.getTime();
+  const redLine = (isActiveToday && nowMin >= GS && nowMin <= GE)
+    ? `<div style="position:absolute;top:0;bottom:0;left:${toP(nowMin)};width:2px;background:#EF4444;z-index:10;pointer-events:none"></div>`
+    : '';
+
+  // ── Lignes collaborateurs (Gantt) ─────────────────────────────────
   const rows = week.collaborateurs.map(collab => {
-    const cells = days.map((d, di) => {
-      const creneaux = (week.creneaux || []).filter(c => c.collab === collab && c.jour === di);
-      const dt = new Date(monday); dt.setDate(monday.getDate()+di);
-      const isToday = dt.getTime() === today.getTime();
-      const content = creneaux.map(c => {
-        const col = PS_COLORS[c.color] || PS_COLORS.h1;
-        return `<div onclick="editPSCreneau('${key}','${c.id}')" style="cursor:pointer;margin-bottom:4px">
-          <div style="background:${col.bg};color:${col.color};border-radius:20px;padding:3px 9px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:3px">${c.horaire||''}</div>
-          ${c.pause ? `<div style="border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:11px;color:var(--ink3);display:inline-block">pause ${c.pause}</div>` : ''}
+    const creneaux = (week.creneaux||[]).filter(c => c.collab===collab && c.jour===psDayView);
+    const bars = creneaux.map(c => {
+      const col = PS_COLORS[c.color] || PS_COLORS.h1;
+      const hr  = parseRange(c.horaire);
+      const pau = parseRange(c.pause);
+      if (!hr || hr.debut >= hr.fin) return '';
+      const deb = Math.max(hr.debut, GS), fin = Math.min(hr.fin, GE);
+      if (deb >= fin) return '';
+
+      if (!pau) {
+        return `<div onclick="editPSCreneau('${key}','${c.id}')" title="${c.horaire}"
+          style="position:absolute;top:9px;left:${toP(deb)};width:${toW(deb,fin)};height:26px;
+          background:${col.bg};border-radius:6px;cursor:pointer;display:flex;align-items:center;
+          justify-content:center;font-size:10px;font-weight:700;color:${col.color};
+          overflow:hidden;border:1px solid ${col.color}33;box-sizing:border-box">
+          <span style="padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.horaire||''}</span>
         </div>`;
-      }).join('') || `<div style="font-size:18px;color:var(--border);text-align:center;padding-top:8px;cursor:pointer" onclick="openModalPS('${collab}',${di})">+</div>`;
-      return `<td style="padding:8px;border-right:1px solid var(--border);min-width:140px;vertical-align:top;${isToday?'background:#F5F9FF':''}">${content}</td>`;
+      }
+      const pdeb = Math.max(pau.debut, GS), pfin = Math.min(pau.fin, GE);
+      const s1e = Math.min(pdeb, fin), s2s = Math.max(pfin, deb);
+      const seg1 = deb < s1e
+        ? `<div onclick="editPSCreneau('${key}','${c.id}')" title="${c.horaire}"
+            style="position:absolute;top:9px;left:${toP(deb)};width:${toW(deb,s1e)};height:26px;
+            background:${col.bg};border-radius:6px 0 0 6px;cursor:pointer;
+            border:1px solid ${col.color}33;border-right:none;box-sizing:border-box"></div>` : '';
+      const gap = pdeb < pfin && pdeb < GE && pfin > GS
+        ? `<div style="position:absolute;top:9px;left:${toP(pdeb)};width:${toW(pdeb,pfin)};height:26px;
+            background:var(--surface2);border-top:2px dashed ${col.color};border-bottom:2px dashed ${col.color};
+            box-sizing:border-box;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:9px;color:${col.color};font-weight:600;white-space:nowrap">⏸ ${c.pause}</span>
+           </div>` : '';
+      const seg2 = s2s < fin
+        ? `<div onclick="editPSCreneau('${key}','${c.id}')" title="${c.horaire}"
+            style="position:absolute;top:9px;left:${toP(s2s)};width:${toW(s2s,fin)};height:26px;
+            background:${col.bg};border-radius:0 6px 6px 0;cursor:pointer;
+            border:1px solid ${col.color}33;border-left:none;box-sizing:border-box"></div>` : '';
+      return seg1 + gap + seg2;
     }).join('');
 
-    const joursOk = days.filter((d,di) => (week.creneaux||[]).some(c => c.collab===collab && c.jour===di)).length;
-    return `<tr>
-      <td style="padding:10px 14px;font-weight:700;font-size:14px;border-right:1px solid var(--border);white-space:nowrap;background:var(--surface2)">${collab}</td>
-      ${cells}
-      <td style="padding:10px 12px;font-weight:700;font-size:14px;text-align:center;background:var(--surface2)">${joursOk*8}h</td>
-    </tr>`;
+    const plusBtn = creneaux.length === 0
+      ? `<span onclick="openModalPS('${collab}',${psDayView})" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;color:var(--border);cursor:pointer">+</span>`
+      : '';
+
+    return `<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--border)">
+      <div style="width:140px;flex-shrink:0;padding:8px 12px;font-weight:700;font-size:13px;color:var(--ink);display:flex;align-items:center;border-right:1px solid var(--border);background:var(--surface2)">${collab}</div>
+      <div style="flex:1;position:relative;height:44px;min-width:500px;overflow:hidden">${gridLines}${redLine}${bars}${plusBtn}</div>
+    </div>`;
   }).join('');
 
+  // ── Présents hors pause (tranches 30min · 7h–20h) ─────────────────
+  const slots = Array.from({length:26},(_,i)=>GS+i*30);
+  const slotBadges = slots.map(slotStart => {
+    const slotEnd = slotStart + 30;
+    const count = (week.creneaux||[]).filter(c => {
+      if (c.jour !== psDayView) return false;
+      const hr = parseRange(c.horaire);
+      if (!hr || hr.debut > slotStart || hr.fin < slotEnd) return false;
+      const pau = parseRange(c.pause);
+      return !(pau && pau.debut <= slotStart && pau.fin >= slotEnd);
+    }).length;
+    if (!count) return '';
+    const [bg,clr] = count >= 3 ? ['#D1FAE5','#065F46'] : count === 2 ? ['#FEF3C7','#92400E'] : ['#FEE2E2','#991B1B'];
+    return `<div style="position:absolute;top:5px;left:${toP(slotStart)};width:${toW(slotStart,slotEnd)};height:30px;background:${bg};display:flex;align-items:center;justify-content:center;border-radius:3px;font-size:10px;font-weight:700;color:${clr};box-sizing:border-box">${count}</div>`;
+  }).join('');
+
+  // ── Taux d'encadrement du jour ────────────────────────────────────
   const structType = localStorage.getItem('structure_type') || 'micro';
-  const enfNM      = parseInt(document.getElementById('ps-enf-nm')?.value) || 0;
-  const enfM       = parseInt(document.getElementById('ps-enf-m')?.value) || 0;
-  const enfTotal   = parseInt(document.getElementById('ps-enf-total')?.value) || 6;
-  const requis     = structType === 'micro'
-    ? Math.ceil(enfTotal / 6)
-    : Math.ceil(enfNM / 5) + Math.ceil(enfM / 8);
-  const enfDetail  = structType === 'micro'
-    ? `${enfTotal} enf.`
-    : `${enfNM} NM · ${enfM} M`;
+  const enfNM    = parseInt(document.getElementById('ps-enf-nm')?.value) || 0;
+  const enfM     = parseInt(document.getElementById('ps-enf-m')?.value) || 0;
+  const enfTotal = parseInt(document.getElementById('ps-enf-total')?.value) || 6;
+  const requis   = structType === 'micro' ? Math.ceil(enfTotal/6) : Math.ceil(enfNM/5)+Math.ceil(enfM/8);
+  const enfDetail = structType === 'micro' ? `${enfTotal} enf.` : `${enfNM} NM · ${enfM} M`;
+  const pros = (week.creneaux||[]).filter(c => c.jour===psDayView).length;
+  let ico, tbg, tclr;
+  if (pros >= requis)         { ico='✓'; tbg='#F0FDF4'; tclr='#16A34A'; }
+  else if (pros === requis-1) { ico='!'; tbg='#FFFBEB'; tclr='#D97706'; }
+  else                        { ico='✗'; tbg='#FEF2F2'; tclr='#DC2626'; }
+  const tauxBadge = pros > 0
+    ? `<span style="background:${tbg};color:${tclr};border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700">${pros} pros / ${requis} req. ${ico} · ${enfDetail}</span>`
+    : `<span style="color:var(--ink3);font-size:12px">Aucun créneau ce jour</span>`;
 
-  const tauxCells = days.map((d, di) => {
-    const dt = new Date(monday); dt.setDate(monday.getDate()+di);
-    const isToday = dt.getTime() === today.getTime();
-    const pros    = (week.creneaux||[]).filter(c => c.jour===di).length;
-    let ico, bg, clr;
-    if (pros >= requis)        { ico = '✓'; bg = '#F0FDF4'; clr = '#16A34A'; }
-    else if (pros === requis - 1) { ico = '!'; bg = '#FFFBEB'; clr = '#D97706'; }
-    else                       { ico = '✗'; bg = '#FEF2F2'; clr = '#DC2626'; }
-    const badge = pros > 0
-      ? `<div style="background:${bg};color:${clr};border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;margin:2px;display:inline-flex;flex-direction:column;align-items:center;line-height:1.4">
-           ${pros} pros / ${requis} req. ${ico}
-           <span style="font-size:10px;font-weight:400">${enfDetail}</span>
-         </div>`
-      : '—';
-    return `<td style="padding:8px;border-right:1px solid var(--border);text-align:center;${isToday?'background:#F5F9FF':'background:var(--bg)'}">${badge}</td>`;
-  }).join('');
-
-  grid.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:700px">
-    <thead>
-      <tr>
-        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink3);background:var(--bg);border-bottom:1px solid var(--border);border-right:1px solid var(--border)">Collaborateur</th>
-        ${dayHeaders}
-        <th style="padding:10px 8px;text-align:center;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink3);background:var(--bg);border-bottom:1px solid var(--border)">Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows}
-      <tr>
-        <td style="padding:10px 14px;font-size:12px;font-weight:400;color:var(--ink3);border-right:1px solid var(--border);background:var(--bg)">Taux hors pauses</td>
-        ${tauxCells}
-        <td style="background:var(--bg)"></td>
-      </tr>
-    </tbody>
-  </table>`;
+  grid.innerHTML = `
+    <div style="padding:10px 12px 8px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border)">${pills}</div>
+    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg)">
+      <div style="width:140px;flex-shrink:0;border-right:1px solid var(--border)"></div>
+      <div style="flex:1;position:relative;height:28px;min-width:500px">${hourLabels}</div>
+    </div>
+    ${rows}
+    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg)">
+      <div style="width:140px;flex-shrink:0;padding:6px 12px;font-size:11px;color:var(--ink3);font-weight:600;border-right:1px solid var(--border);display:flex;align-items:center">Présents hors pause</div>
+      <div style="flex:1;position:relative;height:40px;min-width:500px">${slotBadges}</div>
+    </div>
+    <div style="padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--ink3);font-weight:600">Taux d'encadrement :</span>
+      ${tauxBadge}
+    </div>`;
 }
 
 function openModalPS(collabPreset, jourPreset) {
