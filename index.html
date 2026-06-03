@@ -7285,11 +7285,16 @@ function openModalPE(horaireIdx, jour, id) {
   document.getElementById('modal-pe-title').textContent = id ? '✏️ Modifier le créneau' : '➕ Ajouter une pro';
   document.getElementById('modal-pe-delete').style.display = id ? 'inline-flex' : 'none';
 
-  // Populate pros list (existing + new)
-  const prosSet = new Set((week.creneaux||[]).map(c => c.pro));
+  // Populate pros list from RH salaries + any already in creneaux
+  let salaries = [];
+  try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
+  const rhNames = salaries.map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
+  const creneauxNames = (week.creneaux||[]).map(c => c.pro);
+  const prosSet = new Set([...rhNames, ...creneauxNames]);
   const sel = document.getElementById('pe-pro-sel');
-  sel.innerHTML = [...prosSet].sort().map(p => `<option value="${p}">${p}</option>`).join('') +
-    '<option value="__new__">+ Nouvelle collaboratrice…</option>';
+  sel.innerHTML = '<option value="">— Choisir —</option>' +
+    [...prosSet].sort().map(p => `<option value="${p}">${p}</option>`).join('') +
+    '<option value="__new__">+ Nom libre…</option>';
 
   // Horaire select
   const hSel = document.getElementById('pe-horaire-sel');
@@ -7310,7 +7315,7 @@ function openModalPE(horaireIdx, jour, id) {
     if (cr) {
       hSel.value = cr.horaire_idx;
       jSel.value = cr.jour;
-      if ([...prosSet].includes(cr.pro)) sel.value = cr.pro;
+      if ([...prosSet].includes(cr.pro)) sel.value = cr.pro; else sel.value = cr.pro;
       document.getElementById('pe-pause').value = cr.pause || '';
     }
   } else {
