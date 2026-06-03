@@ -8876,9 +8876,11 @@ function psColorChanged() {
 function psCollabChanged() {
   const val = document.getElementById('ps-collab')?.value;
   const grp = document.getElementById('ps-new-collab-group');
+  console.log('[psCollabChanged] val=', val, 'grp=', grp);
   if (!grp) return;
   if (val === '__new__') {
-    grp.style.display = '';
+    grp.style.display = 'block';
+    console.log('[psCollabChanged] affichage ps-new-collab-group');
     document.getElementById('ps-new-collab')?.focus();
   } else {
     grp.style.display = 'none';
