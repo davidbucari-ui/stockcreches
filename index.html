@@ -8929,8 +8929,8 @@ function psPopulateCreches() {
   if (!sel) return;
   const prev = sel.value;
   sel.innerHTML = '<option value="">Toutes les crèches</option>';
-  if (typeof CRECHES !== 'undefined') {
-    CRECHES.forEach(c => {
+  if (typeof CRECHES_DATA !== 'undefined') {
+    CRECHES_DATA.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id || c.nom;
       opt.textContent = c.nom;
