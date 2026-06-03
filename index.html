@@ -3889,11 +3889,13 @@ function filterCreche(creche, el) {
   currentCreche = creche;
   const sel = document.getElementById('creche-select-sidebar');
   if (sel) sel.value = creche;
-  // Sync planning creche select
-  const peSel = document.getElementById('pe-creche');
-  if (peSel && creche && creche !== 'all') {
-    if ([...peSel.options].some(o => o.value === creche)) peSel.value = creche;
-  }
+  // Sync tous les selects crèche de l'app
+  ['pe-creche', 'sal-creche'].forEach(id => {
+    const s = document.getElementById(id);
+    if (s && creche && creche !== 'all') {
+      if ([...s.options].some(o => o.value === creche)) s.value = creche;
+    }
+  });
   if (currentPage === 'inventaire') renderTable();
   else if (currentPage === 'commandes') renderCommandes();
   else if (currentPage === 'historique') renderHistorique();
@@ -7180,54 +7182,55 @@ function renderPlanningEquipe() {
     return;
   }
 
-  // Timeline config — calcul dynamique de la largeur des colonnes
-  const T_START = 7;   // 7h
-  const T_END   = 20;  // 20h
-  const T_TOTAL = T_END - T_START; // 13h
-  const ROW_H   = 52;  // px per row
-  const LABEL_W = 120; // px for name column
-
-  // Mesure la largeur réelle du container parent
-  const containerW = grid.parentElement ? grid.parentElement.clientWidth || 900 : 900;
-  const timelineW  = Math.max(containerW - LABEL_W - 4, T_TOTAL * 60); // au moins 60px/h
-  const COL_W      = timelineW / T_TOTAL; // px par heure, calculé dynamiquement
-
+  // Timeline config — positionnement en % de la zone timeline (sans LABEL_W)
+  const T_START  = 7;            // 7h
+  const T_END    = 20;           // 20h
+  const T_TOTAL  = T_END - T_START; // 13h
+  const ROW_H    = 52;           // px per row
+  const LABEL_W  = 120;          // px for name column (fixe)
   const startMin = T_START * 60;
   const endMin   = T_END   * 60;
+  const totalMin = endMin - startMin; // 780 min
 
-  // Hours header
+  // Convertit des minutes en % de la timeline
+  const toLeft  = m  => `calc(${LABEL_W}px + ${((m - startMin) / totalMin * 100).toFixed(4)}% * ((100% - ${LABEL_W}px) / 100%))`;
+  const toWidth = m  => `calc(${(m / totalMin * 100).toFixed(4)}% * ((100% - ${LABEL_W}px) / 100%))`;
+  // Simplifié : on travaille directement en % de (100% - LABEL_W)
+  const pct     = m  => ((m - startMin) / totalMin * 100).toFixed(4);
+  const pctW    = m  => (m / totalMin * 100).toFixed(4);
+
+  // Hours header — distribués en % dans la zone timeline
   const hoursHeader = Array.from({length: T_TOTAL + 1}, (_, i) => {
-    const h = T_START + i;
-    const left = LABEL_W + i * COL_W;
-    return `<div style="position:absolute;left:${left}px;top:0;width:${COL_W}px;font-size:10px;font-weight:700;color:var(--ink3);text-align:center;padding-top:6px">${h}h</div>`;
+    const h    = T_START + i;
+    const left = (i / T_TOTAL * 100).toFixed(3);
+    return `<div style="position:absolute;left:calc(${LABEL_W}px + ${left}% * ((100% - ${LABEL_W}px) / 100%));top:0;font-size:10px;font-weight:700;color:var(--ink3);padding-top:6px;transform:translateX(-50%)">${h}h</div>`;
   }).join('');
 
-  // Grid lines
-  const gridLines = Array.from({length: T_TOTAL}, (_, i) => {
-    const left = LABEL_W + i * COL_W;
-    return `<div style="position:absolute;left:${left}px;top:0;bottom:0;width:1px;background:var(--border)"></div>`;
+  // Grid lines en %
+  const gridLines = Array.from({length: T_TOTAL + 1}, (_, i) => {
+    const left = (i / T_TOTAL * 100).toFixed(3);
+    return `<div style="position:absolute;left:${left}%;top:0;bottom:0;width:1px;background:var(--border)"></div>`;
   }).join('');
 
   // Current time line
-  const now = new Date();
+  const now    = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const timeLine = (nowMin > startMin && nowMin < endMin)
-    ? `<div style="position:absolute;left:${LABEL_W + (nowMin - startMin) / 60 * COL_W}px;top:0;bottom:0;width:2px;background:var(--red);z-index:10">
+    ? `<div style="position:absolute;left:${((nowMin - startMin) / totalMin * 100).toFixed(3)}%;top:0;bottom:0;width:2px;background:var(--red);z-index:10">
          <div style="position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--red)"></div>
        </div>` : '';
 
-  const totalH = allPros.length * ROW_H + 28 + 26; // header + taux row
+  const totalH = allPros.length * ROW_H + 28 + 26;
 
   // Rows per pro
-  const fmtHHMM = s => { if (!s) return 0; const [h,m] = s.split(':').map(Number); return h*60+(m||0); };
+  const fmtHHMM = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+(m||0); };
 
   const proRows = allPros.map((pro, pi) => {
     const creneaux = (week.creneaux||[]).filter(cr => cr.pro === pro && cr.jour === peGanttDay);
     const top = 28 + pi * ROW_H;
 
-    // Name label
     const initial = pro.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
-    const label = `<div style="position:absolute;left:0;top:${top}px;width:${LABEL_W}px;height:${ROW_H}px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);background:var(--surface2)">
+    const labelEl = `<div style="position:absolute;left:0;top:${top}px;width:${LABEL_W}px;height:${ROW_H}px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);background:var(--surface2);z-index:3">
       <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initial}</div>
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--ink);line-height:1.2">${pro.split(' ')[0]}</div>
@@ -7235,56 +7238,57 @@ function renderPlanningEquipe() {
       </div>
     </div>`;
 
-    // Row background
     const rowBg = `<div style="position:absolute;left:${LABEL_W}px;top:${top}px;right:0;height:${ROW_H}px;background:${pi%2===0?'var(--surface2)':'var(--bg)'};border-bottom:1px solid var(--border)"></div>`;
 
-    // Créneau bars
     const bars = creneaux.map(cr => {
       const h = horaires[cr.horaire_idx] || {};
       const c = PE_COLORS[cr.horaire_idx] || PE_COLORS[0];
       const debutMin = fmtHHMM(h.debut);
       const finMin   = fmtHHMM(h.fin);
-      if (!debutMin || !finMin) return '';
-      const barLeft  = LABEL_W + (debutMin - startMin) / 60 * COL_W;
-      const barWidth = (finMin - debutMin) / 60 * COL_W;
+      if (debutMin === null || finMin === null) return '';
+
+      // Position en % de la zone timeline
+      const leftPct  = ((debutMin - startMin) / totalMin * 100).toFixed(4);
+      const widthPct = ((finMin - debutMin)   / totalMin * 100).toFixed(4);
       const barTop   = top + 8;
       const barH     = ROW_H - 16;
 
-      // Pause cutout
+      // Pause hachures en % relatif à la barre
       let pauseHtml = '';
       if (cr.pause) {
-        const pm = cr.pause.match(/(\d+)h?:?(\d*)\s*[–-]\s*(\d+)h?:?(\d*)/);
+        const pm = cr.pause.match(/(\d+)h?(\d*)\s*[–-]\s*(\d+)h?(\d*)/);
         if (pm) {
-          const pdebut = parseInt(pm[1])*60 + (parseInt(pm[2])||0);
-          const pfin   = parseInt(pm[3])*60 + (parseInt(pm[4])||0);
-          const pl = (pdebut - startMin) / 60 * COL_W;
-          const pw = (pfin - pdebut) / 60 * COL_W;
-          const relLeft = pl - (debutMin - startMin) / 60 * COL_W;
-          pauseHtml = `<div style="position:absolute;left:${relLeft}px;top:0;width:${pw}px;bottom:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 3px,transparent 3px,transparent 7px);border-left:1px dashed ${c.border};border-right:1px dashed ${c.border}"></div>`;
+          const pd = parseInt(pm[1])*60 + (parseInt(pm[2])||0);
+          const pf = parseInt(pm[3])*60 + (parseInt(pm[4])||0);
+          const pLeftPct  = ((pd - debutMin) / (finMin - debutMin) * 100).toFixed(3);
+          const pWidthPct = ((pf - pd)       / (finMin - debutMin) * 100).toFixed(3);
+          pauseHtml = `<div style="position:absolute;left:${pLeftPct}%;top:0;width:${pWidthPct}%;bottom:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 3px,transparent 3px,transparent 7px);border-left:1px dashed ${c.border};border-right:1px dashed ${c.border}"></div>`;
         }
       }
 
-      const label = creneaux.length < 3 ? `<span style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.debut||''}–${h.fin||''}</span>` : '';
+      const lbl = `<span style="font-size:11px;font-weight:700;white-space:nowrap">${h.debut||''}–${h.fin||''}</span>`;
 
       return `<div onclick="openModalPE(${cr.horaire_idx},${peGanttDay},'${cr.id}')"
-        style="position:absolute;left:${barLeft}px;top:${barTop}px;width:${barWidth}px;height:${barH}px;
+        style="position:absolute;
+               left:calc(${LABEL_W}px + ${leftPct}% * ((100% - ${LABEL_W}px) / 100%));
+               top:${barTop}px;
+               width:calc(${widthPct}% * ((100% - ${LABEL_W}px) / 100%));
+               height:${barH}px;
                background:${c.bg};border:1.5px solid ${c.border};border-radius:8px;
                display:flex;align-items:center;justify-content:center;overflow:hidden;
                cursor:pointer;transition:opacity 0.15s"
         onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
         ${pauseHtml}
-        <div style="color:${c.text};padding:0 8px;z-index:1;position:relative">${label}</div>
+        <div style="color:${c.text};padding:0 8px;z-index:1;position:relative">${lbl}</div>
       </div>`;
     }).join('');
 
-    return label + rowBg + bars;
+    return labelEl + rowBg + bars;
   }).join('');
 
-  // Taux row (nb de pros présentes par heure)
+  // Taux row — slots de 30min en %
   const tauxTop = 28 + allPros.length * ROW_H;
-  const enfantsTop = tauxTop + 26;
 
-  // Build taux per 30-min slot
   const slots = Array.from({length: T_TOTAL * 2}, (_, i) => {
     const slotStart = startMin + i * 30;
     const slotEnd   = slotStart + 30;
@@ -7292,41 +7296,37 @@ function renderPlanningEquipe() {
     (week.creneaux||[]).filter(cr => cr.jour === peGanttDay).forEach(cr => {
       const h = horaires[cr.horaire_idx] || {};
       const d = fmtHHMM(h.debut), f = fmtHHMM(h.fin);
-      // Check pause
       let inPause = false;
       if (cr.pause) {
-        const pm = cr.pause.match(/(\d+)h?:?(\d*)\s*[–-]\s*(\d+)h?:?(\d*)/);
+        const pm = cr.pause.match(/(\d+)h?(\d*)\s*[–-]\s*(\d+)h?(\d*)/);
         if (pm) {
           const pd = parseInt(pm[1])*60+(parseInt(pm[2])||0);
           const pf = parseInt(pm[3])*60+(parseInt(pm[4])||0);
           if (slotStart >= pd && slotEnd <= pf) inPause = true;
         }
       }
-      if (d && f && slotStart >= d && slotEnd <= f && !inPause) count++;
+      if (d !== null && f !== null && slotStart >= d && slotEnd <= f && !inPause) count++;
     });
     return count;
   });
 
   const tauxCells = slots.map((count, i) => {
-    const left = LABEL_W + i * (COL_W / 2);
+    const leftPct  = (i * 30 / totalMin * 100).toFixed(4);
+    const widthPct = (30 / totalMin * 100).toFixed(4);
     const color = count === 0 ? 'var(--ink3)' : count >= 3 ? 'var(--green)' : count === 2 ? 'var(--amber)' : 'var(--red)';
-    return `<div style="position:absolute;left:${left}px;top:0;width:${COL_W/2}px;text-align:center;font-size:10px;font-weight:700;color:${color}">${count>0?count:''}</div>`;
+    return `<div style="position:absolute;left:${leftPct}%;width:${widthPct}%;top:0;text-align:center;font-size:10px;font-weight:700;color:${color}">${count>0?count:''}</div>`;
   }).join('');
 
-  grid.style.cssText = `position:relative;height:${totalH + 4}px;width:100%;min-width:${LABEL_W + T_TOTAL * 60}px`;
+  grid.style.cssText = `position:relative;height:${totalH + 4}px;width:100%`;
   grid.innerHTML = `
-    <!-- Header hours -->
     <div style="position:absolute;left:0;top:0;right:0;height:28px;background:var(--bg);border-bottom:2px solid var(--border)">
       <div style="position:absolute;left:0;top:0;width:${LABEL_W}px;height:28px;background:var(--bg);z-index:2;display:flex;align-items:center;padding-left:10px">
         <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3)">Collaborateur</span>
       </div>
       ${hoursHeader}
     </div>
-    <!-- Grid lines -->
-    <div style="position:absolute;left:${LABEL_W}px;top:28px;right:0;bottom:52px">${gridLines}${timeLine}</div>
-    <!-- Pro rows -->
+    <div style="position:absolute;left:${LABEL_W}px;top:28px;right:0;bottom:26px">${gridLines}${timeLine}</div>
     ${proRows}
-    <!-- Taux row label -->
     <div style="position:absolute;left:0;top:${tauxTop}px;width:${LABEL_W}px;height:26px;background:var(--bg);border-top:2px solid var(--border);display:flex;align-items:center;padding-left:10px">
       <span style="font-size:10px;font-weight:700;color:var(--ink3)">Salariés présents</span>
     </div>
@@ -7334,7 +7334,6 @@ function renderPlanningEquipe() {
       ${tauxCells}
     </div>
   `;
-}
 
 // ── PLANNING HEBDOMADAIRE (Salarié × Jours) ────────────────────────
 function renderPlanningHebdo() {
