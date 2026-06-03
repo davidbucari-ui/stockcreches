@@ -7159,6 +7159,63 @@ async function renderPlanning() {
   }
 }
 
+// ── Steppers horaire planning ──
+let plDebut      = 7*60+30;
+let plFin        = 15*60+30;
+let plPauseDebut = 12*60;
+let plPauseFin   = 12*60+30;
+
+function plFmt(min) {
+  return `${String(Math.floor(min/60)).padStart(2,'0')}h${String(min%60).padStart(2,'0')}`;
+}
+function plToHHMM(min) {
+  return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`;
+}
+function plFromHHMM(s) {
+  const [h, m] = (s || '00:00').split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+function plFromHhmm(s) {
+  const mt = (s || '').match(/(\d+)h(\d+)/);
+  return mt ? parseInt(mt[1]) * 60 + parseInt(mt[2]) : 0;
+}
+function plAdjust(field, delta) {
+  const MIN = 6*60, MAX = 22*60;
+  if (field === 'debut') {
+    plDebut = Math.min(MAX - 30, Math.max(MIN, plDebut + delta));
+    if (plFin <= plDebut) plFin = Math.min(MAX, plDebut + 30);
+  } else if (field === 'fin') {
+    plFin = Math.min(MAX, Math.max(plDebut + 30, plFin + delta));
+  } else if (field === 'pause-debut') {
+    plPauseDebut = Math.min(plFin - 30, Math.max(plDebut, plPauseDebut + delta));
+    if (plPauseFin <= plPauseDebut) plPauseFin = Math.min(plFin, plPauseDebut + 30);
+  } else if (field === 'pause-fin') {
+    plPauseFin = Math.min(plFin, Math.max(plPauseDebut + 30, plPauseFin + delta));
+  }
+  plRefreshDisplay();
+}
+function plRefreshDisplay() {
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  set('pl-debut-display',       plFmt(plDebut));
+  set('pl-fin-display',         plFmt(plFin));
+  set('pl-pause-debut-display', plFmt(plPauseDebut));
+  set('pl-pause-fin-display',   plFmt(plPauseFin));
+  // Durée nette
+  const pauseActive = document.getElementById('pl-pause-active')?.checked;
+  const pauseDur = pauseActive ? (plPauseFin - plPauseDebut) : 0;
+  const workMin  = plFin - plDebut - pauseDur;
+  const wh = Math.floor(workMin / 60), wm = workMin % 60;
+  const durStr = wh > 0 && wm > 0 ? `(${wh}h${String(wm).padStart(2,'0')})`
+               : wh > 0 ? `(${wh}h00)` : `(${wm}min)`;
+  set('pl-duration', durStr);
+  // Toggle pause row
+  const pauseRow = document.getElementById('pl-pause-row');
+  if (pauseRow) {
+    pauseRow.style.opacity       = pauseActive ? '1'    : '0.35';
+    pauseRow.style.pointerEvents = pauseActive ? 'auto' : 'none';
+  }
+}
+
 async function openModalPlanning(date, horaire, id) {
   planningEditingId = id;
   document.getElementById('modal-planning-title').textContent = id ? 'Modifier le créneau' : 'Ajouter un créneau';
@@ -7173,17 +7230,19 @@ async function openModalPlanning(date, horaire, id) {
       CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
   }
 
-  const hSel = document.getElementById('pl-horaire');
-  if (hSel) {
-    const horaires = getPlanningHoraires();
-    hSel.innerHTML = '<option value="">— Choisir —</option>' +
-      horaires.map(h => `<option value="${h.name}">${h.name} (${h.debut}–${h.fin})</option>`).join('');
-  }
+  // Initialise les steppers depuis la config horaire
+  const horaires  = getPlanningHoraires();
+  const hConfig   = horaire ? horaires.find(h => h.name === horaire) : null;
+  plDebut      = hConfig ? plFromHHMM(hConfig.debut) : 7*60+30;
+  plFin        = hConfig ? plFromHHMM(hConfig.fin)   : 15*60+30;
+  plPauseDebut = Math.round((plDebut + plFin) / 2 / 30) * 30;
+  plPauseFin   = Math.min(plFin - 30, plPauseDebut + 30);
+  const pauseEl = document.getElementById('pl-pause-active');
+  if (pauseEl) pauseEl.checked = false;
 
   const fill = (elId, val) => { const e = document.getElementById(elId); if (e) e.value = val ?? ''; };
   fill('pl-date', date || '');
   fill('pl-notes', '');
-  if (horaire && hSel) hSel.value = horaire;
 
   const curCreche = (document.getElementById('planning-creche-filter')||{}).value||'';
   if (curCreche && cSel) cSel.value = curCreche;
@@ -7196,9 +7255,17 @@ async function openModalPlanning(date, horaire, id) {
       fill('pl-notes', r.notes);
       if (document.getElementById('pl-user')) document.getElementById('pl-user').value = r.user_id||'';
       if (cSel) cSel.value = r.creche_id||'';
-      if (hSel) hSel.value = r.poste||'';
+      if (r.heure_debut) plDebut = plFromHHMM(r.heure_debut);
+      if (r.heure_fin)   plFin   = plFromHHMM(r.heure_fin);
+      const pauseMatch = (r.poste||'').match(/⏸(\d+h\d+)–(\d+h\d+)/);
+      if (pauseMatch && pauseEl) {
+        plPauseDebut = plFromHhmm(pauseMatch[1]);
+        plPauseFin   = plFromHhmm(pauseMatch[2]);
+        pauseEl.checked = true;
+      }
     }
   }
+  plRefreshDisplay();
   document.getElementById('modal-planning').classList.add('open');
 }
 
@@ -7206,19 +7273,25 @@ async function savePlanning() {
   const user_id   = document.getElementById('pl-user').value;
   const creche_id = document.getElementById('pl-creche').value;
   const date      = document.getElementById('pl-date').value;
-  const horaire   = document.getElementById('pl-horaire').value;
-  if (!user_id || !creche_id || !date || !horaire) {
-    alert('Collaborateur, crèche, date et horaire sont requis.'); return;
+  if (!user_id || !creche_id || !date) {
+    alert('Collaborateur, crèche et date sont requis.'); return;
   }
-  const horaires = getPlanningHoraires();
-  const h = horaires.find(x => x.name === horaire) || { debut:'00:00', fin:'23:59' };
+  if (plFin <= plDebut) {
+    alert('L\'heure de fin doit être après l\'heure de début.'); return;
+  }
+  const pauseActive = document.getElementById('pl-pause-active')?.checked;
+  if (pauseActive && (plPauseDebut < plDebut || plPauseFin > plFin)) {
+    alert('La pause doit être incluse dans le créneau de travail.'); return;
+  }
+  let poste = `${plFmt(plDebut)}–${plFmt(plFin)}`;
+  if (pauseActive) poste += ` ⏸${plFmt(plPauseDebut)}–${plFmt(plPauseFin)}`;
   const data = {
     user_id: parseInt(user_id),
     creche_id, date,
-    heure_debut: h.debut,
-    heure_fin:   h.fin,
-    poste:  horaire,
-    notes:  (document.getElementById('pl-notes').value || '').trim(),
+    heure_debut: plToHHMM(plDebut),
+    heure_fin:   plToHHMM(plFin),
+    poste,
+    notes: (document.getElementById('pl-notes').value || '').trim(),
   };
   try {
     planningEditingId
@@ -7480,9 +7553,61 @@ async function enregistrerPointage(type) {
           <label>Date *</label>
           <input type="date" id="pl-date">
         </div>
+        <!-- Heure de début -->
         <div class="form-group full">
-          <label>Horaire *</label>
-          <select id="pl-horaire"><option value="">— Choisir —</option></select>
+          <label>Heure de début *</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button type="button" onclick="plAdjust('debut',-30)"
+              style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
+              onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
+            <span id="pl-debut-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:60px;text-align:center">07h30</span>
+            <button type="button" onclick="plAdjust('debut',30)"
+              style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
+              onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
+          </div>
+        </div>
+        <!-- Heure de fin -->
+        <div class="form-group full">
+          <label>Heure de fin * <span id="pl-duration" style="font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:400;color:var(--ink3)"></span></label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button type="button" onclick="plAdjust('fin',-30)"
+              style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
+              onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
+            <span id="pl-fin-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:60px;text-align:center">15h30</span>
+            <button type="button" onclick="plAdjust('fin',30)"
+              style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
+              onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
+          </div>
+        </div>
+        <!-- Pause (optionnel) -->
+        <div class="form-group full">
+          <label style="display:flex;align-items:center;gap:8px">
+            Pause
+            <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:12px;color:var(--ink3);cursor:pointer">
+              <input type="checkbox" id="pl-pause-active" onchange="plRefreshDisplay()"> activer
+            </label>
+          </label>
+          <div id="pl-pause-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;opacity:0.35;pointer-events:none;margin-top:4px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <button type="button" onclick="plAdjust('pause-debut',-30)"
+                style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
+                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
+              <span id="pl-pause-debut-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:60px;text-align:center">12h00</span>
+              <button type="button" onclick="plAdjust('pause-debut',30)"
+                style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
+                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
+            </div>
+            <span style="color:var(--ink3);font-size:13px;font-weight:600">→</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button type="button" onclick="plAdjust('pause-fin',-30)"
+                style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
+                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">−</button>
+              <span id="pl-pause-fin-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:60px;text-align:center">12h30</span>
+              <button type="button" onclick="plAdjust('pause-fin',30)"
+                style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;transition:background 0.15s"
+                onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--bg)'">+</button>
+            </div>
+          </div>
         </div>
         <div class="form-group full">
           <label>Notes</label>
