@@ -908,15 +908,6 @@ textarea { resize: vertical; min-height: 72px; }
     <span class="nav-icon">🔐</span> Administration
   </button>
 
-  <div style="padding:8px 16px 4px">
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="openModal('add')">
-      + Ajouter un article
-    </button>
-    <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="openScanner()">
-      📷 Scanner un code-barres
-    </button>
-  </div>
-
   <div class="sidebar-section-title">Structures</div>
   <div id="sidebar-creches-container">
     <div class="creche-badge active" onclick="filterCreche('all', this)">
@@ -1180,6 +1171,12 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
       </div>
 
+      <!-- Actions inventaire -->
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px">
+        <button class="btn btn-secondary" onclick="openScanner()">📷 Scanner un code-barres</button>
+        <button class="btn btn-primary" onclick="openModal('add')">+ Ajouter un article</button>
+      </div>
+
       <!-- FILTERS + TABLE -->
       <div class="section-header">
         <div class="section-title">Articles en stock</div>
@@ -1438,6 +1435,7 @@ textarea { resize: vertical; min-height: 72px; }
           <button class="tab-btn" onclick="showRhTab('contrats',this)">📄 Contrats</button>
           <button class="tab-btn" onclick="showRhTab('conges',this)">🌴 Congés</button>
           <button class="tab-btn" onclick="showRhTab('formations',this)">🎓 Formation</button>
+          <button class="tab-btn" onclick="showRhTab('planning-salarie',this)">📋 Planning salarié</button>
         </div>
       </div>
       <div style="padding:0 28px 28px">
@@ -1468,6 +1466,35 @@ textarea { resize: vertical; min-height: 72px; }
             <button class="btn btn-primary" onclick="openModalRh('formation')">+ Ajouter formation</button>
           </div>
           <div class="table-wrap"><div id="rh-formations-list"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div></div>
+        </div>
+        <div id="rh-tab-planning-salarie" style="display:none">
+          <!-- En-tête controls -->
+          <div class="section-header" style="padding-top:20px;flex-wrap:wrap;gap:12px">
+            <div class="section-title">📋 Planning salarié — Taux d'encadrement</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="ps-creche" onchange="renderPlanningSalarie()" style="padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none"></select>
+              <button class="btn btn-secondary btn-sm" onclick="psGoWeek(-1)">← Préc.</button>
+              <span id="ps-week-label" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;white-space:nowrap"></span>
+              <button class="btn btn-secondary btn-sm" onclick="psGoWeek(1)">Suiv. →</button>
+              <button class="btn btn-secondary btn-sm" onclick="psGoWeek(0)">Aujourd'hui</button>
+              <button class="btn btn-primary btn-sm" onclick="openModalPS()">+ Ajouter un créneau</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportPlanningPDF()">🖨 PDF</button>
+            </div>
+          </div>
+          <!-- Bandeau semaine -->
+          <div id="ps-banner" style="background:var(--bg);border-radius:8px;padding:9px 14px;font-size:11.5px;letter-spacing:0.06em;color:var(--ink3);font-weight:600;margin-bottom:14px"></div>
+          <!-- Tableau planning -->
+          <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
+            <div id="ps-grid"></div>
+          </div>
+          <!-- Légende -->
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:14px;font-size:12px;color:var(--ink3)">
+            <div style="display:flex;align-items:center;gap:6px"><span style="background:#F0FDF4;color:#16A34A;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">✓ 1/4</span> Taux OK</div>
+            <div style="display:flex;align-items:center;gap:6px"><span style="background:#FFFBEB;color:#D97706;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">! 1/6</span> Taux limite</div>
+            <div style="display:flex;align-items:center;gap:6px"><span style="background:#FEF2F2;color:#DC2626;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">✗</span> Non conforme</div>
+            <div style="display:flex;align-items:center;gap:6px"><span style="border:1px solid var(--border);padding:3px 8px;border-radius:6px;font-size:11px;color:var(--ink3)">pause xx–xx</span> Créneau de pause</div>
+            <div style="margin-top:4px;width:100%;font-size:11px;color:var(--ink3)">Les pauses simultanées sont détectées automatiquement.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -6594,16 +6621,17 @@ async function showRhPage() {
 
 function showRhTab(tab, btn) {
   rhCurrentTab = tab;
-  ['recrutement','contrats','conges','formations'].forEach(t => {
+  ['recrutement','contrats','conges','formations','planning-salarie'].forEach(t => {
     const el = document.getElementById(`rh-tab-${t}`);
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
   document.querySelectorAll('#rh-tabs .tab-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  if (tab === 'recrutement') renderRecrutements();
-  if (tab === 'contrats')    renderContrats();
-  if (tab === 'conges')      renderConges();
-  if (tab === 'formations')  renderFormations();
+  if (tab === 'recrutement')     renderRecrutements();
+  if (tab === 'contrats')        renderContrats();
+  if (tab === 'conges')          renderConges();
+  if (tab === 'formations')      renderFormations();
+  if (tab === 'planning-salarie') renderPlanningSalarie();
 }
 
 async function renderRhStats() {
@@ -8273,7 +8301,330 @@ function showImportResult(type, html) {
   </div>
 </div>
 
+<!-- ── MODAL Planning salarié ── -->
+<div class="modal-overlay" id="modal-ps" onclick="closeModalClick(event,'modal-ps')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2 id="modal-ps-title">➕ Ajouter un créneau</h2>
+      <button class="modal-close" onclick="closeModal('modal-ps')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Collaborateur</label>
+          <select id="ps-collab" style="width:100%"></select>
+        </div>
+        <div class="form-group">
+          <label>Jour</label>
+          <select id="ps-jour">
+            <option value="0">Lundi</option>
+            <option value="1">Mardi</option>
+            <option value="2">Mercredi</option>
+            <option value="3">Jeudi</option>
+            <option value="4">Vendredi</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Horaire (ex: H1 · 7h30–15h30)</label>
+          <input type="text" id="ps-horaire" placeholder="H1 · 7h30–15h30">
+        </div>
+        <div class="form-group">
+          <label>Couleur horaire</label>
+          <select id="ps-color">
+            <option value="h1">H1 — Bleu</option>
+            <option value="h2">H2 — Vert</option>
+            <option value="h3">H3 — Orange</option>
+            <option value="h4">H4 — Violet</option>
+            <option value="h5">H5 — Jaune</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Pause (ex: 12h–12h30)</label>
+          <input type="text" id="ps-pause" placeholder="12h–12h30">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ps')">Annuler</button>
+      <button id="ps-delete-btn" class="btn btn-danger" style="display:none" onclick="deletePSCreneau()">🗑 Supprimer</button>
+      <button class="btn btn-primary" onclick="savePSCreneau()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <script>
+/* ── Planning salarié ── */
+let psWeekOffset = 0;
+let psEditingId  = null;
+
+const PS_COLORS = {
+  h1: { bg:'#DBEAFE', color:'#1D4ED8' },
+  h2: { bg:'#D1FAE5', color:'#065F46' },
+  h3: { bg:'#FED7AA', color:'#92400E' },
+  h4: { bg:'#EDE9FE', color:'#5B21B6' },
+  h5: { bg:'#FEF3C7', color:'#78350F' },
+};
+
+function psGetMonday(offset) {
+  const now    = new Date();
+  const day    = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - day + 1 + offset * 7);
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+
+function psISOWeek(d) {
+  const tmp = new Date(d.getTime());
+  tmp.setHours(0,0,0,0);
+  tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay()+6)%7));
+  const week1 = new Date(tmp.getFullYear(),0,4);
+  return 1 + Math.round(((tmp - week1)/86400000 - 3 + ((week1.getDay()+6)%7)) / 7);
+}
+
+function psLoad()  { try { return JSON.parse(localStorage.getItem('orevy_planning_salarie') || '{}'); } catch { return {}; } }
+function psSave(d) { localStorage.setItem('orevy_planning_salarie', JSON.stringify(d)); }
+
+function psWeekKey(offset, crecheId) {
+  const mon = psGetMonday(offset);
+  return `${mon.getFullYear()}-W${String(psISOWeek(mon)).padStart(2,'0')}-${crecheId||'all'}`;
+}
+
+function psGoWeek(dir) {
+  if (dir === 0) psWeekOffset = 0;
+  else psWeekOffset += dir;
+  renderPlanningSalarie();
+}
+
+function psPopulateCreches() {
+  const sel = document.getElementById('ps-creche');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Toutes les crèches</option>';
+  if (typeof CRECHES !== 'undefined') {
+    CRECHES.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id || c.nom;
+      opt.textContent = c.nom;
+      sel.appendChild(opt);
+    });
+  }
+  if (prev) sel.value = prev;
+}
+
+function renderPlanningSalarie() {
+  psPopulateCreches();
+  const monday  = psGetMonday(psWeekOffset);
+  const weekNum = psISOWeek(monday);
+  const days    = ['Lun','Mar','Mer','Jeu','Ven'];
+  const today   = new Date(); today.setHours(0,0,0,0);
+
+  const endFri  = new Date(monday); endFri.setDate(monday.getDate()+4);
+  const fmt     = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+
+  const lbl = document.getElementById('ps-week-label');
+  if (lbl) lbl.textContent = `Semaine ${weekNum}`;
+
+  const crecheLabel = (() => {
+    const sel = document.getElementById('ps-creche');
+    return sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].text.toUpperCase() : 'TOUTES CRÈCHES';
+  })();
+  const banner = document.getElementById('ps-banner');
+  if (banner) {
+    const dateRange = `${monday.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'})} AU ${fmt(endFri)}`;
+    banner.textContent = `SEMAINE ${weekNum} — ${dateRange.toUpperCase()} · ${crecheLabel}`;
+  }
+
+  const crecheId = document.getElementById('ps-creche')?.value || 'all';
+  const key  = psWeekKey(psWeekOffset, crecheId);
+  const data = psLoad();
+  const week = data[key] || { collaborateurs: [], creneaux: [] };
+
+  const grid = document.getElementById('ps-grid');
+  if (!grid) return;
+
+  if (!week.collaborateurs || week.collaborateurs.length === 0) {
+    grid.innerHTML = `
+      <div style="padding:48px;text-align:center;color:var(--ink3)">
+        <div style="font-size:36px;margin-bottom:10px">👥</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucun planning pour cette semaine</div>
+        <div style="font-size:13px;margin-bottom:16px">Cliquez sur "+ Ajouter un créneau" pour commencer</div>
+        <button class="btn btn-primary" onclick="openModalPS()">+ Ajouter un créneau</button>
+      </div>`;
+    return;
+  }
+
+  const dayHeaders = days.map((d, i) => {
+    const dt = new Date(monday); dt.setDate(monday.getDate()+i);
+    const isToday = dt.getTime() === today.getTime();
+    const dayNum  = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+    return `<th style="padding:10px 8px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-right:1px solid var(--border);${isToday?'background:var(--accent-lt);color:var(--accent)':'background:var(--bg);color:var(--ink3)'}">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px">${d}</div>
+      <div style="font-size:14px;font-weight:700;margin-top:2px">${dayNum}</div>
+    </th>`;
+  }).join('');
+
+  const rows = week.collaborateurs.map(collab => {
+    const cells = days.map((d, di) => {
+      const creneaux = (week.creneaux || []).filter(c => c.collab === collab && c.jour === di);
+      const dt = new Date(monday); dt.setDate(monday.getDate()+di);
+      const isToday = dt.getTime() === today.getTime();
+      const content = creneaux.map(c => {
+        const col = PS_COLORS[c.color] || PS_COLORS.h1;
+        return `<div onclick="editPSCreneau('${key}','${c.id}')" style="cursor:pointer;margin-bottom:4px">
+          <div style="background:${col.bg};color:${col.color};border-radius:20px;padding:3px 9px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:3px">${c.horaire||''}</div>
+          ${c.pause ? `<div style="border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:11px;color:var(--ink3);display:inline-block">pause ${c.pause}</div>` : ''}
+        </div>`;
+      }).join('') || `<div style="font-size:18px;color:var(--border);text-align:center;padding-top:8px;cursor:pointer" onclick="openModalPS('${collab}',${di})">+</div>`;
+      return `<td style="padding:8px;border-right:1px solid var(--border);min-width:140px;vertical-align:top;${isToday?'background:#F5F9FF':''}">${content}</td>`;
+    }).join('');
+
+    const joursOk = days.filter((d,di) => (week.creneaux||[]).some(c => c.collab===collab && c.jour===di)).length;
+    return `<tr>
+      <td style="padding:10px 14px;font-weight:700;font-size:14px;border-right:1px solid var(--border);white-space:nowrap;background:var(--surface2)">${collab}</td>
+      ${cells}
+      <td style="padding:10px 12px;font-weight:700;font-size:14px;text-align:center;background:var(--surface2)">${joursOk*8}h</td>
+    </tr>`;
+  }).join('');
+
+  const tauxCells = days.map((d, di) => {
+    const dt = new Date(monday); dt.setDate(monday.getDate()+di);
+    const isToday      = dt.getTime() === today.getTime();
+    const presentCount = (week.creneaux||[]).filter(c => c.jour===di).length;
+    const pauseGroups  = {};
+    (week.creneaux||[]).filter(c => c.jour===di && c.pause).forEach(c => {
+      pauseGroups[c.pause] = (pauseGroups[c.pause] || 0) + 1;
+    });
+    const badges = [];
+    const hpCount   = presentCount;
+    const ratio     = hpCount > 0 ? `1/${Math.ceil(12/hpCount)}` : '—';
+    const ratioNum  = hpCount > 0 ? Math.ceil(12/hpCount) : 0;
+    const ratioClass = ratioNum <= 4 ? 'ok' : ratioNum <= 6 ? 'limit' : 'bad';
+    const ratioColors = { ok:'#F0FDF4,#16A34A,✓', limit:'#FFFBEB,#D97706,!', bad:'#FEF2F2,#DC2626,✗' };
+    const [rbg,rclr,rico] = (ratioColors[ratioClass]||ratioColors.ok).split(',');
+    if (hpCount > 0) badges.push(`<div style="background:${rbg};color:${rclr};border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;margin:2px;display:inline-flex;flex-direction:column;align-items:center;line-height:1.4">${ratio} ${rico}<span style="font-size:10px;font-weight:400">hors pause</span></div>`);
+    Object.entries(pauseGroups).forEach(([p, cnt]) => {
+      if (cnt >= 2) {
+        const denom      = presentCount - cnt || 1;
+        const simultRatio = `1/${Math.ceil(12/denom)}`;
+        badges.push(`<div style="background:#FFFBEB;color:#D97706;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;margin:2px;display:inline-flex;flex-direction:column;align-items:center;line-height:1.4">${simultRatio} !<span style="font-size:10px;font-weight:400">${p}</span></div>`);
+      } else {
+        badges.push(`<div style="background:#F0FDF4;color:#16A34A;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;margin:2px;display:inline-flex;flex-direction:column;align-items:center;line-height:1.4">${ratio} ✓<span style="font-size:10px;font-weight:400">pauses décalées</span></div>`);
+      }
+    });
+    return `<td style="padding:8px;border-right:1px solid var(--border);text-align:center;${isToday?'background:#F5F9FF':'background:var(--bg)'}">${badges.join('')||'—'}</td>`;
+  }).join('');
+
+  grid.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:700px">
+    <thead>
+      <tr>
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink3);background:var(--bg);border-bottom:1px solid var(--border);border-right:1px solid var(--border)">Collaborateur</th>
+        ${dayHeaders}
+        <th style="padding:10px 8px;text-align:center;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink3);background:var(--bg);border-bottom:1px solid var(--border)">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+      <tr>
+        <td style="padding:10px 14px;font-size:12px;font-weight:400;color:var(--ink3);border-right:1px solid var(--border);background:var(--bg)">Taux hors pauses</td>
+        ${tauxCells}
+        <td style="background:var(--bg)"></td>
+      </tr>
+    </tbody>
+  </table>`;
+}
+
+function openModalPS(collabPreset, jourPreset) {
+  psEditingId = null;
+  document.getElementById('modal-ps-title').textContent = '➕ Ajouter un créneau';
+  document.getElementById('ps-delete-btn').style.display = 'none';
+
+  const crecheId = document.getElementById('ps-creche')?.value || 'all';
+  const key  = psWeekKey(psWeekOffset, crecheId);
+  const data = psLoad();
+  const week = data[key] || { collaborateurs: [], creneaux: [] };
+  const sel  = document.getElementById('ps-collab');
+  sel.innerHTML  = week.collaborateurs.map(x => `<option value="${x}">${x}</option>`).join('');
+  sel.innerHTML += '<option value="__new__">+ Nouveau collaborateur…</option>';
+  if (collabPreset) sel.value = collabPreset;
+  if (jourPreset !== undefined) document.getElementById('ps-jour').value = jourPreset;
+  document.getElementById('ps-horaire').value = '';
+  document.getElementById('ps-pause').value   = '';
+  document.getElementById('ps-color').value   = 'h1';
+  document.getElementById('modal-ps').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function editPSCreneau(key, id) {
+  const data = psLoad();
+  const week = data[key];
+  if (!week) return;
+  const c = week.creneaux.find(x => x.id === id);
+  if (!c) return;
+  psEditingId = { key, id };
+  document.getElementById('modal-ps-title').textContent = '✏️ Modifier le créneau';
+  document.getElementById('ps-delete-btn').style.display = 'inline-flex';
+  const sel  = document.getElementById('ps-collab');
+  sel.innerHTML  = week.collaborateurs.map(x => `<option value="${x}">${x}</option>`).join('');
+  sel.innerHTML += '<option value="__new__">+ Nouveau collaborateur…</option>';
+  sel.value = c.collab;
+  document.getElementById('ps-jour').value    = c.jour;
+  document.getElementById('ps-horaire').value = c.horaire;
+  document.getElementById('ps-pause').value   = c.pause || '';
+  document.getElementById('ps-color').value   = c.color  || 'h1';
+  document.getElementById('modal-ps').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function savePSCreneau() {
+  const crecheId = document.getElementById('ps-creche')?.value || 'all';
+  const key  = psWeekKey(psWeekOffset, crecheId);
+  const data = psLoad();
+  if (!data[key]) data[key] = { collaborateurs:[], creneaux:[] };
+  const week = data[key];
+  let collab = document.getElementById('ps-collab').value;
+  if (collab === '__new__') {
+    collab = prompt('Nom du collaborateur :')?.trim();
+    if (!collab) return;
+  }
+  const creneau = {
+    id:      psEditingId ? psEditingId.id : 'ps_' + Date.now(),
+    collab,
+    jour:    parseInt(document.getElementById('ps-jour').value),
+    horaire: document.getElementById('ps-horaire').value.trim(),
+    pause:   document.getElementById('ps-pause').value.trim(),
+    color:   document.getElementById('ps-color').value,
+  };
+  if (!creneau.horaire) { showNotif('⚠ Horaire obligatoire'); return; }
+  if (!week.collaborateurs.includes(collab)) week.collaborateurs.push(collab);
+  if (psEditingId) {
+    const idx = week.creneaux.findIndex(x => x.id === psEditingId.id);
+    if (idx >= 0) week.creneaux[idx] = creneau; else week.creneaux.push(creneau);
+  } else {
+    week.creneaux.push(creneau);
+  }
+  psSave(data);
+  closeModal('modal-ps');
+  renderPlanningSalarie();
+  showNotif(psEditingId ? '✅ Créneau mis à jour' : '✅ Créneau ajouté');
+}
+
+function deletePSCreneau() {
+  if (!psEditingId) return;
+  if (!confirm('Supprimer ce créneau ?')) return;
+  const data = psLoad();
+  const week = data[psEditingId.key];
+  if (!week) return;
+  week.creneaux = week.creneaux.filter(x => x.id !== psEditingId.id);
+  psSave(data);
+  closeModal('modal-ps');
+  renderPlanningSalarie();
+  showNotif('🗑 Créneau supprimé');
+}
+
+function exportPlanningPDF() {
+  window.print();
+}
 </script>
 
 </body>
