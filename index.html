@@ -7098,10 +7098,14 @@ async function renderPlanning() {
 
     const [entries, users] = await Promise.all([
       sbGet('planning', params),
-      sbGet('utilisateurs', 'actif=eq.true&select=id,email&order=email.asc'),
+      sbGet('utilisateurs', 'select=id,email&order=email.asc'),
     ]);
 
-    const userMap = Object.fromEntries(users.map(u => [String(u.id), u.email.split('@')[0]]));
+    const userMap = {};
+    users.forEach(u => {
+      userMap[u.id] = u.email.split('@')[0];
+      userMap[String(u.id)] = u.email.split('@')[0];
+    });
 
     // Lookup: "Horaire X|YYYY-MM-DD" → entries[]
     const byKey = {};
