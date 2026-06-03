@@ -8441,12 +8441,8 @@ function showImportResult(type, html) {
           </select>
         </div>
         <div class="form-group">
-          <label>Horaire (ex: H1 · 7h30–15h30)</label>
-          <input type="text" id="ps-horaire" placeholder="H1 · 7h30–15h30">
-        </div>
-        <div class="form-group">
-          <label>Couleur horaire</label>
-          <select id="ps-color">
+          <label>Couleur / Horaire type</label>
+          <select id="ps-color" onchange="psColorChanged()">
             <option value="h1">H1 — Bleu</option>
             <option value="h2">H2 — Vert</option>
             <option value="h3">H3 — Orange</option>
@@ -8454,10 +8450,28 @@ function showImportResult(type, html) {
             <option value="h5">H5 — Jaune</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Heure de début</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button type="button" onclick="psAdjust('debut',-30)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+            <span id="ps-debut-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:52px;text-align:center">07h30</span>
+            <button type="button" onclick="psAdjust('debut',30)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Heure de fin</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button type="button" onclick="psAdjust('fin',-30)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+            <span id="ps-fin-display" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:52px;text-align:center">15h30</span>
+            <button type="button" onclick="psAdjust('fin',30)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+          </div>
+        </div>
         <div class="form-group full">
-          <label>Pause (ex: 12h–12h30)</label>
+          <label>Pause (optionnelle, ex: 12h–12h30)</label>
           <input type="text" id="ps-pause" placeholder="12h–12h30">
         </div>
+        <!-- champ horaire caché pour compatibilité avec savePSCreneau() -->
+        <input type="hidden" id="ps-horaire">
       </div>
     </div>
     <div class="modal-footer">
@@ -8815,6 +8829,46 @@ function deleteSalarie() {
 /* ── Planning salarié ── */
 let psWeekOffset = 0;
 let psEditingId  = null;
+
+/* ── Steppers Planning salarié ── */
+let psDebut = 7*60+30;
+let psFin   = 15*60+30;
+const PS_HORAIRES_DEFAULTS = {
+  h1: { debut: 7*60+30,  fin: 15*60+30 },
+  h2: { debut: 8*60+30,  fin: 16*60+30 },
+  h3: { debut: 9*60,     fin: 17*60    },
+  h4: { debut: 10*60+30, fin: 18*60+30 },
+  h5: { debut: 11*60,    fin: 19*60    },
+};
+function psFmt(min) {
+  return `${String(Math.floor(min/60)).padStart(2,'0')}h${String(min%60).padStart(2,'0')}`;
+}
+function psAdjust(field, delta) {
+  const MIN = 6*60, MAX = 22*60;
+  if (field === 'debut') {
+    psDebut = Math.min(MAX-30, Math.max(MIN, psDebut + delta));
+    if (psFin <= psDebut) psFin = Math.min(MAX, psDebut + 30);
+  } else {
+    psFin = Math.min(MAX, Math.max(psDebut+30, psFin + delta));
+  }
+  psRefreshSteppers();
+}
+function psRefreshSteppers() {
+  const ds = document.getElementById('ps-debut-display');
+  const fs = document.getElementById('ps-fin-display');
+  if (ds) ds.textContent = psFmt(psDebut);
+  if (fs) fs.textContent = psFmt(psFin);
+  const colorKey = document.getElementById('ps-color')?.value || 'h1';
+  const label = colorKey.toUpperCase();
+  const hid = document.getElementById('ps-horaire');
+  if (hid) hid.value = `${label} · ${psFmt(psDebut)}–${psFmt(psFin)}`;
+}
+function psColorChanged() {
+  const colorKey = document.getElementById('ps-color')?.value || 'h1';
+  const def = PS_HORAIRES_DEFAULTS[colorKey];
+  if (def) { psDebut = def.debut; psFin = def.fin; }
+  psRefreshSteppers();
+}
 
 const PS_COLORS = {
   h1: { bg:'#DBEAFE', color:'#1D4ED8' },
