@@ -1454,6 +1454,7 @@ textarea { resize: vertical; min-height: 72px; }
           <button class="tab-btn" onclick="showRhTab('contrats',this)">📄 Contrats</button>
           <button class="tab-btn" onclick="showRhTab('conges',this)">🌴 Congés</button>
           <button class="tab-btn" onclick="showRhTab('formations',this)">🎓 Formation</button>
+          <button class="tab-btn" onclick="showRhTab('salaries',this)">👤 Salariés</button>
         </div>
       </div>
       <div style="padding:0 28px 28px">
@@ -1484,6 +1485,13 @@ textarea { resize: vertical; min-height: 72px; }
             <button class="btn btn-primary" onclick="openModalRh('formation')">+ Ajouter formation</button>
           </div>
           <div class="table-wrap"><div id="rh-formations-list"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div></div>
+        </div>
+        <div id="rh-tab-salaries" style="display:none">
+          <div class="section-header" style="padding-top:20px">
+            <div class="section-title">👤 Fiches salariés</div>
+            <button class="btn btn-primary" onclick="openModalSalarie()">+ Nouveau salarié</button>
+          </div>
+          <div id="rh-salaries-list"></div>
         </div>
       </div>
     </div>
@@ -6581,7 +6589,7 @@ let rhEditingFormation = null;
 
 async function showRhPage() {
   renderRhStats();
-  const tabOrder = ['recrutement','contrats','conges','formations'];
+  const tabOrder = ['recrutement','contrats','conges','formations','salaries'];
   const idx = tabOrder.indexOf(rhCurrentTab);
   const btn = document.querySelectorAll('#rh-tabs .tab-btn')[idx] || null;
   showRhTab(rhCurrentTab, btn);
@@ -6589,7 +6597,7 @@ async function showRhPage() {
 
 function showRhTab(tab, btn) {
   rhCurrentTab = tab;
-  ['recrutement','contrats','conges','formations'].forEach(t => {
+  ['recrutement','contrats','conges','formations','salaries'].forEach(t => {
     const el = document.getElementById(`rh-tab-${t}`);
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
@@ -6599,6 +6607,7 @@ function showRhTab(tab, btn) {
   if (tab === 'contrats')    renderContrats();
   if (tab === 'conges')      renderConges();
   if (tab === 'formations')  renderFormations();
+  if (tab === 'salaries')    renderSalaries();
 }
 
 async function renderRhStats() {
@@ -8443,6 +8452,340 @@ function showImportResult(type, html) {
     </div>
   </div>
 </div>
+
+<!-- ── MODAL FICHE SALARIÉ ── -->
+<div class="modal-overlay" id="modal-salarie" onclick="closeModalClick(event,'modal-salarie')">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h2 id="modal-salarie-title">👤 Nouveau salarié</h2>
+      <button class="modal-close" onclick="closeModal('modal-salarie')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <!-- Identité -->
+        <div class="form-group full">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:4px">Identité</div>
+        </div>
+        <div class="form-group">
+          <label>Prénom</label>
+          <input type="text" id="sal-prenom" placeholder="Marie">
+        </div>
+        <div class="form-group">
+          <label>Nom</label>
+          <input type="text" id="sal-nom" placeholder="Dupont">
+        </div>
+        <div class="form-group">
+          <label>Date de naissance</label>
+          <input type="date" id="sal-naissance">
+        </div>
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input type="tel" id="sal-tel" placeholder="06 00 00 00 00">
+        </div>
+        <div class="form-group full">
+          <label>Email professionnel</label>
+          <input type="email" id="sal-email" placeholder="marie.dupont@creche.fr">
+        </div>
+        <div class="form-group full">
+          <label>Adresse</label>
+          <input type="text" id="sal-adresse" placeholder="12 rue des Fleurs, 83400 Hyères">
+        </div>
+        <!-- Poste -->
+        <div class="form-group full" style="margin-top:8px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:4px">Poste</div>
+        </div>
+        <div class="form-group">
+          <label>Fonction</label>
+          <select id="sal-fonction">
+            <option>Directrice</option>
+            <option>Éducatrice de jeunes enfants</option>
+            <option>Auxiliaire de puériculture</option>
+            <option>CAP Petite Enfance</option>
+            <option>Agent d'entretien</option>
+            <option>Cuisinier</option>
+            <option>Stagiaire</option>
+            <option>Autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Structure</label>
+          <select id="sal-creche"></select>
+        </div>
+        <div class="form-group">
+          <label>Type de contrat</label>
+          <select id="sal-contrat">
+            <option>CDI</option>
+            <option>CDD</option>
+            <option>Alternance</option>
+            <option>Stage</option>
+            <option>Interim</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Temps de travail</label>
+          <select id="sal-temps">
+            <option>Temps plein</option>
+            <option>Temps partiel 80%</option>
+            <option>Temps partiel 50%</option>
+            <option>Autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date d'entrée</label>
+          <input type="date" id="sal-entree">
+        </div>
+        <div class="form-group">
+          <label>Date de fin (si CDD)</label>
+          <input type="date" id="sal-fin">
+        </div>
+        <div class="form-group">
+          <label>Salaire brut mensuel (€)</label>
+          <input type="number" id="sal-salaire" placeholder="1800">
+        </div>
+        <div class="form-group">
+          <label>Statut</label>
+          <select id="sal-statut">
+            <option value="actif">Actif</option>
+            <option value="conge">En congé</option>
+            <option value="arret">Arrêt maladie</option>
+            <option value="inactif">Inactif</option>
+          </select>
+        </div>
+        <!-- Qualifications -->
+        <div class="form-group full" style="margin-top:8px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:4px">Qualifications & formations</div>
+        </div>
+        <div class="form-group full">
+          <label>Diplôme principal</label>
+          <input type="text" id="sal-diplome" placeholder="Ex: DE Auxiliaire de puériculture">
+        </div>
+        <div class="form-group">
+          <label>PSC1 / Premiers secours</label>
+          <select id="sal-psc1">
+            <option value="">Non renseigné</option>
+            <option value="valide">Valide</option>
+            <option value="expire">Expiré</option>
+            <option value="non">Non formé</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date renouvellement PSC1</label>
+          <input type="date" id="sal-psc1-date">
+        </div>
+        <div class="form-group full">
+          <label>Autres formations</label>
+          <textarea id="sal-formations" rows="2" placeholder="HACCP, gestes et postures..."></textarea>
+        </div>
+        <!-- Notes -->
+        <div class="form-group full" style="margin-top:8px">
+          <label>Notes internes</label>
+          <textarea id="sal-notes" rows="3" placeholder="Informations complémentaires..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-salarie')">Annuler</button>
+      <button id="sal-delete-btn" class="btn btn-danger" style="display:none" onclick="deleteSalarie()">🗑 Supprimer</button>
+      <button class="btn btn-primary" onclick="saveSalarie()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Fiches salariés (localStorage) ── */
+let salEditingId = null;
+let SALARIES = [];
+
+function loadSalaries() {
+  try { SALARIES = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); }
+  catch { SALARIES = []; }
+}
+function saveSalaries() {
+  localStorage.setItem('orevy_salaries', JSON.stringify(SALARIES));
+}
+
+function renderSalaries() {
+  loadSalaries();
+  const list = document.getElementById('rh-salaries-list');
+  if (!list) return;
+  if (SALARIES.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:48px;color:var(--ink3)">
+      <div style="font-size:36px;margin-bottom:10px">👤</div>
+      <div style="font-weight:700;margin-bottom:6px">Aucun salarié</div>
+      <div style="font-size:13px;margin-bottom:16px">Cliquez sur "+ Nouveau salarié"</div>
+      <button class="btn btn-primary" onclick="openModalSalarie()">+ Nouveau salarié</button>
+    </div>`;
+    return;
+  }
+  const statutColors = {
+    actif:   { bg:'var(--green-lt)',  color:'var(--green)',  label:'Actif' },
+    conge:   { bg:'var(--amber-lt)',  color:'var(--amber)',  label:'En congé' },
+    arret:   { bg:'var(--red-lt)',    color:'var(--red)',    label:'Arrêt maladie' },
+    inactif: { bg:'var(--bg)',        color:'var(--ink3)',   label:'Inactif' },
+  };
+  const thStyle = `padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);border-bottom:1px solid var(--border)`;
+  list.innerHTML = `<div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--bg)">
+          <th style="${thStyle}">Salarié</th>
+          <th style="${thStyle}">Fonction</th>
+          <th style="${thStyle}">Structure</th>
+          <th style="${thStyle}">Contrat</th>
+          <th style="${thStyle}">Statut</th>
+          <th style="${thStyle}">PSC1</th>
+          <th style="border-bottom:1px solid var(--border)"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${SALARIES.map(s => {
+          const st = statutColors[s.statut] || statutColors.actif;
+          const psc1Colors = {
+            valide: 'var(--green-lt),var(--green)',
+            expire: 'var(--red-lt),var(--red)',
+            non:    'var(--bg),var(--ink3)',
+          };
+          const [pbg, pclr] = (psc1Colors[s.psc1] || 'var(--bg),var(--ink3)').split(',');
+          const initiales = ((s.prenom||'?')[0] + (s.nom||'?')[0]).toUpperCase();
+          return `<tr style="border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s"
+                      onmouseover="this.style.background='var(--bg)'"
+                      onmouseout="this.style.background=''"
+                      onclick="editSalarie('${s.id}')">
+            <td style="padding:12px 14px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-lt);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">${initiales}</div>
+                <div>
+                  <div style="font-weight:600">${s.prenom||''} ${s.nom||''}</div>
+                  <div style="font-size:11px;color:var(--ink3)">${s.email||''}</div>
+                </div>
+              </div>
+            </td>
+            <td style="padding:12px 14px;font-size:13px">${s.fonction||'—'}</td>
+            <td style="padding:12px 14px;font-size:13px">${s.creche||'—'}</td>
+            <td style="padding:12px 14px">
+              <span style="background:var(--accent-lt);color:var(--accent);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">${s.contrat||'—'}</span>
+            </td>
+            <td style="padding:12px 14px">
+              <span style="background:${st.bg};color:${st.color};padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">${st.label}</span>
+            </td>
+            <td style="padding:12px 14px">
+              <span style="background:${pbg};color:${pclr};padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">
+                ${s.psc1==='valide'?'✓ Valide':s.psc1==='expire'?'⚠ Expiré':'—'}
+              </span>
+            </td>
+            <td style="padding:12px 14px">
+              <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();editSalarie('${s.id}')">✏️</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function _salPopulateCreche() {
+  const sel = document.getElementById('sal-creche');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Choisir —</option>' +
+    CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+}
+
+function openModalSalarie() {
+  salEditingId = null;
+  document.getElementById('modal-salarie-title').textContent = '👤 Nouveau salarié';
+  document.getElementById('sal-delete-btn').style.display = 'none';
+  ['sal-prenom','sal-nom','sal-tel','sal-email','sal-adresse','sal-diplome','sal-formations','sal-notes','sal-salaire']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['sal-naissance','sal-entree','sal-fin','sal-psc1-date']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('sal-statut').value = 'actif';
+  document.getElementById('sal-psc1').value   = '';
+  _salPopulateCreche();
+  document.getElementById('modal-salarie').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function editSalarie(id) {
+  loadSalaries();
+  const s = SALARIES.find(x => x.id === id);
+  if (!s) return;
+  salEditingId = id;
+  document.getElementById('modal-salarie-title').textContent = `✏️ ${s.prenom||''} ${s.nom||''}`;
+  document.getElementById('sal-delete-btn').style.display = 'inline-flex';
+  const fill = (elId, val) => { const e = document.getElementById(elId); if (e) e.value = val || ''; };
+  fill('sal-prenom',    s.prenom);
+  fill('sal-nom',       s.nom);
+  fill('sal-naissance', s.naissance);
+  fill('sal-tel',       s.tel);
+  fill('sal-email',     s.email);
+  fill('sal-adresse',   s.adresse);
+  fill('sal-fonction',  s.fonction);
+  fill('sal-contrat',   s.contrat);
+  fill('sal-temps',     s.temps);
+  fill('sal-entree',    s.entree);
+  fill('sal-fin',       s.fin);
+  fill('sal-salaire',   s.salaire);
+  fill('sal-statut',    s.statut);
+  fill('sal-diplome',   s.diplome);
+  fill('sal-psc1',      s.psc1);
+  fill('sal-psc1-date', s.psc1Date);
+  fill('sal-formations',s.formations);
+  fill('sal-notes',     s.notes);
+  _salPopulateCreche();
+  document.getElementById('sal-creche').value = s.creche || '';
+  document.getElementById('modal-salarie').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function saveSalarie() {
+  const prenom = document.getElementById('sal-prenom').value.trim();
+  const nom    = document.getElementById('sal-nom').value.trim();
+  if (!prenom || !nom) { showNotif('⚠ Prénom et nom requis'); return; }
+  const s = {
+    id:         salEditingId || 'sal_' + Date.now(),
+    prenom, nom,
+    naissance:  document.getElementById('sal-naissance').value,
+    tel:        document.getElementById('sal-tel').value.trim(),
+    email:      document.getElementById('sal-email').value.trim(),
+    adresse:    document.getElementById('sal-adresse').value.trim(),
+    fonction:   document.getElementById('sal-fonction').value,
+    creche:     document.getElementById('sal-creche').value,
+    contrat:    document.getElementById('sal-contrat').value,
+    temps:      document.getElementById('sal-temps').value,
+    entree:     document.getElementById('sal-entree').value,
+    fin:        document.getElementById('sal-fin').value,
+    salaire:    document.getElementById('sal-salaire').value,
+    statut:     document.getElementById('sal-statut').value,
+    diplome:    document.getElementById('sal-diplome').value.trim(),
+    psc1:       document.getElementById('sal-psc1').value,
+    psc1Date:   document.getElementById('sal-psc1-date').value,
+    formations: document.getElementById('sal-formations').value.trim(),
+    notes:      document.getElementById('sal-notes').value.trim(),
+  };
+  loadSalaries();
+  if (salEditingId) {
+    const idx = SALARIES.findIndex(x => x.id === salEditingId);
+    if (idx >= 0) SALARIES[idx] = s; else SALARIES.push(s);
+    showNotif('✅ Fiche mise à jour');
+  } else {
+    SALARIES.push(s);
+    showNotif('✅ Salarié ajouté');
+  }
+  saveSalaries();
+  closeModal('modal-salarie');
+  renderSalaries();
+}
+
+function deleteSalarie() {
+  if (!salEditingId || !confirm('Supprimer cette fiche salarié ?')) return;
+  loadSalaries();
+  SALARIES = SALARIES.filter(x => x.id !== salEditingId);
+  saveSalaries();
+  closeModal('modal-salarie');
+  renderSalaries();
+  showNotif('🗑 Salarié supprimé');
+}
+</script>
 
 <script>
 /* ── Planning salarié ── */
