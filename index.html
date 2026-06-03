@@ -8428,11 +8428,7 @@ function showImportResult(type, html) {
       <div class="form-grid">
         <div class="form-group">
           <label>Collaborateur</label>
-          <select id="ps-collab" style="width:100%"></select>
-        </div>
-        <div class="form-group" id="ps-new-collab-group" style="display:none">
-          <label>Nom du nouveau collaborateur</label>
-          <input type="text" id="ps-new-collab" placeholder="Prénom Nom">
+          <input type="text" id="ps-collab-input" placeholder="Prénom Nom du collaborateur" style="width:100%">
         </div>
         <div class="form-group">
           <label>Jour</label>
@@ -8873,21 +8869,6 @@ function psColorChanged() {
   if (def) { psDebut = def.debut; psFin = def.fin; }
   psRefreshSteppers();
 }
-function psCollabChanged() {
-  const val = document.getElementById('ps-collab')?.value;
-  const grp = document.getElementById('ps-new-collab-group');
-  console.log('[psCollabChanged] val=', val, 'grp=', grp);
-  if (!grp) return;
-  if (val === '__new__') {
-    grp.style.display = 'block';
-    console.log('[psCollabChanged] affichage ps-new-collab-group');
-    document.getElementById('ps-new-collab')?.focus();
-  } else {
-    grp.style.display = 'none';
-    const inp = document.getElementById('ps-new-collab');
-    if (inp) inp.value = '';
-  }
-}
 
 const PS_COLORS = {
   h1: { bg:'#DBEAFE', color:'#1D4ED8' },
@@ -9073,15 +9054,7 @@ function openModalPS(collabPreset, jourPreset) {
 
   const crecheId = document.getElementById('ps-creche')?.value || 'all';
   const key  = psWeekKey(psWeekOffset, crecheId);
-  const data = psLoad();
-  const week = data[key] || { collaborateurs: [], creneaux: [] };
-  const sel  = document.getElementById('ps-collab');
-  sel.innerHTML  = week.collaborateurs.map(x => `<option value="${x}">${x}</option>`).join('');
-  sel.innerHTML += '<option value="__new__">+ Nouveau collaborateur…</option>';
-  document.getElementById('ps-new-collab-group').style.display = 'none';
-  document.getElementById('ps-new-collab').value = '';
-  sel.addEventListener('change', psCollabChanged);
-  if (collabPreset) sel.value = collabPreset;
+  document.getElementById('ps-collab-input').value = collabPreset || '';
   if (jourPreset !== undefined) document.getElementById('ps-jour').value = jourPreset;
   psDebut = PS_HORAIRES_DEFAULTS.h1.debut;
   psFin   = PS_HORAIRES_DEFAULTS.h1.fin;
@@ -9101,13 +9074,7 @@ function editPSCreneau(key, id) {
   psEditingId = { key, id };
   document.getElementById('modal-ps-title').textContent = '✏️ Modifier le créneau';
   document.getElementById('ps-delete-btn').style.display = 'inline-flex';
-  const sel  = document.getElementById('ps-collab');
-  sel.innerHTML  = week.collaborateurs.map(x => `<option value="${x}">${x}</option>`).join('');
-  sel.innerHTML += '<option value="__new__">+ Nouveau collaborateur…</option>';
-  sel.value = c.collab;
-  document.getElementById('ps-new-collab-group').style.display = 'none';
-  document.getElementById('ps-new-collab').value = '';
-  sel.addEventListener('change', psCollabChanged);
+  document.getElementById('ps-collab-input').value = c.collab || '';
   document.getElementById('ps-jour').value    = c.jour;
   // Tenter de parser l'horaire existant (ex: "H1 · 07h30–15h30")
   const pm = (c.horaire||'').match(/(\d+)h(\d+)[–\-](\d+)h(\d+)/);
@@ -9132,11 +9099,8 @@ function savePSCreneau() {
   const data = psLoad();
   if (!data[key]) data[key] = { collaborateurs:[], creneaux:[] };
   const week = data[key];
-  let collab = document.getElementById('ps-collab').value;
-  if (collab === '__new__') {
-    collab = document.getElementById('ps-new-collab').value.trim();
-    if (!collab) { showNotif('⚠ Saisissez le nom du nouveau collaborateur'); return; }
-  }
+  const collab = document.getElementById('ps-collab-input').value.trim();
+  if (!collab) { showNotif('⚠ Saisissez le nom du collaborateur'); return; }
   const creneau = {
     id:      psEditingId ? psEditingId.id : 'ps_' + Date.now(),
     collab,
