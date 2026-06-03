@@ -1369,6 +1369,9 @@ textarea { resize: vertical; min-height: 72px; }
             <span id="pe-week-label" style="font-size:13px;font-weight:600;color:var(--ink3)"></span>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
+            <select id="pe-creche" onchange="renderActiveTab()"
+              style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
+            </select>
             <button class="btn btn-primary" id="pe-add-btn" onclick="openModalPE(null,null)">+ Ajouter</button>
             <button class="btn btn-secondary" onclick="exportPlanningPDF()">🖨 PDF</button>
           </div>
@@ -7066,9 +7069,8 @@ function pePopulateCreches(selId) {
   const sel = document.getElementById(selId);
   if (!sel) return;
   const prev = sel.value;
-  sel.innerHTML = '<option value="">Toutes les crèches</option>' +
-    (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
-  if (prev) sel.value = prev;
+  sel.innerHTML = (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+  if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
 }
 
 function showPlanningEquipePage() {
@@ -7111,6 +7113,8 @@ function renderActiveTab() {
 function renderPlanningEquipe() {
   const grid = document.getElementById('pe-grid');
   if (!grid) return;
+  grid.innerHTML = ''; // vider avant de reconstruire
+  grid.removeAttribute('style'); // reset style inline
 
   const monday  = peGetMonday();
   const weekNum = getISOWeekNumber(monday);
