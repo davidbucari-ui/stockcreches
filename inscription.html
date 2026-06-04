@@ -440,7 +440,7 @@
   </div>
 
   <!-- ── ÉTAPE 2 : PARENT 1 ── -->
-  <div class="section" id="section-2">
+  <div class="section" id="section-2" style="display:none">
     <div class="section-title">Parent / Tuteur légal 1</div>
     <div class="section-subtitle">Informations du premier représentant légal de l'enfant.</div>
 
@@ -518,7 +518,7 @@
   </div>
 
   <!-- ── ÉTAPE 3 : PARENT 2 ── -->
-  <div class="section" id="section-3">
+  <div class="section" id="section-3" style="display:none">
     <div class="section-title">Parent / Tuteur légal 2</div>
     <div class="section-subtitle">Si applicable, informations du second représentant légal.</div>
 
@@ -578,7 +578,7 @@
   </div>
 
   <!-- ── ÉTAPE 4 : RÉFÉRENTS ── -->
-  <div class="section" id="section-4">
+  <div class="section" id="section-4" style="display:none">
     <div class="section-title">Personnes autorisées à récupérer l'enfant</div>
     <div class="section-subtitle">Listez les personnes (hors parents) autorisées à récupérer votre enfant. Une pièce d'identité leur sera demandée.</div>
 
@@ -595,7 +595,7 @@
   </div>
 
   <!-- ── ÉTAPE 5 : ACCUEIL ── -->
-  <div class="section" id="section-5">
+  <div class="section" id="section-5" style="display:none">
     <div class="section-title">Mode d'accueil souhaité</div>
     <div class="section-subtitle">Indiquez vos besoins d'accueil. Ces informations nous permettront d'établir votre contrat.</div>
 
@@ -670,7 +670,7 @@
   </div>
 
   <!-- ── ÉTAPE 6 : RÉCAPITULATIF ── -->
-  <div class="section" id="section-6">
+  <div class="section" id="section-6" style="display:none">
     <div class="section-title">Récapitulatif de la demande</div>
     <div class="section-subtitle">Vérifiez les informations avant de télécharger votre demande.</div>
 
@@ -697,7 +697,7 @@
   </div>
 
   <!-- ── SUCCÈS ── -->
-  <div class="section" id="section-success">
+  <div class="section" id="section-success" style="display:none">
     <div class="success-screen">
       <div class="success-icon">✓</div>
       <h2 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:10px">Demande téléchargée !</h2>
@@ -723,9 +723,16 @@ let joursSelectionnes = [];
 
 // ── Navigation ──────────────────────────────────────────
 function showStep(n) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById('section-' + n).classList.add('active');
+  // Cacher toutes les sections par inline style
+  ['1','2','3','4','5','6','success'].forEach(id => {
+    const el = document.getElementById('section-' + id);
+    if (el) el.style.display = 'none';
+  });
+  // Afficher la section active
+  const active = document.getElementById('section-' + n);
+  if (active) { active.style.display = 'block'; active.style.animation = 'fadeIn 0.25s ease'; }
 
+  // Mettre à jour la barre de progression
   document.querySelectorAll('.progress-step').forEach((btn, i) => {
     btn.classList.remove('active', 'done');
     if (i + 1 === n) btn.classList.add('active');
@@ -937,8 +944,12 @@ function telecharger() {
   a.click();
   URL.revokeObjectURL(a.href);
 
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById('section-success').classList.add('active');
+  ['1','2','3','4','5','6','success'].forEach(id => {
+    const el = document.getElementById('section-' + id);
+    if (el) el.style.display = 'none';
+  });
+  const successEl = document.getElementById('section-success');
+  if (successEl) successEl.style.display = 'block';
   document.querySelectorAll('.progress-step').forEach(b => b.classList.add('done'));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
