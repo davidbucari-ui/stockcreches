@@ -569,6 +569,53 @@ textarea { resize: vertical; min-height: 72px; }
 .empty .icon { font-size: 40px; margin-bottom: 12px; }
 .empty p { font-size: 14px; }
 
+/* ── FICHE ENFANT ── */
+.fiche-tab {
+  padding: 9px 18px; border: none; background: none; font-family: inherit;
+  font-size: 13px; font-weight: 600; color: var(--ink3);
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  cursor: pointer; white-space: nowrap;
+}
+.fiche-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.fiche-panel { display: none; }
+.fiche-panel.active { display: block; }
+.fiche-card {
+  background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 18px 20px; margin-bottom: 14px;
+}
+.fiche-card-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--ink3); margin-bottom: 14px;
+}
+.fi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.fi-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+.fi-row.solo { grid-template-columns: 1fr; }
+.fi-field label { font-size: 12px; color: var(--ink3); margin-bottom: 4px; display: block; }
+.fi-field input, .fi-field select, .fi-field textarea {
+  width: 100%; padding: 8px 11px; border: 1.5px solid var(--border);
+  border-radius: 8px; font-family: inherit; font-size: 13px;
+  background: var(--bg); color: var(--ink);
+}
+.fi-field input:focus, .fi-field select:focus, .fi-field textarea:focus {
+  outline: none; border-color: var(--accent);
+}
+.jour-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.jour-toggle span {
+  padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border);
+  font-size: 12px; font-weight: 600; color: var(--ink3); transition: all 0.15s;
+}
+.jour-toggle input { display: none; }
+.jour-toggle input:checked + span {
+  background: var(--accent-lt); border-color: var(--accent); color: var(--accent);
+}
+.referent-block {
+  border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 10px; position: relative;
+}
+@media (max-width: 600px) {
+  .fi-row { grid-template-columns: 1fr; }
+  .fi-row.triple { grid-template-columns: 1fr; }
+}
 /* ── NOTIFICATION ── */
 .notif {
   position: fixed;
@@ -1425,6 +1472,215 @@ textarea { resize: vertical; min-height: 72px; }
         <div id="fam-view-financement" style="display:none">
           <div id="fam-financement-grid"></div>
         </div>
+      </div>
+    </div>
+
+    <div id="page-fiche-enfant" style="display:none">
+      <div style="padding:24px;max-width:900px">
+        <!-- Header fiche -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <button onclick="showFamillesFromFiche()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink3);display:flex;align-items:center;gap:6px">
+            ← Retour
+          </button>
+          <div style="flex:1"></div>
+          <button class="btn btn-danger btn-sm" id="fiche-delete-btn" onclick="deleteFicheEnfant()">🗑 Supprimer</button>
+          <button class="btn btn-primary" onclick="saveFicheEnfant()">💾 Enregistrer</button>
+        </div>
+
+        <!-- Avatar + nom -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+          <div id="fiche-avatar" style="width:60px;height:60px;border-radius:50%;background:var(--accent-lt);color:var(--accent);font-family:'Syne',sans-serif;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>
+          <div>
+            <div id="fiche-nom-display" style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;color:var(--ink)"></div>
+            <div id="fiche-badges" style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"></div>
+          </div>
+        </div>
+
+        <!-- Onglets -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto">
+          <button class="fiche-tab active" data-tab="fi-identite" onclick="switchFicheTab('fi-identite',this)">Identité</button>
+          <button class="fiche-tab" data-tab="fi-parents" onclick="switchFicheTab('fi-parents',this)">Parents et référents</button>
+          <button class="fiche-tab" data-tab="fi-accueil" onclick="switchFicheTab('fi-accueil',this)">Mode d'accueil</button>
+          <button class="fiche-tab" data-tab="fi-notes" onclick="switchFicheTab('fi-notes',this)">Notes</button>
+          <button class="fiche-tab" data-tab="fi-planning" onclick="switchFicheTab('fi-planning',this)">Planning</button>
+          <button class="fiche-tab" data-tab="fi-factures" onclick="switchFicheTab('fi-factures',this)">Factures et règlements</button>
+          <button class="fiche-tab" data-tab="fi-docs" onclick="switchFicheTab('fi-docs',this)">Documents</button>
+        </div>
+
+        <!-- ─ ONGLET IDENTITÉ ─ -->
+        <div id="fi-identite" class="fiche-panel active">
+          <div class="fiche-card">
+            <div class="fiche-card-title">Informations de l'enfant</div>
+            <div class="fi-row triple">
+              <div class="fi-field"><label>Prénom *</label><input id="fi-prenom" type="text"></div>
+              <div class="fi-field"><label>Nom *</label><input id="fi-nom" type="text"></div>
+              <div class="fi-field"><label>Date de naissance</label><input id="fi-ddn" type="date"></div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Tranche d'âge *</label>
+                <select id="fi-type">
+                  <option value="2.5-6">2½–6 mois</option>
+                  <option value="6-12">6–12 mois</option>
+                  <option value="12-18">12–18 mois</option>
+                  <option value="18-24">18–24 mois</option>
+                  <option value="24-30">24–30 mois</option>
+                  <option value="30-36">30–36 mois</option>
+                </select>
+              </div>
+              <div class="fi-field"><label>Contrat CAF *</label>
+                <select id="fi-contrat-caf">
+                  <option value="PSU">PSU — Prestation de Service Unique</option>
+                  <option value="PAJE">PAJE — Prestation d'Accueil du Jeune Enfant</option>
+                </select>
+              </div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Date d'entrée</label><input id="fi-entree" type="date"></div>
+              <div class="fi-field"><label>Date de sortie prévue</label><input id="fi-sortie" type="date"></div>
+            </div>
+          </div>
+          <div class="fiche-card">
+            <div class="fiche-card-title">CAF & Sécurité sociale</div>
+            <div class="fi-row">
+              <div class="fi-field"><label>N° allocataire CAF</label><input id="fi-num-caf" type="text" placeholder="Ex : 1234567A"></div>
+              <div class="fi-field"><label>N° sécurité sociale (parent 1)</label><input id="fi-nss1" type="text" placeholder="15 chiffres"></div>
+            </div>
+            <div class="fi-row solo">
+              <div class="fi-field"><label>N° sécurité sociale (parent 2)</label><input id="fi-nss2" type="text" placeholder="15 chiffres"></div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Quotient familial</label><input id="fi-qf" type="text" placeholder="Ex : 1240"></div>
+              <div class="fi-field"><label>Taux horaire CAF</label><input id="fi-taux-caf" type="text" placeholder="Ex : 0,42 €/h"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─ ONGLET PARENTS ─ -->
+        <div id="fi-parents" class="fiche-panel" style="display:none">
+          <div class="fiche-card">
+            <div class="fiche-card-title">Parent 1</div>
+            <div class="fi-row triple">
+              <div class="fi-field"><label>Prénom</label><input id="fi-p1-prenom" type="text"></div>
+              <div class="fi-field"><label>Nom</label><input id="fi-p1-nom" type="text"></div>
+              <div class="fi-field"><label>Lien</label>
+                <select id="fi-p1-lien"><option value="Mère">Mère</option><option value="Père">Père</option><option value="Tuteur">Tuteur légal</option><option value="Autre">Autre</option></select>
+              </div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Téléphone</label><input id="fi-p1-tel" type="tel"></div>
+              <div class="fi-field"><label>Email</label><input id="fi-p1-email" type="email"></div>
+            </div>
+            <div class="fi-row solo">
+              <div class="fi-field"><label>Adresse</label><input id="fi-p1-adresse" type="text"></div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>N° sécurité sociale</label><input id="fi-p1-nss" type="text" placeholder="15 chiffres"></div>
+              <div class="fi-field"><label>Profession</label><input id="fi-p1-profession" type="text"></div>
+            </div>
+          </div>
+          <div class="fiche-card">
+            <div class="fiche-card-title">Parent 2</div>
+            <div class="fi-row triple">
+              <div class="fi-field"><label>Prénom</label><input id="fi-p2-prenom" type="text"></div>
+              <div class="fi-field"><label>Nom</label><input id="fi-p2-nom" type="text"></div>
+              <div class="fi-field"><label>Lien</label>
+                <select id="fi-p2-lien"><option value="Père">Père</option><option value="Mère">Mère</option><option value="Tuteur">Tuteur légal</option><option value="Autre">Autre</option></select>
+              </div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Téléphone</label><input id="fi-p2-tel" type="tel"></div>
+              <div class="fi-field"><label>Email</label><input id="fi-p2-email" type="email"></div>
+            </div>
+            <div class="fi-row solo">
+              <div class="fi-field"><label>Adresse</label><input id="fi-p2-adresse" type="text"></div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>N° sécurité sociale</label><input id="fi-p2-nss" type="text" placeholder="15 chiffres"></div>
+              <div class="fi-field"><label>Profession</label><input id="fi-p2-profession" type="text"></div>
+            </div>
+          </div>
+          <!-- Référents -->
+          <div class="fiche-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div class="fiche-card-title" style="margin-bottom:0">Référents autorisés</div>
+              <button onclick="addReferent()" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--ink3);font-family:inherit">+ Ajouter</button>
+            </div>
+            <div id="fi-referents-list"></div>
+          </div>
+        </div>
+
+        <!-- ─ ONGLET ACCUEIL ─ -->
+        <div id="fi-accueil" class="fiche-panel" style="display:none">
+          <div class="fiche-card">
+            <div class="fiche-card-title">Contrat d'accueil</div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Berceau entreprise</label><select id="fi-berceau"></select></div>
+              <div class="fi-field"><label>Jours / semaine</label><input id="fi-jours" type="number" min="1" max="5"></div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Heures / semaine</label><input id="fi-heures" type="number"></div>
+              <div class="fi-field"><label>Heures / mois estimées</label><input id="fi-heures-mois" type="number"></div>
+            </div>
+          </div>
+          <div class="fiche-card">
+            <div class="fiche-card-title">Jours de présence habituels</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0" id="fi-jours-presence">
+              <label class="jour-toggle"><input type="checkbox" value="0"> <span>Lundi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="1"> <span>Mardi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="2"> <span>Mercredi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="3"> <span>Jeudi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="4"> <span>Vendredi</span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─ ONGLET NOTES ─ -->
+        <div id="fi-notes" class="fiche-panel" style="display:none">
+          <div class="fiche-card">
+            <div class="fiche-card-title">Informations médicales</div>
+            <div class="fi-row solo">
+              <div class="fi-field"><label>Allergies / intolérances</label><input id="fi-allergies" type="text" placeholder="Aucune connue"></div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>PAI</label>
+                <select id="fi-pai"><option value="">Non</option><option value="en_cours">En cours</option><option value="actif">Actif</option></select>
+              </div>
+              <div class="fi-field"><label>Médecin traitant</label><input id="fi-medecin" type="text" placeholder="Nom + téléphone"></div>
+            </div>
+          </div>
+          <div class="fiche-card">
+            <div class="fiche-card-title">Notes libres</div>
+            <textarea id="fi-notes-text" rows="5" style="width:100%;resize:vertical;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:var(--surface2);color:var(--ink)"></textarea>
+          </div>
+        </div>
+
+        <!-- ─ ONGLET PLANNING ─ -->
+        <div id="fi-planning" class="fiche-panel" style="display:none">
+          <div style="padding:48px;text-align:center;color:var(--ink3)">
+            <div style="font-size:40px;margin-bottom:12px">📅</div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px">Lié au module Planning</div>
+            <div style="font-size:13px">Le planning de l'enfant sera visible ici une fois intégré.</div>
+          </div>
+        </div>
+
+        <!-- ─ ONGLET FACTURES ─ -->
+        <div id="fi-factures" class="fiche-panel" style="display:none">
+          <div style="padding:48px;text-align:center;color:var(--ink3)">
+            <div style="font-size:40px;margin-bottom:12px">🧾</div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px">Factures et règlements</div>
+            <div style="font-size:13px">Historique des factures CAF et paiements famille.</div>
+          </div>
+        </div>
+
+        <!-- ─ ONGLET DOCUMENTS ─ -->
+        <div id="fi-docs" class="fiche-panel" style="display:none">
+          <div style="padding:48px;text-align:center;color:var(--ink3)">
+            <div style="font-size:40px;margin-bottom:12px">📄</div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px">Documents</div>
+            <div style="font-size:13px">Contrats, certificats médicaux, justificatifs.</div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -3756,7 +4012,7 @@ function renderFamillesList() {
       const sortieProche = sortieDate && (sortieDate - today) < 30*24*3600*1000 && sortieDate >= today;
       const sorti = sortieDate && sortieDate < today;
 
-      return `<div onclick="openModalFamille('${e.id}')"
+      return `<div onclick="openFicheEnfant('${e.id}')"
         style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s;${sorti?'opacity:0.5':''}"
         onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'"
         onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
@@ -4100,6 +4356,213 @@ function renderDashboardFamillesTile() {
 
 // ══════════════════════════════════════════════════════════════════
 // FIN MODULE FAMILLES
+// ══════════════════════════════════════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════════════════
+// MODULE FICHE ENFANT
+// ══════════════════════════════════════════════════════════════════
+
+let ficheEnfantId = null;
+let ficheReferents = [];
+
+function openFicheEnfant(id) {
+  ficheEnfantId = id;
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId);
+  const e = enfants.find(x => x.id === id);
+  if (!e) return;
+
+  ficheReferents = e.referents ? JSON.parse(JSON.stringify(e.referents)) : [];
+
+  // Avatar + nom
+  const initials = ((e.prenom||'')[0]||'') + ((e.nom||'')[0]||'');
+  const el = document.getElementById('fiche-avatar');
+  if (el) el.textContent = initials.toUpperCase();
+  const nomEl = document.getElementById('fiche-nom-display');
+  if (nomEl) nomEl.textContent = (e.prenom||'') + ' ' + (e.nom||'');
+
+  // Badges
+  const badgesEl = document.getElementById('fiche-badges');
+  if (badgesEl) {
+    const age = calcAgeEnfant(e.ddn);
+    const tc = getTrancheColor(e.type);
+    const tr = getTranche(e.type);
+    const cafColor = e.contrat_caf === 'PSU' ? '#6D28D9' : '#B45309';
+    const cafBg    = e.contrat_caf === 'PSU' ? '#EDE9FE' : '#FEF3C7';
+    badgesEl.innerHTML = `
+      <span style="background:${tc.bg};color:${tc.text};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">${tr.label}</span>
+      <span style="background:${cafBg};color:${cafColor};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">${e.contrat_caf||'—'}</span>
+      <span style="background:var(--surface2);color:var(--ink3);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">${age.label}</span>`;
+  }
+
+  // Onglet Identité
+  const setV = (id, v) => { const el=document.getElementById(id); if(el) el.value=v||''; };
+  setV('fi-prenom', e.prenom); setV('fi-nom', e.nom); setV('fi-ddn', e.ddn);
+  setV('fi-entree', e.entree); setV('fi-sortie', e.sortie);
+  setV('fi-num-caf', e.num_caf); setV('fi-nss1', e.nss1); setV('fi-nss2', e.nss2);
+  setV('fi-qf', e.qf); setV('fi-taux-caf', e.taux_caf);
+  const typeEl = document.getElementById('fi-type'); if(typeEl) typeEl.value = e.type || '2.5-6';
+  const cafEl  = document.getElementById('fi-contrat-caf'); if(cafEl) cafEl.value = e.contrat_caf || 'PSU';
+
+  // Onglet Parents
+  const p1 = e.parent1 || {};
+  setV('fi-p1-prenom', p1.prenom); setV('fi-p1-nom', p1.nom);
+  setV('fi-p1-tel', p1.tel); setV('fi-p1-email', p1.email);
+  setV('fi-p1-adresse', p1.adresse); setV('fi-p1-nss', p1.nss);
+  setV('fi-p1-profession', p1.profession);
+  const p1LienEl = document.getElementById('fi-p1-lien'); if(p1LienEl) p1LienEl.value = p1.lien || 'Mère';
+  const p2 = e.parent2 || {};
+  setV('fi-p2-prenom', p2.prenom); setV('fi-p2-nom', p2.nom);
+  setV('fi-p2-tel', p2.tel); setV('fi-p2-email', p2.email);
+  setV('fi-p2-adresse', p2.adresse); setV('fi-p2-nss', p2.nss);
+  setV('fi-p2-profession', p2.profession);
+  const p2LienEl = document.getElementById('fi-p2-lien'); if(p2LienEl) p2LienEl.value = p2.lien || 'Père';
+  renderReferents();
+
+  // Onglet Accueil
+  const berceaux = getBerceaux(crecheId);
+  const bEl = document.getElementById('fi-berceau');
+  if (bEl) {
+    bEl.innerHTML = '<option value="">Aucun</option>' + berceaux.map(b => `<option value="${b.id}">${b.entreprise} (${b.places}p)</option>`).join('');
+    bEl.value = e.berceau || '';
+  }
+  setV('fi-jours', e.jours); setV('fi-heures', e.heures);
+  setV('fi-heures-mois', e.heures_mois || Math.round((e.heures||0)*52/12));
+  const joursCbs = document.querySelectorAll('#fi-jours-presence input');
+  joursCbs.forEach(cb => { cb.checked = (e.jours_presence||[]).includes(parseInt(cb.value)); });
+
+  // Onglet Notes
+  setV('fi-allergies', e.allergies); setV('fi-medecin', e.medecin);
+  setV('fi-notes-text', e.notes_libres);
+  const paiEl = document.getElementById('fi-pai'); if(paiEl) paiEl.value = e.pai || '';
+
+  // Réinitialiser sur onglet identité
+  switchFicheTab('fi-identite', document.querySelector('.fiche-tab[data-tab="fi-identite"]'));
+
+  // Afficher la page
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique',
+   'statistiques','univers','parametres','admin','rh','planning','salarie','familles'].forEach(p => {
+    const el = document.getElementById('page-'+p); if(el) el.style.display = 'none';
+  });
+  const fp = document.getElementById('page-fiche-enfant');
+  if (fp) fp.style.display = 'block';
+  document.getElementById('pageTitle').textContent = (e.prenom||'') + ' ' + (e.nom||'');
+}
+
+function showFamillesFromFiche() {
+  const fp = document.getElementById('page-fiche-enfant');
+  if (fp) fp.style.display = 'none';
+  showPage('familles', document.querySelector('.nav-item[onclick*="familles"]'));
+}
+
+function switchFicheTab(tabId, btn) {
+  document.querySelectorAll('.fiche-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.fiche-tab').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById(tabId);
+  if (panel) panel.style.display = 'block';
+  if (btn) btn.classList.add('active');
+}
+
+function renderReferents() {
+  const el = document.getElementById('fi-referents-list');
+  if (!el) return;
+  if (!ficheReferents.length) {
+    el.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px 0">Aucun référent ajouté.</div>';
+    return;
+  }
+  el.innerHTML = ficheReferents.map((r, i) => `
+    <div class="referent-block">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px">
+        <div class="fi-field"><label>Prénom</label><input value="${r.prenom||''}" oninput="ficheReferents[${i}].prenom=this.value"></div>
+        <div class="fi-field"><label>Nom</label><input value="${r.nom||''}" oninput="ficheReferents[${i}].nom=this.value"></div>
+        <div class="fi-field"><label>Lien</label>
+          <select onchange="ficheReferents[${i}].lien=this.value">
+            <option ${r.lien==='Grand-mère'?'selected':''}>Grand-mère</option>
+            <option ${r.lien==='Grand-père'?'selected':''}>Grand-père</option>
+            <option ${r.lien==='Oncle/Tante'?'selected':''}>Oncle/Tante</option>
+            <option ${r.lien==='Autre'?'selected':''}>Autre</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fi-field"><label>Téléphone</label><input value="${r.tel||''}" oninput="ficheReferents[${i}].tel=this.value"></div>
+        <div class="fi-field"><label>Pièce d'identité</label><input value="${r.piece||''}" placeholder="Type + n°" oninput="ficheReferents[${i}].piece=this.value"></div>
+      </div>
+      <button onclick="removeReferent(${i})" style="position:absolute;top:10px;right:10px;background:none;border:none;color:var(--red);cursor:pointer;font-size:16px">✕</button>
+    </div>`).join('');
+}
+
+function addReferent() {
+  ficheReferents.push({ prenom:'', nom:'', lien:'Autre', tel:'', piece:'' });
+  renderReferents();
+}
+
+function removeReferent(i) {
+  ficheReferents.splice(i, 1);
+  renderReferents();
+}
+
+function saveFicheEnfant() {
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId);
+  const idx = enfants.findIndex(e => e.id === ficheEnfantId);
+  if (idx === -1) { showNotif('⚠ Enfant introuvable'); return; }
+
+  const getV = id => { const el=document.getElementById(id); return el ? el.value.trim() : ''; };
+  const joursCbs = document.querySelectorAll('#fi-jours-presence input');
+  const joursPresence = Array.from(joursCbs).filter(cb=>cb.checked).map(cb=>parseInt(cb.value));
+
+  enfants[idx] = {
+    ...enfants[idx],
+    prenom: getV('fi-prenom'), nom: getV('fi-nom'), ddn: getV('fi-ddn'),
+    type: getV('fi-type'), contrat_caf: getV('fi-contrat-caf'),
+    entree: getV('fi-entree'), sortie: getV('fi-sortie'),
+    num_caf: getV('fi-num-caf'), nss1: getV('fi-nss1'), nss2: getV('fi-nss2'),
+    qf: getV('fi-qf'), taux_caf: getV('fi-taux-caf'),
+    parent1: {
+      prenom: getV('fi-p1-prenom'), nom: getV('fi-p1-nom'),
+      lien: getV('fi-p1-lien'), tel: getV('fi-p1-tel'),
+      email: getV('fi-p1-email'), adresse: getV('fi-p1-adresse'),
+      nss: getV('fi-p1-nss'), profession: getV('fi-p1-profession'),
+    },
+    parent2: {
+      prenom: getV('fi-p2-prenom'), nom: getV('fi-p2-nom'),
+      lien: getV('fi-p2-lien'), tel: getV('fi-p2-tel'),
+      email: getV('fi-p2-email'), adresse: getV('fi-p2-adresse'),
+      nss: getV('fi-p2-nss'), profession: getV('fi-p2-profession'),
+    },
+    referents: ficheReferents,
+    berceau: getV('fi-berceau'),
+    jours: parseInt(getV('fi-jours'))||5,
+    heures: parseInt(getV('fi-heures'))||40,
+    heures_mois: parseInt(getV('fi-heures-mois'))||0,
+    jours_presence: joursPresence,
+    allergies: getV('fi-allergies'), medecin: getV('fi-medecin'),
+    pai: getV('fi-pai'), notes_libres: getV('fi-notes-text'),
+  };
+
+  saveFamilles(enfants, crecheId);
+  showNotif('✅ Fiche enregistrée');
+
+  // Mettre à jour header
+  const nomEl = document.getElementById('fiche-nom-display');
+  if (nomEl) nomEl.textContent = (enfants[idx].prenom||'') + ' ' + (enfants[idx].nom||'');
+  document.getElementById('pageTitle').textContent = (enfants[idx].prenom||'') + ' ' + (enfants[idx].nom||'');
+}
+
+function deleteFicheEnfant() {
+  if (!ficheEnfantId) return;
+  if (!confirm('Supprimer définitivement cette fiche ?')) return;
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId).filter(e => e.id !== ficheEnfantId);
+  saveFamilles(enfants, crecheId);
+  showNotif('🗑 Fiche supprimée');
+  showFamillesFromFiche();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FIN MODULE FICHE ENFANT
 // ══════════════════════════════════════════════════════════════════
 
 // ── PERSONNALISATION ─────────────────────────────────────────────
@@ -5453,13 +5916,13 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants' };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
