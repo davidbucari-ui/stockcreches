@@ -1650,6 +1650,122 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
 
   </div><!-- /content -->
+
+
+
+<div class="modal-overlay" id="modal-famille" onclick="closeModalClick(event,'modal-famille')">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h2 id="modal-famille-title">➕ Ajouter un enfant</h2>
+      <button class="modal-close" onclick="closeModal('modal-famille')">✕</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="form-group">
+        <label>Prénom *</label>
+        <input type="text" id="fam-prenom" placeholder="Prénom">
+      </div>
+      <div class="form-group">
+        <label>Nom *</label>
+        <input type="text" id="fam-nom" placeholder="Nom">
+      </div>
+      <div class="form-group">
+        <label>Date de naissance *</label>
+        <input type="date" id="fam-ddn">
+      </div>
+      <div class="form-group">
+        <label>Tranche d'âge *</label>
+        <select id="fam-type">
+          <option value="2.5-6">2½ – 6 mois</option>
+          <option value="6-12">6 – 12 mois</option>
+          <option value="12-18">12 – 18 mois</option>
+          <option value="18-24">18 – 24 mois</option>
+          <option value="24-30">24 – 30 mois</option>
+          <option value="30-36">30 – 36 mois</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Contrat CAF *</label>
+        <select id="fam-contrat-caf">
+          <option value="PSU">PSU</option>
+          <option value="PAJE">PAJE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Jours / semaine</label>
+        <input type="number" id="fam-jours" min="1" max="5" value="5">
+      </div>
+      <div class="form-group">
+        <label>Heures / semaine</label>
+        <input type="number" id="fam-heures" min="1" max="50" value="40">
+      </div>
+      <div class="form-group">
+        <label>Berceau entreprise</label>
+        <select id="fam-berceau"><option value="">Aucun</option></select>
+      </div>
+      <div class="form-group full">
+        <label>Date d'entrée</label>
+        <input type="date" id="fam-entree">
+      </div>
+      <div class="form-group full">
+        <label>Date de sortie prévue</label>
+        <input type="date" id="fam-sortie">
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <textarea id="fam-notes" rows="2" placeholder="Allergies, PAI, informations particulières..." style="width:100%;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="modal-famille-delete" style="display:none;margin-right:auto" onclick="deleteFamille()">Supprimer</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-famille')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveModalFamille()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-berceau" onclick="closeModalClick(event,'modal-berceau')">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <h2 id="modal-berceau-title">Ajouter un berceau</h2>
+      <button class="modal-close" onclick="closeModal('modal-berceau')">✕</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="form-group full">
+        <label>Entreprise *</label>
+        <input type="text" id="berc-entreprise" placeholder="Nom de l'entreprise">
+      </div>
+      <div class="form-group">
+        <label>Nombre de places *</label>
+        <input type="number" id="berc-places" min="1" value="1">
+      </div>
+      <div class="form-group">
+        <label>Type contrat CAF</label>
+        <select id="berc-contrat">
+          <option value="PSU">PSU</option>
+          <option value="PAJE">PAJE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date début</label>
+        <input type="date" id="berc-debut">
+      </div>
+      <div class="form-group">
+        <label>Date fin</label>
+        <input type="date" id="berc-fin">
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <input type="text" id="berc-notes" placeholder="Contact, conditions...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="modal-berceau-delete" style="display:none;margin-right:auto" onclick="deleteModalBerceau()">Supprimer</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-berceau')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveModalBerceau()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 </main>
 </div><!-- /app -->
 
@@ -2545,128 +2661,7 @@ function printEtiquettes() {
         return `try { new QRCode(document.getElementById('qr-${a.id}'), { text:'${code}', width:${qrSize}, height:${qrSize}, colorDark:'#1C1917', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}`;
       }).join('\n      ')}
     };
-  <\/script>
-
-
-
-
-
-
-
-
-<div class="modal-overlay" id="modal-famille" onclick="closeModalClick(event,'modal-famille')">
-  <div class="modal-box" style="max-width:520px">
-    <div class="modal-header">
-      <h2 id="modal-famille-title">➕ Ajouter un enfant</h2>
-      <button class="modal-close" onclick="closeModal('modal-famille')">✕</button>
-    </div>
-    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div class="form-group">
-        <label>Prénom *</label>
-        <input type="text" id="fam-prenom" placeholder="Prénom">
-      </div>
-      <div class="form-group">
-        <label>Nom *</label>
-        <input type="text" id="fam-nom" placeholder="Nom">
-      </div>
-      <div class="form-group">
-        <label>Date de naissance *</label>
-        <input type="date" id="fam-ddn">
-      </div>
-      <div class="form-group">
-        <label>Tranche d'âge *</label>
-        <select id="fam-type">
-          <option value="2.5-6">2½ – 6 mois</option>
-          <option value="6-12">6 – 12 mois</option>
-          <option value="12-18">12 – 18 mois</option>
-          <option value="18-24">18 – 24 mois</option>
-          <option value="24-30">24 – 30 mois</option>
-          <option value="30-36">30 – 36 mois</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Contrat CAF *</label>
-        <select id="fam-contrat-caf">
-          <option value="PSU">PSU</option>
-          <option value="PAJE">PAJE</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Jours / semaine</label>
-        <input type="number" id="fam-jours" min="1" max="5" value="5">
-      </div>
-      <div class="form-group">
-        <label>Heures / semaine</label>
-        <input type="number" id="fam-heures" min="1" max="50" value="40">
-      </div>
-      <div class="form-group">
-        <label>Berceau entreprise</label>
-        <select id="fam-berceau"><option value="">Aucun</option></select>
-      </div>
-      <div class="form-group full">
-        <label>Date d'entrée</label>
-        <input type="date" id="fam-entree">
-      </div>
-      <div class="form-group full">
-        <label>Date de sortie prévue</label>
-        <input type="date" id="fam-sortie">
-      </div>
-      <div class="form-group full">
-        <label>Notes</label>
-        <textarea id="fam-notes" rows="2" placeholder="Allergies, PAI, informations particulières..." style="width:100%;resize:vertical"></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" id="modal-famille-delete" style="display:none;margin-right:auto" onclick="deleteFamille()">Supprimer</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-famille')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveModalFamille()">Enregistrer</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modal-berceau" onclick="closeModalClick(event,'modal-berceau')">
-  <div class="modal-box" style="max-width:440px">
-    <div class="modal-header">
-      <h2 id="modal-berceau-title">Ajouter un berceau</h2>
-      <button class="modal-close" onclick="closeModal('modal-berceau')">✕</button>
-    </div>
-    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div class="form-group full">
-        <label>Entreprise *</label>
-        <input type="text" id="berc-entreprise" placeholder="Nom de l'entreprise">
-      </div>
-      <div class="form-group">
-        <label>Nombre de places *</label>
-        <input type="number" id="berc-places" min="1" value="1">
-      </div>
-      <div class="form-group">
-        <label>Type contrat CAF</label>
-        <select id="berc-contrat">
-          <option value="PSU">PSU</option>
-          <option value="PAJE">PAJE</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Date début</label>
-        <input type="date" id="berc-debut">
-      </div>
-      <div class="form-group">
-        <label>Date fin</label>
-        <input type="date" id="berc-fin">
-      </div>
-      <div class="form-group full">
-        <label>Notes</label>
-        <input type="text" id="berc-notes" placeholder="Contact, conditions...">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" id="modal-berceau-delete" style="display:none;margin-right:auto" onclick="deleteModalBerceau()">Supprimer</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-berceau')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveModalBerceau()">Enregistrer</button>
-    </div>
-  </div>
-</div>
-</body></html>`;
+  <\/script></body></html>`;
 
   closeModal('modal-etiquettes');
   const w = window.open('', '_blank');
@@ -2726,7 +2721,6 @@ function printArticleLabel(id) {
       new QRCode(document.getElementById('qr-container'),{text:'${code}',width:100,height:100,colorDark:'#1C1917',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
     };
   <\/script>
-
 
 
 
@@ -2842,7 +2836,6 @@ function buildScannerPage() {
     }
     init();
   <\/script>
-
 
 
 
@@ -3427,7 +3420,6 @@ function exportInventairePDF() {
 
 
 
-
 </body></html>`;
 
   const w = window.open('', '_blank');
@@ -3957,26 +3949,25 @@ function openModalFamille(id) {
   if (id) {
     const e = enfants.find(x => x.id === id);
     if (e) {
-      document.getElementById('fam-prenom').value = e.prenom || '';
-      document.getElementById('fam-nom').value    = e.nom    || '';
-      document.getElementById('fam-ddn').value    = e.ddn    || '';
-      document.getElementById('fam-type').value   = e.type   || 'NM';
-      document.getElementById('fam-contrat-caf').value = e.contrat_caf || 'PSU';
-      document.getElementById('fam-jours').value  = e.jours  || 5;
-      document.getElementById('fam-heures').value = e.heures || 40;
-      document.getElementById('fam-berceau').value = e.berceau || '';
-      document.getElementById('fam-entree').value = e.entree || '';
-      document.getElementById('fam-sortie').value = e.sortie || '';
-      document.getElementById('fam-notes').value  = e.notes  || '';
+      const setVal = (id, v) => { const el=document.getElementById(id); if(el) el.value=v||''; };
+      setVal('fam-prenom', e.prenom); setVal('fam-nom', e.nom);
+      setVal('fam-ddn', e.ddn);       setVal('fam-entree', e.entree);
+      setVal('fam-sortie', e.sortie); setVal('fam-notes', e.notes);
+      setVal('fam-berceau', e.berceau);
+      const typeEl = document.getElementById('fam-type'); if(typeEl) typeEl.value = e.type || '2.5-6';
+      const cafEl  = document.getElementById('fam-contrat-caf'); if(cafEl) cafEl.value = e.contrat_caf || 'PSU';
+      const jEl    = document.getElementById('fam-jours'); if(jEl) jEl.value = e.jours || 5;
+      const hEl    = document.getElementById('fam-heures'); if(hEl) hEl.value = e.heures || 40;
     }
   } else {
-    ['fam-prenom','fam-nom','fam-notes','fam-entree','fam-sortie'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
-    document.getElementById('fam-ddn').value = '';
-    document.getElementById('fam-type').value = 'NM';
-    document.getElementById('fam-contrat-caf').value = 'PSU';
-    document.getElementById('fam-jours').value = 5;
-    document.getElementById('fam-heures').value = 40;
-    document.getElementById('fam-berceau').value = '';
+    ['fam-prenom','fam-nom','fam-notes','fam-entree','fam-sortie','fam-ddn'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value='';
+    });
+    const typeEl = document.getElementById('fam-type'); if(typeEl) typeEl.value = '2.5-6';
+    const cafEl  = document.getElementById('fam-contrat-caf'); if(cafEl) cafEl.value = 'PSU';
+    const jEl    = document.getElementById('fam-jours'); if(jEl) jEl.value = 5;
+    const hEl    = document.getElementById('fam-heures'); if(hEl) hEl.value = 40;
+    const bEl    = document.getElementById('fam-berceau'); if(bEl) bEl.value = '';
   }
   const mf = document.getElementById('modal-famille');
   if (mf) { mf.classList.add('open'); document.body.style.overflow = 'hidden'; }
@@ -6276,7 +6267,6 @@ function printUnivers(id) {
     ${u.conseils ? `<div class="section"><h3>💡 Mise en scène</h3><div class="conseils-box">${u.conseils}</div></div>` : ''}
     <div class="footer">Fiche générée le ${new Date().toLocaleDateString('fr-FR')} — ${u.creche}${u.ia_generated ? ' · ✨ Activité suggérée par Claude (IA)' : ''}</div>
     
-
 
 
 
@@ -8584,7 +8574,6 @@ function exportPlanningPDF() {
 
 
 
-
 </body></html>`);
   w.document.close();
 }
@@ -8706,7 +8695,6 @@ function printFicheSalarie() {
   </div>
   <script>window.onload=()=>setTimeout(()=>{window.print();window.close();},500);<\/script>
   
-
 
 
 
@@ -10060,7 +10048,6 @@ function deleteSalarie() {
 
 
 <!-- ── MODAL BERCEAU ENTREPRISE ──────────────────────────────────── -->
-
 
 </body>
 </html>
