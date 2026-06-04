@@ -6970,11 +6970,11 @@ async function deleteRh(table, id, tab) {
 let peWeekOffset = 0;
 
 const PE_COLORS = [
-  { bg:'#BFDBFE', text:'#1D4ED8', border:'#3B82F6' },
-  { bg:'#BBF7D0', text:'#15803D', border:'#22C55E' },
-  { bg:'#FDE68A', text:'#92400E', border:'#F59E0B' },
-  { bg:'#DDD6FE', text:'#5B21B6', border:'#8B5CF6' },
-  { bg:'#FECDD3', text:'#9F1239', border:'#F43F5E' },
+  { bg:'#EFF6FF', text:'#2563EB', border:'#BFDBFE' },
+  { bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0' },
+  { bg:'#FFFBEB', text:'#D97706', border:'#FDE68A' },
+  { bg:'#F5F3FF', text:'#7C3AED', border:'#DDD6FE' },
+  { bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3' },
 ];
 
 
@@ -7206,7 +7206,7 @@ function renderPlanningEquipe() {
   const hoursHeader = Array.from({length: T_TOTAL + 1}, (_, i) => {
     const h    = T_START + i;
     const left = (i / T_TOTAL * 100).toFixed(3);
-    return `<div style="position:absolute;left:calc(${LABEL_W}px + ${left}% * ((100% - ${LABEL_W}px) / 100%));top:0;font-size:10px;font-weight:700;color:var(--ink3);padding-top:6px;transform:translateX(-50%)">${h}h</div>`;
+    return `<div data-hour="${h}" style="position:absolute;left:calc(${LABEL_W}px + ${left}% * ((100% - ${LABEL_W}px) / 100%));top:0;font-size:10px;font-weight:700;color:var(--ink3);padding-top:6px;transform:translateX(-50%)">${h}h</div>`;
   }).join('');
 
   // Grid lines en %
@@ -7234,7 +7234,7 @@ function renderPlanningEquipe() {
 
     const initial = pro.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
     const labelEl = `<div style="position:absolute;left:0;top:${top}px;width:${LABEL_W}px;height:${ROW_H}px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);background:var(--surface2);z-index:3">
-      <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initial}</div>
+      <div data-avatar="${pi}" style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initial}</div>
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--ink);line-height:1.2">${pro.split(' ')[0]}</div>
         <div style="font-size:10px;color:var(--ink3)">${pro.split(' ').slice(1).join(' ')}</div>
@@ -7586,47 +7586,61 @@ function deleteModalPE() {
 }
 
 function exportPlanningPDF() {
-  const monday  = peGetMonday();
-  const weekNum = getISOWeekNumber(monday);
-  const fmtD    = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-  const endFri  = new Date(monday); endFri.setDate(monday.getDate()+4);
+  const monday   = peGetMonday();
+  const weekNum  = getISOWeekNumber(monday);
+  const fmtD     = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  const endFri   = new Date(monday); endFri.setDate(monday.getDate()+4);
   const crecheId = document.getElementById('pe-creche')?.value || '';
   const title    = `Planning ${crecheId ? '— ' + crecheId + ' — ' : ''}Semaine ${weekNum} · ${fmtD(monday)} au ${fmtD(endFri)}`;
+  const ganttEl  = document.getElementById('pe-grid');
+  if (!ganttEl) return;
 
-  // Récupère le HTML du gantt actuel
-  const ganttEl = document.getElementById('pe-grid');
-  const ganttHTML = ganttEl ? ganttEl.outerHTML : '<p>Aucun planning</p>';
+  // Résoudre toutes les CSS variables en valeurs réelles
+  const CSS_VARS = {
+    'var(--bg)':        '#F5F3EF',
+    'var(--surface)':   '#FDFCFA',
+    'var(--surface2)':  '#FFFFFF',
+    'var(--border)':    '#E5E2DC',
+    'var(--ink)':       '#2A2D26',
+    'var(--ink2)':      '#5C5A54',
+    'var(--ink3)':      '#A8A29E',
+    'var(--accent)':    '#3B6CF8',
+    'var(--accent-lt)': '#EEF2FF',
+    'var(--green)':     '#16A34A',
+    'var(--amber)':     '#D97706',
+    'var(--red)':       '#DC2626',
+    'var(--red-lt)':    '#FEF2F2',
+    'var(--green-lt)':  '#F0FDF4',
+    'var(--amber-lt)':  '#FFFBEB',
+    'var(--purple)':    '#7C3AED',
+    'var(--purple-lt)': '#F5F3FF',
+    'var(--radius)':    '12px',
+    'var(--shadow)':    '0 1px 4px rgba(0,0,0,0.08)',
+    'var(--shadow-lg)': '0 4px 16px rgba(0,0,0,0.12)',
+  };
 
-  // Récupère les CSS variables de la page
-  const styles = Array.from(document.styleSheets)
-    .flatMap(s => { try { return Array.from(s.cssRules); } catch { return []; } })
-    .map(r => r.cssText).join('\n');
+  let ganttHTML = ganttEl.outerHTML;
+  Object.entries(CSS_VARS).forEach(([k, v]) => {
+    ganttHTML = ganttHTML.split(k).join(v);
+  });
 
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <title>${title}</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Instrument Sans', sans-serif; background: white; padding: 40px 30px; max-width: 1400px; margin: 0 auto; }
-    --bg: #F5F3EF; --surface2: #FFFFFF; --border: #E5E2DC; --ink: #2A2D26; --ink2: #5C5A54; --ink3: #A8A29E;
-    --accent: #3B6CF8; --accent-lt: #EEF2FF; --green: #16A34A; --amber: #D97706; --red: #DC2626;
-    h1 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; margin-bottom: 4px; color: #2A2D26; }
-    .sub { font-size: 11px; color: #78716C; margin-bottom: 16px; }
-    #pe-grid { position: relative; width: 100%; overflow: visible; }
-    #pe-grid * { font-family: 'Instrument Sans', sans-serif; }
-    .legend { display: flex; gap: 12px; margin-top: 12px; font-size: 11px; flex-wrap: wrap; }
-    .legend span { padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Instrument Sans',sans-serif; background:white; padding:30px 40px; }
+    h1 { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:#2A2D26; margin-bottom:4px; }
+    .sub { font-size:12px; color:#78716C; margin-bottom:20px; }
+    #pe-grid { position:relative; width:100%; overflow:visible; }
+    #pe-grid * { font-family:'Instrument Sans',sans-serif; }
+    .legend { display:flex; gap:14px; margin-top:14px; font-size:11px; flex-wrap:wrap; }
+    .legend span { padding:3px 10px; border-radius:12px; font-weight:700; }
     @media print {
-      @page { size: A4 landscape; margin: 1cm; }
-      body { padding: 0; }
-      button { display: none !important; }
-    }
-    /* Copie des variables CSS */
-    :root {
-      --bg: #F5F3EF; --surface2: #FFFFFF; --border: #E5E2DC; --ink: #2A2D26; --ink2: #5C5A54; --ink3: #A8A29E;
-      --accent: #3B6CF8; --accent-lt: #EEF2FF; --green: #16A34A; --amber: #D97706; --red: #DC2626;
-      --radius: 12px; --shadow: 0 1px 4px rgba(0,0,0,0.08);
+      @page { size:A4 landscape; margin:0.8cm; }
+      body { padding:0; }
+      button { display:none !important; }
     }
   </style>
   </head><body>
@@ -7639,7 +7653,6 @@ function exportPlanningPDF() {
     <span style="background:#FEF2F2;color:#DC2626">✗ Non conforme</span>
   </div>
   <script>
-    // Repositionner les barres après rendu
     window.onload = function() {
       const grid = document.getElementById('pe-grid');
       if (!grid) return;
@@ -7649,15 +7662,27 @@ function exportPlanningPDF() {
       grid.querySelectorAll('[data-debut-min]').forEach(bar => {
         const debut = parseInt(bar.dataset.debutMin);
         const fin   = parseInt(bar.dataset.finMin);
-        bar.style.left  = leftW + (debut - startMin) / 60 * COL_W + 'px';
-        bar.style.width = (fin - debut) / 60 * COL_W + 'px';
-        bar.style.top   = bar.dataset.top + 'px';
-        bar.style.height= bar.dataset.h   + 'px';
+        bar.style.left   = leftW + (debut - startMin) / 60 * COL_W + 'px';
+        bar.style.width  = (fin - debut) / 60 * COL_W + 'px';
+        bar.style.top    = (bar.dataset.top || 0) + 'px';
+        bar.style.height = (bar.dataset.h   || 36) + 'px';
+      });
+      grid.querySelectorAll('[data-pause-debut]').forEach(h => {
+        const pd = parseInt(h.dataset.pauseDebut);
+        const pf = parseInt(h.dataset.pauseFin);
+        const bd = parseInt(h.dataset.barDebut);
+        h.style.left  = (pd - bd) / 60 * COL_W + 'px';
+        h.style.width = (pf - pd) / 60 * COL_W + 'px';
       });
       grid.querySelectorAll('[data-timeline-min]').forEach(line => {
         line.style.left = leftW + (parseInt(line.dataset.timelineMin) - startMin) / 60 * COL_W + 'px';
       });
-      setTimeout(() => window.print(), 400);
+      grid.querySelectorAll('[data-hour]').forEach(el => {
+        const h = parseInt(el.dataset.hour);
+        el.style.left = leftW + (h - 7) * COL_W + 'px';
+        el.style.transform = 'translateX(-50%)';
+      });
+      setTimeout(() => window.print(), 500);
     };
   <\/script>
   </body></html>`);
