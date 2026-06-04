@@ -7644,15 +7644,18 @@ function openModalPE(horaireIdx, jour, id) {
   }
 
   peRefreshPause();
-  // Reset occurrence (mode édition = jour spécifique seulement)
-  peSetOccurrence('day');
-  const occGrp = document.getElementById('pe-occurrence-group');
-  if (occGrp) occGrp.style.display = id ? 'none' : '';
+  // Footer : 2 boutons en ajout, 1 bouton en édition
+  const footerAdd  = document.getElementById('pe-footer-add');
+  const footerEdit = document.getElementById('pe-footer-edit');
+  const delBtn     = document.getElementById('modal-pe-delete');
+  if (footerAdd)  footerAdd.style.display  = id ? 'none' : 'flex';
+  if (footerEdit) footerEdit.style.display = id ? 'flex'  : 'none';
+  if (delBtn)     delBtn.style.display     = id ? 'inline-flex' : 'none';
   document.getElementById('modal-pe').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
-function saveModalPE() {
+function saveModalPE(mode) {
   const crecheId  = document.getElementById('pe-creche')?.value || '';
   const week      = peGetWeek(crecheId);
 
@@ -7666,7 +7669,7 @@ function saveModalPE() {
   const jour        = parseInt(document.getElementById('pe-jour-sel').value);
   const pauseActive = document.getElementById('pe-pause-active')?.checked;
   const pause       = pauseActive ? `${peFmtMin(pePauseDebut)}–${peFmtMin(pePauseFin)}` : '';
-  const occWeek     = !peEditingId && document.getElementById('pe-occ-week')?.checked;
+  const occWeek     = !peEditingId && mode === 'week';
 
   if (!week.creneaux) week.creneaux = [];
   if (!week.pros) week.pros = [];
@@ -8068,30 +8071,6 @@ async function enregistrerPointage(type) {
             <option value="4">Vendredi</option>
           </select>
         </div>
-        <!-- Occurrence -->
-        <div class="form-group full" id="pe-occurrence-group">
-          <label style="font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Occurrence</label>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.15s"
-              id="pe-occ-day-label"
-              onclick="peSetOccurrence('day')">
-              <input type="radio" name="pe-occurrence" id="pe-occ-day" value="day" checked style="accent-color:var(--accent)">
-              <div>
-                <div style="font-size:13px;font-weight:700;color:var(--ink)">Jour spécifique</div>
-                <div style="font-size:11px;color:var(--ink3);margin-top:1px">Uniquement le jour sélectionné</div>
-              </div>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.15s"
-              id="pe-occ-week-label"
-              onclick="peSetOccurrence('week')">
-              <input type="radio" name="pe-occurrence" id="pe-occ-week" value="week" style="accent-color:var(--accent)">
-              <div>
-                <div style="font-size:13px;font-weight:700;color:var(--ink)">Toute la semaine</div>
-                <div style="font-size:11px;color:var(--ink3);margin-top:1px">Lundi → Vendredi, même horaire</div>
-              </div>
-            </label>
-          </div>
-        </div>
         <div class="form-group full">
           <label style="display:flex;align-items:center;gap:8px">
             Pause
@@ -8125,10 +8104,16 @@ async function enregistrerPointage(type) {
         </div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" id="modal-pe-delete" style="display:none;margin-right:auto" onclick="deleteModalPE()">🗑 Supprimer</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-pe')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveModalPE()">💾 Enregistrer</button>
+    <div class="modal-footer" style="flex-direction:column;gap:8px;align-items:stretch">
+      <div style="display:flex;gap:8px" id="pe-footer-add">
+        <button class="btn btn-secondary" style="flex:1" onclick="saveModalPE('day')">💾 Ce jour</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveModalPE('week')">📅 Toute la semaine</button>
+      </div>
+      <div style="display:flex;gap:8px" id="pe-footer-edit" style="display:none">
+        <button class="btn btn-danger btn-sm" id="modal-pe-delete" style="display:none;margin-right:auto" onclick="deleteModalPE()">🗑 Supprimer</button>
+        <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-pe')">Annuler</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveModalPE('day')">💾 Enregistrer</button>
+      </div>
     </div>
   </div>
 </div>
