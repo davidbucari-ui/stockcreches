@@ -3900,6 +3900,7 @@ function filterCreche(creche, el) {
   else if (currentPage === 'commandes') renderCommandes();
   else if (currentPage === 'historique') renderHistorique();
   else if (currentPage === 'planning') renderActiveTab();
+  else if (currentPage === 'rh') renderSalaries();
   renderStats();
   updateCounts();
 }
@@ -8846,10 +8847,14 @@ function renderSalaries() {
   loadSalaries();
   const list = document.getElementById('rh-salaries-list');
   if (!list) return;
-  if (SALARIES.length === 0) {
+  // Filtrer par crèche sélectionnée
+  const filtered = (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all')
+    ? SALARIES.filter(s => s.creche === currentCreche)
+    : SALARIES;
+  if (filtered.length === 0) {
     list.innerHTML = `<div style="text-align:center;padding:48px;color:var(--ink3)">
       <div style="font-size:36px;margin-bottom:10px">👤</div>
-      <div style="font-weight:700;margin-bottom:6px">Aucun salarié</div>
+      <div style="font-weight:700;margin-bottom:6px">Aucun salarié${currentCreche && currentCreche !== 'all' ? ' pour cette crèche' : ''}</div>
       <div style="font-size:13px;margin-bottom:16px">Cliquez sur "+ Nouveau salarié"</div>
       <button class="btn btn-primary" onclick="openModalSalarie()">+ Nouveau salarié</button>
     </div>`;
@@ -8876,7 +8881,7 @@ function renderSalaries() {
         </tr>
       </thead>
       <tbody>
-        ${SALARIES.map(s => {
+        ${filtered.map(s => {
           const st = statutColors[s.statut] || statutColors.actif;
           const psc1Colors = {
             valide: 'var(--green-lt),var(--green)',
