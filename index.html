@@ -1381,7 +1381,7 @@ textarea { resize: vertical; min-height: 72px; }
         <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
           <button id="pe-tab-gantt" onclick="switchPlanningTab('gantt')"
             style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer">
-            📊 Gantt équipe
+            📅 Planning équipe
           </button>
           <button id="pe-tab-hebdo" onclick="switchPlanningTab('hebdo')"
             style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
@@ -1391,8 +1391,8 @@ textarea { resize: vertical; min-height: 72px; }
 
         <!-- Vue Gantt -->
         <div id="pe-view-gantt">
-          <!-- Sélecteur jour -->
-          <div id="pe-day-pills" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap"></div>
+          <!-- Sélecteur jour (masqué, grille affiche tous les jours) -->
+          <div id="pe-day-pills" style="display:none"></div>
           <!-- Gantt -->
           <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
             <div id="pe-grid"></div>
@@ -7123,222 +7123,122 @@ function renderActiveTab() {
   else renderPlanningHebdo();
 }
 
-// ── GANTT PAR SALARIÉ (vue principale) ────────────────────────────
+// ── PLANNING ÉQUIPE (Horaire × Jours) ───────────────────────────────
 function renderPlanningEquipe() {
   const grid = document.getElementById('pe-grid');
   if (!grid) return;
-  grid.innerHTML = ''; // vider avant de reconstruire
-  grid.removeAttribute('style'); // reset style inline
 
-  const monday  = peGetMonday();
-  const weekNum = getISOWeekNumber(monday);
-  const today   = new Date(); today.setHours(0,0,0,0);
-  const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
+  const monday   = peGetMonday();
+  const weekNum  = getISOWeekNumber(monday);
+  const today    = new Date(); today.setHours(0,0,0,0);
+  const DAY_NAMES = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
   const horaires  = getPlanningHoraires();
   const crecheId  = document.getElementById('pe-creche')?.value || '';
+  const week      = peGetWeek(crecheId);
+  const fmtD      = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
+  const endFri    = new Date(monday); endFri.setDate(monday.getDate()+4);
 
-  // Week label (shared header)
+  // Week label
   const lbl = document.getElementById('pe-week-label');
-  const fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
-  const endFri = new Date(monday); endFri.setDate(monday.getDate()+4);
   if (lbl) lbl.textContent = `S${weekNum} — ${fmtD(monday)} au ${fmtD(endFri)} ${endFri.getFullYear()}`;
 
-  // Day pills (Lun-Ven selector)
-  const pillsEl = document.getElementById('pe-day-pills');
-  if (pillsEl) {
-    // Default to today's day index (0=Lun…4=Ven) or 0
-    if (peGanttDay === -1) {
-      const d = today.getDay();
-      peGanttDay = (d >= 1 && d <= 5) ? d - 1 : 0;
-    }
-    pillsEl.innerHTML = DAY_NAMES.map((name, i) => {
-      const dt = new Date(monday); dt.setDate(monday.getDate()+i);
-      const dayNum = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
-      const isActive = peGanttDay === i;
-      const isToday  = dt.getTime() === today.getTime();
-      return `<button onclick="peGanttDay=${i};renderPlanningEquipe()"
-        style="padding:7px 14px;border-radius:20px;border:2px solid ${isActive?'var(--accent)':isToday?'var(--accent)':'var(--border)'};
-               background:${isActive?'var(--accent)':'var(--surface2)'};color:${isActive?'#fff':isToday?'var(--accent)':'var(--ink)'};
-               font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s">
-        ${name} ${dayNum}
-      </button>`;
-    }).join('');
-  }
-
-  const week = peGetWeek(crecheId);
-
-  // Collect pros filtered by creche
-  let salaries = [];
-  try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
-  const rhNames  = salaries
-    .filter(s => !crecheId || s.creche === crecheId)
-    .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
-  const crNames  = (week.creneaux||[]).map(c => c.pro);
-  const allPros  = [...new Set([...rhNames, ...crNames])].sort();
-
-  if (allPros.length === 0) {
-    grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
-      <div style="font-size:32px;margin-bottom:10px">📅</div>
-      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucune collaboratrice</div>
-      <div style="font-size:13px">Ajoutez des salariées dans RH → Salariés, puis cliquez "+ Ajouter".</div>
+  // Header row
+  const dayHeaders = DAY_NAMES.map((name, di) => {
+    const dt = new Date(monday); dt.setDate(monday.getDate()+di);
+    const isToday = dt.getTime() === today.getTime();
+    const dayNum  = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+    return `<div style="text-align:center;padding:10px 6px;font-size:12px;font-weight:700;
+      color:${isToday?'var(--accent)':'var(--ink3)'};text-transform:uppercase;letter-spacing:0.5px;
+      border-left:1px solid var(--border);background:${isToday?'var(--accent-lt)':'var(--bg)'}">
+      ${name}<br><span style="font-size:11px;font-weight:600;opacity:0.8">${dayNum}</span>
     </div>`;
-    return;
-  }
-
-  // Timeline config — positionnement en % de la zone timeline (sans LABEL_W)
-  const T_START  = 7;            // 7h
-  const T_END    = 20;           // 20h
-  const T_TOTAL  = T_END - T_START; // 13h
-  const ROW_H    = 52;           // px per row
-  const LABEL_W  = 120;          // px for name column (fixe)
-  const startMin = T_START * 60;
-  const endMin   = T_END   * 60;
-  const totalMin = endMin - startMin; // 780 min
-
-  // Convertit des minutes en % de la timeline
-  const toLeft  = m  => `calc(${LABEL_W}px + ${((m - startMin) / totalMin * 100).toFixed(4)}% * ((100% - ${LABEL_W}px) / 100%))`;
-  const toWidth = m  => `calc(${(m / totalMin * 100).toFixed(4)}% * ((100% - ${LABEL_W}px) / 100%))`;
-  // Simplifié : on travaille directement en % de (100% - LABEL_W)
-  const pct     = m  => ((m - startMin) / totalMin * 100).toFixed(4);
-  const pctW    = m  => (m / totalMin * 100).toFixed(4);
-
-  // Hours header — distribués en % dans la zone timeline
-  const hoursHeader = Array.from({length: T_TOTAL + 1}, (_, i) => {
-    const h    = T_START + i;
-    const left = (i / T_TOTAL * 100).toFixed(3);
-    return `<div data-hour="${h}" style="position:absolute;left:calc(${LABEL_W}px + ${left}% * ((100% - ${LABEL_W}px) / 100%));top:0;font-size:10px;font-weight:700;color:var(--ink3);padding-top:6px;transform:translateX(-50%)">${h}h</div>`;
   }).join('');
 
-  // Grid lines — positionnées dans la zone timeline (après LABEL_W)
-  const gridLines = Array.from({length: T_TOTAL + 1}, (_, i) => {
-    const leftPct = (i / T_TOTAL * 100).toFixed(3);
-    return `<div style="position:absolute;left:calc(${leftPct}% * ((100% - ${LABEL_W}px) / 100%));top:0;bottom:0;width:1px;background:var(--border)"></div>`;
-  }).join('');
+  // For each horaire row
+  const rows = horaires.map((h, hi) => {
+    const c = PE_COLORS[hi] || PE_COLORS[0];
 
-  // Current time line
-  const now    = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const timeLine = (nowMin > startMin && nowMin < endMin)
-    ? `<div style="position:absolute;left:${((nowMin - startMin) / totalMin * 100).toFixed(3)}%;top:0;bottom:0;width:2px;background:var(--red);z-index:10">
-         <div style="position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--red)"></div>
-       </div>` : '';
-
-  const totalH = allPros.length * ROW_H + 28 + 26;
-
-  // Rows per pro
-  const fmtHHMM = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+(m||0); };
-
-  const proRows = allPros.map((pro, pi) => {
-    const creneaux = (week.creneaux||[]).filter(cr => cr.pro === pro && cr.jour === peGanttDay);
-    const top = 28 + pi * ROW_H;
-
-    const initial = pro.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
-    const labelEl = `<div style="position:absolute;left:0;top:${top}px;width:${LABEL_W}px;height:${ROW_H}px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);background:var(--surface2);z-index:3">
-      <div data-avatar="${pi}" style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initial}</div>
-      <div>
-        <div style="font-size:12px;font-weight:700;color:var(--ink);line-height:1.2">${pro.split(' ')[0]}</div>
-        <div style="font-size:10px;color:var(--ink3)">${pro.split(' ').slice(1).join(' ')}</div>
-      </div>
+    // Label horaire
+    const rowLabel = `<div style="padding:10px 12px;background:${c.bg};border-right:1px solid ${c.border};
+      display:flex;flex-direction:column;justify-content:center;min-width:110px">
+      <div style="font-size:12px;font-weight:700;color:${c.text}">${h.name}</div>
+      <div style="font-size:11px;color:${c.text};opacity:0.8;margin-top:2px">${h.debut}–${h.fin}</div>
     </div>`;
 
-    const rowBg = `<div style="position:absolute;left:${LABEL_W}px;top:${top}px;right:0;height:${ROW_H}px;background:${pi%2===0?'var(--surface2)':'var(--bg)'};border-bottom:1px solid var(--border)"></div>`;
+    // Cells
+    const cells = Array.from({length:5}, (_, di) => {
+      const creneaux = (week.creneaux||[]).filter(cr => cr.horaire_idx === hi && cr.jour === di);
+      const dt = new Date(monday); dt.setDate(monday.getDate()+di);
+      const isToday = dt.getTime() === today.getTime();
 
-    const bars = creneaux.map(cr => {
-      const h = horaires[cr.horaire_idx] || {};
-      const c = PE_COLORS[cr.horaire_idx] || PE_COLORS[0];
-      const debutMin = fmtHHMM(h.debut);
-      const finMin   = fmtHHMM(h.fin);
-      if (debutMin === null || finMin === null) return '';
+      const proTags = creneaux.map(cr => `
+        <div onclick="openModalPE(${hi},${di},'${cr.id}')"
+          style="display:flex;align-items:center;gap:5px;background:${c.bg};border:1.5px solid ${c.border};
+            border-radius:6px;padding:4px 8px;cursor:pointer;transition:opacity 0.15s;margin-bottom:3px"
+          onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+          <div style="width:20px;height:20px;border-radius:50%;background:${c.text};color:#fff;
+            font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            ${cr.pro.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)}
+          </div>
+          <span style="font-size:11px;font-weight:700;color:${c.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px">${cr.pro.split(' ')[0]}</span>
+          ${cr.pause ? `<span style="font-size:9px;color:var(--ink3);opacity:0.8">⏸</span>` : ''}
+        </div>`).join('');
 
-      // Position en % de la zone timeline
-      const leftPct  = ((debutMin - startMin) / totalMin * 100).toFixed(4);
-      const widthPct = ((finMin - debutMin)   / totalMin * 100).toFixed(4);
-      const barTop   = top + 8;
-      const barH     = ROW_H - 16;
+      // Taux d'encadrement badge
+      const nb = creneaux.length;
+      const taux = calcTaux(nb);
+      const tc = TAUX_COLORS[taux.state];
+      const tauxBadge = nb > 0 ? `<div style="margin-top:4px;display:inline-flex;align-items:center;gap:3px;
+        background:${tc.bg};color:${tc.color};border-radius:10px;padding:2px 7px;font-size:10px;font-weight:700">
+        ${tc.icon} ${taux.label}
+      </div>` : '';
 
-      // Pause hachures en % relatif à la barre
-      let pauseHtml = '';
-      if (cr.pause) {
-        const pm = cr.pause.match(/(\d+)h?(\d*)\s*[–-]\s*(\d+)h?(\d*)/);
-        if (pm) {
-          const pd = parseInt(pm[1])*60 + (parseInt(pm[2])||0);
-          const pf = parseInt(pm[3])*60 + (parseInt(pm[4])||0);
-          const pLeftPct  = ((pd - debutMin) / (finMin - debutMin) * 100).toFixed(3);
-          const pWidthPct = ((pf - pd)       / (finMin - debutMin) * 100).toFixed(3);
-          pauseHtml = `<div data-pause-debut="${pd}" data-pause-fin="${pf}" data-bar-debut="${debutMin}" data-bar-fin="${finMin}" style="position:absolute;left:${pLeftPct}%;top:0;width:${pWidthPct}%;bottom:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 3px,transparent 3px,transparent 7px);border-left:1px dashed ${c.border};border-right:1px dashed ${c.border}"></div>`;
-        }
-      }
+      const addBtn = `<button onclick="openModalPE(${hi},${di},null)"
+        style="width:100%;border:1.5px dashed var(--border);border-radius:6px;background:none;
+          color:var(--ink3);font-size:11px;cursor:pointer;padding:5px;margin-top:${creneaux.length?'4px':'0'};
+          transition:all 0.15s;font-family:inherit"
+        onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink3)'">+ pro</button>`;
 
-      const lbl = `<span style="font-size:11px;font-weight:700;white-space:nowrap">${h.debut||''}–${h.fin||''}</span>`;
-
-      return `<div onclick="openModalPE(${cr.horaire_idx},${peGanttDay},'${cr.id}')"
-        data-debut-min="${debutMin}" data-fin-min="${finMin}" data-top="${barTop}" data-h="${barH}" data-bar-debut="${debutMin}"
-        data-bar-color-bg="${c.bg}" data-bar-color-border="${c.border}" data-bar-color-text="${c.text}"
-        style="position:absolute;
-               left:calc(${LABEL_W}px + ${leftPct}% * ((100% - ${LABEL_W}px) / 100%));
-               top:${barTop}px;
-               width:calc(${widthPct}% * ((100% - ${LABEL_W}px) / 100%));
-               height:${barH}px;
-               background:${c.bg};border:1.5px solid ${c.border};border-radius:8px;
-               display:flex;align-items:center;justify-content:center;overflow:hidden;
-               cursor:pointer;transition:opacity 0.15s"
-        onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-        ${pauseHtml}
-        <div style="color:${c.text};padding:0 8px;z-index:1;position:relative">${lbl}</div>
+      return `<div style="padding:8px;border-left:1px solid var(--border);min-height:70px;
+        background:${isToday?'var(--accent-lt)':'var(--surface2)'};vertical-align:top">
+        ${proTags}
+        ${tauxBadge}
+        ${addBtn}
       </div>`;
     }).join('');
 
-    return labelEl + rowBg + bars;
+    return `<div style="display:grid;grid-template-columns:110px repeat(5,1fr);border-bottom:1px solid var(--border)">
+      ${rowLabel}${cells}
+    </div>`;
   }).join('');
 
-  // Taux row — slots de 30min en %
-  const tauxTop = 28 + allPros.length * ROW_H;
+  // Ligne taux global par jour (nb de pros total présents)
+  const totalRow = (() => {
+    const cells = Array.from({length:5}, (_,di) => {
+      const nb = (week.creneaux||[]).filter(cr => cr.jour === di).length;
+      const taux = calcTaux(nb);
+      const tc = TAUX_COLORS[taux.state];
+      return `<div style="padding:6px;border-left:1px solid var(--border);text-align:center;background:var(--bg)">
+        ${nb > 0 ? `<span style="background:${tc.bg};color:${tc.color};border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">${tc.icon} ${nb} pro${nb>1?'s':''}</span>` : '<span style="color:var(--border);font-size:11px">—</span>'}
+      </div>`;
+    }).join('');
+    return `<div style="display:grid;grid-template-columns:110px repeat(5,1fr);background:var(--bg)">
+      <div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center">Total jour</div>
+      ${cells}
+    </div>`;
+  })();
 
-  const slots = Array.from({length: T_TOTAL * 2}, (_, i) => {
-    const slotStart = startMin + i * 30;
-    const slotEnd   = slotStart + 30;
-    let count = 0;
-    (week.creneaux||[]).filter(cr => cr.jour === peGanttDay).forEach(cr => {
-      const h = horaires[cr.horaire_idx] || {};
-      const d = fmtHHMM(h.debut), f = fmtHHMM(h.fin);
-      let inPause = false;
-      if (cr.pause) {
-        const pm = cr.pause.match(/(\d+)h?(\d*)\s*[–-]\s*(\d+)h?(\d*)/);
-        if (pm) {
-          const pd = parseInt(pm[1])*60+(parseInt(pm[2])||0);
-          const pf = parseInt(pm[3])*60+(parseInt(pm[4])||0);
-          if (slotStart >= pd && slotEnd <= pf) inPause = true;
-        }
-      }
-      if (d !== null && f !== null && slotStart >= d && slotEnd <= f && !inPause) count++;
-    });
-    return count;
-  });
-
-  const tauxCells = slots.map((count, i) => {
-    const leftPct  = (i * 30 / totalMin * 100).toFixed(4);
-    const widthPct = (30 / totalMin * 100).toFixed(4);
-    const color = count === 0 ? 'var(--ink3)' : count >= 3 ? 'var(--green)' : count === 2 ? 'var(--amber)' : 'var(--red)';
-    return `<div style="position:absolute;left:${leftPct}%;width:${widthPct}%;top:0;text-align:center;font-size:10px;font-weight:700;color:${color}">${count>0?count:''}</div>`;
-  }).join('');
-
-  grid.style.cssText = `position:relative;height:${totalH + 4}px;width:100%`;
   grid.innerHTML = `
-    <div style="position:absolute;left:0;top:0;right:0;height:28px;background:var(--bg);border-bottom:2px solid var(--border)">
-      <div style="position:absolute;left:0;top:0;width:${LABEL_W}px;height:28px;background:var(--bg);z-index:2;display:flex;align-items:center;padding-left:10px">
-        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3)">Collaborateur</span>
+    <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)">
+      <!-- Header jours -->
+      <div style="display:grid;grid-template-columns:110px repeat(5,1fr);border-bottom:2px solid var(--border);background:var(--bg)">
+        <div style="padding:10px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);display:flex;align-items:center">Horaire</div>
+        ${dayHeaders}
       </div>
-      ${hoursHeader}
-    </div>
-    <div style="position:absolute;left:${LABEL_W}px;top:28px;right:0;bottom:26px">${gridLines}${timeLine}</div>
-    ${proRows}
-    <div style="position:absolute;left:0;top:${tauxTop}px;width:${LABEL_W}px;height:26px;background:var(--bg);border-top:2px solid var(--border);display:flex;align-items:center;padding-left:10px">
-      <span style="font-size:10px;font-weight:700;color:var(--ink3)">Salariés présents</span>
-    </div>
-    <div style="position:absolute;left:${LABEL_W}px;top:${tauxTop}px;right:0;height:26px;background:var(--bg);border-top:2px solid var(--border)">
-      ${tauxCells}
-    </div>
-  `;
+      ${rows}
+      ${totalRow}
+    </div>`;
 }
 
 // ── PLANNING HEBDOMADAIRE (Salarié × Jours) ────────────────────────
