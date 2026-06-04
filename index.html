@@ -3614,15 +3614,23 @@ function calcTauxEncadrement(enfants, option) {
 }
 
 function getCrecheId() {
-  return document.getElementById('fam-creche-sel')?.value || '';
+  const val = document.getElementById('fam-creche-sel')?.value;
+  if (val && val !== '') return val;
+  if (window.CRECHES_DATA && CRECHES_DATA.length) return CRECHES_DATA[0].nom;
+  if (window.currentCreche && currentCreche !== 'all') return currentCreche;
+  return 'default';
 }
 
 // ── Render principal ──────────────────────────────────────────────
 function renderFamilles() {
-  // Remplir sélecteur crèches
+  // Remplir sélecteur crèches - utiliser CRECHES_DATA ou currentCreche
   const sel = document.getElementById('fam-creche-sel');
-  if (sel && window.CRECHES_DATA) {
-    sel.innerHTML = CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+  const crechesList = window.CRECHES_DATA && CRECHES_DATA.length ? CRECHES_DATA :
+    (window.currentCreche && currentCreche !== 'all' ? [{nom: currentCreche}] : [{nom: 'Crèche'}]);
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = crechesList.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+    if (cur && crechesList.some(c => c.nom === cur)) sel.value = cur;
   }
   renderFamillesKPI();
   renderFamillesList();
@@ -3885,10 +3893,12 @@ function openModalFamille(id) {
 
   // Remplir sélecteur berceaux
   const bSel = document.getElementById('fam-berceau');
-  if (bSel) bSel.innerHTML = '<option value="">Aucun</option>' + berceaux.map(b => `<option value="${b.id}">${b.entreprise} (${b.places} places)</option>`).join('');
+  if (bSel) bSel.innerHTML = '<option value="">Aucun</option>' + (berceaux||[]).map(b => `<option value="${b.id}">${b.entreprise} (${b.places} places)</option>`).join('');
 
-  document.getElementById('modal-famille-title').textContent = id ? "✏️ Modifier l'enfant" : '➕ Ajouter un enfant';
-  document.getElementById('modal-famille-delete').style.display = id ? 'inline-flex' : 'none';
+  const titleEl = document.getElementById('modal-famille-title');
+  const delBtn  = document.getElementById('modal-famille-delete');
+  if (titleEl) titleEl.textContent = id ? "Modifier l'enfant" : 'Ajouter un enfant';
+  if (delBtn)  delBtn.style.display = id ? 'inline-flex' : 'none';
 
   if (id) {
     const e = enfants.find(x => x.id === id);
