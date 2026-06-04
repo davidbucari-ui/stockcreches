@@ -1387,6 +1387,10 @@ textarea { resize: vertical; min-height: 72px; }
             style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
             👤 Par salarié
           </button>
+          <button id="pe-tab-gantt2" onclick="switchPlanningTab('gantt2')"
+            style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
+            📊 Gantt
+          </button>
         </div>
 
         <!-- Vue Gantt -->
@@ -1408,6 +1412,19 @@ textarea { resize: vertical; min-height: 72px; }
         <!-- Vue Par salarié -->
         <div id="pe-view-hebdo" style="display:none">
           <div id="ph-grid"></div>
+        </div>
+
+        <!-- Vue Gantt -->
+        <div id="pe-view-gantt2" style="display:none">
+          <div id="pe-day-pills2" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap"></div>
+          <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
+            <div id="pe-grid2"></div>
+          </div>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11px;color:var(--ink3)">
+            <span style="background:#DCFCE7;color:#15803D;padding:2px 8px;border-radius:12px;font-weight:600">✓ Conforme</span>
+            <span style="background:#FEF3C7;color:#B45309;padding:2px 8px;border-radius:12px;font-weight:600">! Limite</span>
+            <span style="background:#FFE4E6;color:#BE123C;padding:2px 8px;border-radius:12px;font-weight:600">✗ Non conforme</span>
+          </div>
         </div>
 
       </div>
@@ -7098,29 +7115,24 @@ let peGanttDay = -1; // -1 = jour courant ou lundi
 
 function switchPlanningTab(tab) {
   pePlanningTab = tab;
-  const ganttBtn = document.getElementById('pe-tab-gantt');
-  const hebdoBtn = document.getElementById('pe-tab-hebdo');
-  const ganttView = document.getElementById('pe-view-gantt');
-  const hebdoView = document.getElementById('pe-view-hebdo');
-  const addBtn    = document.getElementById('pe-add-btn');
-  if (ganttBtn) {
-    ganttBtn.style.color        = tab==='gantt' ? 'var(--accent)' : 'var(--ink3)';
-    ganttBtn.style.borderBottom = tab==='gantt' ? '2px solid var(--accent)' : '2px solid transparent';
-  }
-  if (hebdoBtn) {
-    hebdoBtn.style.color        = tab==='hebdo' ? 'var(--accent)' : 'var(--ink3)';
-    hebdoBtn.style.borderBottom = tab==='hebdo' ? '2px solid var(--accent)' : '2px solid transparent';
-  }
-  if (ganttView) ganttView.style.display = tab==='gantt' ? '' : 'none';
-  if (hebdoView) hebdoView.style.display = tab==='hebdo' ? '' : 'none';
-  if (addBtn)    addBtn.style.display    = tab==='gantt' ? '' : 'none';
-  if (tab === 'gantt') renderPlanningEquipe();
-  else renderPlanningHebdo();
+  const tabs = ['gantt','hebdo','gantt2'];
+  tabs.forEach(t => {
+    const btn  = document.getElementById('pe-tab-' + t);
+    const view = document.getElementById('pe-view-' + t);
+    if (btn)  { btn.style.color  = tab===t ? 'var(--accent)' : 'var(--ink3)'; btn.style.borderBottom = tab===t ? '2px solid var(--accent)' : '2px solid transparent'; btn.style.fontWeight = tab===t ? '700' : '600'; }
+    if (view) view.style.display = tab===t ? '' : 'none';
+  });
+  const addBtn = document.getElementById('pe-add-btn');
+  if (addBtn) addBtn.style.display = tab==='gantt' ? '' : 'none';
+  if (tab === 'gantt')  renderPlanningEquipe();
+  else if (tab === 'hebdo')  renderPlanningHebdo();
+  else if (tab === 'gantt2') renderPlanningGantt();
 }
 
 function renderActiveTab() {
-  if (pePlanningTab === 'gantt') renderPlanningEquipe();
-  else renderPlanningHebdo();
+  if (pePlanningTab === 'gantt')  renderPlanningEquipe();
+  else if (pePlanningTab === 'hebdo')  renderPlanningHebdo();
+  else if (pePlanningTab === 'gantt2') renderPlanningGantt();
 }
 
 // ── PLANNING ÉQUIPE (Horaire × Jours) ───────────────────────────────
@@ -7335,6 +7347,192 @@ function renderPlanningHebdo() {
   }).join('');
 
   grid.innerHTML = `<div style="padding:16px 18px">${cards}</div>`;
+}
+
+
+// ── GANTT PAR SALARIÉ (vue visuelle) ─────────────────────────────────
+let peGanttDay2 = -1;
+
+function renderPlanningGantt() {
+  const grid = document.getElementById('pe-grid2');
+  if (!grid) return;
+  grid.innerHTML = '';
+  grid.removeAttribute('style');
+
+  const monday   = peGetMonday();
+  const weekNum  = getISOWeekNumber(monday);
+  const today    = new Date(); today.setHours(0,0,0,0);
+  const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
+  const horaires  = getPlanningHoraires();
+  const crecheId  = document.getElementById('pe-creche')?.value || '';
+
+  const lbl = document.getElementById('pe-week-label');
+  const fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
+  const endFri = new Date(monday); endFri.setDate(monday.getDate()+4);
+  if (lbl) lbl.textContent = `S${weekNum} — ${fmtD(monday)} au ${fmtD(endFri)} ${endFri.getFullYear()}`;
+
+  // Day pills
+  const pillsEl = document.getElementById('pe-day-pills2');
+  if (pillsEl) {
+    if (peGanttDay2 === -1) {
+      const d = today.getDay();
+      peGanttDay2 = (d >= 1 && d <= 5) ? d - 1 : 0;
+    }
+    pillsEl.innerHTML = DAY_NAMES.map((name, i) => {
+      const dt = new Date(monday); dt.setDate(monday.getDate()+i);
+      const dayNum  = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+      const isActive = peGanttDay2 === i;
+      const isToday  = dt.getTime() === today.getTime();
+      return `<button onclick="peGanttDay2=${i};renderPlanningGantt()"
+        style="padding:7px 14px;border-radius:20px;border:2px solid ${isActive?'var(--accent)':isToday?'var(--accent)':'var(--border)'};
+               background:${isActive?'var(--accent)':'var(--surface2)'};color:${isActive?'#fff':isToday?'var(--accent)':'var(--ink)'};
+               font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s">
+        ${name} ${dayNum}
+      </button>`;
+    }).join('');
+  }
+
+  const week = peGetWeek(crecheId);
+
+  let salaries = [];
+  try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
+  const rhNames = salaries.filter(s => !crecheId || s.creche === crecheId)
+    .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
+  const crNames = (week.creneaux||[]).map(c => c.pro);
+  const allPros = [...new Set([...rhNames, ...crNames])].sort();
+
+  if (allPros.length === 0) {
+    grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:32px;margin-bottom:10px">📊</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucune collaboratrice</div>
+      <div style="font-size:13px">Ajoutez des créneaux via l'onglet Planning équipe.</div>
+    </div>`;
+    return;
+  }
+
+  const T_START = 7, T_END = 20, T_TOTAL = T_END - T_START;
+  const ROW_H = 52, LABEL_W = 120;
+  const startMin = T_START * 60, endMin = T_END * 60, totalMin = endMin - startMin;
+  const fmtHHMM = s => { if (!s) return null; const [h,m] = s.split(':').map(Number); return h*60+(m||0); };
+
+  const hoursHeader = Array.from({length: T_TOTAL + 1}, (_, i) => {
+    const h = T_START + i;
+    const left = (i / T_TOTAL * 100).toFixed(3);
+    return `<div data-hour="${h}" style="position:absolute;left:calc(${LABEL_W}px + ${left}% * ((100% - ${LABEL_W}px) / 100%));top:0;font-size:10px;font-weight:700;color:var(--ink3);padding-top:6px;transform:translateX(-50%)">${h}h</div>`;
+  }).join('');
+
+  const gridLines = Array.from({length: T_TOTAL + 1}, (_, i) => {
+    const leftPct = (i / T_TOTAL * 100).toFixed(3);
+    return `<div style="position:absolute;left:calc(${leftPct}% * ((100% - ${LABEL_W}px) / 100%));top:0;bottom:0;width:1px;background:var(--border)"></div>`;
+  }).join('');
+
+  const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+  const showTimeLine = peGanttDay2 === (today.getDay() === 0 ? 4 : today.getDay() - 1);
+  const timeLine = (showTimeLine && nowMin > startMin && nowMin < endMin)
+    ? `<div style="position:absolute;left:${((nowMin-startMin)/totalMin*100).toFixed(3)}%;top:0;bottom:0;width:2px;background:var(--red);z-index:10">
+         <div style="position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--red)"></div>
+       </div>` : '';
+
+  const totalH = allPros.length * ROW_H + 28 + 26;
+
+  const proRows = allPros.map((pro, pi) => {
+    const creneaux = (week.creneaux||[]).filter(cr => cr.pro === pro && cr.jour === peGanttDay2);
+    const top = 28 + pi * ROW_H;
+    const initial = pro.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
+
+    const labelEl = `<div style="position:absolute;left:0;top:${top}px;width:${LABEL_W}px;height:${ROW_H}px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);background:var(--surface2);z-index:3">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initial}</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink);line-height:1.2">${pro.split(' ')[0]}</div>
+        <div style="font-size:10px;color:var(--ink3)">${pro.split(' ').slice(1).join(' ')}</div>
+      </div>
+    </div>`;
+
+    const rowBg = `<div style="position:absolute;left:${LABEL_W}px;top:${top}px;right:0;height:${ROW_H}px;background:${pi%2===0?'var(--surface2)':'var(--bg)'};border-bottom:1px solid var(--border)"></div>`;
+
+    const bars = creneaux.map(cr => {
+      const h = horaires[cr.horaire_idx] || {};
+      const c = PE_COLORS[cr.horaire_idx] || PE_COLORS[0];
+      const debutMin = fmtHHMM(h.debut), finMin = fmtHHMM(h.fin);
+      if (debutMin === null || finMin === null) return '';
+      const leftPct  = ((debutMin - startMin) / totalMin * 100).toFixed(4);
+      const widthPct = ((finMin - debutMin)   / totalMin * 100).toFixed(4);
+      const barTop = top + 8, barH = ROW_H - 16;
+
+      let pauseHtml = '';
+      if (cr.pause) {
+        const pm = cr.pause.match(/(\d+)h?(\d*)\s*[–-]\s*(\d+)h?(\d*)/);
+        if (pm) {
+          const pd = parseInt(pm[1])*60+(parseInt(pm[2])||0);
+          const pf = parseInt(pm[3])*60+(parseInt(pm[4])||0);
+          const pL = ((pd - debutMin) / (finMin - debutMin) * 100).toFixed(3);
+          const pW = ((pf - pd)       / (finMin - debutMin) * 100).toFixed(3);
+          pauseHtml = `<div data-pause-debut="${pd}" data-pause-fin="${pf}" data-bar-debut="${debutMin}" data-bar-fin="${finMin}" style="position:absolute;left:${pL}%;top:0;width:${pW}%;bottom:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 3px,transparent 3px,transparent 7px);border-left:1px dashed ${c.border};border-right:1px dashed ${c.border}"></div>`;
+        }
+      }
+
+      return `<div onclick="openModalPE(${cr.horaire_idx},${peGanttDay2},'${cr.id}')"
+        data-debut-min="${debutMin}" data-fin-min="${finMin}" data-top="${barTop}" data-h="${barH}" data-bar-debut="${debutMin}"
+        data-bar-color-bg="${c.bg}" data-bar-color-border="${c.border}" data-bar-color-text="${c.text}"
+        style="position:absolute;
+               left:calc(${LABEL_W}px + ${leftPct}% * ((100% - ${LABEL_W}px) / 100%));
+               top:${barTop}px;
+               width:calc(${widthPct}% * ((100% - ${LABEL_W}px) / 100%));
+               height:${barH}px;
+               background:${c.bg};border:1.5px solid ${c.border};border-radius:8px;
+               display:flex;align-items:center;justify-content:center;overflow:hidden;
+               cursor:pointer;transition:opacity 0.15s"
+        onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+        ${pauseHtml}
+        <div style="color:${c.text};padding:0 8px;z-index:1;position:relative;font-size:11px;font-weight:700;white-space:nowrap">${h.debut||''}–${h.fin||''}</div>
+      </div>`;
+    }).join('');
+
+    return labelEl + rowBg + bars;
+  }).join('');
+
+  // Taux row
+  const tauxTop = 28 + allPros.length * ROW_H;
+  const slots = Array.from({length: T_TOTAL * 2}, (_, i) => {
+    const slotStart = startMin + i * 30, slotEnd = slotStart + 30;
+    let count = 0;
+    (week.creneaux||[]).filter(cr => cr.jour === peGanttDay2).forEach(cr => {
+      const h = horaires[cr.horaire_idx] || {};
+      const d = fmtHHMM(h.debut), f = fmtHHMM(h.fin);
+      let inPause = false;
+      if (cr.pause) {
+        const pm = cr.pause.match(/(\d+)h?(\d*)\s*[–-]\s*(\d+)h?(\d*)/);
+        if (pm) { const pd=parseInt(pm[1])*60+(parseInt(pm[2])||0),pf=parseInt(pm[3])*60+(parseInt(pm[4])||0); if(slotStart>=pd&&slotEnd<=pf)inPause=true; }
+      }
+      if (d!==null&&f!==null&&slotStart>=d&&slotEnd<=f&&!inPause) count++;
+    });
+    return count;
+  });
+
+  const tauxCells = slots.map((count, i) => {
+    const leftPct  = (i * 30 / totalMin * 100).toFixed(4);
+    const widthPct = (30 / totalMin * 100).toFixed(4);
+    const color = count === 0 ? 'var(--ink3)' : count >= 3 ? '#15803D' : count === 2 ? '#B45309' : '#BE123C';
+    return `<div style="position:absolute;left:${leftPct}%;width:${widthPct}%;top:0;text-align:center;font-size:10px;font-weight:700;color:${color}">${count>0?count:''}</div>`;
+  }).join('');
+
+  grid.style.cssText = `position:relative;height:${totalH + 4}px;width:100%`;
+  grid.innerHTML = `
+    <div style="position:absolute;left:0;top:0;right:0;height:28px;background:var(--bg);border-bottom:2px solid var(--border)">
+      <div style="position:absolute;left:0;top:0;width:${LABEL_W}px;height:28px;background:var(--bg);z-index:2;display:flex;align-items:center;padding-left:10px">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3)">Collaborateur</span>
+      </div>
+      ${hoursHeader}
+    </div>
+    <div style="position:absolute;left:${LABEL_W}px;top:28px;right:0;bottom:26px">${gridLines}${timeLine}</div>
+    ${proRows}
+    <div style="position:absolute;left:0;top:${tauxTop}px;width:${LABEL_W}px;height:26px;background:var(--bg);border-top:2px solid var(--border);display:flex;align-items:center;padding-left:10px">
+      <span style="font-size:10px;font-weight:700;color:var(--ink3)">Salariés présents</span>
+    </div>
+    <div style="position:absolute;left:${LABEL_W}px;top:${tauxTop}px;right:0;height:26px;background:var(--bg);border-top:2px solid var(--border)">
+      ${tauxCells}
+    </div>
+  `;
 }
 
 // ── Steppers pause modal PE ────────────────────────────────────────
