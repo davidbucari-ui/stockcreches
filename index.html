@@ -7585,7 +7585,84 @@ function deleteModalPE() {
   showNotif('🗑 Créneau supprimé');
 }
 
-function exportPlanningPDF() { window.print(); }
+function exportPlanningPDF() {
+  const monday  = peGetMonday();
+  const weekNum = getISOWeekNumber(monday);
+  const fmtD    = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  const endFri  = new Date(monday); endFri.setDate(monday.getDate()+4);
+  const crecheId = document.getElementById('pe-creche')?.value || '';
+  const title    = `Planning ${crecheId ? '— ' + crecheId + ' — ' : ''}Semaine ${weekNum} · ${fmtD(monday)} au ${fmtD(endFri)}`;
+
+  // Récupère le HTML du gantt actuel
+  const ganttEl = document.getElementById('pe-grid');
+  const ganttHTML = ganttEl ? ganttEl.outerHTML : '<p>Aucun planning</p>';
+
+  // Récupère les CSS variables de la page
+  const styles = Array.from(document.styleSheets)
+    .flatMap(s => { try { return Array.from(s.cssRules); } catch { return []; } })
+    .map(r => r.cssText).join('\n');
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>${title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Instrument Sans', sans-serif; background: white; padding: 20px; }
+    --bg: #F5F3EF; --surface2: #FFFFFF; --border: #E5E2DC; --ink: #2A2D26; --ink2: #5C5A54; --ink3: #A8A29E;
+    --accent: #3B6CF8; --accent-lt: #EEF2FF; --green: #16A34A; --amber: #D97706; --red: #DC2626;
+    h1 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; margin-bottom: 4px; color: #2A2D26; }
+    .sub { font-size: 11px; color: #78716C; margin-bottom: 16px; }
+    #pe-grid { position: relative; width: 100%; overflow: visible; }
+    #pe-grid * { font-family: 'Instrument Sans', sans-serif; }
+    .legend { display: flex; gap: 12px; margin-top: 12px; font-size: 11px; flex-wrap: wrap; }
+    .legend span { padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+    @media print {
+      @page { size: A4 landscape; margin: 1cm; }
+      body { padding: 0; }
+      button { display: none !important; }
+    }
+    /* Copie des variables CSS */
+    :root {
+      --bg: #F5F3EF; --surface2: #FFFFFF; --border: #E5E2DC; --ink: #2A2D26; --ink2: #5C5A54; --ink3: #A8A29E;
+      --accent: #3B6CF8; --accent-lt: #EEF2FF; --green: #16A34A; --amber: #D97706; --red: #DC2626;
+      --radius: 12px; --shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+  </style>
+  </head><body>
+  <h1>📅 ${title}</h1>
+  <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+  ${ganttHTML}
+  <div class="legend">
+    <span style="background:#F0FDF4;color:#16A34A">✓ Conforme</span>
+    <span style="background:#FFFBEB;color:#D97706">! Limite</span>
+    <span style="background:#FEF2F2;color:#DC2626">✗ Non conforme</span>
+  </div>
+  <script>
+    // Repositionner les barres après rendu
+    window.onload = function() {
+      const grid = document.getElementById('pe-grid');
+      if (!grid) return;
+      const leftW = 120, nHours = 13, startMin = 7*60;
+      const ganttW = grid.offsetWidth - leftW;
+      const COL_W  = ganttW / nHours;
+      grid.querySelectorAll('[data-debut-min]').forEach(bar => {
+        const debut = parseInt(bar.dataset.debutMin);
+        const fin   = parseInt(bar.dataset.finMin);
+        bar.style.left  = leftW + (debut - startMin) / 60 * COL_W + 'px';
+        bar.style.width = (fin - debut) / 60 * COL_W + 'px';
+        bar.style.top   = bar.dataset.top + 'px';
+        bar.style.height= bar.dataset.h   + 'px';
+      });
+      grid.querySelectorAll('[data-timeline-min]').forEach(line => {
+        line.style.left = leftW + (parseInt(line.dataset.timelineMin) - startMin) / 60 * COL_W + 'px';
+      });
+      setTimeout(() => window.print(), 400);
+    };
+  <\/script>
+  </body></html>`);
+  w.document.close();
+}
 
 // Stub pour compatibilité Paramètres
 function renderPlanningParamHoraires() {
