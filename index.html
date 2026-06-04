@@ -1477,7 +1477,7 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
 
     <div id="page-fiche-enfant" style="display:none">
-      <div style="padding:24px">
+      <div>
         <!-- Header fiche -->
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
           <button onclick="showFamillesFromFiche()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink3);display:flex;align-items:center;gap:6px">
@@ -1557,7 +1557,7 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <!-- ─ ONGLET PARENTS ─ -->
-        <div id="fi-parents" class="fiche-panel">
+        <div id="fi-parents" class="fiche-panel" style="display:none">
           <div class="fiche-card">
             <div class="fiche-card-title">Parent 1</div>
             <div class="fi-row triple">
@@ -1611,7 +1611,7 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <!-- ─ ONGLET ACCUEIL ─ -->
-        <div id="fi-accueil" class="fiche-panel">
+        <div id="fi-accueil" class="fiche-panel" style="display:none">
           <div class="fiche-card">
             <div class="fiche-card-title">Contrat d'accueil</div>
             <div class="fi-row">
@@ -1636,7 +1636,7 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <!-- ─ ONGLET NOTES ─ -->
-        <div id="fi-notes" class="fiche-panel">
+        <div id="fi-notes" class="fiche-panel" style="display:none">
           <div class="fiche-card">
             <div class="fiche-card-title">Informations médicales</div>
             <div class="fi-row solo">
@@ -1656,7 +1656,7 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <!-- ─ ONGLET PLANNING ─ -->
-        <div id="fi-planning" class="fiche-panel">
+        <div id="fi-planning" class="fiche-panel" style="display:none">
           <div style="padding:48px;text-align:center;color:var(--ink3)">
             <div style="font-size:40px;margin-bottom:12px">📅</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:6px">Lié au module Planning</div>
@@ -1665,7 +1665,7 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <!-- ─ ONGLET FACTURES ─ -->
-        <div id="fi-factures" class="fiche-panel">
+        <div id="fi-factures" class="fiche-panel" style="display:none">
           <div style="padding:48px;text-align:center;color:var(--ink3)">
             <div style="font-size:40px;margin-bottom:12px">🧾</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:6px">Factures et règlements</div>
@@ -1674,7 +1674,7 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <!-- ─ ONGLET DOCUMENTS ─ -->
-        <div id="fi-docs" class="fiche-panel">
+        <div id="fi-docs" class="fiche-panel" style="display:none">
           <div style="padding:48px;text-align:center;color:var(--ink3)">
             <div style="font-size:40px;margin-bottom:12px">📄</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:6px">Documents</div>
@@ -4449,16 +4449,26 @@ function showFamillesFromFiche() {
 }
 
 function switchFicheTab(tabId, btn) {
-  const page = document.getElementById('page-fiche-enfant');
-  if (!page) return;
-  page.querySelectorAll('.fiche-panel').forEach(p => p.style.display = 'none');
-  page.querySelectorAll('.fiche-tab').forEach(b => b.classList.remove('active'));
+  // Cacher tous les panels
+  ['fi-identite','fi-parents','fi-accueil','fi-notes','fi-planning','fi-factures','fi-docs'].forEach(id => {
+    const p = document.getElementById(id);
+    if (p) p.style.display = 'none';
+  });
+  // Désactiver tous les onglets
+  document.querySelectorAll('.fiche-tab').forEach(b => {
+    b.style.color = 'var(--ink3)';
+    b.style.borderBottom = '2px solid transparent';
+    b.style.fontWeight = '600';
+  });
+  // Afficher le panel actif
   const panel = document.getElementById(tabId);
   if (panel) panel.style.display = 'block';
-  if (btn) { btn.classList.add('active'); }
-  else {
-    const activBtn = page.querySelector(`.fiche-tab[data-tab="${tabId}"]`);
-    if (activBtn) activBtn.classList.add('active');
+  // Activer l'onglet
+  const activeBtn = btn || document.querySelector(`.fiche-tab[data-tab="${tabId}"]`);
+  if (activeBtn) {
+    activeBtn.style.color = 'var(--accent)';
+    activeBtn.style.borderBottom = '2px solid var(--accent)';
+    activeBtn.style.fontWeight = '700';
   }
 }
 
