@@ -7209,10 +7209,10 @@ function renderPlanningEquipe() {
     return `<div data-hour="${h}" style="position:absolute;left:calc(${LABEL_W}px + ${left}% * ((100% - ${LABEL_W}px) / 100%));top:0;font-size:10px;font-weight:700;color:var(--ink3);padding-top:6px;transform:translateX(-50%)">${h}h</div>`;
   }).join('');
 
-  // Grid lines en %
+  // Grid lines — positionnées dans la zone timeline (après LABEL_W)
   const gridLines = Array.from({length: T_TOTAL + 1}, (_, i) => {
-    const left = (i / T_TOTAL * 100).toFixed(3);
-    return `<div style="position:absolute;left:${left}%;top:0;bottom:0;width:1px;background:var(--border)"></div>`;
+    const leftPct = (i / T_TOTAL * 100).toFixed(3);
+    return `<div style="position:absolute;left:calc(${leftPct}% * ((100% - ${LABEL_W}px) / 100%));top:0;bottom:0;width:1px;background:var(--border)"></div>`;
   }).join('');
 
   // Current time line
@@ -7265,13 +7265,15 @@ function renderPlanningEquipe() {
           const pf = parseInt(pm[3])*60 + (parseInt(pm[4])||0);
           const pLeftPct  = ((pd - debutMin) / (finMin - debutMin) * 100).toFixed(3);
           const pWidthPct = ((pf - pd)       / (finMin - debutMin) * 100).toFixed(3);
-          pauseHtml = `<div style="position:absolute;left:${pLeftPct}%;top:0;width:${pWidthPct}%;bottom:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 3px,transparent 3px,transparent 7px);border-left:1px dashed ${c.border};border-right:1px dashed ${c.border}"></div>`;
+          pauseHtml = `<div data-pause-debut="${pd}" data-pause-fin="${pf}" data-bar-debut="${debutMin}" data-bar-fin="${finMin}" style="position:absolute;left:${pLeftPct}%;top:0;width:${pWidthPct}%;bottom:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 3px,transparent 3px,transparent 7px);border-left:1px dashed ${c.border};border-right:1px dashed ${c.border}"></div>`;
         }
       }
 
       const lbl = `<span style="font-size:11px;font-weight:700;white-space:nowrap">${h.debut||''}–${h.fin||''}</span>`;
 
       return `<div onclick="openModalPE(${cr.horaire_idx},${peGanttDay},'${cr.id}')"
+        data-debut-min="${debutMin}" data-fin-min="${finMin}" data-top="${barTop}" data-h="${barH}" data-bar-debut="${debutMin}"
+        data-bar-color-bg="${c.bg}" data-bar-color-border="${c.border}" data-bar-color-text="${c.text}"
         style="position:absolute;
                left:calc(${LABEL_W}px + ${leftPct}% * ((100% - ${LABEL_W}px) / 100%));
                top:${barTop}px;
@@ -7610,7 +7612,7 @@ function exportPlanningPDF() {
   <title>${title}</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing:border-box; margin:0; padding:0; }
+    * { box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
     :root { ${cssVarBlock} }
     body { font-family:'Instrument Sans',sans-serif; background:white; padding:30px 40px; }
     h1 { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--ink); margin-bottom:4px; }
@@ -7638,32 +7640,55 @@ function exportPlanningPDF() {
     window.onload = function() {
       const grid = document.getElementById('pe-grid');
       if (!grid) return;
-      const leftW = 120, nHours = 13, startMin = 7*60;
-      const ganttW = grid.offsetWidth - leftW;
-      const COL_W  = ganttW / nHours;
+      const LABEL_W = 120, START_H = 7, END_H = 20, TOTAL_MIN = (END_H - START_H) * 60;
+      const ganttW  = grid.offsetWidth - LABEL_W;
+
+      // Reposition bars using data-* attrs
       grid.querySelectorAll('[data-debut-min]').forEach(bar => {
         const debut = parseInt(bar.dataset.debutMin);
         const fin   = parseInt(bar.dataset.finMin);
-        bar.style.left   = leftW + (debut - startMin) / 60 * COL_W + 'px';
-        bar.style.width  = (fin - debut) / 60 * COL_W + 'px';
-        bar.style.top    = (bar.dataset.top || 0) + 'px';
-        bar.style.height = (bar.dataset.h   || 36) + 'px';
+        const top   = parseInt(bar.dataset.top || 0);
+        const h     = parseInt(bar.dataset.h   || 36);
+        const bg    = bar.dataset.barColorBg     || '';
+        const border= bar.dataset.barColorBorder || '';
+        const text  = bar.dataset.barColorText   || '';
+        bar.style.left     = (LABEL_W + (debut - START_H*60) / TOTAL_MIN * ganttW) + 'px';
+        bar.style.width    = ((fin - debut) / TOTAL_MIN * ganttW) + 'px';
+        bar.style.top      = top + 'px';
+        bar.style.height   = h + 'px';
+        bar.style.position = 'absolute';
+        if (bg)     bar.style.background   = bg;
+        if (border) bar.style.borderColor  = border;
+        // fix text color on label inside bar
+        const lbl = bar.querySelector('div[style*="padding"]');
+        if (lbl && text) lbl.style.color = text;
       });
+
+      // Reposition pause hatch divs
       grid.querySelectorAll('[data-pause-debut]').forEach(h => {
         const pd = parseInt(h.dataset.pauseDebut);
         const pf = parseInt(h.dataset.pauseFin);
         const bd = parseInt(h.dataset.barDebut);
-        h.style.left  = (pd - bd) / 60 * COL_W + 'px';
-        h.style.width = (pf - pd) / 60 * COL_W + 'px';
+        const bf = parseInt(h.dataset.barFin);
+        const barW = (bf - bd) / TOTAL_MIN * ganttW;
+        h.style.position = 'absolute';
+        h.style.left  = ((pd - bd) / (bf - bd) * 100).toFixed(3) + '%';
+        h.style.width = ((pf - pd) / (bf - bd) * 100).toFixed(3) + '%';
       });
-      grid.querySelectorAll('[data-timeline-min]').forEach(line => {
-        line.style.left = leftW + (parseInt(line.dataset.timelineMin) - startMin) / 60 * COL_W + 'px';
-      });
+
+      // Reposition hour labels
       grid.querySelectorAll('[data-hour]').forEach(el => {
-        el.style.left = leftW + (parseInt(el.dataset.hour) - 7) * COL_W + 'px';
+        const h = parseInt(el.dataset.hour);
+        el.style.left = (LABEL_W + (h - START_H) / (END_H - START_H) * ganttW) + 'px';
         el.style.transform = 'translateX(-50%)';
       });
-      setTimeout(() => window.print(), 500);
+
+      // Hide current-time red line in PDF
+      grid.querySelectorAll('[style*="var(--red)"]').forEach(el => {
+        if (el.children.length <= 1 && el.style.width === '2px') el.style.display = 'none';
+      });
+
+      setTimeout(() => window.print(), 600);
     };
   <\/script>
   </body></html>`);
