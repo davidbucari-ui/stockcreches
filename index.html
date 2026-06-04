@@ -867,6 +867,9 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('univers', this)">
     <span class="nav-icon">🌟</span> Univers ludiques
   </button>
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('familles', this)">
+    <span class="nav-icon">👨‍👩‍👧</span> Familles
+  </button>
   <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('planning', this)">
     <span class="nav-icon">📅</span> Planning
   </button>
@@ -1002,6 +1005,19 @@ textarea { resize: vertical; min-height: 72px; }
             <div style="font-size:32px;margin-bottom:10px">🧑‍💼</div>
             <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Ressources humaines</div>
             <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Contrats · Congés · Recrutement · Formation</div>
+          </button>
+
+          <button id="dashboard-card-familles" onclick="showPage('familles', null)" style="background:linear-gradient(135deg,#134E4A,#0891B2);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(8,145,178,0.3);position:relative;overflow:hidden"
+            onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(8,145,178,0.45)'"
+            onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(8,145,178,0.3)'">
+            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">👨‍👩‍👧</div>
+            <div style="font-size:32px;margin-bottom:10px">👨‍👩‍👧</div>
+            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Familles & Enfants</div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <span class="fam-nm" style="background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700">— NM</span>
+              <span class="fam-m"  style="background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700">— M</span>
+              <span class="fam-pros" style="background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700">—</span>
+            </div>
           </button>
 
           <button id="dashboard-card-planning" onclick="showPage('planning', null)" style="display:none;background:linear-gradient(135deg,#1e3a5f,#2563EB);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(37,99,235,0.3);position:relative;overflow:hidden"
@@ -1355,6 +1371,59 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
 
     <!-- ── PAGE PLANNING ── -->
+    <div id="page-familles" style="display:none">
+      <div style="padding:24px;max-width:1100px">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);margin-bottom:4px">Module</div>
+            <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif">👨‍👩‍👧 Familles & Enfants</div>
+          </div>
+          <select id="fam-creche-sel" onchange="renderFamilles()" style="padding:8px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2)"></select>
+          <button class="btn btn-primary" onclick="openModalFamille(null)">+ Ajouter un enfant</button>
+        </div>
+
+        <!-- KPI strip -->
+        <div id="fam-kpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px"></div>
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">
+          <button id="fam-tab-liste" onclick="switchFamTab('liste')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer">📋 Liste enfants</button>
+          <button id="fam-tab-berceaux" onclick="switchFamTab('berceaux')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">🏢 Berceaux entreprise</button>
+          <button id="fam-tab-financement" onclick="switchFamTab('financement')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">💶 Financement</button>
+        </div>
+
+        <div id="fam-view-liste">
+          <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+            <input type="text" id="fam-search" placeholder="🔍 Rechercher un enfant..." oninput="renderFamillesList()"
+              style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2)">
+            <select id="fam-filter-type" onchange="renderFamillesList()" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2)">
+              <option value="">Tous types</option>
+              <option value="NM">Non-marcheurs</option>
+              <option value="M">Marcheurs</option>
+            </select>
+            <select id="fam-filter-contrat" onchange="renderFamillesList()" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2)">
+              <option value="">Tous contrats</option>
+              <option value="PSU">PSU</option>
+              <option value="PAJE">PAJE</option>
+            </select>
+          </div>
+          <div id="fam-list-grid"></div>
+        </div>
+
+        <div id="fam-view-berceaux" style="display:none">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+            <button class="btn btn-primary" onclick="openModalBerceau(null)">+ Ajouter un berceau</button>
+          </div>
+          <div id="fam-berceaux-grid"></div>
+        </div>
+
+        <div id="fam-view-financement" style="display:none">
+          <div id="fam-financement-grid"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="page-planning" style="display:none">
       <div style="padding:20px 28px">
 
@@ -2473,6 +2542,122 @@ function printEtiquettes() {
       }).join('\n      ')}
     };
   <\/script>
+
+
+
+
+
+
+
+
+<div class="modal-overlay" id="modal-famille" onclick="closeModalClick(event,'modal-famille')">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h2 id="modal-famille-title">➕ Ajouter un enfant</h2>
+      <button class="modal-close" onclick="closeModal('modal-famille')">✕</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="form-group">
+        <label>Prénom *</label>
+        <input type="text" id="fam-prenom" placeholder="Prénom">
+      </div>
+      <div class="form-group">
+        <label>Nom *</label>
+        <input type="text" id="fam-nom" placeholder="Nom">
+      </div>
+      <div class="form-group">
+        <label>Date de naissance *</label>
+        <input type="date" id="fam-ddn">
+      </div>
+      <div class="form-group">
+        <label>Type *</label>
+        <select id="fam-type">
+          <option value="NM">Non-marcheur (NM)</option>
+          <option value="M">Marcheur</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Contrat CAF *</label>
+        <select id="fam-contrat-caf">
+          <option value="PSU">PSU</option>
+          <option value="PAJE">PAJE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Jours / semaine</label>
+        <input type="number" id="fam-jours" min="1" max="5" value="5">
+      </div>
+      <div class="form-group">
+        <label>Heures / semaine</label>
+        <input type="number" id="fam-heures" min="1" max="50" value="40">
+      </div>
+      <div class="form-group">
+        <label>Berceau entreprise</label>
+        <select id="fam-berceau"><option value="">Aucun</option></select>
+      </div>
+      <div class="form-group full">
+        <label>Date d'entrée</label>
+        <input type="date" id="fam-entree">
+      </div>
+      <div class="form-group full">
+        <label>Date de sortie prévue</label>
+        <input type="date" id="fam-sortie">
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <textarea id="fam-notes" rows="2" placeholder="Allergies, PAI, informations particulières..." style="width:100%;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="modal-famille-delete" style="display:none;margin-right:auto" onclick="deleteFamille()">Supprimer</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-famille')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveModalFamille()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-berceau" onclick="closeModalClick(event,'modal-berceau')">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <h2 id="modal-berceau-title">Ajouter un berceau</h2>
+      <button class="modal-close" onclick="closeModal('modal-berceau')">✕</button>
+    </div>
+    <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="form-group full">
+        <label>Entreprise *</label>
+        <input type="text" id="berc-entreprise" placeholder="Nom de l'entreprise">
+      </div>
+      <div class="form-group">
+        <label>Nombre de places *</label>
+        <input type="number" id="berc-places" min="1" value="1">
+      </div>
+      <div class="form-group">
+        <label>Type contrat CAF</label>
+        <select id="berc-contrat">
+          <option value="PSU">PSU</option>
+          <option value="PAJE">PAJE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date début</label>
+        <input type="date" id="berc-debut">
+      </div>
+      <div class="form-group">
+        <label>Date fin</label>
+        <input type="date" id="berc-fin">
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <input type="text" id="berc-notes" placeholder="Contact, conditions...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="modal-berceau-delete" style="display:none;margin-right:auto" onclick="deleteModalBerceau()">Supprimer</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-berceau')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveModalBerceau()">Enregistrer</button>
+    </div>
+  </div>
+</div>
 </body></html>`;
 
   closeModal('modal-etiquettes');
@@ -2533,6 +2718,13 @@ function printArticleLabel(id) {
       new QRCode(document.getElementById('qr-container'),{text:'${code}',width:100,height:100,colorDark:'#1C1917',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
     };
   <\/script>
+
+
+
+
+
+
+
 </body></html>`;
   const w = window.open('','_blank');
   w.document.write(html);
@@ -2642,6 +2834,13 @@ function buildScannerPage() {
     }
     init();
   <\/script>
+
+
+
+
+
+
+
 </body></html>`;
 }
 
@@ -3214,7 +3413,14 @@ function exportInventairePDF() {
     </tr></tfoot>
   </table>
   <script>window.onload=function(){window.print()}<\/script>
-  </body></html>`;
+  
+
+
+
+
+
+
+</body></html>`;
 
   const w = window.open('', '_blank');
   w.document.write(html);
@@ -3357,7 +3563,488 @@ function renderHub() {
     const now = new Date();
     dateEl.textContent = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   }
+  if (typeof renderDashboardFamillesTile === 'function') renderDashboardFamillesTile();
 }
+
+
+// ══════════════════════════════════════════════════════════════════
+// MODULE FAMILLES & ENFANTS
+// ══════════════════════════════════════════════════════════════════
+
+// ── Storage helpers ───────────────────────────────────────────────
+function getFamilles(crecheId) {
+  const key = 'orevy_familles_' + (crecheId || 'all');
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+function saveFamilles(data, crecheId) {
+  localStorage.setItem('orevy_familles_' + (crecheId || 'all'), JSON.stringify(data));
+}
+function getBerceaux(crecheId) {
+  try { return JSON.parse(localStorage.getItem('orevy_berceaux_' + (crecheId||'all')) || '[]'); } catch { return []; }
+}
+function saveBerceaux(data, crecheId) {
+  localStorage.setItem('orevy_berceaux_' + (crecheId||'all'), JSON.stringify(data));
+}
+
+// ── Utilitaires ───────────────────────────────────────────────────
+function calcAgeEnfant(ddn) {
+  if (!ddn) return { mois: 0, label: '?' };
+  const d = new Date(ddn), now = new Date();
+  let mois = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+  if (mois < 0) mois = 0;
+  if (mois < 24) return { mois, label: mois + ' mois' };
+  const ans = Math.floor(mois / 12);
+  return { mois, label: ans + ' an' + (ans > 1 ? 's' : '') };
+}
+
+function calcTauxEncadrement(enfants, option) {
+  // option : 'NM8M' (1/5 NM + 1/8 M) ou '6' (1/6 tous)
+  const nm = enfants.filter(e => e.type === 'NM').length;
+  const m  = enfants.filter(e => e.type === 'M').length;
+  const total = nm + m;
+  if (total === 0) return { prosMin: 0, nm, m, total };
+  let prosMin;
+  if (option === '6') {
+    prosMin = Math.ceil(total / 6);
+  } else {
+    prosMin = Math.ceil(nm / 5) + Math.ceil(m / 8);
+  }
+  prosMin = Math.max(prosMin, total > 0 ? 2 : 0); // min 2 pros
+  return { prosMin, nm, m, total };
+}
+
+function getCrecheId() {
+  return document.getElementById('fam-creche-sel')?.value || '';
+}
+
+// ── Render principal ──────────────────────────────────────────────
+function renderFamilles() {
+  // Remplir sélecteur crèches
+  const sel = document.getElementById('fam-creche-sel');
+  if (sel && window.CRECHES_DATA) {
+    sel.innerHTML = CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+  }
+  renderFamillesKPI();
+  renderFamillesList();
+  renderFamillesBerceaux();
+  renderFamillesFinancement();
+}
+
+// ── KPI strip ─────────────────────────────────────────────────────
+function renderFamillesKPI() {
+  const el = document.getElementById('fam-kpi');
+  if (!el) return;
+  const crecheId = getCrecheId();
+  const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+  const nm = enfants.filter(e => e.type === 'NM').length;
+  const m  = enfants.filter(e => e.type === 'M').length;
+  const total = enfants.length;
+  const berceaux = getBerceaux(crecheId);
+  const placesB = berceaux.reduce((s,b) => s + (parseInt(b.places)||0), 0);
+
+  // Taux encadrement (option stockée dans prefs crèche ou défaut NM8M)
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const option = prefs.optionEncadrement || 'NM8M';
+  const { prosMin } = calcTauxEncadrement(enfants, option);
+
+  const psu = enfants.filter(e => e.contrat_caf === 'PSU').length;
+  const paje = enfants.filter(e => e.contrat_caf === 'PAJE').length;
+
+  const kpis = [
+    { icon:'👶', label:'Non-marcheurs', val: nm, sub: `sur ${total} enfants`, color:'#DBEAFE', text:'#1D4ED8' },
+    { icon:'🚶', label:'Marcheurs', val: m, sub: `sur ${total} enfants`, color:'#DCFCE7', text:'#15803D' },
+    { icon:'👩‍💼', label:'Pros minimum', val: prosMin, sub: option==='6'?'1 pour 6':'1/5 NM + 1/8 M', color:'#EDE9FE', text:'#6D28D9' },
+    { icon:'🏢', label:'Berceaux entreprise', val: placesB, sub: berceaux.length + ' entreprise' + (berceaux.length>1?'s':''), color:'#FEF3C7', text:'#B45309' },
+    { icon:'💶', label:'PSU / PAJE', val: `${psu} / ${paje}`, sub: 'contrats CAF', color:'#FFE4E6', text:'#BE123C' },
+  ];
+
+  el.innerHTML = kpis.map(k => `
+    <div style="background:${k.color};border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:22px">${k.icon}</div>
+      <div style="font-size:24px;font-weight:800;font-family:'Syne',sans-serif;color:${k.text}">${k.val}</div>
+      <div style="font-size:12px;font-weight:700;color:${k.text}">${k.label}</div>
+      <div style="font-size:11px;color:${k.text};opacity:0.7">${k.sub}</div>
+    </div>`).join('');
+}
+
+// ── Liste enfants ─────────────────────────────────────────────────
+function renderFamillesList() {
+  const el = document.getElementById('fam-list-grid');
+  if (!el) return;
+  const crecheId = getCrecheId();
+  let enfants = getFamilles(crecheId);
+  const q = document.getElementById('fam-search')?.value?.toLowerCase() || '';
+  const filterType = document.getElementById('fam-filter-type')?.value || '';
+  const filterContrat = document.getElementById('fam-filter-contrat')?.value || '';
+
+  if (q) enfants = enfants.filter(e => (e.prenom+' '+e.nom).toLowerCase().includes(q));
+  if (filterType) enfants = enfants.filter(e => e.type === filterType);
+  if (filterContrat) enfants = enfants.filter(e => e.contrat_caf === filterContrat);
+
+  if (!enfants.length) {
+    el.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:40px;margin-bottom:12px">👶</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucun enfant enregistré</div>
+      <div style="font-size:13px">Cliquez sur "+ Ajouter un enfant" pour commencer</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+    ${enfants.map(e => {
+      const age = calcAgeEnfant(e.ddn);
+      const isNM = e.type === 'NM';
+      const typeColor = isNM ? { bg:'#DBEAFE', text:'#1D4ED8' } : { bg:'#DCFCE7', text:'#15803D' };
+      const cafColor  = e.contrat_caf === 'PSU' ? { bg:'#EDE9FE', text:'#6D28D9' } : { bg:'#FEF3C7', text:'#B45309' };
+      const initials  = ((e.prenom||'')[0]||'') + ((e.nom||'')[0]||'');
+      const today = new Date();
+      const sortieDate = e.sortie ? new Date(e.sortie) : null;
+      const sortieProche = sortieDate && (sortieDate - today) < 30*24*3600*1000 && sortieDate >= today;
+      const sorti = sortieDate && sortieDate < today;
+
+      return `<div onclick="openModalFamille('${e.id}')"
+        style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s;${sorti?'opacity:0.5':''}"
+        onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:50%;background:${typeColor.bg};color:${typeColor.text};font-family:'Syne',sans-serif;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials.toUpperCase()}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.prenom} ${e.nom}</div>
+            <div style="font-size:12px;color:var(--ink3)">${age.label}</div>
+          </div>
+          ${sortieProche ? '<span style="font-size:10px;background:#FEF3C7;color:#B45309;padding:2px 6px;border-radius:8px;font-weight:700">⚠ Sortie proche</span>' : ''}
+          ${sorti ? '<span style="font-size:10px;background:#F1F5F9;color:var(--ink3);padding:2px 6px;border-radius:8px;font-weight:700">Sorti</span>' : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span style="background:${typeColor.bg};color:${typeColor.text};padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">${isNM?'🔵 NM':'🟢 Marcheur'}</span>
+          <span style="background:${cafColor.bg};color:${cafColor.text};padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">${e.contrat_caf||'—'}</span>
+          ${e.berceau ? `<span style="background:#FFE4E6;color:#BE123C;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">🏢 ${e.berceau}</span>` : ''}
+          ${e.jours ? `<span style="background:var(--bg);color:var(--ink3);padding:3px 9px;border-radius:10px;font-size:11px;font-weight:600">${e.jours}j/sem</span>` : ''}
+        </div>
+        ${e.notes ? `<div style="margin-top:8px;font-size:11px;color:var(--ink3);background:var(--bg);border-radius:6px;padding:6px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.notes}</div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── Berceaux entreprise ───────────────────────────────────────────
+function renderFamillesBerceaux() {
+  const el = document.getElementById('fam-berceaux-grid');
+  if (!el) return;
+  const crecheId = getCrecheId();
+  const berceaux = getBerceaux(crecheId);
+  const enfants  = getFamilles(crecheId);
+
+  if (!berceaux.length) {
+    el.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:40px;margin-bottom:12px">🏢</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucun berceau entreprise</div>
+      <div style="font-size:13px">Ajoutez des places réservées par des entreprises partenaires</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+    ${berceaux.map(b => {
+      const occupes = enfants.filter(e => e.berceau === b.id).length;
+      const pct = b.places > 0 ? Math.round(occupes / b.places * 100) : 0;
+      const color = pct >= 100 ? '#BE123C' : pct >= 75 ? '#B45309' : '#15803D';
+      return `<div onclick="openModalBerceau('${b.id}')"
+        style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:18px;cursor:pointer;transition:all 0.15s"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div style="font-size:28px">🏢</div>
+          <div>
+            <div style="font-weight:800;font-size:15px;font-family:'Syne',sans-serif">${b.entreprise}</div>
+            <div style="font-size:12px;color:var(--ink3)">${b.contrat||'PSU'} · ${b.debut||'—'} → ${b.fin||'—'}</div>
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:5px">
+            <span style="color:var(--ink3)">Places occupées</span>
+            <span style="color:${color}">${occupes} / ${b.places}</span>
+          </div>
+          <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(pct,100)}%;background:${color};border-radius:4px;transition:width 0.4s"></div>
+          </div>
+        </div>
+        ${b.notes ? `<div style="font-size:11px;color:var(--ink3)">${b.notes}</div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── Financement ───────────────────────────────────────────────────
+function renderFamillesFinancement() {
+  const el = document.getElementById('fam-financement-grid');
+  if (!el) return;
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+  const psu  = enfants.filter(e => e.contrat_caf === 'PSU');
+  const paje = enfants.filter(e => e.contrat_caf === 'PAJE');
+  const hPSU  = psu.reduce((s,e)  => s + (parseInt(e.heures)||0), 0);
+  const hPAJE = paje.reduce((s,e) => s + (parseInt(e.heures)||0), 0);
+
+  // Option encadrement configurable
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const option = prefs.optionEncadrement || 'NM8M';
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+      <div style="background:#EDE9FE;border-radius:14px;padding:20px">
+        <div style="font-size:28px;margin-bottom:8px">💜</div>
+        <div style="font-size:28px;font-weight:800;font-family:'Syne',sans-serif;color:#6D28D9">${psu.length}</div>
+        <div style="font-size:14px;font-weight:700;color:#6D28D9">Enfants PSU</div>
+        <div style="font-size:12px;color:#6D28D9;opacity:0.8;margin-top:4px">Prestation de Service Unique</div>
+        <div style="margin-top:10px;font-size:12px;color:#6D28D9;font-weight:600">${hPSU}h contractuelles / semaine</div>
+      </div>
+      <div style="background:#FEF3C7;border-radius:14px;padding:20px">
+        <div style="font-size:28px;margin-bottom:8px">💛</div>
+        <div style="font-size:28px;font-weight:800;font-family:'Syne',sans-serif;color:#B45309">${paje.length}</div>
+        <div style="font-size:14px;font-weight:700;color:#B45309">Enfants PAJE</div>
+        <div style="font-size:12px;color:#B45309;opacity:0.8;margin-top:4px">Prestation d'Accueil du Jeune Enfant</div>
+        <div style="margin-top:10px;font-size:12px;color:#B45309;font-weight:600">${hPAJE}h contractuelles / semaine</div>
+      </div>
+    </div>
+
+    
+    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px">⚙️ Option d'encadrement réglementaire</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid ${option==='NM8M'?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;background:${option==='NM8M'?'var(--accent-lt)':'var(--surface2)'}">
+          <input type="radio" name="opt-enc" value="NM8M" ${option==='NM8M'?'checked':''} onchange="saveOptionEncadrement('NM8M')" style="accent-color:var(--accent)">
+          <div>
+            <div style="font-size:13px;font-weight:700">Option A</div>
+            <div style="font-size:11px;color:var(--ink3)">1 pro / 5 NM + 1 pro / 8 marcheurs</div>
+          </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid ${option==='6'?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;background:${option==='6'?'var(--accent-lt)':'var(--surface2)'}">
+          <input type="radio" name="opt-enc" value="6" ${option==='6'?'checked':''} onchange="saveOptionEncadrement('6')" style="accent-color:var(--accent)">
+          <div>
+            <div style="font-size:13px;font-weight:700">Option B</div>
+            <div style="font-size:11px;color:var(--ink3)">1 pro / 6 enfants (tous âges)</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    
+    ${psu.length ? `
+    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#6D28D9">📋 Enfants PSU</div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
+      <tbody>${psu.map(e => `<tr>
+        <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
+        <td><span style="background:${e.type==='NM'?'#DBEAFE':'#DCFCE7'};color:${e.type==='NM'?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${e.type==='NM'?'NM':'Marcheur'}</span></td>
+        <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
+        <td>${e.berceau?`<span style="background:#FFE4E6;color:#BE123C;padding:2px 6px;border-radius:6px;font-size:11px">${e.berceau}</span>`:'—'}</td>
+      </tr>`).join('')}</tbody></table></div>
+    </div>` : ''}
+
+    
+    ${paje.length ? `
+    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#B45309">📋 Enfants PAJE</div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
+      <tbody>${paje.map(e => `<tr>
+        <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
+        <td><span style="background:${e.type==='NM'?'#DBEAFE':'#DCFCE7'};color:${e.type==='NM'?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${e.type==='NM'?'NM':'Marcheur'}</span></td>
+        <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
+        <td>${e.berceau?`<span style="background:#FFE4E6;color:#BE123C;padding:2px 6px;border-radius:6px;font-size:11px">${e.berceau}</span>`:'—'}</td>
+      </tr>`).join('')}</tbody></table></div>
+    </div>` : ''}
+  `;
+}
+
+function saveOptionEncadrement(val) {
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  prefs.optionEncadrement = val;
+  localStorage.setItem('koala_prefs', JSON.stringify(prefs));
+  renderFamillesKPI();
+  renderFamillesFinancement();
+}
+
+// ── Tabs familles ─────────────────────────────────────────────────
+function switchFamTab(tab) {
+  ['liste','berceaux','financement'].forEach(t => {
+    const btn  = document.getElementById('fam-tab-' + t);
+    const view = document.getElementById('fam-view-' + t);
+    if (btn)  { btn.style.color = tab===t ? 'var(--accent)' : 'var(--ink3)'; btn.style.borderBottom = tab===t ? '2px solid var(--accent)' : '2px solid transparent'; btn.style.fontWeight = tab===t ? '700' : '600'; }
+    if (view) view.style.display = tab===t ? '' : 'none';
+  });
+}
+
+// ── Modal enfant ──────────────────────────────────────────────────
+let famEditingId = null;
+
+function openModalFamille(id) {
+  famEditingId = id || null;
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId);
+  const berceaux = getBerceaux(crecheId);
+
+  // Remplir sélecteur berceaux
+  const bSel = document.getElementById('fam-berceau');
+  if (bSel) bSel.innerHTML = '<option value="">Aucun</option>' + berceaux.map(b => `<option value="${b.id}">${b.entreprise} (${b.places} places)</option>`).join('');
+
+  document.getElementById('modal-famille-title').textContent = id ? "✏️ Modifier l'enfant" : '➕ Ajouter un enfant';
+  document.getElementById('modal-famille-delete').style.display = id ? 'inline-flex' : 'none';
+
+  if (id) {
+    const e = enfants.find(x => x.id === id);
+    if (e) {
+      document.getElementById('fam-prenom').value = e.prenom || '';
+      document.getElementById('fam-nom').value    = e.nom    || '';
+      document.getElementById('fam-ddn').value    = e.ddn    || '';
+      document.getElementById('fam-type').value   = e.type   || 'NM';
+      document.getElementById('fam-contrat-caf').value = e.contrat_caf || 'PSU';
+      document.getElementById('fam-jours').value  = e.jours  || 5;
+      document.getElementById('fam-heures').value = e.heures || 40;
+      document.getElementById('fam-berceau').value = e.berceau || '';
+      document.getElementById('fam-entree').value = e.entree || '';
+      document.getElementById('fam-sortie').value = e.sortie || '';
+      document.getElementById('fam-notes').value  = e.notes  || '';
+    }
+  } else {
+    ['fam-prenom','fam-nom','fam-notes','fam-entree','fam-sortie'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('fam-ddn').value = '';
+    document.getElementById('fam-type').value = 'NM';
+    document.getElementById('fam-contrat-caf').value = 'PSU';
+    document.getElementById('fam-jours').value = 5;
+    document.getElementById('fam-heures').value = 40;
+    document.getElementById('fam-berceau').value = '';
+  }
+  document.getElementById('modal-famille').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function saveModalFamille() {
+  const prenom = document.getElementById('fam-prenom').value.trim();
+  const nom    = document.getElementById('fam-nom').value.trim();
+  if (!prenom || !nom) { showNotif('⚠ Prénom et nom obligatoires'); return; }
+
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId);
+  const enfant = {
+    id:          famEditingId || 'fam_' + Date.now(),
+    prenom, nom,
+    ddn:         document.getElementById('fam-ddn').value,
+    type:        document.getElementById('fam-type').value,
+    contrat_caf: document.getElementById('fam-contrat-caf').value,
+    jours:       parseInt(document.getElementById('fam-jours').value) || 5,
+    heures:      parseInt(document.getElementById('fam-heures').value) || 40,
+    berceau:     document.getElementById('fam-berceau').value,
+    entree:      document.getElementById('fam-entree').value,
+    sortie:      document.getElementById('fam-sortie').value,
+    notes:       document.getElementById('fam-notes').value.trim(),
+  };
+
+  if (famEditingId) {
+    const idx = enfants.findIndex(e => e.id === famEditingId);
+    if (idx >= 0) enfants[idx] = enfant; else enfants.push(enfant);
+  } else {
+    enfants.push(enfant);
+  }
+  saveFamilles(enfants, crecheId);
+  closeModal('modal-famille');
+  renderFamilles();
+  showNotif(famEditingId ? '✅ Enfant mis à jour' : '✅ Enfant ajouté');
+}
+
+function deleteFamille() {
+  if (!famEditingId) return;
+  if (!confirm('Supprimer cet enfant ?')) return;
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId).filter(e => e.id !== famEditingId);
+  saveFamilles(enfants, crecheId);
+  closeModal('modal-famille');
+  renderFamilles();
+  showNotif('🗑 Enfant supprimé');
+}
+
+// ── Modal berceau ─────────────────────────────────────────────────
+let bercEditingId = null;
+
+function openModalBerceau(id) {
+  bercEditingId = id || null;
+  const crecheId = getCrecheId();
+  document.getElementById('modal-berceau-title').textContent = id ? '✏️ Modifier le berceau' : '🏢 Ajouter un berceau';
+  document.getElementById('modal-berceau-delete').style.display = id ? 'inline-flex' : 'none';
+
+  if (id) {
+    const b = getBerceaux(crecheId).find(x => x.id === id);
+    if (b) {
+      document.getElementById('berc-entreprise').value = b.entreprise || '';
+      document.getElementById('berc-places').value     = b.places || 1;
+      document.getElementById('berc-contrat').value    = b.contrat || 'PSU';
+      document.getElementById('berc-debut').value      = b.debut || '';
+      document.getElementById('berc-fin').value        = b.fin   || '';
+      document.getElementById('berc-notes').value      = b.notes || '';
+    }
+  } else {
+    ['berc-entreprise','berc-debut','berc-fin','berc-notes'].forEach(i => { const el=document.getElementById(i); if(el) el.value=''; });
+    document.getElementById('berc-places').value = 1;
+    document.getElementById('berc-contrat').value = 'PSU';
+  }
+  document.getElementById('modal-berceau').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function saveModalBerceau() {
+  const entreprise = document.getElementById('berc-entreprise').value.trim();
+  if (!entreprise) { showNotif('⚠ Nom entreprise obligatoire'); return; }
+  const crecheId = getCrecheId();
+  const berceaux = getBerceaux(crecheId);
+  const berceau = {
+    id:         bercEditingId || 'berc_' + Date.now(),
+    entreprise,
+    places:     parseInt(document.getElementById('berc-places').value) || 1,
+    contrat:    document.getElementById('berc-contrat').value,
+    debut:      document.getElementById('berc-debut').value,
+    fin:        document.getElementById('berc-fin').value,
+    notes:      document.getElementById('berc-notes').value.trim(),
+  };
+  if (bercEditingId) {
+    const idx = berceaux.findIndex(b => b.id === bercEditingId);
+    if (idx >= 0) berceaux[idx] = berceau; else berceaux.push(berceau);
+  } else {
+    berceaux.push(berceau);
+  }
+  saveBerceaux(berceaux, crecheId);
+  closeModal('modal-berceau');
+  renderFamilles();
+  showNotif(bercEditingId ? '✅ Berceau mis à jour' : '✅ Berceau ajouté');
+}
+
+function deleteModalBerceau() {
+  if (!bercEditingId) return;
+  if (!confirm('Supprimer ce berceau ?')) return;
+  const crecheId = getCrecheId();
+  const berceaux = getBerceaux(crecheId).filter(b => b.id !== bercEditingId);
+  saveBerceaux(berceaux, crecheId);
+  closeModal('modal-berceau');
+  renderFamilles();
+  showNotif('🗑 Berceau supprimé');
+}
+
+// ── Tuile dashboard Familles ───────────────────────────────────────
+function renderDashboardFamillesTile() {
+  const el = document.getElementById('dashboard-card-familles');
+  if (!el) return;
+  const crecheId = window.currentCreche && window.currentCreche !== 'all' ? window.currentCreche : (window.CRECHES_DATA?.[0]?.nom || '');
+  const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+  const nm = enfants.filter(e => e.type === 'NM').length;
+  const m  = enfants.filter(e => e.type === 'M').length;
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const { prosMin } = calcTauxEncadrement(enfants, prefs.optionEncadrement || 'NM8M');
+  el.querySelector('.fam-nm').textContent  = nm;
+  el.querySelector('.fam-m').textContent   = m;
+  el.querySelector('.fam-pros').textContent = prosMin + ' pros min';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FIN MODULE FAMILLES
+// ══════════════════════════════════════════════════════════════════
 
 // ── PERSONNALISATION ─────────────────────────────────────────────
 function renderParametres() {
@@ -3607,9 +4294,9 @@ let currentUserRole = 'stagiaire';
 let currentUserDbId = null;
 
 const ROLE_PAGES = {
-  admin:      ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie'],
-  directrice: ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie'],
-  auxiliaire: ['dashboard','inventaire','entretien','univers','planning'],
+  admin:      ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles'],
+  directrice: ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles'],
+  auxiliaire: ['dashboard','inventaire','entretien','univers','planning','familles'],
   stagiaire:  ['dashboard'],
 };
 
@@ -4710,13 +5397,13 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -4728,6 +5415,7 @@ function showPage(page, btn) {
   if (page === 'historique') { renderHistorique(); }
   if (page === 'inventaire') { renderTable(); renderStats(); }
   if (page === 'parametres') { renderParametres(); }
+  if (page === 'familles') { renderFamilles(); }
   if (page === 'admin') { showAdminPage(); }
   if (page === 'rh')       { showRhPage(); }
   if (page === 'planning') { showPlanningEquipePage(); }
@@ -4973,7 +5661,7 @@ function printBordereau(id) {
       '</tr></tbody></table>' +
       notesHTML +
       '<div class="footer">Bordereau généré le ' + new Date().toLocaleDateString('fr-FR') + ' — ' + getCrecheName() + '</div>' +
-      '</body></html>';
+      '\n</body></html>';
 
     // Ouvrir le modal de prévisualisation
     const previewBody  = document.getElementById('preview-body');
@@ -5363,7 +6051,7 @@ function showUniversDetail(id) {
 
   document.getElementById('detail-univers-title').textContent = u.nom;
   document.getElementById('detail-univers-body').innerHTML = `
-    <!-- Photos hero -->
+    
     ${(() => {
       const photos = u.photos && u.photos.length > 0 ? u.photos : (u.photo ? [u.photo] : []);
       if (photos.length === 0) return `
@@ -5407,21 +6095,21 @@ function showUniversDetail(id) {
         </div>`;
     })()}
 
-    <!-- Badges info -->
+    
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
       ${u.age ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600">👶 ${u.age}</span>` : ''}
       ${u.enfants ? `<span style="background:#F5F3FF;color:#6D28D9;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600">👥 ${u.enfants}</span>` : ''}
       <span style="background:#F0FDF4;color:#15803D;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600">📦 ${arts.length} article${arts.length>1?'s':''}</span>
     </div>
 
-    <!-- Objectifs -->
+    
     ${u.desc ? `
     <div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:16px;border-left:3px solid var(--accent)">
       <div style="font-weight:700;font-size:13px;color:var(--accent);margin-bottom:8px">🎯 Objectifs & Description</div>
       <div style="font-size:13px;line-height:1.7;color:var(--ink)">${u.desc}</div>
     </div>` : ''}
 
-    <!-- Matériel -->
+    
     <div style="margin-bottom:16px">
       <div style="font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
         📦 Matériel nécessaire
@@ -5444,7 +6132,7 @@ function showUniversDetail(id) {
         </div>`}
     </div>
 
-    <!-- Conseils -->
+    
     ${u.conseils ? `
     <div style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1px solid #FDE68A;border-radius:12px;padding:16px">
       <div style="font-weight:700;font-size:13px;color:#92400E;margin-bottom:8px">💡 Mise en scène & Conseils</div>
@@ -5522,7 +6210,14 @@ function printUnivers(id) {
     </div>
     ${u.conseils ? `<div class="section"><h3>💡 Mise en scène</h3><div class="conseils-box">${u.conseils}</div></div>` : ''}
     <div class="footer">Fiche générée le ${new Date().toLocaleDateString('fr-FR')} — ${u.creche}${u.ia_generated ? ' · ✨ Activité suggérée par Claude (IA)' : ''}</div>
-    </body></html>`;
+    
+
+
+
+
+
+
+</body></html>`;
 
   const blob = new Blob([html], { type:'text/html;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
@@ -7243,7 +7938,7 @@ function renderPlanningEquipe() {
 
   grid.innerHTML = `
     <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)">
-      <!-- Header jours -->
+      
       <div style="display:grid;grid-template-columns:110px repeat(5,1fr);border-bottom:2px solid var(--border);background:var(--bg)">
         <div style="padding:10px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);display:flex;align-items:center">Horaire</div>
         ${dayHeaders}
@@ -7818,7 +8513,14 @@ function exportPlanningPDF() {
       setTimeout(() => window.print(), 600);
     };
   <\/script>
-  </body></html>`);
+  
+
+
+
+
+
+
+</body></html>`);
   w.document.close();
 }
 
@@ -7938,7 +8640,14 @@ function printFicheSalarie() {
     <div class="info">✉ ${u.email}</div>
   </div>
   <script>window.onload=()=>setTimeout(()=>{window.print();window.close();},500);<\/script>
-  </body></html>`;
+  
+
+
+
+
+
+
+</body></html>`;
   const w = window.open('', '_blank');
   if (w) { w.document.write(html); w.document.close(); }
 }
@@ -9279,6 +9988,13 @@ function deleteSalarie() {
   showNotif('🗑 Salarié supprimé');
 }
 </script>
+
+
+
+<!-- ── MODAL ENFANT ──────────────────────────────────────────────── -->
+
+
+<!-- ── MODAL BERCEAU ENTREPRISE ──────────────────────────────────── -->
 
 
 </body>
