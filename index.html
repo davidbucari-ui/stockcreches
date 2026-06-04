@@ -7166,10 +7166,12 @@ function renderPlanningEquipe() {
 
   const week = peGetWeek(crecheId);
 
-  // Collect all pros (from RH + creneaux)
+  // Collect pros filtered by creche
   let salaries = [];
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
-  const rhNames  = salaries.map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
+  const rhNames  = salaries
+    .filter(s => !crecheId || s.creche === crecheId)
+    .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
   const crNames  = (week.creneaux||[]).map(c => c.pro);
   const allPros  = [...new Set([...rhNames, ...crNames])].sort();
 
@@ -7356,10 +7358,12 @@ function renderPlanningHebdo() {
 
   const week = peGetWeek(crecheId);
 
-  // Liste des pros depuis RH + creneaux
+  // Liste des pros filtrées par crèche
   let salaries = [];
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
-  const rhNames = salaries.map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
+  const rhNames = salaries
+    .filter(s => !crecheId || s.creche === crecheId)
+    .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
   const crNames = (week.creneaux||[]).map(c => c.pro);
   const pros = [...new Set([...rhNames, ...crNames])].sort();
 
@@ -7475,10 +7479,12 @@ function openModalPE(horaireIdx, jour, id) {
   document.getElementById('modal-pe-title').textContent = id ? '✏️ Modifier le créneau' : '➕ Ajouter une pro';
   document.getElementById('modal-pe-delete').style.display = id ? 'inline-flex' : 'none';
 
-  // Populate pros list from RH salaries + any already in creneaux
+  // Populate pros list filtrées par crèche
   let salaries = [];
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
-  const rhNames = salaries.map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
+  const rhNames = salaries
+    .filter(s => !crecheId || s.creche === crecheId)
+    .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
   const creneauxNames = (week.creneaux||[]).map(c => c.pro);
   const prosSet = new Set([...rhNames, ...creneauxNames]);
   const sel = document.getElementById('pe-pro-sel');
