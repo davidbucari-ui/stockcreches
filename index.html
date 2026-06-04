@@ -1477,39 +1477,37 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
 
     <div id="page-fiche-enfant" style="display:none">
-      <div>
-        <!-- Header fiche -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-          <button onclick="showFamillesFromFiche()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink3);display:flex;align-items:center;gap:6px">
-            ← Retour
-          </button>
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+          <button onclick="showFamillesFromFiche()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink3)">← Retour</button>
           <div style="flex:1"></div>
-          <button class="btn btn-danger btn-sm" id="fiche-delete-btn" onclick="deleteFicheEnfant()">🗑 Supprimer</button>
-          <button class="btn btn-primary" onclick="saveFicheEnfant()">💾 Enregistrer</button>
+          <button onclick="deleteFicheEnfant()" style="background:none;border:1.5px solid #FECACA;border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--red)">🗑 Supprimer</button>
+          <button onclick="saveFicheEnfant()" class="btn btn-primary">💾 Enregistrer</button>
         </div>
 
-        <!-- Avatar + nom -->
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
-          <div id="fiche-avatar" style="width:60px;height:60px;border-radius:50%;background:var(--accent-lt);color:var(--accent);font-family:'Syne',sans-serif;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>
+        <!-- Avatar -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+          <div id="fiche-avatar" style="width:56px;height:56px;border-radius:50%;background:var(--accent-lt);color:var(--accent);font-family:'Syne',sans-serif;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>
           <div>
-            <div id="fiche-nom-display" style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;color:var(--ink)"></div>
+            <div id="fiche-nom-display" style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif"></div>
             <div id="fiche-badges" style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"></div>
           </div>
         </div>
 
         <!-- Onglets -->
-        <div style="display:flex;flex-wrap:wrap;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">
-          <button class="fiche-tab active" data-tab="fi-identite" onclick="switchFicheTab('fi-identite',this)">Identité</button>
-          <button class="fiche-tab" data-tab="fi-parents" onclick="switchFicheTab('fi-parents',this)">Parents & référents</button>
-          <button class="fiche-tab" data-tab="fi-accueil" onclick="switchFicheTab('fi-accueil',this)">Accueil</button>
-          <button class="fiche-tab" data-tab="fi-notes" onclick="switchFicheTab('fi-notes',this)">Notes</button>
-          <button class="fiche-tab" data-tab="fi-planning" onclick="switchFicheTab('fi-planning',this)">Planning</button>
-          <button class="fiche-tab" data-tab="fi-factures" onclick="switchFicheTab('fi-factures',this)">Factures</button>
-          <button class="fiche-tab" data-tab="fi-docs" onclick="switchFicheTab('fi-docs',this)">Documents</button>
+        <div id="fiche-tabs-bar" style="display:flex;flex-wrap:wrap;border-bottom:2px solid var(--border);margin-bottom:20px;margin-left:-28px;margin-right:-28px;padding-left:28px">
+          <button class="fiche-tab" data-tab="fi-identite"  onclick="switchFicheTab('fi-identite',this)"  style="color:var(--accent);border-bottom:2px solid var(--accent);font-weight:700;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Identité</button>
+          <button class="fiche-tab" data-tab="fi-parents"   onclick="switchFicheTab('fi-parents',this)"   style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Parents & référents</button>
+          <button class="fiche-tab" data-tab="fi-accueil"   onclick="switchFicheTab('fi-accueil',this)"   style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Accueil</button>
+          <button class="fiche-tab" data-tab="fi-notes"     onclick="switchFicheTab('fi-notes',this)"     style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Notes</button>
+          <button class="fiche-tab" data-tab="fi-planning"  onclick="switchFicheTab('fi-planning',this)"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Planning</button>
+          <button class="fiche-tab" data-tab="fi-factures"  onclick="switchFicheTab('fi-factures',this)"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Factures</button>
+          <button class="fiche-tab" data-tab="fi-docs"      onclick="switchFicheTab('fi-docs',this)"      style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Documents</button>
         </div>
 
-        <!-- ─ ONGLET IDENTITÉ ─ -->
-        <div id="fi-identite" class="fiche-panel active">
+        <!-- IDENTITÉ -->
+        <div id="fi-identite" style="display:block">
           <div class="fiche-card">
             <div class="fiche-card-title">Informations de l'enfant</div>
             <div class="fi-row triple">
@@ -1520,12 +1518,9 @@ textarea { resize: vertical; min-height: 72px; }
             <div class="fi-row">
               <div class="fi-field"><label>Tranche d'âge *</label>
                 <select id="fi-type">
-                  <option value="2.5-6">2½–6 mois</option>
-                  <option value="6-12">6–12 mois</option>
-                  <option value="12-18">12–18 mois</option>
-                  <option value="18-24">18–24 mois</option>
-                  <option value="24-30">24–30 mois</option>
-                  <option value="30-36">30–36 mois</option>
+                  <option value="2.5-6">2½–6 mois</option><option value="6-12">6–12 mois</option>
+                  <option value="12-18">12–18 mois</option><option value="18-24">18–24 mois</option>
+                  <option value="24-30">24–30 mois</option><option value="30-36">30–36 mois</option>
                 </select>
               </div>
               <div class="fi-field"><label>Contrat CAF *</label>
@@ -1544,36 +1539,32 @@ textarea { resize: vertical; min-height: 72px; }
             <div class="fiche-card-title">CAF & Sécurité sociale</div>
             <div class="fi-row">
               <div class="fi-field"><label>N° allocataire CAF</label><input id="fi-num-caf" type="text" placeholder="Ex : 1234567A"></div>
-              <div class="fi-field"><label>N° sécurité sociale (parent 1)</label><input id="fi-nss1" type="text" placeholder="15 chiffres"></div>
-            </div>
-            <div class="fi-row solo">
-              <div class="fi-field"><label>N° sécurité sociale (parent 2)</label><input id="fi-nss2" type="text" placeholder="15 chiffres"></div>
+              <div class="fi-field"><label>N° sécu parent 1</label><input id="fi-nss1" type="text" placeholder="15 chiffres"></div>
             </div>
             <div class="fi-row">
+              <div class="fi-field"><label>N° sécu parent 2</label><input id="fi-nss2" type="text" placeholder="15 chiffres"></div>
               <div class="fi-field"><label>Quotient familial</label><input id="fi-qf" type="text" placeholder="Ex : 1240"></div>
+            </div>
+            <div class="fi-row solo">
               <div class="fi-field"><label>Taux horaire CAF</label><input id="fi-taux-caf" type="text" placeholder="Ex : 0,42 €/h"></div>
             </div>
           </div>
         </div>
 
-        <!-- ─ ONGLET PARENTS ─ -->
-        <div id="fi-parents" class="fiche-panel" style="display:none">
+        <!-- PARENTS -->
+        <div id="fi-parents" style="display:none">
           <div class="fiche-card">
             <div class="fiche-card-title">Parent 1</div>
             <div class="fi-row triple">
               <div class="fi-field"><label>Prénom</label><input id="fi-p1-prenom" type="text"></div>
               <div class="fi-field"><label>Nom</label><input id="fi-p1-nom" type="text"></div>
-              <div class="fi-field"><label>Lien</label>
-                <select id="fi-p1-lien"><option value="Mère">Mère</option><option value="Père">Père</option><option value="Tuteur">Tuteur légal</option><option value="Autre">Autre</option></select>
-              </div>
+              <div class="fi-field"><label>Lien</label><select id="fi-p1-lien"><option value="Mère">Mère</option><option value="Père">Père</option><option value="Tuteur">Tuteur légal</option><option value="Autre">Autre</option></select></div>
             </div>
             <div class="fi-row">
               <div class="fi-field"><label>Téléphone</label><input id="fi-p1-tel" type="tel"></div>
               <div class="fi-field"><label>Email</label><input id="fi-p1-email" type="email"></div>
             </div>
-            <div class="fi-row solo">
-              <div class="fi-field"><label>Adresse</label><input id="fi-p1-adresse" type="text"></div>
-            </div>
+            <div class="fi-row solo"><div class="fi-field"><label>Adresse</label><input id="fi-p1-adresse" type="text"></div></div>
             <div class="fi-row">
               <div class="fi-field"><label>N° sécurité sociale</label><input id="fi-p1-nss" type="text" placeholder="15 chiffres"></div>
               <div class="fi-field"><label>Profession</label><input id="fi-p1-profession" type="text"></div>
@@ -1584,23 +1575,18 @@ textarea { resize: vertical; min-height: 72px; }
             <div class="fi-row triple">
               <div class="fi-field"><label>Prénom</label><input id="fi-p2-prenom" type="text"></div>
               <div class="fi-field"><label>Nom</label><input id="fi-p2-nom" type="text"></div>
-              <div class="fi-field"><label>Lien</label>
-                <select id="fi-p2-lien"><option value="Père">Père</option><option value="Mère">Mère</option><option value="Tuteur">Tuteur légal</option><option value="Autre">Autre</option></select>
-              </div>
+              <div class="fi-field"><label>Lien</label><select id="fi-p2-lien"><option value="Père">Père</option><option value="Mère">Mère</option><option value="Tuteur">Tuteur légal</option><option value="Autre">Autre</option></select></div>
             </div>
             <div class="fi-row">
               <div class="fi-field"><label>Téléphone</label><input id="fi-p2-tel" type="tel"></div>
               <div class="fi-field"><label>Email</label><input id="fi-p2-email" type="email"></div>
             </div>
-            <div class="fi-row solo">
-              <div class="fi-field"><label>Adresse</label><input id="fi-p2-adresse" type="text"></div>
-            </div>
+            <div class="fi-row solo"><div class="fi-field"><label>Adresse</label><input id="fi-p2-adresse" type="text"></div></div>
             <div class="fi-row">
               <div class="fi-field"><label>N° sécurité sociale</label><input id="fi-p2-nss" type="text" placeholder="15 chiffres"></div>
               <div class="fi-field"><label>Profession</label><input id="fi-p2-profession" type="text"></div>
             </div>
           </div>
-          <!-- Référents -->
           <div class="fiche-card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
               <div class="fiche-card-title" style="margin-bottom:0">Référents autorisés</div>
@@ -1610,8 +1596,8 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
         </div>
 
-        <!-- ─ ONGLET ACCUEIL ─ -->
-        <div id="fi-accueil" class="fiche-panel" style="display:none">
+        <!-- ACCUEIL -->
+        <div id="fi-accueil" style="display:none">
           <div class="fiche-card">
             <div class="fiche-card-title">Contrat d'accueil</div>
             <div class="fi-row">
@@ -1626,64 +1612,57 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="fiche-card">
             <div class="fiche-card-title">Jours de présence habituels</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0" id="fi-jours-presence">
-              <label class="jour-toggle"><input type="checkbox" value="0"> <span>Lundi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="1"> <span>Mardi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="2"> <span>Mercredi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="3"> <span>Jeudi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="4"> <span>Vendredi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="0"><span>Lundi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="1"><span>Mardi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="2"><span>Mercredi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="3"><span>Jeudi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="4"><span>Vendredi</span></label>
             </div>
           </div>
         </div>
 
-        <!-- ─ ONGLET NOTES ─ -->
-        <div id="fi-notes" class="fiche-panel" style="display:none">
+        <!-- NOTES -->
+        <div id="fi-notes" style="display:none">
           <div class="fiche-card">
             <div class="fiche-card-title">Informations médicales</div>
-            <div class="fi-row solo">
-              <div class="fi-field"><label>Allergies / intolérances</label><input id="fi-allergies" type="text" placeholder="Aucune connue"></div>
-            </div>
+            <div class="fi-row solo"><div class="fi-field"><label>Allergies / intolérances</label><input id="fi-allergies" type="text" placeholder="Aucune connue"></div></div>
             <div class="fi-row">
-              <div class="fi-field"><label>PAI</label>
-                <select id="fi-pai"><option value="">Non</option><option value="en_cours">En cours</option><option value="actif">Actif</option></select>
-              </div>
+              <div class="fi-field"><label>PAI</label><select id="fi-pai"><option value="">Non</option><option value="en_cours">En cours</option><option value="actif">Actif</option></select></div>
               <div class="fi-field"><label>Médecin traitant</label><input id="fi-medecin" type="text" placeholder="Nom + téléphone"></div>
             </div>
           </div>
           <div class="fiche-card">
             <div class="fiche-card-title">Notes libres</div>
-            <textarea id="fi-notes-text" rows="5" style="width:100%;resize:vertical;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:var(--surface2);color:var(--ink)"></textarea>
+            <textarea id="fi-notes-text" rows="5" style="width:100%;resize:vertical;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--ink)"></textarea>
           </div>
         </div>
 
-        <!-- ─ ONGLET PLANNING ─ -->
-        <div id="fi-planning" class="fiche-panel" style="display:none">
+        <!-- PLANNING -->
+        <div id="fi-planning" style="display:none">
           <div style="padding:48px;text-align:center;color:var(--ink3)">
             <div style="font-size:40px;margin-bottom:12px">📅</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:6px">Lié au module Planning</div>
-            <div style="font-size:13px">Le planning de l'enfant sera visible ici une fois intégré.</div>
           </div>
         </div>
 
-        <!-- ─ ONGLET FACTURES ─ -->
-        <div id="fi-factures" class="fiche-panel" style="display:none">
+        <!-- FACTURES -->
+        <div id="fi-factures" style="display:none">
           <div style="padding:48px;text-align:center;color:var(--ink3)">
             <div style="font-size:40px;margin-bottom:12px">🧾</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:6px">Factures et règlements</div>
-            <div style="font-size:13px">Historique des factures CAF et paiements famille.</div>
           </div>
         </div>
 
-        <!-- ─ ONGLET DOCUMENTS ─ -->
-        <div id="fi-docs" class="fiche-panel" style="display:none">
+        <!-- DOCUMENTS -->
+        <div id="fi-docs" style="display:none">
           <div style="padding:48px;text-align:center;color:var(--ink3)">
             <div style="font-size:40px;margin-bottom:12px">📄</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:6px">Documents</div>
-            <div style="font-size:13px">Contrats, certificats médicaux, justificatifs.</div>
           </div>
         </div>
 
-      </div>
     </div>
+
 
     <div id="page-planning" style="display:none">
       <div style="padding:20px 28px">
@@ -4449,22 +4428,18 @@ function showFamillesFromFiche() {
 }
 
 function switchFicheTab(tabId, btn) {
-  // Cacher tous les panels
   ['fi-identite','fi-parents','fi-accueil','fi-notes','fi-planning','fi-factures','fi-docs'].forEach(id => {
     const p = document.getElementById(id);
     if (p) p.style.display = 'none';
   });
-  // Désactiver tous les onglets
   document.querySelectorAll('.fiche-tab').forEach(b => {
     b.style.color = 'var(--ink3)';
     b.style.borderBottom = '2px solid transparent';
     b.style.fontWeight = '600';
   });
-  // Afficher le panel actif
   const panel = document.getElementById(tabId);
   if (panel) panel.style.display = 'block';
-  // Activer l'onglet
-  const activeBtn = btn || document.querySelector(`.fiche-tab[data-tab="${tabId}"]`);
+  const activeBtn = btn || document.querySelector('.fiche-tab[data-tab="' + tabId + '"]');
   if (activeBtn) {
     activeBtn.style.color = 'var(--accent)';
     activeBtn.style.borderBottom = '2px solid var(--accent)';
