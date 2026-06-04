@@ -1398,9 +1398,13 @@ textarea { resize: vertical; min-height: 72px; }
             <input type="text" id="fam-search" placeholder="🔍 Rechercher un enfant..." oninput="renderFamillesList()"
               style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2)">
             <select id="fam-filter-type" onchange="renderFamillesList()" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2)">
-              <option value="">Tous types</option>
-              <option value="NM">Non-marcheurs</option>
-              <option value="M">Marcheurs</option>
+              <option value="">Toutes tranches</option>
+              <option value="2.5-6">2½ – 6 mois</option>
+              <option value="6-12">6 – 12 mois</option>
+              <option value="12-18">12 – 18 mois</option>
+              <option value="18-24">18 – 24 mois</option>
+              <option value="24-30">24 – 30 mois</option>
+              <option value="30-36">30 – 36 mois</option>
             </select>
             <select id="fam-filter-contrat" onchange="renderFamillesList()" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2)">
               <option value="">Tous contrats</option>
@@ -2570,10 +2574,14 @@ function printEtiquettes() {
         <input type="date" id="fam-ddn">
       </div>
       <div class="form-group">
-        <label>Type *</label>
+        <label>Tranche d'âge *</label>
         <select id="fam-type">
-          <option value="NM">Non-marcheur (NM)</option>
-          <option value="M">Marcheur</option>
+          <option value="2.5-6">2½ – 6 mois</option>
+          <option value="6-12">6 – 12 mois</option>
+          <option value="12-18">12 – 18 mois</option>
+          <option value="18-24">18 – 24 mois</option>
+          <option value="24-30">24 – 30 mois</option>
+          <option value="30-36">30 – 36 mois</option>
         </select>
       </div>
       <div class="form-group">
@@ -3587,6 +3595,34 @@ function saveBerceaux(data, crecheId) {
 }
 
 // ── Utilitaires ───────────────────────────────────────────────────
+// Tranches d'âge : 2½-6, 6-12, 12-18, 18-24, 24-30, 30-36 mois
+const TRANCHES = [
+  { val:'2.5-6',  label:'2½–6 mois',   min:2.5,  max:6   },
+  { val:'6-12',   label:'6–12 mois',   min:6,    max:12  },
+  { val:'12-18',  label:'12–18 mois',  min:12,   max:18  },
+  { val:'18-24',  label:'18–24 mois',  min:18,   max:24  },
+  { val:'24-30',  label:'24–30 mois',  min:24,   max:30  },
+  { val:'30-36',  label:'30–36 mois',  min:30,   max:36  },
+];
+
+const TRANCHE_COLORS = [
+  { bg:'#DBEAFE', text:'#1D4ED8', border:'#93C5FD' },  // bleu
+  { bg:'#DCFCE7', text:'#15803D', border:'#86EFAC' },  // vert
+  { bg:'#EDE9FE', text:'#6D28D9', border:'#C4B5FD' },  // violet
+  { bg:'#FEF3C7', text:'#B45309', border:'#FCD34D' },  // ambre
+  { bg:'#FFE4E6', text:'#BE123C', border:'#FCA5A5' },  // rose
+  { bg:'#F0FDF4', text:'#166534', border:'#86EFAC' },  // vert foncé
+];
+
+function getTranche(type) {
+  return TRANCHES.find(t => t.val === type) || TRANCHES[0];
+}
+
+function getTrancheColor(type) {
+  const idx = TRANCHES.findIndex(t => t.val === type);
+  return TRANCHE_COLORS[Math.max(0, idx)] || TRANCHE_COLORS[0];
+}
+
 function calcAgeEnfant(ddn) {
   if (!ddn) return { mois: 0, label: '?' };
   const d = new Date(ddn), now = new Date();
@@ -3597,10 +3633,16 @@ function calcAgeEnfant(ddn) {
   return { mois, label: ans + ' an' + (ans > 1 ? 's' : '') };
 }
 
+// Ratio encadrement : < 18 mois = "NM" (1/5), >= 18 mois = "marcheur" (1/8)
+// Source : FAQ réglementation EAJE 19/02/2026
+function isNonMarcheur(type) {
+  const t = getTranche(type);
+  return t.max <= 18; // tranches 2½-6, 6-12, 12-18
+}
+
 function calcTauxEncadrement(enfants, option) {
-  // option : 'NM8M' (1/5 NM + 1/8 M) ou '6' (1/6 tous)
-  const nm = enfants.filter(e => e.type === 'NM').length;
-  const m  = enfants.filter(e => e.type === 'M').length;
+  const nm = enfants.filter(e => isNonMarcheur(e.type)).length;
+  const m  = enfants.filter(e => !isNonMarcheur(e.type)).length;
   const total = nm + m;
   if (total === 0) return { prosMin: 0, nm, m, total };
   let prosMin;
@@ -3609,7 +3651,7 @@ function calcTauxEncadrement(enfants, option) {
   } else {
     prosMin = Math.ceil(nm / 5) + Math.ceil(m / 8);
   }
-  prosMin = Math.max(prosMin, total > 0 ? 2 : 0); // min 2 pros
+  prosMin = Math.max(prosMin, total > 0 ? 2 : 0);
   return { prosMin, nm, m, total };
 }
 
@@ -3644,35 +3686,47 @@ function renderFamillesKPI() {
   if (!el) return;
   const crecheId = getCrecheId();
   const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
-  const nm = enfants.filter(e => e.type === 'NM').length;
-  const m  = enfants.filter(e => e.type === 'M').length;
   const total = enfants.length;
   const berceaux = getBerceaux(crecheId);
   const placesB = berceaux.reduce((s,b) => s + (parseInt(b.places)||0), 0);
-
-  // Taux encadrement (option stockée dans prefs crèche ou défaut NM8M)
   const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
   const option = prefs.optionEncadrement || 'NM8M';
-  const { prosMin } = calcTauxEncadrement(enfants, option);
-
-  const psu = enfants.filter(e => e.contrat_caf === 'PSU').length;
+  const { prosMin, nm, m } = calcTauxEncadrement(enfants, option);
+  const psu  = enfants.filter(e => e.contrat_caf === 'PSU').length;
   const paje = enfants.filter(e => e.contrat_caf === 'PAJE').length;
 
-  const kpis = [
-    { icon:'👶', label:'Non-marcheurs', val: nm, sub: `sur ${total} enfants`, color:'#DBEAFE', text:'#1D4ED8' },
-    { icon:'🚶', label:'Marcheurs', val: m, sub: `sur ${total} enfants`, color:'#DCFCE7', text:'#15803D' },
-    { icon:'👩‍💼', label:'Pros minimum', val: prosMin, sub: option==='6'?'1 pour 6':'1/5 NM + 1/8 M', color:'#EDE9FE', text:'#6D28D9' },
-    { icon:'🏢', label:'Berceaux entreprise', val: placesB, sub: berceaux.length + ' entreprise' + (berceaux.length>1?'s':''), color:'#FEF3C7', text:'#B45309' },
-    { icon:'💶', label:'PSU / PAJE', val: `${psu} / ${paje}`, sub: 'contrats CAF', color:'#FFE4E6', text:'#BE123C' },
-  ];
+  // KPI par tranche d'âge
+  const trancheKpis = TRANCHES.map((t, i) => {
+    const n = enfants.filter(e => e.type === t.val).length;
+    const c = TRANCHE_COLORS[i];
+    return `<div style="background:${c.bg};border:1.5px solid ${c.border};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:3px">
+      <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif;color:${c.text}">${n}</div>
+      <div style="font-size:11px;font-weight:700;color:${c.text}">${t.label}</div>
+    </div>`;
+  }).join('');
 
-  el.innerHTML = kpis.map(k => `
-    <div style="background:${k.color};border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:4px">
-      <div style="font-size:22px">${k.icon}</div>
-      <div style="font-size:24px;font-weight:800;font-family:'Syne',sans-serif;color:${k.text}">${k.val}</div>
-      <div style="font-size:12px;font-weight:700;color:${k.text}">${k.label}</div>
-      <div style="font-size:11px;color:${k.text};opacity:0.7">${k.sub}</div>
-    </div>`).join('');
+  el.innerHTML = `
+    <div style="background:#EDE9FE;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:22px">👩‍💼</div>
+      <div style="font-size:24px;font-weight:800;font-family:'Syne',sans-serif;color:#6D28D9">${prosMin}</div>
+      <div style="font-size:12px;font-weight:700;color:#6D28D9">Pros minimum</div>
+      <div style="font-size:11px;color:#6D28D9;opacity:0.7">${option==='6'?'1 pour 6':'1/5 &lt;18m + 1/8 ≥18m'}</div>
+    </div>
+    <div style="background:#FFE4E6;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:22px">🏢</div>
+      <div style="font-size:24px;font-weight:800;font-family:'Syne',sans-serif;color:#BE123C">${placesB}</div>
+      <div style="font-size:12px;font-weight:700;color:#BE123C">Berceaux entreprise</div>
+      <div style="font-size:11px;color:#BE123C;opacity:0.7">${berceaux.length} entreprise${berceaux.length>1?'s':''}</div>
+    </div>
+    <div style="background:#FEF3C7;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:22px">💶</div>
+      <div style="font-size:24px;font-weight:800;font-family:'Syne',sans-serif;color:#B45309">${psu} / ${paje}</div>
+      <div style="font-size:12px;font-weight:700;color:#B45309">PSU / PAJE</div>
+      <div style="font-size:11px;color:#B45309;opacity:0.7">${total} enfants au total</div>
+    </div>
+    <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(6,1fr);gap:8px">
+      ${trancheKpis}
+    </div>`;
 }
 
 // ── Liste enfants ─────────────────────────────────────────────────
@@ -3701,8 +3755,8 @@ function renderFamillesList() {
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
     ${enfants.map(e => {
       const age = calcAgeEnfant(e.ddn);
-      const isNM = e.type === 'NM';
-      const typeColor = isNM ? { bg:'#DBEAFE', text:'#1D4ED8' } : { bg:'#DCFCE7', text:'#15803D' };
+      const tranche   = getTranche(e.type);
+      const typeColor = getTrancheColor(e.type);
       const cafColor  = e.contrat_caf === 'PSU' ? { bg:'#EDE9FE', text:'#6D28D9' } : { bg:'#FEF3C7', text:'#B45309' };
       const initials  = ((e.prenom||'')[0]||'') + ((e.nom||'')[0]||'');
       const today = new Date();
@@ -3724,7 +3778,7 @@ function renderFamillesList() {
           ${sorti ? '<span style="font-size:10px;background:#F1F5F9;color:var(--ink3);padding:2px 6px;border-radius:8px;font-weight:700">Sorti</span>' : ''}
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <span style="background:${typeColor.bg};color:${typeColor.text};padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">${isNM?'🔵 NM':'🟢 Marcheur'}</span>
+          <span style="background:${typeColor.bg};color:${typeColor.text};padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">${tranche.label}</span>
           <span style="background:${cafColor.bg};color:${cafColor.text};padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">${e.contrat_caf||'—'}</span>
           ${e.berceau ? `<span style="background:#FFE4E6;color:#BE123C;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">🏢 ${e.berceau}</span>` : ''}
           ${e.jours ? `<span style="background:var(--bg);color:var(--ink3);padding:3px 9px;border-radius:10px;font-size:11px;font-weight:600">${e.jours}j/sem</span>` : ''}
@@ -3924,8 +3978,9 @@ function openModalFamille(id) {
     document.getElementById('fam-heures').value = 40;
     document.getElementById('fam-berceau').value = '';
   }
-  document.getElementById('modal-famille').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  const mf = document.getElementById('modal-famille');
+  if (mf) { mf.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  else { showNotif('⚠ Erreur : modal non trouvé'); }
 }
 
 function saveModalFamille() {
@@ -3996,8 +4051,8 @@ function openModalBerceau(id) {
     document.getElementById('berc-places').value = 1;
     document.getElementById('berc-contrat').value = 'PSU';
   }
-  document.getElementById('modal-berceau').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  const mb = document.getElementById('modal-berceau');
+  if (mb) { mb.classList.add('open'); document.body.style.overflow = 'hidden'; }
 }
 
 function saveModalBerceau() {
