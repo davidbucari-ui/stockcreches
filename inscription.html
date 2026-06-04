@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demande d'inscription — Crèche</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --accent: #4F46E5;
+    --accent-lt: #EEF2FF;
+    --ink: #1C1917;
+    --ink2: #44403C;
+    --ink3: #78716C;
+    --border: #E7E5E4;
+    --bg: #FAFAF9;
+    --surface: #FFFFFF;
+    --red: #EF4444;
+    --green: #16A34A;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'Instrument Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--accent);
+    color: #fff;
+    padding: 32px 40px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    right: -60px; bottom: -60px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+  }
+  .header-logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    opacity: 0.8;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+  .header p {
+    font-size: 14px;
+    opacity: 0.85;
+    max-width: 500px;
+    line-height: 1.5;
+  }
+
+  /* ── PROGRESS ── */
+  .progress-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex;
+    gap: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .progress-step {
+    padding: 14px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink3);
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: color 0.15s;
+  }
+  .progress-step.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .progress-step.done { color: var(--green); }
+  .progress-step .num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--ink3);
+    font-size: 10px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .progress-step.active .num { background: var(--accent); color: #fff; }
+  .progress-step.done .num { background: var(--green); color: #fff; }
+
+  /* ── CONTENT ── */
+  .container { max-width: 720px; margin: 0 auto; padding: 32px 20px; }
+
+  /* ── SECTIONS ── */
+  .section { display: none; }
+  .section.active { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+  .section-subtitle {
+    font-size: 13px;
+    color: var(--ink3);
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--ink3);
+    margin-bottom: 18px;
+  }
+
+  /* ── FORM ── */
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .row.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .row.solo { grid-template-columns: 1fr; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink2);
+  }
+  .field label .req { color: var(--red); margin-left: 2px; }
+  .field input, .field select, .field textarea {
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--bg);
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+  .field input.error { border-color: var(--red); }
+  .field .hint { font-size: 11px; color: var(--ink3); }
+
+  /* ── JOUR TOGGLE ── */
+  .jours-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+  .jour-btn {
+    padding: 8px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink3);
+    background: var(--bg);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .jour-btn.selected {
+    background: var(--accent-lt);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── NAVIGATION BOUTONS ── */
+  .nav-btns {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 28px;
+    gap: 12px;
+  }
+  .btn {
+    padding: 11px 24px;
+    border-radius: 10px;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(79,70,229,0.25);
+  }
+  .btn-primary:hover { background: #4338CA; }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink3);
+    border: 1.5px solid var(--border);
+  }
+  .btn-secondary:hover { color: var(--ink); border-color: var(--ink3); }
+  .btn-success {
+    background: var(--green);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(22,163,74,0.25);
+  }
+
+  /* ── REFERENT BLOCK ── */
+  .referent-block {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    background: var(--bg);
+  }
+  .referent-block .remove-btn {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: none;
+    border: none;
+    color: var(--ink3);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+  }
+  .btn-add {
+    background: none;
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink3);
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.15s;
+  }
+  .btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── RÉCAP ── */
+  .recap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .recap-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .recap-item .rl { font-size: 11px; color: var(--ink3); margin-bottom: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .recap-item .rv { font-size: 13px; color: var(--ink); font-weight: 500; }
+
+  /* ── SUCCESS ── */
+  .success-screen {
+    text-align: center;
+    padding: 48px 20px;
+  }
+  .success-icon {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: #DCFCE7;
+    color: var(--green);
+    font-size: 32px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .header { padding: 24px 20px 20px; }
+    .header h1 { font-size: 22px; }
+    .progress-bar { padding: 0 12px; overflow-x: auto; }
+    .progress-step { padding: 12px 14px; font-size: 11px; }
+    .container { padding: 24px 16px; }
+    .row, .row.triple { grid-template-columns: 1fr; }
+    .recap-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo" id="creche-name">Votre crèche</div>
+  <h1>Demande d'inscription</h1>
+  <p>Merci de remplir ce formulaire pour votre demande d'accueil. Toutes les informations resteront confidentielles.</p>
+</div>
+
+<div class="progress-bar">
+  <div class="progress-step active" onclick="goToStep(1)" id="step-btn-1">
+    <span class="num">1</span> Enfant
+  </div>
+  <div class="progress-step" onclick="goToStep(2)" id="step-btn-2">
+    <span class="num">2</span> Parent 1
+  </div>
+  <div class="progress-step" onclick="goToStep(3)" id="step-btn-3">
+    <span class="num">3</span> Parent 2
+  </div>
+  <div class="progress-step" onclick="goToStep(4)" id="step-btn-4">
+    <span class="num">4</span> Référents
+  </div>
+  <div class="progress-step" onclick="goToStep(5)" id="step-btn-5">
+    <span class="num">5</span> Accueil
+  </div>
+  <div class="progress-step" onclick="goToStep(6)" id="step-btn-6">
+    <span class="num">6</span> Récapitulatif
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── ÉTAPE 1 : ENFANT ── -->
+  <div class="section active" id="section-1">
+    <div class="section-title">Informations sur l'enfant</div>
+    <div class="section-subtitle">Renseignez l'état civil et les informations administratives de l'enfant.</div>
+
+    <div class="card">
+      <div class="card-title">État civil</div>
+      <div class="row triple">
+        <div class="field">
+          <label>Prénom <span class="req">*</span></label>
+          <input type="text" id="e-prenom" placeholder="Prénom">
+        </div>
+        <div class="field">
+          <label>Nom <span class="req">*</span></label>
+          <input type="text" id="e-nom" placeholder="Nom de famille">
+        </div>
+        <div class="field">
+          <label>Date de naissance <span class="req">*</span></label>
+          <input type="date" id="e-ddn">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Tranche d'âge <span class="req">*</span></label>
+          <select id="e-tranche">
+            <option value="">— Sélectionner —</option>
+            <option value="2.5-6">2½ – 6 mois</option>
+            <option value="6-12">6 – 12 mois</option>
+            <option value="12-18">12 – 18 mois</option>
+            <option value="18-24">18 – 24 mois</option>
+            <option value="24-30">24 – 30 mois</option>
+            <option value="30-36">30 – 36 mois</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Lieu de naissance</label>
+          <input type="text" id="e-lieu-naissance" placeholder="Ville, département">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">CAF & Sécurité sociale</div>
+      <div class="row">
+        <div class="field">
+          <label>N° allocataire CAF</label>
+          <input type="text" id="e-num-caf" placeholder="Ex : 1234567A">
+          <span class="hint">Indiqué sur votre attestation CAF</span>
+        </div>
+        <div class="field">
+          <label>Type de contrat <span class="req">*</span></label>
+          <select id="e-contrat-caf">
+            <option value="PSU">PSU — Prestation de Service Unique</option>
+            <option value="PAJE">PAJE — Prestation d'Accueil du Jeune Enfant</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Quotient familial</label>
+          <input type="number" id="e-qf" placeholder="Ex : 1240">
+          <span class="hint">Revenu mensuel net / nombre de parts</span>
+        </div>
+        <div class="field">
+          <label>N° sécurité sociale (enfant)</label>
+          <input type="text" id="e-nss" placeholder="15 chiffres">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Informations médicales</div>
+      <div class="row solo">
+        <div class="field">
+          <label>Allergies / intolérances connues</label>
+          <input type="text" id="e-allergies" placeholder="Aucune connue">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>PAI (Projet d'Accueil Individualisé)</label>
+          <select id="e-pai">
+            <option value="">Non</option>
+            <option value="en_cours">En cours de mise en place</option>
+            <option value="actif">Actif</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Médecin traitant</label>
+          <input type="text" id="e-medecin" placeholder="Nom + téléphone">
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <div></div>
+      <button class="btn btn-primary" onclick="nextStep(1)">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ── ÉTAPE 2 : PARENT 1 ── -->
+  <div class="section" id="section-2">
+    <div class="section-title">Parent / Tuteur légal 1</div>
+    <div class="section-subtitle">Informations du premier représentant légal de l'enfant.</div>
+
+    <div class="card">
+      <div class="card-title">Identité</div>
+      <div class="row triple">
+        <div class="field">
+          <label>Prénom <span class="req">*</span></label>
+          <input type="text" id="p1-prenom" placeholder="Prénom">
+        </div>
+        <div class="field">
+          <label>Nom <span class="req">*</span></label>
+          <input type="text" id="p1-nom" placeholder="Nom">
+        </div>
+        <div class="field">
+          <label>Lien avec l'enfant</label>
+          <select id="p1-lien">
+            <option value="Mère">Mère</option>
+            <option value="Père">Père</option>
+            <option value="Tuteur légal">Tuteur légal</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Date de naissance</label>
+          <input type="date" id="p1-ddn">
+        </div>
+        <div class="field">
+          <label>Profession</label>
+          <input type="text" id="p1-profession" placeholder="Ex : Infirmière">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Coordonnées</div>
+      <div class="row">
+        <div class="field">
+          <label>Téléphone <span class="req">*</span></label>
+          <input type="tel" id="p1-tel" placeholder="06 XX XX XX XX">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="p1-email" placeholder="email@exemple.fr">
+        </div>
+      </div>
+      <div class="row solo">
+        <div class="field">
+          <label>Adresse complète</label>
+          <input type="text" id="p1-adresse" placeholder="N° rue, code postal, ville">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Administratif</div>
+      <div class="row">
+        <div class="field">
+          <label>N° sécurité sociale</label>
+          <input type="text" id="p1-nss" placeholder="15 chiffres">
+        </div>
+        <div class="field">
+          <label>Employeur</label>
+          <input type="text" id="p1-employeur" placeholder="Nom de l'employeur">
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-secondary" onclick="prevStep(2)">← Précédent</button>
+      <button class="btn btn-primary" onclick="nextStep(2)">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ── ÉTAPE 3 : PARENT 2 ── -->
+  <div class="section" id="section-3">
+    <div class="section-title">Parent / Tuteur légal 2</div>
+    <div class="section-subtitle">Si applicable, informations du second représentant légal.</div>
+
+    <div class="card">
+      <div class="card-title">Identité</div>
+      <div class="row triple">
+        <div class="field">
+          <label>Prénom</label>
+          <input type="text" id="p2-prenom" placeholder="Prénom">
+        </div>
+        <div class="field">
+          <label>Nom</label>
+          <input type="text" id="p2-nom" placeholder="Nom">
+        </div>
+        <div class="field">
+          <label>Lien avec l'enfant</label>
+          <select id="p2-lien">
+            <option value="Père">Père</option>
+            <option value="Mère">Mère</option>
+            <option value="Tuteur légal">Tuteur légal</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Téléphone</label>
+          <input type="tel" id="p2-tel" placeholder="06 XX XX XX XX">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="p2-email" placeholder="email@exemple.fr">
+        </div>
+      </div>
+      <div class="row solo">
+        <div class="field">
+          <label>Adresse (si différente)</label>
+          <input type="text" id="p2-adresse" placeholder="N° rue, code postal, ville">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>N° sécurité sociale</label>
+          <input type="text" id="p2-nss" placeholder="15 chiffres">
+        </div>
+        <div class="field">
+          <label>Profession</label>
+          <input type="text" id="p2-profession" placeholder="Ex : Ingénieur">
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-secondary" onclick="prevStep(3)">← Précédent</button>
+      <button class="btn btn-primary" onclick="nextStep(3)">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ── ÉTAPE 4 : RÉFÉRENTS ── -->
+  <div class="section" id="section-4">
+    <div class="section-title">Personnes autorisées à récupérer l'enfant</div>
+    <div class="section-subtitle">Listez les personnes (hors parents) autorisées à récupérer votre enfant. Une pièce d'identité leur sera demandée.</div>
+
+    <div class="card">
+      <div class="card-title">Référents autorisés</div>
+      <div id="referents-container"></div>
+      <button class="btn-add" onclick="addReferentForm()">+ Ajouter un référent</button>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-secondary" onclick="prevStep(4)">← Précédent</button>
+      <button class="btn btn-primary" onclick="nextStep(4)">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- ── ÉTAPE 5 : ACCUEIL ── -->
+  <div class="section" id="section-5">
+    <div class="section-title">Mode d'accueil souhaité</div>
+    <div class="section-subtitle">Indiquez vos besoins d'accueil. Ces informations nous permettront d'établir votre contrat.</div>
+
+    <div class="card">
+      <div class="card-title">Dates souhaitées</div>
+      <div class="row">
+        <div class="field">
+          <label>Date d'entrée souhaitée <span class="req">*</span></label>
+          <input type="date" id="a-entree">
+        </div>
+        <div class="field">
+          <label>Date de sortie prévisionnelle</label>
+          <input type="date" id="a-sortie">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Rythme d'accueil</div>
+      <div class="row">
+        <div class="field">
+          <label>Nombre de jours / semaine</label>
+          <select id="a-jours">
+            <option value="1">1 jour</option>
+            <option value="2">2 jours</option>
+            <option value="3">3 jours</option>
+            <option value="4">4 jours</option>
+            <option value="5" selected>5 jours</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Heures / semaine estimées</label>
+          <input type="number" id="a-heures" placeholder="Ex : 40" min="1" max="50">
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:10px">Jours de présence habituels</label>
+        <div class="jours-grid" id="jours-grid">
+          <button type="button" class="jour-btn" data-jour="0" onclick="toggleJour(this)">Lundi</button>
+          <button type="button" class="jour-btn" data-jour="1" onclick="toggleJour(this)">Mardi</button>
+          <button type="button" class="jour-btn" data-jour="2" onclick="toggleJour(this)">Mercredi</button>
+          <button type="button" class="jour-btn" data-jour="3" onclick="toggleJour(this)">Jeudi</button>
+          <button type="button" class="jour-btn" data-jour="4" onclick="toggleJour(this)">Vendredi</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Horaires habituels</div>
+      <div class="row">
+        <div class="field">
+          <label>Heure d'arrivée habituelle</label>
+          <input type="time" id="a-heure-arrivee" value="08:00">
+        </div>
+        <div class="field">
+          <label>Heure de départ habituelle</label>
+          <input type="time" id="a-heure-depart" value="18:00">
+        </div>
+      </div>
+      <div class="row solo">
+        <div class="field">
+          <label>Informations complémentaires</label>
+          <textarea id="a-notes" rows="3" placeholder="Besoins particuliers, contraintes horaires..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-secondary" onclick="prevStep(5)">← Précédent</button>
+      <button class="btn btn-primary" onclick="nextStep(5)">Voir le récapitulatif →</button>
+    </div>
+  </div>
+
+  <!-- ── ÉTAPE 6 : RÉCAPITULATIF ── -->
+  <div class="section" id="section-6">
+    <div class="section-title">Récapitulatif de la demande</div>
+    <div class="section-subtitle">Vérifiez les informations avant de télécharger votre demande.</div>
+
+    <div id="recap-content"></div>
+
+    <div class="card" style="background:#F0FDF4;border-color:#86EFAC">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="font-size:20px;margin-top:2px">✅</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#15803D;margin-bottom:4px">Déclaration sur l'honneur</div>
+          <div style="font-size:12px;color:#166534;line-height:1.5">Je certifie que les informations fournies dans ce formulaire sont exactes et complètes. Je m'engage à signaler toute modification à l'établissement d'accueil.</div>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
+            <input type="checkbox" id="declaration-check" style="width:16px;height:16px;accent-color:#16A34A">
+            <span style="font-size:12px;font-weight:600;color:#15803D">Je certifie l'exactitude de ces informations</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn btn-secondary" onclick="prevStep(6)">← Modifier</button>
+      <button class="btn btn-success" onclick="telecharger()">⬇ Télécharger la demande</button>
+    </div>
+  </div>
+
+  <!-- ── SUCCÈS ── -->
+  <div class="section" id="section-success">
+    <div class="success-screen">
+      <div class="success-icon">✓</div>
+      <h2 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:10px">Demande téléchargée !</h2>
+      <p style="font-size:14px;color:var(--ink3);max-width:440px;margin:0 auto 28px;line-height:1.6">
+        Votre fichier <strong>inscription.json</strong> a été téléchargé. Transmettez-le à la crèche qui l'importera directement dans son système.
+      </p>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:18px 24px;max-width:400px;margin:0 auto;text-align:left">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);margin-bottom:10px">Comment transmettre votre dossier ?</div>
+        <div style="font-size:13px;color:var(--ink2);line-height:1.6">
+          Envoyez le fichier <code style="background:var(--bg);padding:2px 6px;border-radius:4px;font-size:12px">inscription.json</code> par email à la crèche, ou apportez-le sur une clé USB lors de votre visite.
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="location.reload()" style="margin-top:24px">Nouvelle demande</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let currentStep = 1;
+let referentsData = [];
+let joursSelectionnes = [];
+
+// ── Navigation ──────────────────────────────────────────
+function showStep(n) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + n).classList.add('active');
+
+  document.querySelectorAll('.progress-step').forEach((btn, i) => {
+    btn.classList.remove('active', 'done');
+    if (i + 1 === n) btn.classList.add('active');
+    else if (i + 1 < n) btn.classList.add('done');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  currentStep = n;
+}
+
+function goToStep(n) {
+  if (n <= currentStep) showStep(n);
+}
+
+function nextStep(from) {
+  if (!validateStep(from)) return;
+  if (from === 5) buildRecap();
+  showStep(from + 1);
+}
+
+function prevStep(from) {
+  showStep(from - 1);
+}
+
+// ── Validation ──────────────────────────────────────────
+function validateStep(step) {
+  const required = {
+    1: ['e-prenom', 'e-nom', 'e-ddn', 'e-tranche'],
+    2: ['p1-prenom', 'p1-nom', 'p1-tel'],
+    3: [],
+    4: [],
+    5: ['a-entree'],
+    6: []
+  };
+  let ok = true;
+  (required[step] || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value.trim()) {
+      el.classList.add('error');
+      el.addEventListener('input', () => el.classList.remove('error'), { once: true });
+      ok = false;
+    }
+  });
+  if (!ok) {
+    const firstErr = document.querySelector('.error');
+    if (firstErr) firstErr.focus();
+    showNotif('Merci de remplir les champs obligatoires (*)');
+  }
+  return ok;
+}
+
+// ── Référents ───────────────────────────────────────────
+function addReferentForm() {
+  const idx = referentsData.length;
+  referentsData.push({ prenom: '', nom: '', lien: 'Grand-mère', tel: '', piece: '' });
+  renderReferentForms();
+}
+
+function removeReferentForm(i) {
+  referentsData.splice(i, 1);
+  renderReferentForms();
+}
+
+function renderReferentForms() {
+  const c = document.getElementById('referents-container');
+  if (!c) return;
+  if (!referentsData.length) {
+    c.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px 0 14px">Aucun référent ajouté. Ce champ est facultatif.</div>';
+    return;
+  }
+  c.innerHTML = referentsData.map((r, i) => `
+    <div class="referent-block">
+      <button class="remove-btn" onclick="removeReferentForm(${i})">✕</button>
+      <div class="row triple" style="margin-bottom:10px">
+        <div class="field"><label>Prénom</label><input value="${r.prenom}" oninput="referentsData[${i}].prenom=this.value" placeholder="Prénom"></div>
+        <div class="field"><label>Nom</label><input value="${r.nom}" oninput="referentsData[${i}].nom=this.value" placeholder="Nom"></div>
+        <div class="field"><label>Lien</label>
+          <select onchange="referentsData[${i}].lien=this.value">
+            <option ${r.lien==='Grand-mère'?'selected':''}>Grand-mère</option>
+            <option ${r.lien==='Grand-père'?'selected':''}>Grand-père</option>
+            <option ${r.lien==='Oncle/Tante'?'selected':''}>Oncle/Tante</option>
+            <option ${r.lien==='Frère/Sœur'?'selected':''}>Frère/Sœur</option>
+            <option ${r.lien==='Autre'?'selected':''}>Autre</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Téléphone</label><input value="${r.tel}" oninput="referentsData[${i}].tel=this.value" placeholder="06 XX XX XX XX" type="tel"></div>
+        <div class="field"><label>Pièce d'identité</label><input value="${r.piece}" oninput="referentsData[${i}].piece=this.value" placeholder="Type + numéro"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Jours ───────────────────────────────────────────────
+function toggleJour(btn) {
+  btn.classList.toggle('selected');
+  const j = parseInt(btn.dataset.jour);
+  if (btn.classList.contains('selected')) {
+    if (!joursSelectionnes.includes(j)) joursSelectionnes.push(j);
+  } else {
+    joursSelectionnes = joursSelectionnes.filter(x => x !== j);
+  }
+}
+
+// ── Récap ───────────────────────────────────────────────
+function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+function buildRecap() {
+  const TRANCHES = {'2.5-6':'2½–6 mois','6-12':'6–12 mois','12-18':'12–18 mois','18-24':'18–24 mois','24-30':'24–30 mois','30-36':'30–36 mois'};
+  const JOURS_NOM = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+  const joursStr = joursSelectionnes.sort().map(j => JOURS_NOM[j]).join(', ') || '—';
+
+  const sections = [
+    {
+      title: 'Enfant',
+      items: [
+        ['Prénom / Nom', v('e-prenom') + ' ' + v('e-nom')],
+        ['Date de naissance', v('e-ddn') ? new Date(v('e-ddn')).toLocaleDateString('fr-FR') : '—'],
+        ['Tranche d\'âge', TRANCHES[v('e-tranche')] || '—'],
+        ['Contrat CAF', v('e-contrat-caf')],
+        ['N° allocataire CAF', v('e-num-caf') || '—'],
+        ['Quotient familial', v('e-qf') || '—'],
+        ['Allergies', v('e-allergies') || 'Aucune connue'],
+      ]
+    },
+    {
+      title: 'Parent 1',
+      items: [
+        ['Identité', v('p1-prenom') + ' ' + v('p1-nom') + ' (' + v('p1-lien') + ')'],
+        ['Téléphone', v('p1-tel') || '—'],
+        ['Email', v('p1-email') || '—'],
+        ['Adresse', v('p1-adresse') || '—'],
+        ['N° sécu', v('p1-nss') || '—'],
+      ]
+    },
+    {
+      title: 'Parent 2',
+      items: [
+        ['Identité', (v('p2-prenom') + ' ' + v('p2-nom')).trim() || '—'],
+        ['Téléphone', v('p2-tel') || '—'],
+      ]
+    },
+    {
+      title: 'Mode d\'accueil',
+      items: [
+        ['Entrée souhaitée', v('a-entree') ? new Date(v('a-entree')).toLocaleDateString('fr-FR') : '—'],
+        ['Jours / semaine', v('a-jours')],
+        ['Jours de présence', joursStr],
+        ['Horaires', (v('a-heure-arrivee') || '—') + ' – ' + (v('a-heure-depart') || '—')],
+      ]
+    }
+  ];
+
+  document.getElementById('recap-content').innerHTML = sections.map(s => `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">${s.title}</div>
+      <div class="recap-grid">
+        ${s.items.map(([l, val]) => `
+          <div class="recap-item">
+            <div class="rl">${l}</div>
+            <div class="rv">${val || '—'}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ── Téléchargement JSON ─────────────────────────────────
+function telecharger() {
+  if (!document.getElementById('declaration-check').checked) {
+    showNotif('Merci de cocher la déclaration sur l\'honneur');
+    return;
+  }
+
+  const TRANCHES = {'2.5-6':'2½–6 mois','6-12':'6–12 mois','12-18':'12–18 mois','18-24':'18–24 mois','24-30':'24–30 mois','30-36':'30–36 mois'};
+
+  const data = {
+    _type: 'orevy_inscription',
+    _version: '1.0',
+    _date: new Date().toISOString(),
+    enfant: {
+      prenom: v('e-prenom'), nom: v('e-nom'), ddn: v('e-ddn'),
+      type: v('e-tranche'), contrat_caf: v('e-contrat-caf'),
+      num_caf: v('e-num-caf'), qf: v('e-qf'), nss1: v('e-nss'),
+      allergies: v('e-allergies'), pai: v('e-pai'), medecin: v('e-medecin'),
+      entree: v('a-entree'), sortie: v('a-sortie'),
+      jours: parseInt(v('a-jours')) || 5,
+      heures: parseInt(v('a-heures')) || 40,
+      jours_presence: joursSelectionnes,
+      notes_libres: v('a-notes'),
+    },
+    parent1: {
+      prenom: v('p1-prenom'), nom: v('p1-nom'), lien: v('p1-lien'),
+      ddn: v('p1-ddn'), tel: v('p1-tel'), email: v('p1-email'),
+      adresse: v('p1-adresse'), nss: v('p1-nss'),
+      profession: v('p1-profession'), employeur: v('p1-employeur'),
+    },
+    parent2: {
+      prenom: v('p2-prenom'), nom: v('p2-nom'), lien: v('p2-lien'),
+      tel: v('p2-tel'), email: v('p2-email'), adresse: v('p2-adresse'),
+      nss: v('p2-nss'), profession: v('p2-profession'),
+    },
+    referents: referentsData,
+  };
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const nomFichier = 'inscription_' + (data.enfant.nom || 'enfant').toLowerCase().replace(/\s+/g, '_') + '.json';
+  a.download = nomFichier;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-success').classList.add('active');
+  document.querySelectorAll('.progress-step').forEach(b => b.classList.add('done'));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Notif ───────────────────────────────────────────────
+function showNotif(msg) {
+  let n = document.getElementById('notif-bar');
+  if (!n) {
+    n = document.createElement('div');
+    n.id = 'notif-bar';
+    n.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1C1917;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;z-index:999;animation:slideUp 0.3s ease';
+    document.body.appendChild(n);
+  }
+  n.textContent = msg;
+  n.style.display = 'block';
+  clearTimeout(n._t);
+  n._t = setTimeout(() => { n.style.display = 'none'; }, 3000);
+}
+
+// ── Init ────────────────────────────────────────────────
+renderReferentForms();
+</script>
+
+</body>
+</html>

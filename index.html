@@ -1427,6 +1427,8 @@ textarea { resize: vertical; min-height: 72px; }
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);margin-bottom:4px">Module</div>
             <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif">👨‍👩‍👧 Familles & Enfants</div>
           </div>
+          <button onclick="document.getElementById('import-inscription-input').click()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink3);display:flex;align-items:center;gap:6px">📥 Importer inscription</button>
+          <input type="file" id="import-inscription-input" accept=".json" style="display:none" onchange="importerInscription(event)">
           <select id="fam-creche-sel" onchange="renderFamilles()" style="padding:8px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2)"></select>
           <button class="btn btn-primary" onclick="openModalFamille(null)">+ Ajouter un enfant</button>
         </div>
@@ -4323,6 +4325,69 @@ function renderDashboardFamillesTile() {
   el.querySelector('.fam-nm').textContent  = nm;
   el.querySelector('.fam-m').textContent   = m;
   el.querySelector('.fam-pros').textContent = prosMin + ' pros min';
+}
+
+// ── Import inscription JSON ──────────────────────────────────────────
+function importerInscription(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data._type !== 'orevy_inscription') { showNotif('⚠ Fichier non reconnu'); return; }
+
+      const crecheId = getCrecheId();
+      const enfants  = getFamilles(crecheId);
+      const d = data.enfant || {};
+      const p1 = data.parent1 || {};
+      const p2 = data.parent2 || {};
+
+      const enfant = {
+        id:          'fam_' + Date.now(),
+        prenom:      d.prenom || '',
+        nom:         d.nom    || '',
+        ddn:         d.ddn    || '',
+        type:        d.type   || '2.5-6',
+        contrat_caf: d.contrat_caf || 'PSU',
+        num_caf:     d.num_caf || '',
+        nss1:        d.nss1 || p1.nss || '',
+        nss2:        p2.nss  || '',
+        qf:          d.qf    || '',
+        allergies:   d.allergies || '',
+        pai:         d.pai   || '',
+        medecin:     d.medecin || '',
+        entree:      d.entree || '',
+        sortie:      d.sortie || '',
+        jours:       d.jours  || 5,
+        heures:      d.heures || 40,
+        jours_presence: d.jours_presence || [],
+        notes_libres: d.notes_libres || '',
+        parent1: {
+          prenom: p1.prenom || '', nom: p1.nom || '', lien: p1.lien || 'Mère',
+          tel: p1.tel || '', email: p1.email || '', adresse: p1.adresse || '',
+          nss: p1.nss || '', profession: p1.profession || '',
+        },
+        parent2: {
+          prenom: p2.prenom || '', nom: p2.nom || '', lien: p2.lien || 'Père',
+          tel: p2.tel || '', email: p2.email || '', adresse: p2.adresse || '',
+          nss: p2.nss || '', profession: p2.profession || '',
+        },
+        referents: data.referents || [],
+      };
+
+      enfants.push(enfant);
+      saveFamilles(enfants, crecheId);
+      event.target.value = '';
+      renderFamilles();
+      showNotif('✅ Inscription importée — fiche créée pour ' + enfant.prenom + ' ' + enfant.nom);
+      setTimeout(() => openFicheEnfant(enfant.id), 600);
+    } catch(err) {
+      showNotif('⚠ Erreur de lecture du fichier');
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ══════════════════════════════════════════════════════════════════
