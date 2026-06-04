@@ -7563,6 +7563,19 @@ function peRefreshPause() {
   if (f) f.textContent = peFmtMin(pePauseFin);
 }
 
+function peSetOccurrence(val) {
+  document.getElementById('pe-occ-day').checked  = val === 'day';
+  document.getElementById('pe-occ-week').checked = val === 'week';
+  const dayLbl  = document.getElementById('pe-occ-day-label');
+  const weekLbl = document.getElementById('pe-occ-week-label');
+  const jourGrp = document.getElementById('pe-jour-group');
+  if (dayLbl)  dayLbl.style.borderColor  = val==='day'  ? 'var(--accent)' : 'var(--border)';
+  if (weekLbl) weekLbl.style.borderColor = val==='week' ? 'var(--accent)' : 'var(--border)';
+  // Masquer le sélecteur de jour si "toute la semaine"
+  if (jourGrp) jourGrp.style.opacity = val==='week' ? '0.4' : '1';
+  if (jourGrp) jourGrp.style.pointerEvents = val==='week' ? 'none' : 'auto';
+}
+
 // ── MODAL Planning équipe ──────────────────────────────────────────
 let peEditingId = null;
 let peModalHoraireIdx = null;
@@ -7631,13 +7644,17 @@ function openModalPE(horaireIdx, jour, id) {
   }
 
   peRefreshPause();
+  // Reset occurrence (mode édition = jour spécifique seulement)
+  peSetOccurrence('day');
+  const occGrp = document.getElementById('pe-occurrence-group');
+  if (occGrp) occGrp.style.display = id ? 'none' : '';
   document.getElementById('modal-pe').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 function saveModalPE() {
-  const crecheId = document.getElementById('pe-creche')?.value || '';
-  const week     = peGetWeek(crecheId);
+  const crecheId  = document.getElementById('pe-creche')?.value || '';
+  const week      = peGetWeek(crecheId);
 
   let pro = document.getElementById('pe-pro-sel').value;
   if (!pro || pro === '') { showNotif('⚠ Choisissez une collaboratrice'); return; }
@@ -7649,29 +7666,38 @@ function saveModalPE() {
   const jour        = parseInt(document.getElementById('pe-jour-sel').value);
   const pauseActive = document.getElementById('pe-pause-active')?.checked;
   const pause       = pauseActive ? `${peFmtMin(pePauseDebut)}–${peFmtMin(pePauseFin)}` : '';
-
-  if (!pro) { showNotif('⚠ Nom obligatoire'); return; }
-
-  const creneau = {
-    id:          peEditingId || 'pe_' + Date.now(),
-    pro, horaireIdx, horaire_idx: horaireIdx, jour, pause,
-  };
+  const occWeek     = !peEditingId && document.getElementById('pe-occ-week')?.checked;
 
   if (!week.creneaux) week.creneaux = [];
   if (!week.pros) week.pros = [];
 
   if (peEditingId) {
+    // Modification : on met à jour uniquement ce créneau
+    const creneau = { id: peEditingId, pro, horaireIdx, horaire_idx: horaireIdx, jour, pause };
     const idx = week.creneaux.findIndex(c => c.id === peEditingId);
     if (idx >= 0) week.creneaux[idx] = creneau; else week.creneaux.push(creneau);
+  } else if (occWeek) {
+    // Toute la semaine : créer un créneau par jour (Lun→Ven)
+    // Supprimer d'abord les creneaux existants de cette pro sur cet horaire cette semaine
+    week.creneaux = week.creneaux.filter(c => !(c.pro === pro && c.horaire_idx === horaireIdx));
+    for (let d = 0; d < 5; d++) {
+      week.creneaux.push({ id: 'pe_' + Date.now() + '_' + d, pro, horaireIdx, horaire_idx: horaireIdx, jour: d, pause });
+    }
   } else {
-    week.creneaux.push(creneau);
+    // Jour spécifique : on ajoute (ou remplace si même pro+horaire+jour)
+    const existing = week.creneaux.findIndex(c => c.pro === pro && c.horaire_idx === horaireIdx && c.jour === jour);
+    const creneau  = { id: 'pe_' + Date.now(), pro, horaireIdx, horaire_idx: horaireIdx, jour, pause };
+    if (existing >= 0) week.creneaux[existing] = creneau;
+    else week.creneaux.push(creneau);
   }
+
   if (!week.pros.includes(pro)) week.pros.push(pro);
 
   peSaveWeek(week, crecheId);
   closeModal('modal-pe');
   renderActiveTab();
-  showNotif(peEditingId ? '✅ Créneau mis à jour' : '✅ Créneau ajouté');
+  const msg = peEditingId ? '✅ Créneau mis à jour' : occWeek ? '✅ Semaine complète ajoutée (Lun→Ven)' : '✅ Créneau ajouté';
+  showNotif(msg);
 }
 
 function deleteModalPE() {
@@ -8032,7 +8058,7 @@ async function enregistrerPointage(type) {
           <label>Horaire *</label>
           <select id="pe-horaire-sel" style="width:100%"></select>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="pe-jour-group">
           <label>Jour *</label>
           <select id="pe-jour-sel" style="width:100%">
             <option value="0">Lundi</option>
@@ -8041,6 +8067,30 @@ async function enregistrerPointage(type) {
             <option value="3">Jeudi</option>
             <option value="4">Vendredi</option>
           </select>
+        </div>
+        <!-- Occurrence -->
+        <div class="form-group full" id="pe-occurrence-group">
+          <label style="font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Occurrence</label>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.15s"
+              id="pe-occ-day-label"
+              onclick="peSetOccurrence('day')">
+              <input type="radio" name="pe-occurrence" id="pe-occ-day" value="day" checked style="accent-color:var(--accent)">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--ink)">Jour spécifique</div>
+                <div style="font-size:11px;color:var(--ink3);margin-top:1px">Uniquement le jour sélectionné</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.15s"
+              id="pe-occ-week-label"
+              onclick="peSetOccurrence('week')">
+              <input type="radio" name="pe-occurrence" id="pe-occ-week" value="week" style="accent-color:var(--accent)">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--ink)">Toute la semaine</div>
+                <div style="font-size:11px;color:var(--ink3);margin-top:1px">Lundi → Vendredi, même horaire</div>
+              </div>
+            </label>
+          </div>
         </div>
         <div class="form-group full">
           <label style="display:flex;align-items:center;gap:8px">
