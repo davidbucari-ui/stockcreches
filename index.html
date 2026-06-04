@@ -1496,7 +1496,7 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <!-- Onglets -->
-        <div id="fiche-tabs-bar" style="display:flex;flex-wrap:wrap;border-bottom:2px solid var(--border);margin-bottom:20px;margin-left:-28px;margin-right:-28px;padding-left:28px">
+        <div id="fiche-tabs-bar" style="display:flex;flex-wrap:wrap;border-bottom:2px solid var(--border);margin-bottom:20px;position:relative;left:-28px;right:-28px;width:calc(100% + 56px);padding-left:28px;box-sizing:border-box">
           <button class="fiche-tab" data-tab="fi-identite"  onclick="switchFicheTab('fi-identite',this)"  style="color:var(--accent);border-bottom:2px solid var(--accent);font-weight:700;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Identité</button>
           <button class="fiche-tab" data-tab="fi-parents"   onclick="switchFicheTab('fi-parents',this)"   style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Parents & référents</button>
           <button class="fiche-tab" data-tab="fi-accueil"   onclick="switchFicheTab('fi-accueil',this)"   style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Accueil</button>
@@ -9075,21 +9075,12 @@ async function openFicheSalarie(userId) {
     document.getElementById('fiche-title').textContent = rows[0].email.split('@')[0];
     // Reset to QR tab
     const qrBtn = document.getElementById('fiche-tab-btn-qr');
-    switchFicheTab('qr', qrBtn);
+    switchSalarieFicheTab('qr', qrBtn);
     renderFicheQR(userId, rows[0].email, rows[0].role, rows[0].creche_id);
     document.getElementById('modal-fiche-salarie').classList.add('open');
   } catch(e) { showNotif('⚠ ' + e.message); }
 }
 
-function switchFicheTab(tab, btn) {
-  ['qr','pointages'].forEach(t => {
-    const el = document.getElementById(`fiche-tab-${t}`);
-    if (el) el.style.display = t === tab ? 'block' : 'none';
-  });
-  document.querySelectorAll('#modal-fiche-salarie .tab-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  if (tab === 'pointages' && ficheCurrentUserId) renderPointagesTab(ficheCurrentUserId);
-}
 
 function renderFicheQR(userId, email, role, crecheId) {
   const container = document.getElementById('fiche-qr-container');
@@ -9149,6 +9140,19 @@ function printFicheSalarie() {
 </body></html>`;
   const w = window.open('', '_blank');
   if (w) { w.document.write(html); w.document.close(); }
+}
+
+function switchSalarieFicheTab(tab, btn) {
+  ['qr','pointages'].forEach(t => {
+    const el = document.getElementById('fiche-tab-' + t);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.salarie-fiche-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else {
+    const ab = document.querySelector('.salarie-fiche-tab[data-tab="' + tab + '"]');
+    if (ab) ab.classList.add('active');
+  }
 }
 
 // ── Journal des pointages ──────────────────────────────────────────
@@ -9334,8 +9338,8 @@ async function enregistrerPointage(type) {
       <button class="modal-close" onclick="closeModal('modal-fiche-salarie')">✕</button>
     </div>
     <div style="display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 24px">
-      <button class="tab-btn active" id="fiche-tab-btn-qr" onclick="switchFicheTab('qr',this)" style="flex:none">🪪 QR Code</button>
-      <button class="tab-btn" id="fiche-tab-btn-pointages" onclick="switchFicheTab('pointages',this)" style="flex:none">🕐 Pointages</button>
+      <button class="tab-btn active" id="fiche-tab-btn-qr" onclick="switchSalarieFicheTab('qr',this)" style="flex:none">🪪 QR Code</button>
+      <button class="tab-btn" id="fiche-tab-btn-pointages" onclick="switchSalarieFicheTab('pointages',this)" style="flex:none">🕐 Pointages</button>
     </div>
     <div class="modal-body">
       <div id="fiche-tab-qr">
