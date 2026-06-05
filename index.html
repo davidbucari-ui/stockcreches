@@ -5020,6 +5020,12 @@ async function startFamillesScan() {
     return;
   }
   try {
+    // Initialiser BarcodeDetector natif si disponible
+    if ('BarcodeDetector' in window) {
+      pfBarcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+    } else {
+      pfBarcodeDetector = null;
+    }
     pfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
     if (video) { video.srcObject = pfStream; await video.play(); }
     pfScanning = true;
@@ -5042,11 +5048,12 @@ function stopFamillesScan() {
   if (v) { v.srcObject = null; }
 }
 
+let pfBarcodeDetector = null;
+
 function pfScanFrame(timestamp) {
   if (!pfScanning) return;
 
-  // Throttle : analyser max 1 frame toutes les 250ms
-  if (timestamp - pfLastScan < 250) { requestAnimationFrame(pfScanFrame); return; }
+  if (timestamp - pfLastScan < 300) { requestAnimationFrame(pfScanFrame); return; }
   pfLastScan = timestamp;
 
   const video  = document.getElementById('pf-video');
@@ -5055,22 +5062,30 @@ function pfScanFrame(timestamp) {
     requestAnimationFrame(pfScanFrame); return;
   }
 
+  if (pfCooldown) { requestAnimationFrame(pfScanFrame); return; }
+
+  // Priorité 1 : BarcodeDetector natif (Android Chrome)
+  if (pfBarcodeDetector) {
+    pfBarcodeDetector.detect(video).then(codes => {
+      if (codes.length > 0) {
+        const data = codes[0].rawValue;
+        if (data.startsWith('ENFANT:')) pfHandleScan(data);
+      }
+    }).catch(() => {});
+    requestAnimationFrame(pfScanFrame);
+    return;
+  }
+
+  // Fallback : jsQR via canvas
   canvas.width  = video.videoWidth;
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  if (typeof jsQR === 'undefined') {
-    // jsQR pas encore chargé, on attend
-    requestAnimationFrame(pfScanFrame); return;
-  }
-
-  if (!pfCooldown) {
+  if (typeof jsQR !== 'undefined') {
     const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
-    if (code && code.data.startsWith('ENFANT:')) {
-      pfHandleScan(code.data);
-    }
+    if (code && code.data.startsWith('ENFANT:')) pfHandleScan(code.data);
   }
   requestAnimationFrame(pfScanFrame);
 }
