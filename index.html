@@ -854,7 +854,7 @@ textarea { resize: vertical; min-height: 72px; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 </head>
 <body>
@@ -1701,21 +1701,53 @@ textarea { resize: vertical; min-height: 72px; }
         <div style="text-align:center">
           <div id="pf-creche-label" style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">—</div>
           <div style="font-size:28px;font-weight:800;color:#fff;font-family:'Syne',sans-serif">Pointage familles</div>
-          <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:6px">Présentez le QR code de l'enfant</div>
+          <div id="pf-subtitle" style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:6px">Présentez le QR code de l'enfant</div>
         </div>
 
-        <!-- Viewfinder -->
-        <div style="position:relative;width:260px;height:260px">
-          <video id="pf-video" autoplay playsinline muted style="width:260px;height:260px;object-fit:cover;border-radius:16px;display:block"></video>
-          <canvas id="pf-canvas" style="display:none"></canvas>
-          <!-- Coins scanner -->
-          <div style="position:absolute;top:0;left:0;width:32px;height:32px;border-top:4px solid var(--accent);border-left:4px solid var(--accent);border-radius:8px 0 0 0;pointer-events:none"></div>
-          <div style="position:absolute;top:0;right:0;width:32px;height:32px;border-top:4px solid var(--accent);border-right:4px solid var(--accent);border-radius:0 8px 0 0;pointer-events:none"></div>
-          <div style="position:absolute;bottom:0;left:0;width:32px;height:32px;border-bottom:4px solid var(--accent);border-left:4px solid var(--accent);border-radius:0 0 0 8px;pointer-events:none"></div>
-          <div style="position:absolute;bottom:0;right:0;width:32px;height:32px;border-bottom:4px solid var(--accent);border-right:4px solid var(--accent);border-radius:0 0 8px 0;pointer-events:none"></div>
+        <!-- Sélecteur de mode -->
+        <div style="display:flex;gap:8px;background:rgba(255,255,255,0.08);border-radius:10px;padding:4px">
+          <button id="pf-mode-camera" onclick="pfSetMode('camera')"
+            style="border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--accent);color:#fff">
+            📷 Caméra
+          </button>
+          <button id="pf-mode-hid" onclick="pfSetMode('hid')"
+            style="border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:rgba(255,255,255,0.5)">
+            🔌 Lecteur sans fil
+          </button>
         </div>
 
-        <!-- Confirmation (cachée par défaut) -->
+        <!-- Zone caméra -->
+        <div id="pf-zone-camera">
+          <div style="position:relative;width:260px;height:260px">
+            <video id="pf-video" autoplay playsinline muted style="width:260px;height:260px;object-fit:cover;border-radius:16px;display:block"></video>
+            <canvas id="pf-canvas" style="display:none"></canvas>
+            <div style="position:absolute;top:0;left:0;width:32px;height:32px;border-top:4px solid var(--accent);border-left:4px solid var(--accent);border-radius:8px 0 0 0;pointer-events:none"></div>
+            <div style="position:absolute;top:0;right:0;width:32px;height:32px;border-top:4px solid var(--accent);border-right:4px solid var(--accent);border-radius:0 8px 0 0;pointer-events:none"></div>
+            <div style="position:absolute;bottom:0;left:0;width:32px;height:32px;border-bottom:4px solid var(--accent);border-left:4px solid var(--accent);border-radius:0 0 0 8px;pointer-events:none"></div>
+            <div style="position:absolute;bottom:0;right:0;width:32px;height:32px;border-bottom:4px solid var(--accent);border-right:4px solid var(--accent);border-radius:0 0 8px 0;pointer-events:none"></div>
+          </div>
+          <div style="margin-top:16px;text-align:center">
+            <button id="pf-start-btn" onclick="startFamillesScan()"
+              style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">
+              📷 Démarrer le scan
+            </button>
+          </div>
+        </div>
+
+        <!-- Zone lecteur HID -->
+        <div id="pf-zone-hid" style="display:none;text-align:center">
+          <div style="width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:48px">
+            🔌
+          </div>
+          <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">Lecteur prêt</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.4);max-width:260px">Scannez le QR code de l'enfant avec le lecteur sans fil</div>
+          <!-- Champ invisible qui capte la saisie HID -->
+          <input id="pf-hid-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
+            style="position:fixed;top:-999px;left:-999px;opacity:0;width:1px;height:1px"
+            onkeydown="pfHidKeydown(event)">
+        </div>
+
+        <!-- Confirmation (commune aux deux modes) -->
         <div id="pf-confirm" style="display:none;width:100%;max-width:320px;border-radius:16px;padding:24px;text-align:center">
           <div id="pf-confirm-icon" style="font-size:48px;margin-bottom:10px"></div>
           <div id="pf-confirm-nom" style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:4px"></div>
@@ -1726,11 +1758,6 @@ textarea { resize: vertical; min-height: 72px; }
         <!-- Erreur caméra -->
         <div id="pf-error" style="display:none;color:rgba(255,255,255,0.5);font-size:13px;text-align:center;max-width:280px"></div>
 
-        <!-- Bouton démarrer (si caméra non encore démarrée) -->
-        <button id="pf-start-btn" onclick="startFamillesScan()"
-          style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">
-          📷 Démarrer le scan
-        </button>
       </div>
     </div>
 
@@ -4899,9 +4926,9 @@ function printQrEnfant() {
 
 // ── Page scan tablette ────────────────────────────────────────────
 
-let pfStream = null;
-let pfScanning = false;
-let pfCooldown = false;
+let pfCurrentMode = 'camera'; // 'camera' | 'hid'
+let pfHidBuffer   = '';
+let pfHidTimer    = null;
 
 function initPointageFamillesPage() {
   const crecheId = getCrecheId();
@@ -4909,9 +4936,65 @@ function initPointageFamillesPage() {
   if (labelEl) labelEl.textContent = crecheId || 'Crèche';
   document.getElementById('pf-confirm').style.display = 'none';
   document.getElementById('pf-error').style.display   = 'none';
-  document.getElementById('pf-start-btn').style.display = 'inline-block';
-  const v = document.getElementById('pf-video');
-  if (v) v.style.display = 'block';
+  pfSetMode(pfCurrentMode);
+}
+
+function pfSetMode(mode) {
+  pfCurrentMode = mode;
+  const zoneCamera = document.getElementById('pf-zone-camera');
+  const zoneHid    = document.getElementById('pf-zone-hid');
+  const btnCamera  = document.getElementById('pf-mode-camera');
+  const btnHid     = document.getElementById('pf-mode-hid');
+  const subtitle   = document.getElementById('pf-subtitle');
+
+  if (mode === 'camera') {
+    if (zoneCamera) zoneCamera.style.display = 'block';
+    if (zoneHid)    zoneHid.style.display    = 'none';
+    if (btnCamera)  { btnCamera.style.background = 'var(--accent)'; btnCamera.style.color = '#fff'; }
+    if (btnHid)     { btnHid.style.background = 'transparent'; btnHid.style.color = 'rgba(255,255,255,0.5)'; }
+    if (subtitle)   subtitle.textContent = 'Présentez le QR code devant la caméra';
+    // Arrêter HID
+    document.removeEventListener('keydown', pfGlobalKeydown);
+  } else {
+    if (zoneCamera) zoneCamera.style.display = 'none';
+    if (zoneHid)    zoneHid.style.display    = 'block';
+    if (btnHid)     { btnHid.style.background = 'var(--accent)'; btnHid.style.color = '#fff'; }
+    if (btnCamera)  { btnCamera.style.background = 'transparent'; btnCamera.style.color = 'rgba(255,255,255,0.5)'; }
+    if (subtitle)   subtitle.textContent = 'Scannez avec le lecteur sans fil';
+    stopFamillesScan();
+    pfHidBuffer = '';
+    // Écoute globale clavier — le lecteur HID envoie des frappes même sans focus
+    document.addEventListener('keydown', pfGlobalKeydown);
+    // Focus sur champ caché pour sécuriser la capture
+    setTimeout(() => { const inp = document.getElementById('pf-hid-input'); if (inp) inp.focus(); }, 100);
+  }
+}
+
+// Écoute globale (lecteur HID branché sur la page entière)
+function pfGlobalKeydown(e) {
+  if (pfCurrentMode !== 'hid') return;
+  if (pfCooldown) return;
+  // Ignorer les touches de navigation
+  if (['Tab','Shift','Control','Alt','Meta','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
+  if (e.key === 'Enter') {
+    const data = pfHidBuffer.trim();
+    pfHidBuffer = '';
+    if (data.startsWith('ENFANT:')) pfHandleScan(data);
+  } else if (e.key === 'Backspace') {
+    pfHidBuffer = pfHidBuffer.slice(0, -1);
+  } else if (e.key.length === 1) {
+    pfHidBuffer += e.key;
+    // Sécurité : vider si trop long ou inactif 2s
+    clearTimeout(pfHidTimer);
+    pfHidTimer = setTimeout(() => { pfHidBuffer = ''; }, 2000);
+  }
+  // Empêcher la saisie dans d'autres champs si on est en mode HID
+  if (pfCurrentMode === 'hid') e.preventDefault();
+}
+
+// Champ caché — fallback si le lecteur envoie vers un input
+function pfHidKeydown(e) {
+  pfGlobalKeydown(e);
 }
 
 async function startFamillesScan() {
@@ -4926,9 +5009,10 @@ async function startFamillesScan() {
     return;
   }
   try {
-    pfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    if (video) { video.srcObject = pfStream; video.play(); }
+    pfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+    if (video) { video.srcObject = pfStream; await video.play(); }
     pfScanning = true;
+    pfLastScan = 0;
     requestAnimationFrame(pfScanFrame);
   } catch(e) {
     if (errEl) { errEl.textContent = 'Accès caméra refusé : ' + e.message; errEl.style.display = 'block'; }
@@ -4941,23 +5025,36 @@ function stopFamillesScan() {
   if (pfStream) { pfStream.getTracks().forEach(t => t.stop()); pfStream = null; }
   const v = document.getElementById('pf-video');
   if (v) { v.srcObject = null; }
+  document.removeEventListener('keydown', pfGlobalKeydown);
+  pfHidBuffer = '';
 }
 
-function pfScanFrame() {
+function pfScanFrame(timestamp) {
   if (!pfScanning) return;
+
+  // Throttle : analyser max 1 frame toutes les 250ms
+  if (timestamp - pfLastScan < 250) { requestAnimationFrame(pfScanFrame); return; }
+  pfLastScan = timestamp;
+
   const video  = document.getElementById('pf-video');
   const canvas = document.getElementById('pf-canvas');
-  if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+  if (!video || !canvas || video.readyState < 2 || video.videoWidth === 0) {
     requestAnimationFrame(pfScanFrame); return;
   }
+
   canvas.width  = video.videoWidth;
   canvas.height = video.videoHeight;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  if (typeof jsQR !== 'undefined' && !pfCooldown) {
-    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+  if (typeof jsQR === 'undefined') {
+    // jsQR pas encore chargé, on attend
+    requestAnimationFrame(pfScanFrame); return;
+  }
+
+  if (!pfCooldown) {
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
     if (code && code.data.startsWith('ENFANT:')) {
       pfHandleScan(code.data);
     }
