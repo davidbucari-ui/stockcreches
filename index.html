@@ -4972,24 +4972,30 @@ function pfSetMode(mode) {
 
 // Écoute globale (lecteur HID branché sur la page entière)
 function pfGlobalKeydown(e) {
-  if (pfCurrentMode !== 'hid') return;
+  if (pfCurrentMode !== 'hid') { document.removeEventListener('keydown', pfGlobalKeydown); return; }
   if (pfCooldown) return;
-  // Ignorer les touches de navigation
-  if (['Tab','Shift','Control','Alt','Meta','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
+  // Ignorer les touches de navigation et raccourcis
+  if (['Tab','Shift','Control','Alt','Meta','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'].includes(e.key)) return;
+  // Ne preventDefault que si le buffer est déjà en cours (= lecteur en train de taper)
+  // Un vrai lecteur HID envoie les caractères en <50ms — buffer vide = frappe humaine normale
+  const isScanner = pfHidBuffer.length > 0;
   if (e.key === 'Enter') {
     const data = pfHidBuffer.trim();
     pfHidBuffer = '';
-    if (data.startsWith('ENFANT:')) pfHandleScan(data);
+    clearTimeout(pfHidTimer);
+    if (data.startsWith('ENFANT:')) {
+      e.preventDefault();
+      pfHandleScan(data);
+    }
   } else if (e.key === 'Backspace') {
-    pfHidBuffer = pfHidBuffer.slice(0, -1);
+    if (isScanner) { e.preventDefault(); pfHidBuffer = pfHidBuffer.slice(0, -1); }
   } else if (e.key.length === 1) {
     pfHidBuffer += e.key;
-    // Sécurité : vider si trop long ou inactif 2s
     clearTimeout(pfHidTimer);
     pfHidTimer = setTimeout(() => { pfHidBuffer = ''; }, 2000);
+    // Ne bloquer la frappe que si le buffer grossit vite (scanner)
+    if (isScanner) e.preventDefault();
   }
-  // Empêcher la saisie dans d'autres champs si on est en mode HID
-  if (pfCurrentMode === 'hid') e.preventDefault();
 }
 
 // Champ caché — fallback si le lecteur envoie vers un input
