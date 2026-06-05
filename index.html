@@ -1873,6 +1873,10 @@ textarea { resize: vertical; min-height: 72px; }
             style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
             📊 Gantt
           </button>
+          <button id="pe-tab-encadrement" onclick="switchPlanningTab('encadrement')"
+            style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
+            🧒 Encadrement
+          </button>
         </div>
 
         <!-- Vue Gantt -->
@@ -1909,10 +1913,13 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
         </div>
 
+        <!-- Vue Encadrement -->
+        <div id="pe-view-encadrement" style="display:none">
+          <div id="enc-container"></div>
+        </div>
+
       </div>
     </div>
-
-    <!-- page-salarie kept as hidden alias so old refs don't break -->
     <div id="page-salarie" style="display:none"></div>
 
     <!-- ── PAGE RH ── -->
@@ -5211,6 +5218,285 @@ async function pfHandleScan(data) {
 
 // ══════════════════════════════════════════════════════════════════
 // FIN MODULE POINTAGE ENFANTS
+// ══════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════
+// MODULE ENCADREMENT — Gantt pros + enfants
+// ══════════════════════════════════════════════════════════════════
+
+let encWeekOffset = 0;
+let encDayIdx     = 0;
+
+function encGetMonday(offset) {
+  const mon = getMondayOfDate(new Date());
+  mon.setDate(mon.getDate() + (offset||0) * 7);
+  return mon;
+}
+
+function encGoWeek(dir) {
+  if (dir === 0) { encWeekOffset = 0; encDayIdx = encTodayIdx(); }
+  else encWeekOffset += dir;
+  renderEncadrement();
+}
+
+function encTodayIdx() {
+  const d = new Date().getDay();
+  return (d >= 1 && d <= 5) ? d - 1 : 0;
+}
+
+function encSelectDay(idx) {
+  encDayIdx = idx;
+  renderEncadrement();
+}
+
+async function renderEncadrement() {
+  const container = document.getElementById('enc-container');
+  if (!container) return;
+  container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--ink3);font-size:13px">Chargement…</div>';
+
+  const crecheId  = getCrecheId();
+  const monday    = encGetMonday(encWeekOffset);
+  const friday    = new Date(monday); friday.setDate(monday.getDate() + 4);
+  const horaires  = getPlanningHoraires();
+  const week      = peGetWeekByOffset(encWeekOffset, crecheId);
+  const enfants   = getFamilles(crecheId);
+  const JOURS     = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+  const START_H   = 7, END_H = 19, TOTAL = END_H - START_H;
+
+  function pct(h)  { return ((h - START_H) / TOTAL * 100).toFixed(3) + '%'; }
+  function pctW(d) { return (d / TOTAL * 100).toFixed(3) + '%'; }
+  function hhmm(str) {
+    if (!str) return null;
+    const [hh, mm] = str.split(':').map(Number);
+    return hh + mm/60;
+  }
+  function fmtH(iso) { return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+
+  // Charger pointages enfants de toute la semaine
+  const weekStartISO = monday.toISOString().split('T')[0];
+  let ptsSemaine = [];
+  try {
+    ptsSemaine = await sbGet('pointages_enfants',
+      `creche_id=eq.${crecheId}&horodatage=gte.${weekStartISO}T00:00:00&order=horodatage.asc`
+    );
+  } catch(e) { console.warn('Encadrement: pointages non chargés', e.message); }
+
+  // Vérifier alertes par jour
+  function hasAlertDay(dayIdx) {
+    const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + dayIdx);
+    const dayStr  = dayDate.toISOString().split('T')[0];
+    const dayPts  = ptsSemaine.filter(p => p.horodatage.startsWith(dayStr));
+    const prosDuJour = (week.creneaux||[]).filter(c => c.jour === dayIdx);
+    if (!prosDuJour.length) return false;
+    // Vérifier s'il y a un slot où ratio < 1/5
+    for (let h = START_H; h < END_H; h += 0.5) {
+      const mid = h + 0.25;
+      const nbP = prosDuJour.filter(c => {
+        const hor = horaires[c.horaire_idx];
+        if (!hor) return false;
+        return mid >= hhmm(hor.debut) && mid <= hhmm(hor.fin);
+      }).length;
+      if (!nbP) continue;
+      const nowH = new Date().getHours() + new Date().getMinutes()/60;
+      const cutoff = (encWeekOffset === 0 && dayIdx === encTodayIdx()) ? nowH : END_H;
+      if (mid > cutoff) continue;
+      const nbE = enfants.filter(e => {
+        const ePts = dayPts.filter(p => p.enfant_id === e.id);
+        const arr  = ePts.find(p=>p.type==='arrivee');
+        const dep  = ePts.find(p=>p.type==='depart');
+        if (!arr) return false;
+        const a = hhmm(arr.horodatage.split('T')[1].substring(0,5));
+        const d = dep ? hhmm(dep.horodatage.split('T')[1].substring(0,5)) : cutoff;
+        return mid >= a && mid <= d;
+      }).length;
+      if (nbE > 0 && nbP/nbE < 0.2) return true;
+    }
+    return false;
+  }
+
+  // Générer le Gantt d'un jour
+  function renderDayGantt(dayIdx) {
+    const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + dayIdx);
+    const dayStr  = dayDate.toISOString().split('T')[0];
+    const dayPts  = ptsSemaine.filter(p => p.horodatage.startsWith(dayStr));
+    const isToday = encWeekOffset === 0 && dayIdx === encTodayIdx();
+    const nowH    = isToday ? (new Date().getHours() + new Date().getMinutes()/60) : null;
+    const cutoff  = nowH ?? END_H;
+
+    const prosDuJour = (week.creneaux||[]).filter(c => c.jour === dayIdx);
+
+    function gridLines() {
+      let h = '';
+      for (let i = START_H+1; i < END_H; i++)
+        h += `<div style="position:absolute;top:0;bottom:0;left:${pct(i)};width:0.5px;background:var(--border)"></div>`;
+      if (nowH)
+        h += `<div style="position:absolute;top:0;bottom:0;left:${pct(nowH)};width:2px;background:#DC2626;z-index:5"></div>`;
+      return h;
+    }
+
+    function hoursHeader() {
+      return Array.from({length:END_H-START_H},(_,i) => {
+        const hr = START_H+i;
+        return `<div style="position:absolute;left:${pct(hr)};width:${pctW(1)};text-align:center;font-size:10px;color:var(--ink3);top:0;height:24px;display:flex;align-items:center;justify-content:center;border-left:0.5px solid var(--border)">${hr}h</div>`;
+      }).join('');
+    }
+
+    // Lignes pros
+    const prosRows = prosDuJour.length ? prosDuJour.map(c => {
+      const hor = horaires[c.horaire_idx];
+      if (!hor) return '';
+      const s = hhmm(hor.debut), e = hhmm(hor.fin);
+      return `<div style="display:flex;align-items:center;border-bottom:0.5px solid var(--border);min-height:32px">
+        <div style="width:110px;flex-shrink:0;padding:0 10px;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.pro||'—'}</div>
+        <div style="flex:1;position:relative;height:32px">${gridLines()}
+          <div style="position:absolute;top:5px;height:22px;left:${pct(s)};width:${pctW(e-s)};background:#B5D4F4;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:600;color:#0C447C;overflow:hidden;white-space:nowrap">${c.pro?c.pro.split(' ')[0]:''}</div>
+        </div>
+      </div>`;
+    }).join('') : `<div style="padding:12px 10px;font-size:12px;color:var(--ink3)">Aucune pro planifiée ce jour</div>`;
+
+    // Lignes enfants
+    const enfantsRows = enfants.length ? enfants.map(e => {
+      const ePts = dayPts.filter(p => p.enfant_id === e.id);
+      const arr  = ePts.find(p=>p.type==='arrivee');
+      const dep  = ePts.find(p=>p.type==='depart');
+      if (!arr) return '';
+      const a = parseFloat(arr.horodatage.split('T')[1].substring(0,2)) + parseFloat(arr.horodatage.split('T')[1].substring(3,5))/60;
+      const d = dep ? parseFloat(dep.horodatage.split('T')[1].substring(0,2)) + parseFloat(dep.horodatage.split('T')[1].substring(3,5))/60 : cutoff;
+      const parti = !!dep;
+      const bg = parti ? '#F7C1C1' : '#9FE1CB';
+      const fg = parti ? '#791F1F' : '#085041';
+      const lbl = parti ? `→ ${fmtH(dep.horodatage)}` : '';
+      return `<div style="display:flex;align-items:center;border-bottom:0.5px solid var(--border);min-height:32px">
+        <div style="width:110px;flex-shrink:0;padding:0 10px;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.prenom} ${e.nom}</div>
+        <div style="flex:1;position:relative;height:32px">${gridLines()}
+          <div style="position:absolute;top:5px;height:22px;left:${pct(a)};width:${pctW(d-a)};background:${bg};border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:600;color:${fg};overflow:hidden;white-space:nowrap">${lbl}</div>
+        </div>
+      </div>`;
+    }).filter(Boolean).join('') : '';
+
+    const enfantsSection = enfantsRows
+      ? `<div style="padding:5px 10px;font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;background:var(--bg);border-bottom:0.5px solid var(--border)">Enfants</div>${enfantsRows}`
+      : `<div style="padding:10px 12px;font-size:12px;color:var(--ink3)">Aucun pointage enfant ce jour</div>`;
+
+    // Taux d'encadrement
+    const tauxCells = Array.from({length:(END_H-START_H)*2},(_,i) => {
+      const h   = START_H + i*0.5;
+      const mid = h + 0.25;
+      if (mid > cutoff) return '';
+      const nbP = prosDuJour.filter(c => {
+        const hor = horaires[c.horaire_idx];
+        if (!hor) return false;
+        return mid >= hhmm(hor.debut) && mid <= hhmm(hor.fin);
+      }).length;
+      const nbE = enfants.filter(en => {
+        const ePts = dayPts.filter(p => p.enfant_id === en.id);
+        const arr  = ePts.find(p=>p.type==='arrivee');
+        const dep  = ePts.find(p=>p.type==='depart');
+        if (!arr) return false;
+        const a = parseFloat(arr.horodatage.split('T')[1].substring(0,2)) + parseFloat(arr.horodatage.split('T')[1].substring(3,5))/60;
+        const d = dep ? parseFloat(dep.horodatage.split('T')[1].substring(0,2)) + parseFloat(dep.horodatage.split('T')[1].substring(3,5))/60 : cutoff;
+        return mid >= a && mid <= d;
+      }).length;
+      if (!nbP && !nbE) return '';
+      const ratio = nbE > 0 ? nbP/nbE : 1;
+      const bg    = ratio >= 0.2 ? '#EAF3DE' : ratio >= 0.14 ? '#FAEEDA' : '#FCEBEB';
+      const fg    = ratio >= 0.2 ? '#27500A' : ratio >= 0.14 ? '#633806' : '#791F1F';
+      return `<div style="position:absolute;left:${pct(h)};width:${pctW(0.5)};top:4px;height:20px;background:${bg};color:${fg};font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;border-radius:2px">${nbP}/${nbE}</div>`;
+    }).join('');
+
+    // Alertes
+    let alerteHTML = '';
+    const badSlots = [];
+    for (let i = 0; i < (END_H-START_H)*2; i++) {
+      const h   = START_H + i*0.5;
+      const mid = h + 0.25;
+      if (mid > cutoff) continue;
+      const nbP = prosDuJour.filter(c => {
+        const hor = horaires[c.horaire_idx];
+        return hor && mid >= hhmm(hor.debut) && mid <= hhmm(hor.fin);
+      }).length;
+      const nbE = enfants.filter(en => {
+        const ePts = dayPts.filter(p => p.enfant_id === en.id);
+        const arr  = ePts.find(p=>p.type==='arrivee');
+        const dep  = ePts.find(p=>p.type==='depart');
+        if (!arr) return false;
+        const a = parseFloat(arr.horodatage.split('T')[1].substring(0,2)) + parseFloat(arr.horodatage.split('T')[1].substring(3,5))/60;
+        const d = dep ? parseFloat(dep.horodatage.split('T')[1].substring(0,2)) + parseFloat(dep.horodatage.split('T')[1].substring(3,5))/60 : cutoff;
+        return mid >= a && mid <= d;
+      }).length;
+      if (nbE > 0 && nbP > 0 && nbP/nbE < 0.2) {
+        const hh = Math.floor(h), mm = String(Math.round((h%1)*60)).padStart(2,'0');
+        badSlots.push(`${hh}h${mm}`);
+      }
+    }
+    if (badSlots.length) {
+      alerteHTML = `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:9px 12px;background:#FAEEDA;border-radius:8px;border:0.5px solid #EF9F27;font-size:12px;color:#633806">
+        ⚠️ Taux insuffisant à : ${[...new Set(badSlots)].join(', ')}
+      </div>`;
+    }
+
+    return `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+        <div style="display:flex;background:var(--bg);border-bottom:0.5px solid var(--border)">
+          <div style="width:110px;flex-shrink:0;padding:6px 10px;font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px">Nom</div>
+          <div style="flex:1;position:relative;height:24px">${hoursHeader()}</div>
+        </div>
+        <div style="padding:5px 10px;font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;background:var(--bg);border-bottom:0.5px solid var(--border)">Professionnelles</div>
+        ${prosRows}
+        ${enfantsSection}
+        <div style="display:flex;align-items:center;border-top:0.5px solid var(--border);background:var(--bg)">
+          <div style="width:110px;flex-shrink:0;padding:0 10px;font-size:11px;color:var(--ink3)">Pros/enfants</div>
+          <div style="flex:1;position:relative;height:28px">${gridLines()}${tauxCells}</div>
+        </div>
+      </div>
+      ${alerteHTML}`;
+  }
+
+  // Onglets jours
+  const todayIdx  = encTodayIdx();
+  const isThisWeek = encWeekOffset === 0;
+  const dayTabsHTML = JOURS.map((j, i) => {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const isToday  = isThisWeek && i === todayIdx;
+    const hasAlert = hasAlertDay(i);
+    const active   = i === encDayIdx;
+    return `<button onclick="encSelectDay(${i})" style="flex:1;min-width:72px;padding:8px 6px;border:none;background:none;cursor:pointer;border-bottom:2px solid ${active?'var(--accent)':'transparent'};margin-bottom:-1px">
+      <div style="font-size:11px;font-weight:600;color:${active?'var(--accent)':'var(--ink3)'}">${j}</div>
+      <div style="font-size:17px;font-weight:600;color:${active||isToday?'var(--accent)':'var(--ink2)'}">${d.getDate()}</div>
+      <div style="width:6px;height:6px;border-radius:50%;background:${hasAlert?'#DC2626':'transparent'};margin:3px auto 0"></div>
+    </button>`;
+  }).join('');
+
+  const weekLabel = `Semaine du ${monday.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} au ${friday.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}`;
+
+  const legend = `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)"><div style="width:10px;height:10px;border-radius:2px;background:#85B7EB"></div>Professionnelle</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)"><div style="width:10px;height:10px;border-radius:2px;background:#5DCAA5"></div>Enfant présent</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)"><div style="width:10px;height:10px;border-radius:2px;background:#F09595"></div>Enfant parti</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)"><div style="width:6px;height:6px;border-radius:50%;background:#DC2626"></div>Alerte taux</div>
+  </div>`;
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" onclick="encGoWeek(-1)">← Préc.</button>
+      <span style="flex:1;text-align:center;font-size:13px;font-weight:600;color:var(--ink3)">${weekLabel}</span>
+      <button class="btn btn-secondary btn-sm" onclick="encGoWeek(0)">Aujourd'hui</button>
+      <button class="btn btn-secondary btn-sm" onclick="encGoWeek(1)">Suiv. →</button>
+    </div>
+    <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:14px">${dayTabsHTML}</div>
+    ${legend}
+    ${renderDayGantt(encDayIdx)}`;
+}
+
+function peGetWeekByOffset(offset, crecheId) {
+  const mon = encGetMonday(offset);
+  const key = `${mon.getFullYear()}-W${String(getISOWeekNumber(mon)).padStart(2,'0')}-${crecheId||'all'}`;
+  const data = peLoad();
+  return data[key] || { pros: [], creneaux: [] };
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FIN MODULE ENCADREMENT
 // ══════════════════════════════════════════════════════════════════
 
 // ── PERSONNALISATION ─────────────────────────────────────────────
@@ -8980,7 +9266,7 @@ let peGanttDay = -1; // -1 = jour courant ou lundi
 
 function switchPlanningTab(tab) {
   pePlanningTab = tab;
-  const tabs = ['gantt','hebdo','gantt2'];
+  const tabs = ['gantt','hebdo','gantt2','encadrement'];
   tabs.forEach(t => {
     const btn  = document.getElementById('pe-tab-' + t);
     const view = document.getElementById('pe-view-' + t);
@@ -8989,15 +9275,17 @@ function switchPlanningTab(tab) {
   });
   const addBtn = document.getElementById('pe-add-btn');
   if (addBtn) addBtn.style.display = tab==='gantt' ? '' : 'none';
-  if (tab === 'gantt')  renderPlanningEquipe();
-  else if (tab === 'hebdo')  renderPlanningHebdo();
-  else if (tab === 'gantt2') renderPlanningGantt();
+  if (tab === 'gantt')        renderPlanningEquipe();
+  else if (tab === 'hebdo')   renderPlanningHebdo();
+  else if (tab === 'gantt2')  renderPlanningGantt();
+  else if (tab === 'encadrement') renderEncadrement();
 }
 
 function renderActiveTab() {
-  if (pePlanningTab === 'gantt')  renderPlanningEquipe();
-  else if (pePlanningTab === 'hebdo')  renderPlanningHebdo();
-  else if (pePlanningTab === 'gantt2') renderPlanningGantt();
+  if (pePlanningTab === 'gantt')        renderPlanningEquipe();
+  else if (pePlanningTab === 'hebdo')   renderPlanningHebdo();
+  else if (pePlanningTab === 'gantt2')  renderPlanningGantt();
+  else if (pePlanningTab === 'encadrement') renderEncadrement();
 }
 
 // ── PLANNING ÉQUIPE (Horaire × Jours) ───────────────────────────────
