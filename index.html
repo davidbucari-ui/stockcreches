@@ -617,79 +617,6 @@ textarea { resize: vertical; min-height: 72px; }
   .fi-row { grid-template-columns: 1fr; }
   .fi-row.triple { grid-template-columns: 1fr; }
 }
-
-/* ── RESPONSIVE MOBILE ── */
-@media (max-width: 768px) {
-  /* Layout : sidebar cachée, main plein écran */
-  .app { grid-template-columns: 1fr; }
-  .sidebar {
-    position: fixed;
-    left: -260px;
-    top: 0; bottom: 0;
-    width: 240px;
-    z-index: 1000;
-    transition: left 0.25s ease;
-  }
-  .sidebar.open { left: 0; }
-  .main { min-height: 100dvh; }
-
-  /* Header mobile */
-  .topbar {
-    padding: 10px 14px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: var(--surface);
-  }
-
-  /* Bouton burger */
-  #mobile-menu-btn {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 36px; height: 36px;
-    background: none;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    font-size: 18px;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-
-  /* Overlay sidebar */
-  #sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
-  }
-  #sidebar-overlay.open { display: block; }
-
-  /* Contenu pages */
-  .content { padding: 14px !important; }
-
-  /* Tableaux scrollables */
-  .table-wrap, table { display: block; overflow-x: auto; }
-
-  /* Topbar title tronqué */
-  #pageTitle { font-size: 15px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
-
-  /* Grilles → 1 colonne */
-  .hub-grid,
-  .fam-grid,
-  .rh-grid { grid-template-columns: 1fr !important; }
-
-  /* Modales plein écran */
-  .modal-box { max-width: 100% !important; margin: 0 !important; border-radius: 16px 16px 0 0 !important; position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; max-height: 90dvh; overflow-y: auto; }
-  .modal-overlay { align-items: flex-end !important; }
-
-  /* Boutons topbar cachés sur mobile */
-  .topbar-actions .btn-secondary { display: none; }
-
-  /* Fiche enfant tabs scrollable */
-  #fiche-tabs-bar { overflow-x: auto; flex-wrap: nowrap !important; }
-}
 /* ── NOTIFICATION ── */
 .notif {
   position: fixed;
@@ -927,13 +854,11 @@ textarea { resize: vertical; min-height: 72px; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 </head>
 <body>
 
 <div class="offline-badge" id="offlineBadge">📵 Hors ligne</div>
-<div id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
 
 <div class="install-bar" id="installBar">
   <div class="install-bar-text">
@@ -996,9 +921,6 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('planning', this)">
     <span class="nav-icon">📅</span> Planning
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('pointage-familles', this)">
-    <span class="nav-icon">📷</span> Pointage familles
-  </button>
   <button class="nav-item" data-roles="admin,directrice" onclick="showPage('fournisseurs', this)">
     <span class="nav-icon">🏭</span> Fournisseurs
   </button>
@@ -1040,8 +962,7 @@ textarea { resize: vertical; min-height: 72px; }
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="topbar-left" style="display:flex;align-items:center;gap:10px">
-      <button id="mobile-menu-btn" style="display:none" onclick="toggleMobileSidebar()">☰</button>
+    <div class="topbar-left">
       <div class="page-title" id="pageTitle">Inventaire</div>
     </div>
     <div style="display:flex;gap:10px;align-items:center">
@@ -1299,6 +1220,11 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="stat-value" style="color:var(--accent)" id="stat-commandes">3</div>
           <div class="stat-sub">en attente livraison</div>
         </div>
+        <div class="stat-card" id="stat-card-remplacer">
+          <div class="stat-label">🔴 À remplacer</div>
+          <div class="stat-value" style="color:#DC2626" id="stat-remplacer">0</div>
+          <div class="stat-sub">dépréciation ≥ 60% (3+ ans)</div>
+        </div>
       </div>
 
       <!-- Actions inventaire -->
@@ -1310,6 +1236,22 @@ textarea { resize: vertical; min-height: 72px; }
       <!-- FILTERS + TABLE -->
       <div class="section-header">
         <div class="section-title">Articles en stock</div>
+      </div>
+
+      <!-- Onglets Matériel / Consommables -->
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
+        <button id="inv-tab-materiel" onclick="switchInvTab('materiel')"
+          style="padding:10px 20px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;color:var(--accent)">
+          🧸 Matériel pédagogique <span id="inv-count-materiel" style="background:var(--accent-lt);color:var(--accent);font-size:11px;padding:1px 7px;border-radius:20px;margin-left:4px">0</span>
+        </button>
+        <button id="inv-tab-consommable" onclick="switchInvTab('consommable')"
+          style="padding:10px 20px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--ink3)">
+          🧴 Consommables <span id="inv-count-consommable" style="background:var(--bg);color:var(--ink3);font-size:11px;padding:1px 7px;border-radius:20px;margin-left:4px">0</span>
+        </button>
+      </div>
+
+      <!-- Filtres catégories matériel -->
+      <div id="inv-filters-materiel" style="margin-bottom:16px">
         <div class="filters">
           <div class="filter-chip active" onclick="filterCat('all', this)">Tout</div>
           <div class="filter-chip" onclick="filterCat('Sensoriel', this)">Sensoriel</div>
@@ -1324,22 +1266,53 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="filter-chip" onclick="filterCat('Rangement', this)">Rangement</div>
         </div>
       </div>
+      <!-- Filtres catégories consommables -->
+      <div id="inv-filters-consommable" style="display:none;margin-bottom:16px">
+        <div class="filters">
+          <div class="filter-chip active" onclick="filterCatConso('all', this)">Tout</div>
+          <div class="filter-chip" onclick="filterCatConso('Puériculture', this)">Puériculture</div>
+          <div class="filter-chip" onclick="filterCatConso('Bureautique', this)">Bureautique</div>
+          <div class="filter-chip" onclick="filterCatConso('Sensoriel', this)">Sensoriel</div>
+          <div class="filter-chip" onclick="filterCatConso('Expression artistique', this)">Expression artistique</div>
+        </div>
+      </div>
 
-      <div class="table-wrap">
+      <!-- Tableau matériel pédagogique -->
+      <div id="inv-table-materiel" class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Article</th>
-              <th>Structure</th>
-              <th>Catégorie</th>
-              <th>Stock</th>
+              <th onclick="toggleSort('nom')" style="cursor:pointer">Article ↕</th>
+              <th onclick="toggleSort('creche')" style="cursor:pointer">Structure ↕</th>
+              <th onclick="toggleSort('cat')" style="cursor:pointer">Catégorie ↕</th>
+              <th onclick="toggleSort('stock')" style="cursor:pointer">Stock ↕</th>
               <th>Prix unit.</th>
               <th style="color:var(--accent)">Montant total</th>
-              <th>Fournisseur</th>
+              <th onclick="toggleSort('fourn')" style="cursor:pointer">Fournisseur ↕</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Tableau consommables -->
+      <div id="inv-table-consommable" class="table-wrap" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="toggleSort('nom')" style="cursor:pointer">Article ↕</th>
+              <th onclick="toggleSort('creche')" style="cursor:pointer">Structure ↕</th>
+              <th onclick="toggleSort('cat')" style="cursor:pointer">Catégorie ↕</th>
+              <th onclick="toggleSort('stock')" style="cursor:pointer">Stock ↕</th>
+              <th>Stock min.</th>
+              <th>Prix unit.</th>
+              <th>Péremption</th>
+              <th onclick="toggleSort('fourn')" style="cursor:pointer">Fournisseur ↕</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyConso"></tbody>
         </table>
       </div>
     </div>
@@ -1565,7 +1538,6 @@ textarea { resize: vertical; min-height: 72px; }
           <button onclick="showFamillesFromFiche()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink3)">← Retour</button>
           <div style="flex:1"></div>
           <button onclick="deleteFicheEnfant()" style="background:none;border:1.5px solid #FECACA;border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--red)">🗑 Supprimer</button>
-          <button onclick="openQrEnfant()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink2)">🔲 QR Code</button>
           <button onclick="saveFicheEnfant()" class="btn btn-primary">💾 Enregistrer</button>
         </div>
 
@@ -1720,30 +1692,11 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
         </div>
 
-        <!-- PLANNING / POINTAGE -->
+        <!-- PLANNING -->
         <div id="fi-planning" style="display:none">
-          <!-- Section A : Pointage du jour -->
-          <div class="fiche-card" style="margin-bottom:14px">
-            <div class="fiche-card-title">Pointage du jour</div>
-            <div id="fi-planning-statut" style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-              <div style="color:var(--ink3);font-size:13px">Chargement…</div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-              <button id="fi-btn-arrivee" onclick="pointageEnfant(ficheEnfantId,'arrivee')"
-                style="border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--green-lt);color:var(--green);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
-                ✅ Arrivée
-              </button>
-              <button id="fi-btn-depart" onclick="pointageEnfant(ficheEnfantId,'depart')"
-                style="border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--red-lt);color:var(--red);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
-                🚪 Départ
-              </button>
-            </div>
-            <div id="fi-planning-today" style="font-size:13px"></div>
-          </div>
-          <!-- Section B : Historique semaine -->
-          <div class="fiche-card">
-            <div class="fiche-card-title">Historique de la semaine</div>
-            <div id="fi-planning-historique" style="font-size:13px;color:var(--ink3)">Chargement…</div>
+          <div style="padding:48px;text-align:center;color:var(--ink3)">
+            <div style="font-size:40px;margin-bottom:12px">📅</div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px">Lié au module Planning</div>
           </div>
         </div>
 
@@ -1763,77 +1716,6 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
         </div>
 
-    </div>
-
-
-    </div>
-
-
-    <!-- ── PAGE POINTAGE FAMILLES ── -->
-    <div id="page-pointage-familles" style="display:none;margin:-24px -28px;padding:0">
-      <div style="min-height:100vh;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;gap:24px">
-        <!-- Titre -->
-        <div style="text-align:center">
-          <div id="pf-creche-label" style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">—</div>
-          <div style="font-size:28px;font-weight:800;color:#fff;font-family:'Syne',sans-serif">Pointage familles</div>
-          <div id="pf-subtitle" style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:6px">Présentez le QR code de l'enfant</div>
-        </div>
-
-        <!-- Sélecteur de mode -->
-        <div style="display:flex;gap:8px;background:rgba(255,255,255,0.08);border-radius:10px;padding:4px">
-          <button id="pf-mode-camera" onclick="pfSetMode('camera')"
-            style="border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--accent);color:#fff">
-            📷 Caméra
-          </button>
-          <button id="pf-mode-hid" onclick="pfSetMode('hid')"
-            style="border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:rgba(255,255,255,0.5)">
-            🔌 Lecteur sans fil
-          </button>
-        </div>
-
-        <!-- Zone caméra -->
-        <div id="pf-zone-camera">
-          <div style="position:relative;width:260px;height:260px">
-            <video id="pf-video" autoplay playsinline muted style="width:260px;height:260px;object-fit:cover;border-radius:16px;display:block"></video>
-            <canvas id="pf-canvas" style="display:none"></canvas>
-            <div style="position:absolute;top:0;left:0;width:32px;height:32px;border-top:4px solid var(--accent);border-left:4px solid var(--accent);border-radius:8px 0 0 0;pointer-events:none"></div>
-            <div style="position:absolute;top:0;right:0;width:32px;height:32px;border-top:4px solid var(--accent);border-right:4px solid var(--accent);border-radius:0 8px 0 0;pointer-events:none"></div>
-            <div style="position:absolute;bottom:0;left:0;width:32px;height:32px;border-bottom:4px solid var(--accent);border-left:4px solid var(--accent);border-radius:0 0 0 8px;pointer-events:none"></div>
-            <div style="position:absolute;bottom:0;right:0;width:32px;height:32px;border-bottom:4px solid var(--accent);border-right:4px solid var(--accent);border-radius:0 0 8px 0;pointer-events:none"></div>
-          </div>
-          <div style="margin-top:16px;text-align:center">
-            <button id="pf-start-btn" onclick="startFamillesScan()"
-              style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">
-              📷 Démarrer le scan
-            </button>
-          </div>
-        </div>
-
-        <!-- Zone lecteur HID -->
-        <div id="pf-zone-hid" style="display:none;text-align:center">
-          <div style="width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:48px">
-            🔌
-          </div>
-          <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">Lecteur prêt</div>
-          <div style="font-size:13px;color:rgba(255,255,255,0.4);max-width:260px">Scannez le QR code de l'enfant avec le lecteur sans fil</div>
-          <!-- Champ invisible qui capte la saisie HID -->
-          <input id="pf-hid-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
-            style="position:fixed;top:-999px;left:-999px;opacity:0;width:1px;height:1px"
-            onkeydown="pfHidKeydown(event)">
-        </div>
-
-        <!-- Confirmation (commune aux deux modes) -->
-        <div id="pf-confirm" style="display:none;width:100%;max-width:320px;border-radius:16px;padding:24px;text-align:center">
-          <div id="pf-confirm-icon" style="font-size:48px;margin-bottom:10px"></div>
-          <div id="pf-confirm-nom" style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:4px"></div>
-          <div id="pf-confirm-type" style="font-size:15px;font-weight:600;margin-bottom:4px"></div>
-          <div id="pf-confirm-heure" style="font-size:13px;opacity:0.7"></div>
-        </div>
-
-        <!-- Erreur caméra -->
-        <div id="pf-error" style="display:none;color:rgba(255,255,255,0.5);font-size:13px;text-align:center;max-width:280px"></div>
-
-      </div>
     </div>
 
 
@@ -1873,10 +1755,6 @@ textarea { resize: vertical; min-height: 72px; }
             style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
             📊 Gantt
           </button>
-          <button id="pe-tab-encadrement" onclick="switchPlanningTab('encadrement')"
-            style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
-            🧒 Encadrement
-          </button>
         </div>
 
         <!-- Vue Gantt -->
@@ -1913,13 +1791,10 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
         </div>
 
-        <!-- Vue Encadrement -->
-        <div id="pe-view-encadrement" style="display:none">
-          <div id="enc-container"></div>
-        </div>
-
       </div>
     </div>
+
+    <!-- page-salarie kept as hidden alias so old refs don't break -->
     <div id="page-salarie" style="display:none"></div>
 
     <!-- ── PAGE RH ── -->
@@ -2067,23 +1942,6 @@ textarea { resize: vertical; min-height: 72px; }
 
   </div><!-- /content -->
 
-
-
-<!-- ── MODALE QR ENFANT ── -->
-<div class="modal-overlay" id="modal-qr-enfant" onclick="closeModalClick(event,'modal-qr-enfant')">
-  <div class="modal-box" style="max-width:360px;text-align:center">
-    <div class="modal-header">
-      <h2 id="modal-qr-enfant-title">🔲 QR Code</h2>
-      <button class="modal-close" onclick="closeModal('modal-qr-enfant')">✕</button>
-    </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:8px">
-      <div id="modal-qr-enfant-canvas" style="background:#fff;padding:16px;border-radius:12px;border:1px solid var(--border);line-height:0"></div>
-      <div id="modal-qr-enfant-name" style="font-size:16px;font-weight:700;font-family:'Syne',sans-serif"></div>
-      <div style="font-size:12px;color:var(--ink3);text-align:center">Présentez ce QR code à l'entrée de la crèche</div>
-      <button onclick="printQrEnfant()" class="btn btn-primary" style="width:100%;justify-content:center">🖨 Imprimer</button>
-    </div>
-  </div>
-</div>
 
 
 <div class="modal-overlay" id="modal-famille" onclick="closeModalClick(event,'modal-famille')">
@@ -2433,6 +2291,30 @@ textarea { resize: vertical; min-height: 72px; }
         <div class="form-group">
           <label>📅 Date de péremption</label>
           <input type="date" id="f-expiry" placeholder="">
+        </div>
+        <div class="form-group">
+          <label>📆 Date d'achat</label>
+          <input type="date" id="f-date-achat">
+        </div>
+        <div class="form-group">
+          <label>🏷 État <span style="font-weight:400;color:var(--ink3)">(auto si date renseignée)</span></label>
+          <select id="f-etat">
+            <option value="">— Auto selon date d'achat —</option>
+            <option value="Neuf">🟢 Neuf</option>
+            <option value="Bon état">🔵 Bon état</option>
+            <option value="Usagé">🟠 Usagé</option>
+            <option value="À remplacer">🔴 À remplacer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>⚠ Stock minimum</label>
+          <input type="number" id="f-min" min="0" placeholder="0" value="0">
+        </div>
+        <div class="form-group" style="justify-content:flex-end;padding-top:8px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;font-size:13px">
+            <input type="checkbox" id="f-depreciable" checked style="width:16px;height:16px;cursor:pointer">
+            🔄 Article dépréciable <span style="font-weight:400;color:var(--ink3);font-size:11px">(décocher pour consommable)</span>
+          </label>
         </div>
         <div class="form-group">
           <label>🔖 Code-barres associé</label>
@@ -3504,7 +3386,7 @@ function confirmScanAdjust(forceType) {
   addHisto(type, article.nom, delta, article.creche, 'Vous', 'Scan code-barres');
   saveData();
   saveArticleDB(article, false);
-  renderTable(); renderStats();
+  renderActiveInvTable(); renderStats();
   closeModal('modal-scan-result');
   showNotif(`${delta > 0 ? '📥' : '📤'} ${article.nom} → stock : ${newStock}`);
 }
@@ -3629,7 +3511,7 @@ async function createFromScan(code, photoUrl) {
       saveData();
     }
 
-    renderTable(); renderStats();
+    renderActiveInvTable(); renderStats();
     closeModal('modal-scan-result');
     showNotif(`✅ "${nom}" créé et synchronisé !`);
 
@@ -3693,10 +3575,40 @@ function getLowStockArticles() {
   return ARTICLES.filter(a => a.stock <= a.min && a.min > 0);
 }
 
+// ── DÉPRÉCIATION ──────────────────────────────────────────────────
+function getArticleEtat(a) {
+  if (a.depreciable === false) return null; // consommable → pas d'état
+  if (a.etat_override) return a.etat_override;
+  if (!a.date_achat) return null;
+  const annees = (Date.now() - new Date(a.date_achat)) / (365.25 * 24 * 3600 * 1000);
+  const residuel = Math.max(0, 1 - 0.20 * annees);
+  if (residuel >= 0.80) return 'Neuf';
+  if (residuel >= 0.60) return 'Bon état';
+  if (residuel >= 0.40) return 'Usagé';
+  return 'À remplacer';
+}
+
+function getEtatBadgeHtml(etat) {
+  if (!etat) return '';
+  const map = {
+    'Neuf':        { bg:'#D1FAE5', color:'#065F46', icon:'🟢' },
+    'Bon état':    { bg:'#DBEAFE', color:'#1E40AF', icon:'🔵' },
+    'Usagé':       { bg:'#FEF3C7', color:'#92400E', icon:'🟠' },
+    'À remplacer': { bg:'#FEE2E2', color:'#991B1B', icon:'🔴' },
+  };
+  const s = map[etat] || { bg:'var(--bg)', color:'var(--ink2)', icon:'⚪' };
+  return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:${s.bg};color:${s.color}">${s.icon} ${etat}</span>`;
+}
+
+function getArticlesToRemplacer() {
+  return ARTICLES.filter(a => getArticleEtat(a) === 'À remplacer');
+}
+
 function updateAlertBadge() {
   const low = getLowStockArticles();
   const exp = getExpiryAlerts();
-  const total = low.length + exp.length;
+  const rem = getArticlesToRemplacer();
+  const total = low.length + exp.length + rem.length;
   const badge = document.getElementById('nav-alert-badge');
   if (!badge) return;
   if (total > 0) {
@@ -3757,7 +3669,7 @@ function doTransfert() {
   }
 
   saveData();
-  renderTable(); renderHistorique(); updateAlertBadge();
+  renderActiveInvTable(); renderHistorique(); updateAlertBadge();
   closeModal('modal-transfert');
   showNotif(`🔄 ${qty} × "${a.nom}" transféré(s) vers ${to}`);
 }
@@ -4705,7 +4617,6 @@ function switchFicheTab(tabId, btn) {
     activeBtn.style.borderBottom = '2px solid var(--accent)';
     activeBtn.style.fontWeight = '700';
   }
-  if (tabId === 'fi-planning' && ficheEnfantId) renderFiPlanning(ficheEnfantId);
 }
 
 function renderReferents() {
@@ -4807,696 +4718,6 @@ function deleteFicheEnfant() {
 
 // ══════════════════════════════════════════════════════════════════
 // FIN MODULE FICHE ENFANT
-// ══════════════════════════════════════════════════════════════════
-
-// ══════════════════════════════════════════════════════════════════
-// MODULE POINTAGE ENFANTS
-// ══════════════════════════════════════════════════════════════════
-
-// ── Helpers ──────────────────────────────────────────────────────
-
-async function loadPointagesEnfant(enfantId, depuis) {
-  return await sbGet('pointages_enfants',
-    `enfant_id=eq.${enfantId}&horodatage=gte.${depuis}T00:00:00&order=horodatage.asc`
-  );
-}
-
-function calculerDureeEnfant(pointages) {
-  let totalMs = 0, lastArrivee = null;
-  const sorted = [...pointages].sort((a,b) => new Date(a.horodatage) - new Date(b.horodatage));
-  sorted.forEach(p => {
-    const ts = new Date(p.horodatage);
-    if (p.type === 'arrivee') lastArrivee = ts;
-    if (p.type === 'depart' && lastArrivee) { totalMs += ts - lastArrivee; lastArrivee = null; }
-  });
-  const enCours = lastArrivee !== null;
-  const depuisMs = enCours ? Date.now() - lastArrivee.getTime() : 0;
-  return { totalMs, enCours, depuisMs, lastArrivee };
-}
-
-function fmtDureeMs(ms) {
-  const m = Math.floor(ms / 60000);
-  return `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`;
-}
-
-function fmtHeure(iso) {
-  return new Date(iso).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
-}
-
-function fmtJour(iso) {
-  return new Date(iso.split('T')[0]+'T12:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'2-digit', month:'long' });
-}
-
-// ── Enregistrer un pointage ───────────────────────────────────────
-
-async function pointageEnfant(enfantId, type) {
-  if (!enfantId) return;
-  const crecheId = getCrecheId();
-  const today = new Date().toISOString().split('T')[0];
-  try {
-    const pts = await loadPointagesEnfant(enfantId, today);
-    const { enCours } = calculerDureeEnfant(pts);
-    // Vérifier cohérence
-    if (type === 'arrivee' && enCours)  { showNotif('⚠ Enfant déjà présent — pointez un départ d\'abord'); return; }
-    if (type === 'depart'  && !enCours) { showNotif('⚠ Aucune arrivée en cours à clôturer'); return; }
-    await sbInsert('pointages_enfants', { enfant_id: enfantId, creche_id: crecheId, type });
-    showNotif(type === 'arrivee' ? '✅ Arrivée enregistrée' : '🚪 Départ enregistré');
-    renderFiPlanning(enfantId);
-  } catch(e) {
-    showNotif('⚠ Erreur : ' + e.message);
-  }
-}
-
-// ── Render onglet Planning fiche enfant ───────────────────────────
-
-async function renderFiPlanning(enfantId) {
-  const statutEl  = document.getElementById('fi-planning-statut');
-  const todayEl   = document.getElementById('fi-planning-today');
-  const histoEl   = document.getElementById('fi-planning-historique');
-  const btnArr    = document.getElementById('fi-btn-arrivee');
-  const btnDep    = document.getElementById('fi-btn-depart');
-  if (!statutEl) return;
-
-  const today    = new Date().toISOString().split('T')[0];
-  const monday   = getMondayOfDate(new Date()).toISOString().split('T')[0];
-  const TLABEL   = { arrivee:'Arrivée', depart:'Départ' };
-  const TBADGE   = {
-    arrivee: `background:var(--green-lt);color:var(--green)`,
-    depart:  `background:var(--red-lt);color:var(--red)`
-  };
-
-  try {
-    const pts = await loadPointagesEnfant(enfantId, monday);
-
-    // ── Section A : aujourd'hui ──────────────────────────────────
-    const todayPts = pts.filter(p => p.horodatage.startsWith(today));
-    const { enCours, depuisMs, totalMs } = calculerDureeEnfant(todayPts);
-
-    // Statut
-    if (enCours) {
-      const arr = todayPts.filter(p=>p.type==='arrivee').at(-1);
-      statutEl.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;background:var(--green-lt);border-radius:20px;padding:6px 14px">
-          <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
-          <span style="font-size:13px;font-weight:700;color:var(--green)">Présent(e)</span>
-          <span style="font-size:12px;color:var(--ink3)">· Arrivée à ${arr?fmtHeure(arr.horodatage):'—'} · depuis ${fmtDureeMs(depuisMs)}</span>
-        </div>`;
-    } else {
-      statutEl.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;background:var(--red-lt);border-radius:20px;padding:6px 14px">
-          <div style="width:8px;height:8px;border-radius:50%;background:var(--red)"></div>
-          <span style="font-size:13px;font-weight:700;color:var(--red)">Absent(e)</span>
-        </div>`;
-    }
-
-    // Boutons
-    if (btnArr) { btnArr.style.opacity = enCours ? '0.4' : '1'; btnArr.style.pointerEvents = enCours ? 'none' : 'auto'; }
-    if (btnDep) { btnDep.style.opacity = enCours ? '1' : '0.4'; btnDep.style.pointerEvents = enCours ? 'auto' : 'none'; }
-
-    // Timeline du jour
-    if (todayPts.length) {
-      const lignes = todayPts.map(p => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-          <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;${TBADGE[p.type]}">${TLABEL[p.type]}</span>
-          <span style="font-size:14px;font-weight:700;font-family:'Syne',sans-serif">${fmtHeure(p.horodatage)}</span>
-        </div>`).join('');
-      const dureeJour = totalMs + (enCours ? depuisMs : 0);
-      todayEl.innerHTML = lignes + `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:8px 12px;background:var(--bg);border-radius:8px">
-          <span style="font-size:12px;color:var(--ink3)">Temps de présence aujourd'hui</span>
-          <span style="font-size:14px;font-weight:700;color:var(--green)">${fmtDureeMs(dureeJour)}${enCours?' (en cours)':''}</span>
-        </div>`;
-    } else {
-      todayEl.innerHTML = `<div style="text-align:center;color:var(--ink3);padding:20px;font-size:13px">Aucun pointage aujourd'hui.</div>`;
-    }
-
-    // ── Section B : historique semaine (sans aujourd'hui) ────────
-    const pastPts = pts.filter(p => !p.horodatage.startsWith(today));
-    if (!pastPts.length) {
-      histoEl.innerHTML = `<div style="text-align:center;color:var(--ink3);padding:20px;font-size:13px">Aucun pointage cette semaine.</div>`;
-    } else {
-      const byDay = {};
-      pastPts.forEach(p => { const d=p.horodatage.split('T')[0]; (byDay[d]=byDay[d]||[]).push(p); });
-      histoEl.innerHTML = Object.keys(byDay).sort().reverse().map(day => {
-        const dayPts = byDay[day];
-        const { totalMs: tm, enCours: ec, depuisMs: dm } = calculerDureeEnfant(dayPts);
-        const duree = tm + (ec ? dm : 0);
-        const chips = dayPts.map(p =>
-          `<div style="display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:4px 10px;margin:3px">
-            <span style="font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;${TBADGE[p.type]}">${TLABEL[p.type]}</span>
-            <span style="font-size:13px;font-weight:700">${fmtHeure(p.horodatage)}</span>
-          </div>`).join('');
-        return `<div style="margin-bottom:14px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span style="font-size:12px;font-weight:700;color:var(--ink2);text-transform:capitalize">${fmtJour(day)}</span>
-            <span style="font-size:11px;color:var(--ink3)">Présence : <strong style="color:var(--green)">${fmtDureeMs(duree)}</strong></span>
-          </div>
-          <div>${chips}</div>
-        </div>`;
-      }).join('');
-    }
-
-  } catch(e) {
-    if (statutEl) statutEl.innerHTML = `<span style="color:var(--red);font-size:12px">Erreur Supabase : ${e.message}</span>`;
-  }
-}
-
-// ── QR Code enfant ────────────────────────────────────────────────
-
-function openQrEnfant() {
-  if (!ficheEnfantId) return;
-  const crecheId = getCrecheId();
-  const enfants  = getFamilles(crecheId);
-  const e = enfants.find(x => x.id === ficheEnfantId);
-  if (!e) return;
-
-  const titleEl = document.getElementById('modal-qr-enfant-title');
-  const nameEl  = document.getElementById('modal-qr-enfant-name');
-  const canvEl  = document.getElementById('modal-qr-enfant-canvas');
-  if (titleEl) titleEl.textContent = `🔲 QR — ${e.prenom} ${e.nom}`;
-  if (nameEl)  nameEl.textContent  = `${e.prenom} ${e.nom}`;
-  if (canvEl)  canvEl.innerHTML    = '';
-
-  const qrData = `ENFANT:${e.id}:${crecheId}`;
-  if (typeof QRCode !== 'undefined' && canvEl) {
-    new QRCode(canvEl, { text: qrData, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
-  }
-  document.getElementById('modal-qr-enfant').classList.add('open');
-}
-
-function printQrEnfant() {
-  if (!ficheEnfantId) return;
-  const crecheId = getCrecheId();
-  const enfants  = getFamilles(crecheId);
-  const e = enfants.find(x => x.id === ficheEnfantId);
-  if (!e) return;
-  const canvEl = document.getElementById('modal-qr-enfant-canvas');
-  const img    = canvEl ? canvEl.querySelector('img,canvas') : null;
-  const imgSrc = img ? (img.tagName === 'CANVAS' ? img.toDataURL() : img.src) : '';
-  const html = `<!DOCTYPE html><html><head><title>QR — ${e.prenom} ${e.nom}</title>
-  <style>body{font-family:sans-serif;text-align:center;padding:40px}img{width:200px;height:200px}h2{margin:16px 0 4px;font-size:20px}p{color:#666;font-size:13px}</style></head>
-  <body>
-    <p style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">Orevy · Réseau Koalakids</p>
-    ${imgSrc ? `<img src="${imgSrc}">` : ''}
-    <h2>${e.prenom} ${e.nom}</h2>
-    <p>Présentez ce QR code à l'entrée de la crèche</p>
-  <script>window.onload=()=>setTimeout(()=>{window.print();window.close();},500);<\/script>
-  </body></html>`;
-  const w = window.open('','_blank');
-  if (w) { w.document.write(html); w.document.close(); }
-}
-
-// ── Page scan tablette ────────────────────────────────────────────
-
-let pfCurrentMode = 'camera';
-let pfHidBuffer   = '';
-let pfHidTimer    = null;
-let pfStream        = null;
-let pfScanning      = false;
-let pfCooldown      = false;
-let pfLastScan      = 0;
-let pfDetecting     = false;
-let pfBarcodeDetector = null;
-let pfScanInterval  = null;
-
-function initPointageFamillesPage() {
-  const crecheId = getCrecheId();
-  const labelEl  = document.getElementById('pf-creche-label');
-  if (labelEl) labelEl.textContent = crecheId || 'Crèche';
-  document.getElementById('pf-confirm').style.display = 'none';
-  document.getElementById('pf-error').style.display   = 'none';
-  pfSetMode(pfCurrentMode);
-}
-
-function pfSetMode(mode) {
-  pfCurrentMode = mode;
-  const zoneCamera = document.getElementById('pf-zone-camera');
-  const zoneHid    = document.getElementById('pf-zone-hid');
-  const btnCamera  = document.getElementById('pf-mode-camera');
-  const btnHid     = document.getElementById('pf-mode-hid');
-  const subtitle   = document.getElementById('pf-subtitle');
-
-  if (mode === 'camera') {
-    if (zoneCamera) zoneCamera.style.display = 'block';
-    if (zoneHid)    zoneHid.style.display    = 'none';
-    if (btnCamera)  { btnCamera.style.background = 'var(--accent)'; btnCamera.style.color = '#fff'; }
-    if (btnHid)     { btnHid.style.background = 'transparent'; btnHid.style.color = 'rgba(255,255,255,0.5)'; }
-    if (subtitle)   subtitle.textContent = 'Présentez le QR code devant la caméra';
-    // Arrêter HID
-    document.removeEventListener('keydown', pfGlobalKeydown);
-  } else {
-    if (zoneCamera) zoneCamera.style.display = 'none';
-    if (zoneHid)    zoneHid.style.display    = 'block';
-    if (btnHid)     { btnHid.style.background = 'var(--accent)'; btnHid.style.color = '#fff'; }
-    if (btnCamera)  { btnCamera.style.background = 'transparent'; btnCamera.style.color = 'rgba(255,255,255,0.5)'; }
-    if (subtitle)   subtitle.textContent = 'Scannez avec le lecteur sans fil';
-    stopFamillesScan();
-    pfHidBuffer = '';
-    // Écoute globale clavier — le lecteur HID envoie des frappes même sans focus
-    document.addEventListener('keydown', pfGlobalKeydown);
-    // Focus sur champ caché pour sécuriser la capture
-    setTimeout(() => { const inp = document.getElementById('pf-hid-input'); if (inp) inp.focus(); }, 100);
-  }
-}
-
-// Écoute globale (lecteur HID branché sur la page entière)
-function pfGlobalKeydown(e) {
-  // Se retirer automatiquement si on a quitté la page
-  if (pfCurrentMode !== 'hid' || currentPage !== 'pointage-familles') {
-    document.removeEventListener('keydown', pfGlobalKeydown);
-    pfHidBuffer = '';
-    return;
-  }
-  if (pfCooldown) return;
-  if (['Tab','Shift','Control','Alt','Meta','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'].includes(e.key)) return;
-  const isScanner = pfHidBuffer.length > 0;
-  if (e.key === 'Enter') {
-    const data = pfHidBuffer.trim();
-    pfHidBuffer = '';
-    clearTimeout(pfHidTimer);
-    if (data.startsWith('ENFANT:')) {
-      e.preventDefault();
-      pfHandleScan(data);
-    }
-  } else if (e.key === 'Backspace') {
-    if (isScanner) { e.preventDefault(); pfHidBuffer = pfHidBuffer.slice(0, -1); }
-  } else if (e.key.length === 1) {
-    pfHidBuffer += e.key;
-    clearTimeout(pfHidTimer);
-    pfHidTimer = setTimeout(() => { pfHidBuffer = ''; }, 2000);
-    if (isScanner) e.preventDefault();
-  }
-}
-
-// Champ caché — fallback si le lecteur envoie vers un input
-function pfHidKeydown(e) {
-  pfGlobalKeydown(e);
-}
-
-
-async function startFamillesScan() {
-  const startBtn = document.getElementById('pf-start-btn');
-  const errEl    = document.getElementById('pf-error');
-  const video    = document.getElementById('pf-video');
-  if (startBtn) startBtn.style.display = 'none';
-  if (errEl)    errEl.style.display    = 'none';
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    if (errEl) { errEl.textContent = 'Caméra non disponible sur cet appareil.'; errEl.style.display = 'block'; }
-    return;
-  }
-  try {
-    // Désactiver BarcodeDetector — trop instable sur Android, jsQR uniquement
-    pfBarcodeDetector = null;
-    pfStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } }
-    });
-    if (video) { video.srcObject = pfStream; await video.play(); }
-    pfScanning = true;
-    // setInterval toutes les 500ms — stable, pas de freeze
-    pfScanInterval = setInterval(pfScanTick, 500);
-  } catch(e) {
-    if (errEl) { errEl.textContent = 'Accès caméra refusé : ' + e.message; errEl.style.display = 'block'; }
-    if (startBtn) startBtn.style.display = 'inline-block';
-  }
-}
-
-function stopFamillesScan() {
-  pfScanning    = false;
-  pfCurrentMode = 'camera';
-  pfHidBuffer   = '';
-  pfDetecting   = false;
-  clearInterval(pfScanInterval);
-  pfScanInterval = null;
-  clearTimeout(pfHidTimer);
-  document.removeEventListener('keydown', pfGlobalKeydown);
-  if (pfStream) { pfStream.getTracks().forEach(t => t.stop()); pfStream = null; }
-  const v = document.getElementById('pf-video');
-  if (v) { v.srcObject = null; }
-}
-
-function pfScanTick() {
-  if (!pfScanning || pfCooldown || pfDetecting) return;
-  const video  = document.getElementById('pf-video');
-  const canvas = document.getElementById('pf-canvas');
-  if (!video || !canvas || video.readyState < 2 || video.videoWidth === 0) return;
-
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  if (typeof jsQR === 'undefined') return;
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-  if (code && code.data.startsWith('ENFANT:')) pfHandleScan(code.data);
-}
-
-// pfScanFrame gardé vide pour éviter les erreurs si appelé ailleurs
-function pfScanFrame() {}
-
-async function pfHandleScan(data) {
-  if (pfCooldown) return;
-  pfCooldown = true;
-  const parts     = data.split(':');
-  const enfantId  = parts[1];
-  const qrCreche  = parts[2];
-  const crecheId  = getCrecheId();
-
-  const confirmEl = document.getElementById('pf-confirm');
-  const iconEl    = document.getElementById('pf-confirm-icon');
-  const nomEl     = document.getElementById('pf-confirm-nom');
-  const typeEl    = document.getElementById('pf-confirm-type');
-  const heureEl   = document.getElementById('pf-confirm-heure');
-
-  if (qrCreche && qrCreche !== crecheId && crecheId !== 'all') {
-    confirmEl.style.cssText = 'display:block;background:#FEF2F2;border-radius:16px;padding:24px;text-align:center;width:100%;max-width:320px';
-    iconEl.textContent = '⚠️';
-    nomEl.textContent  = 'QR d\'une autre crèche';
-    typeEl.textContent = '';
-    heureEl.textContent = '';
-    setTimeout(() => { confirmEl.style.display='none'; pfCooldown=false; }, 3000);
-    return;
-  }
-
-  // Trouver l'enfant dans localStorage
-  const enfants = getFamilles(crecheId);
-  const enfant  = enfants.find(x => x.id === enfantId);
-  const nom     = enfant ? `${enfant.prenom} ${enfant.nom}` : 'Enfant inconnu';
-
-  // Déterminer arrivée ou départ
-  const today = new Date().toISOString().split('T')[0];
-  let type = 'arrivee';
-  try {
-    const pts = await loadPointagesEnfant(enfantId, today);
-    const { enCours } = calculerDureeEnfant(pts);
-    type = enCours ? 'depart' : 'arrivee';
-    await sbInsert('pointages_enfants', { enfant_id: enfantId, creche_id: crecheId, type });
-  } catch(e) {
-    confirmEl.style.cssText = 'display:block;background:#FEF2F2;border-radius:16px;padding:24px;text-align:center;width:100%;max-width:320px';
-    iconEl.textContent  = '❌';
-    nomEl.textContent   = 'Erreur Supabase';
-    typeEl.textContent  = e.message;
-    heureEl.textContent = '';
-    setTimeout(() => { confirmEl.style.display='none'; pfCooldown=false; }, 3000);
-    return;
-  }
-
-  const heure = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
-  const bg    = type === 'arrivee' ? '#F0FDF4' : '#FEF2F2';
-  const color = type === 'arrivee' ? '#16A34A' : '#DC2626';
-  confirmEl.style.cssText = `display:block;background:${bg};border-radius:16px;padding:24px;text-align:center;width:100%;max-width:320px`;
-  iconEl.textContent  = type === 'arrivee' ? '✅' : '🚪';
-  nomEl.style.color   = color;
-  nomEl.textContent   = nom;
-  typeEl.style.color  = color;
-  typeEl.textContent  = type === 'arrivee' ? 'Arrivée enregistrée' : 'Départ enregistré';
-  heureEl.textContent = heure;
-
-  setTimeout(() => { confirmEl.style.display='none'; pfCooldown=false; }, 3500);
-}
-
-// ══════════════════════════════════════════════════════════════════
-// FIN MODULE POINTAGE ENFANTS
-// ══════════════════════════════════════════════════════════════════
-
-// ══════════════════════════════════════════════════════════════════
-// MODULE ENCADREMENT — Gantt pros + enfants
-// ══════════════════════════════════════════════════════════════════
-
-let encWeekOffset = 0;
-let encDayIdx     = 0;
-
-function encGetMonday(offset) {
-  const mon = getMondayOfDate(new Date());
-  mon.setDate(mon.getDate() + (offset||0) * 7);
-  return mon;
-}
-
-function encGoWeek(dir) {
-  if (dir === 0) { encWeekOffset = 0; encDayIdx = encTodayIdx(); }
-  else encWeekOffset += dir;
-  renderEncadrement();
-}
-
-function encTodayIdx() {
-  const d = new Date().getDay();
-  return (d >= 1 && d <= 5) ? d - 1 : 0;
-}
-
-function encSelectDay(idx) {
-  encDayIdx = idx;
-  renderEncadrement();
-}
-
-async function renderEncadrement() {
-  const container = document.getElementById('enc-container');
-  if (!container) return;
-  container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--ink3);font-size:13px">Chargement…</div>';
-
-  const crecheId  = getCrecheId();
-  const monday    = encGetMonday(encWeekOffset);
-  const friday    = new Date(monday); friday.setDate(monday.getDate() + 4);
-  const horaires  = getPlanningHoraires();
-  const week      = peGetWeekByOffset(encWeekOffset, crecheId);
-  const enfants   = getFamilles(crecheId);
-  const JOURS     = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-  const START_H   = 7, END_H = 19, TOTAL = END_H - START_H;
-
-  function pct(h)  { return ((h - START_H) / TOTAL * 100).toFixed(3) + '%'; }
-  function pctW(d) { return (d / TOTAL * 100).toFixed(3) + '%'; }
-  function hhmm(str) {
-    if (!str) return null;
-    const [hh, mm] = str.split(':').map(Number);
-    return hh + mm/60;
-  }
-  function fmtH(iso) { return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
-
-  // Charger pointages enfants de toute la semaine
-  const weekStartISO = monday.toISOString().split('T')[0];
-  let ptsSemaine = [];
-  try {
-    ptsSemaine = await sbGet('pointages_enfants',
-      `creche_id=eq.${crecheId}&horodatage=gte.${weekStartISO}T00:00:00&order=horodatage.asc`
-    );
-  } catch(e) { console.warn('Encadrement: pointages non chargés', e.message); }
-
-  // Vérifier alertes par jour
-  function hasAlertDay(dayIdx) {
-    const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + dayIdx);
-    const dayStr  = dayDate.toISOString().split('T')[0];
-    const dayPts  = ptsSemaine.filter(p => p.horodatage.startsWith(dayStr));
-    const prosDuJour = (week.creneaux||[]).filter(c => c.jour === dayIdx);
-    if (!prosDuJour.length) return false;
-    // Vérifier s'il y a un slot où ratio < 1/5
-    for (let h = START_H; h < END_H; h += 0.5) {
-      const mid = h + 0.25;
-      const nbP = prosDuJour.filter(c => {
-        const hor = horaires[c.horaire_idx];
-        if (!hor) return false;
-        return mid >= hhmm(hor.debut) && mid <= hhmm(hor.fin);
-      }).length;
-      if (!nbP) continue;
-      const nowH = new Date().getHours() + new Date().getMinutes()/60;
-      const cutoff = (encWeekOffset === 0 && dayIdx === encTodayIdx()) ? nowH : END_H;
-      if (mid > cutoff) continue;
-      const nbE = enfants.filter(e => {
-        const ePts = dayPts.filter(p => p.enfant_id === e.id);
-        const arr  = ePts.find(p=>p.type==='arrivee');
-        const dep  = ePts.find(p=>p.type==='depart');
-        if (!arr) return false;
-        const a = hhmm(arr.horodatage.split('T')[1].substring(0,5));
-        const d = dep ? hhmm(dep.horodatage.split('T')[1].substring(0,5)) : cutoff;
-        return mid >= a && mid <= d;
-      }).length;
-      if (nbE > 0 && nbP/nbE < 0.2) return true;
-    }
-    return false;
-  }
-
-  // Générer le Gantt d'un jour
-  function renderDayGantt(dayIdx) {
-    const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + dayIdx);
-    const dayStr  = dayDate.toISOString().split('T')[0];
-    const dayPts  = ptsSemaine.filter(p => p.horodatage.startsWith(dayStr));
-    const isToday = encWeekOffset === 0 && dayIdx === encTodayIdx();
-    const nowH    = isToday ? (new Date().getHours() + new Date().getMinutes()/60) : null;
-    const cutoff  = nowH ?? END_H;
-
-    const prosDuJour = (week.creneaux||[]).filter(c => c.jour === dayIdx);
-
-    function gridLines() {
-      let h = '';
-      for (let i = START_H+1; i < END_H; i++)
-        h += `<div style="position:absolute;top:0;bottom:0;left:${pct(i)};width:0.5px;background:var(--border)"></div>`;
-      if (nowH)
-        h += `<div style="position:absolute;top:0;bottom:0;left:${pct(nowH)};width:2px;background:#DC2626;z-index:5"></div>`;
-      return h;
-    }
-
-    function hoursHeader() {
-      return Array.from({length:END_H-START_H},(_,i) => {
-        const hr = START_H+i;
-        return `<div style="position:absolute;left:${pct(hr)};width:${pctW(1)};text-align:center;font-size:10px;color:var(--ink3);top:0;height:24px;display:flex;align-items:center;justify-content:center;border-left:0.5px solid var(--border)">${hr}h</div>`;
-      }).join('');
-    }
-
-    // Lignes pros
-    const prosRows = prosDuJour.length ? prosDuJour.map(c => {
-      const hor = horaires[c.horaire_idx];
-      if (!hor) return '';
-      const s = hhmm(hor.debut), e = hhmm(hor.fin);
-      return `<div style="display:flex;align-items:center;border-bottom:0.5px solid var(--border);min-height:32px">
-        <div style="width:110px;flex-shrink:0;padding:0 10px;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.pro||'—'}</div>
-        <div style="flex:1;position:relative;height:32px">${gridLines()}
-          <div style="position:absolute;top:5px;height:22px;left:${pct(s)};width:${pctW(e-s)};background:#B5D4F4;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:600;color:#0C447C;overflow:hidden;white-space:nowrap">${c.pro?c.pro.split(' ')[0]:''}</div>
-        </div>
-      </div>`;
-    }).join('') : `<div style="padding:12px 10px;font-size:12px;color:var(--ink3)">Aucune pro planifiée ce jour</div>`;
-
-    // Lignes enfants
-    const enfantsRows = enfants.length ? enfants.map(e => {
-      const ePts = dayPts.filter(p => p.enfant_id === e.id);
-      const arr  = ePts.find(p=>p.type==='arrivee');
-      const dep  = ePts.find(p=>p.type==='depart');
-      if (!arr) return '';
-      const a = parseFloat(arr.horodatage.split('T')[1].substring(0,2)) + parseFloat(arr.horodatage.split('T')[1].substring(3,5))/60;
-      const d = dep ? parseFloat(dep.horodatage.split('T')[1].substring(0,2)) + parseFloat(dep.horodatage.split('T')[1].substring(3,5))/60 : cutoff;
-      const parti = !!dep;
-      const bg = parti ? '#F7C1C1' : '#9FE1CB';
-      const fg = parti ? '#791F1F' : '#085041';
-      const lbl = parti ? `→ ${fmtH(dep.horodatage)}` : '';
-      return `<div style="display:flex;align-items:center;border-bottom:0.5px solid var(--border);min-height:32px">
-        <div style="width:110px;flex-shrink:0;padding:0 10px;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.prenom} ${e.nom}</div>
-        <div style="flex:1;position:relative;height:32px">${gridLines()}
-          <div style="position:absolute;top:5px;height:22px;left:${pct(a)};width:${pctW(d-a)};background:${bg};border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:600;color:${fg};overflow:hidden;white-space:nowrap">${lbl}</div>
-        </div>
-      </div>`;
-    }).filter(Boolean).join('') : '';
-
-    const enfantsSection = enfantsRows
-      ? `<div style="padding:5px 10px;font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;background:var(--bg);border-bottom:0.5px solid var(--border)">Enfants</div>${enfantsRows}`
-      : `<div style="padding:10px 12px;font-size:12px;color:var(--ink3)">Aucun pointage enfant ce jour</div>`;
-
-    // Taux d'encadrement
-    const tauxCells = Array.from({length:(END_H-START_H)*2},(_,i) => {
-      const h   = START_H + i*0.5;
-      const mid = h + 0.25;
-      if (mid > cutoff) return '';
-      const nbP = prosDuJour.filter(c => {
-        const hor = horaires[c.horaire_idx];
-        if (!hor) return false;
-        return mid >= hhmm(hor.debut) && mid <= hhmm(hor.fin);
-      }).length;
-      const nbE = enfants.filter(en => {
-        const ePts = dayPts.filter(p => p.enfant_id === en.id);
-        const arr  = ePts.find(p=>p.type==='arrivee');
-        const dep  = ePts.find(p=>p.type==='depart');
-        if (!arr) return false;
-        const a = parseFloat(arr.horodatage.split('T')[1].substring(0,2)) + parseFloat(arr.horodatage.split('T')[1].substring(3,5))/60;
-        const d = dep ? parseFloat(dep.horodatage.split('T')[1].substring(0,2)) + parseFloat(dep.horodatage.split('T')[1].substring(3,5))/60 : cutoff;
-        return mid >= a && mid <= d;
-      }).length;
-      if (!nbP && !nbE) return '';
-      const ratio = nbE > 0 ? nbP/nbE : 1;
-      const bg    = ratio >= 0.2 ? '#EAF3DE' : ratio >= 0.14 ? '#FAEEDA' : '#FCEBEB';
-      const fg    = ratio >= 0.2 ? '#27500A' : ratio >= 0.14 ? '#633806' : '#791F1F';
-      return `<div style="position:absolute;left:${pct(h)};width:${pctW(0.5)};top:4px;height:20px;background:${bg};color:${fg};font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;border-radius:2px">${nbP}/${nbE}</div>`;
-    }).join('');
-
-    // Alertes
-    let alerteHTML = '';
-    const badSlots = [];
-    for (let i = 0; i < (END_H-START_H)*2; i++) {
-      const h   = START_H + i*0.5;
-      const mid = h + 0.25;
-      if (mid > cutoff) continue;
-      const nbP = prosDuJour.filter(c => {
-        const hor = horaires[c.horaire_idx];
-        return hor && mid >= hhmm(hor.debut) && mid <= hhmm(hor.fin);
-      }).length;
-      const nbE = enfants.filter(en => {
-        const ePts = dayPts.filter(p => p.enfant_id === en.id);
-        const arr  = ePts.find(p=>p.type==='arrivee');
-        const dep  = ePts.find(p=>p.type==='depart');
-        if (!arr) return false;
-        const a = parseFloat(arr.horodatage.split('T')[1].substring(0,2)) + parseFloat(arr.horodatage.split('T')[1].substring(3,5))/60;
-        const d = dep ? parseFloat(dep.horodatage.split('T')[1].substring(0,2)) + parseFloat(dep.horodatage.split('T')[1].substring(3,5))/60 : cutoff;
-        return mid >= a && mid <= d;
-      }).length;
-      if (nbE > 0 && nbP > 0 && nbP/nbE < 0.2) {
-        const hh = Math.floor(h), mm = String(Math.round((h%1)*60)).padStart(2,'0');
-        badSlots.push(`${hh}h${mm}`);
-      }
-    }
-    if (badSlots.length) {
-      alerteHTML = `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:9px 12px;background:#FAEEDA;border-radius:8px;border:0.5px solid #EF9F27;font-size:12px;color:#633806">
-        ⚠️ Taux insuffisant à : ${[...new Set(badSlots)].join(', ')}
-      </div>`;
-    }
-
-    return `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
-        <div style="display:flex;background:var(--bg);border-bottom:0.5px solid var(--border)">
-          <div style="width:110px;flex-shrink:0;padding:6px 10px;font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px">Nom</div>
-          <div style="flex:1;position:relative;height:24px">${hoursHeader()}</div>
-        </div>
-        <div style="padding:5px 10px;font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;background:var(--bg);border-bottom:0.5px solid var(--border)">Professionnelles</div>
-        ${prosRows}
-        ${enfantsSection}
-        <div style="display:flex;align-items:center;border-top:0.5px solid var(--border);background:var(--bg)">
-          <div style="width:110px;flex-shrink:0;padding:0 10px;font-size:11px;color:var(--ink3)">Pros/enfants</div>
-          <div style="flex:1;position:relative;height:28px">${gridLines()}${tauxCells}</div>
-        </div>
-      </div>
-      ${alerteHTML}`;
-  }
-
-  // Onglets jours
-  const todayIdx  = encTodayIdx();
-  const isThisWeek = encWeekOffset === 0;
-  const dayTabsHTML = JOURS.map((j, i) => {
-    const d = new Date(monday); d.setDate(monday.getDate() + i);
-    const isToday  = isThisWeek && i === todayIdx;
-    const hasAlert = hasAlertDay(i);
-    const active   = i === encDayIdx;
-    return `<button onclick="encSelectDay(${i})" style="flex:1;min-width:72px;padding:8px 6px;border:none;background:none;cursor:pointer;border-bottom:2px solid ${active?'var(--accent)':'transparent'};margin-bottom:-1px">
-      <div style="font-size:11px;font-weight:600;color:${active?'var(--accent)':'var(--ink3)'}">${j}</div>
-      <div style="font-size:17px;font-weight:600;color:${active||isToday?'var(--accent)':'var(--ink2)'}">${d.getDate()}</div>
-      <div style="width:6px;height:6px;border-radius:50%;background:${hasAlert?'#DC2626':'transparent'};margin:3px auto 0"></div>
-    </button>`;
-  }).join('');
-
-  const weekLabel = `Semaine du ${monday.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} au ${friday.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}`;
-
-  const legend = `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)"><div style="width:10px;height:10px;border-radius:2px;background:#85B7EB"></div>Professionnelle</div>
-    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)"><div style="width:10px;height:10px;border-radius:2px;background:#5DCAA5"></div>Enfant présent</div>
-    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)"><div style="width:10px;height:10px;border-radius:2px;background:#F09595"></div>Enfant parti</div>
-    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)"><div style="width:6px;height:6px;border-radius:50%;background:#DC2626"></div>Alerte taux</div>
-  </div>`;
-
-  container.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <button class="btn btn-secondary btn-sm" onclick="encGoWeek(-1)">← Préc.</button>
-      <span style="flex:1;text-align:center;font-size:13px;font-weight:600;color:var(--ink3)">${weekLabel}</span>
-      <button class="btn btn-secondary btn-sm" onclick="encGoWeek(0)">Aujourd'hui</button>
-      <button class="btn btn-secondary btn-sm" onclick="encGoWeek(1)">Suiv. →</button>
-    </div>
-    <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:14px">${dayTabsHTML}</div>
-    ${legend}
-    ${renderDayGantt(encDayIdx)}`;
-}
-
-function peGetWeekByOffset(offset, crecheId) {
-  const mon = encGetMonday(offset);
-  const key = `${mon.getFullYear()}-W${String(getISOWeekNumber(mon)).padStart(2,'0')}-${crecheId||'all'}`;
-  const data = peLoad();
-  return data[key] || { pros: [], creneaux: [] };
-}
-
-// ══════════════════════════════════════════════════════════════════
-// FIN MODULE ENCADREMENT
 // ══════════════════════════════════════════════════════════════════
 
 // ── PERSONNALISATION ─────────────────────────────────────────────
@@ -5905,11 +5126,11 @@ function init() {
   renderSidebarCreches();
 
   // Interface immédiate
-  renderTable(); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique();
+  switchInvTab('materiel'); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique();
 
   // Sync Supabase en arrière-plan
   loadData().then(() => {
-    renderTable(); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique(); updateCounts();
+    switchInvTab(currentInvTab); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique(); updateCounts();
     if (typeof updateAlertBadge === 'function') updateAlertBadge();
     if (typeof startPolling === 'function') startPolling(30);
   }).catch(e => {
@@ -5922,12 +5143,20 @@ function init() {
 function renderTable() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   let data = ARTICLES.filter(a => {
-    const matchType = !a.type || a.type === 'pedagogique';
+    const isMateriel = a.depreciable !== false;
     const matchCat = currentCat === 'all' || a.cat === currentCat;
     const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
     const matchQ = !q || a.nom.toLowerCase().includes(q) || a.ref.toLowerCase().includes(q) || a.fourn.toLowerCase().includes(q);
-    return matchType && matchCat && matchCreche && matchQ;
-  }).sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+    return isMateriel && matchCat && matchCreche && matchQ;
+  });
+
+  const sortCol = window._sortCol || 'nom';
+  const sortDir = window._sortDir || 'asc';
+  data.sort((a, b) => {
+    const va = String(a[sortCol]||'').toLowerCase();
+    const vb = String(b[sortCol]||'').toLowerCase();
+    return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
 
   const tb = document.getElementById('tableBody');
 
@@ -5947,6 +5176,7 @@ function renderTable() {
       : `<div class="article-thumb-placeholder">${CAT_ICONS[a.cat]||'📦'}</div>`;
 
     const montant = a.stock * a.prix;
+    const etat = getArticleEtat(a);
 
     return `<tr onclick="showDetail(${a.id})">
       <td>
@@ -5955,10 +5185,11 @@ function renderTable() {
           <div>
             <div class="item-name">${a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').replace(/\s*\{.*?\}\s*/g,'').trim()}</div>
             <div class="item-ref">${a.ref}</div>
+            ${etat ? getEtatBadgeHtml(etat) : ''}
           </div>
         </div>
       </td>
-      <td><span class="badge badge-blue">${a.creche}</span></td>
+      <td><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:${CRECHE_COLORS[a.creche]}"></span>${a.creche}</span></td>
       <td><span class="badge badge-blue">${a.cat}</span></td>
       <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px">${a.stock}</td>
       <td style="font-weight:500">${a.prix > 0 ? a.prix.toFixed(2)+' €' : '—'}</td>
@@ -6015,23 +5246,140 @@ function renderTable() {
 
   renderStats();
   updateCounts();
+  updateInvTabCounts();
 }
 
 function renderStats() {
-  if (typeof updateAlertBadge === 'function') updateAlertBadge();
   const data = (typeof currentCreche !== 'undefined' && currentCreche !== 'all') ? ARTICLES.filter(a => a.creche === currentCreche) : ARTICLES;
   const el = document.getElementById('stat-total');
   if (el) el.textContent = data.length;
-  // Stock critique supprimé
   const valeur = data.reduce((s,a) => s + a.stock * a.prix, 0);
   const elVal = document.getElementById('stat-valeur');
   if (elVal) elVal.textContent = valeur.toFixed(0)+' €';
   const elCmd = document.getElementById('stat-commandes');
-  if (elCmd) elCmd.textContent = COMMANDES.filter(c=>c.status==='en-cours').length;
+  if (elCmd) elCmd.textContent = COMMANDES.filter(c => c.status === 'en-cours' && (currentCreche === 'all' || c.creche === currentCreche)).length;
+  // Tuile "À remplacer" — filtrée par crèche
+  const rem = ARTICLES.filter(a => {
+    const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
+    return matchCreche && getArticleEtat(a) === 'À remplacer';
+  });
+  const elRem = document.getElementById('stat-remplacer');
+  if (elRem) elRem.textContent = rem.length;
+  const cardRem = document.getElementById('stat-card-remplacer');
+  if (cardRem) cardRem.style.borderLeft = rem.length > 0 ? '3px solid #DC2626' : '';
+  updateAlertBadge();
 }
 
 function updateCounts() {
   renderSidebarCreches();
+}
+
+// ─── ONGLETS MATÉRIEL / CONSOMMABLES ────────────────────────────────────────
+let currentInvTab = 'materiel';
+let currentCatConso = 'all';
+
+function switchInvTab(tab) {
+  currentInvTab = tab;
+  const isMat = tab === 'materiel';
+  const tMat = document.getElementById('inv-tab-materiel');
+  const tCon = document.getElementById('inv-tab-consommable');
+  if (tMat) { tMat.style.borderBottomColor = isMat ? 'var(--accent)' : 'transparent'; tMat.style.color = isMat ? 'var(--accent)' : 'var(--ink3)'; }
+  if (tCon) { tCon.style.borderBottomColor = !isMat ? 'var(--accent)' : 'transparent'; tCon.style.color = !isMat ? 'var(--accent)' : 'var(--ink3)'; }
+  const fMat = document.getElementById('inv-filters-materiel');
+  const fCon = document.getElementById('inv-filters-consommable');
+  if (fMat) fMat.style.display = isMat ? 'block' : 'none';
+  if (fCon) fCon.style.display = !isMat ? 'block' : 'none';
+  const tbMat = document.getElementById('inv-table-materiel');
+  const tbCon = document.getElementById('inv-table-consommable');
+  if (tbMat) tbMat.style.display = isMat ? 'block' : 'none';
+  if (tbCon) tbCon.style.display = !isMat ? 'block' : 'none';
+  if (isMat) renderTable();
+  else renderTableConso();
+}
+
+function filterCatConso(cat, el) {
+  currentCatConso = cat;
+  document.querySelectorAll('#inv-filters-consommable .filter-chip').forEach(e => e.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderTableConso();
+}
+
+function renderTableConso() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let data = ARTICLES.filter(a => {
+    const isConso = a.depreciable === false;
+    const matchCreche = currentCreche === 'all' || a.creche === currentCreche;
+    const matchCat = currentCatConso === 'all' || a.cat === currentCatConso;
+    const matchQ = !q || a.nom.toLowerCase().includes(q) || (a.ref||'').toLowerCase().includes(q);
+    return isConso && matchCreche && matchCat && matchQ;
+  });
+  const sortCol = window._sortCol || 'nom';
+  const sortDir = window._sortDir || 'asc';
+  data.sort((a,b) => {
+    const va = String(a[sortCol]||'').toLowerCase();
+    const vb = String(b[sortCol]||'').toLowerCase();
+    return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  const tb = document.getElementById('tableBodyConso');
+  if (!tb) return;
+  if (data.length === 0) {
+    tb.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--ink3)">Aucun consommable trouvé</td></tr>`;
+    return;
+  }
+  tb.innerHTML = data.map(a => {
+    const CAT_ICONS_L = { 'Sensoriel':'👂','Manipulation':'🤲','Construction':'🧱','Motricité':'🏃','Imitation':'🎭','Expression artistique':'🎨','Mobilier':'🪑','Puériculture':'🍼','Bureautique':'💻','Rangement':'🗂' };
+    const thumb = a.photo
+      ? `<img class="article-thumb" src="${a.photo}" alt="${a.nom}" loading="lazy">`
+      : `<div class="article-thumb-placeholder">${CAT_ICONS_L[a.cat]||'🧴'}</div>`;
+    const stockAlert = a.min > 0 && a.stock <= a.min;
+    return `<tr onclick="showDetail(${a.id})">
+      <td>
+        <div class="article-name-cell">
+          ${thumb}
+          <div>
+            <div class="item-name">${a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').trim()}</div>
+            <div class="item-ref">${a.ref}</div>
+          </div>
+        </div>
+      </td>
+      <td><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:${CRECHE_COLORS[a.creche]}"></span>${a.creche}</span></td>
+      <td><span class="badge badge-blue">${a.cat}</span></td>
+      <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:${stockAlert?'#DC2626':'inherit'}">${a.stock}${stockAlert?` <span style="font-size:10px">⚠</span>`:''}</td>
+      <td style="font-size:12px;color:var(--ink3)">${a.min > 0 ? a.min : '—'}</td>
+      <td style="font-weight:500">${a.prix > 0 ? a.prix.toFixed(2)+' €' : '—'}</td>
+      <td style="font-size:12px">${a.expiry ? `<span style="color:${expiryColor(a.expiry)};font-weight:600">${formatExpiry(a.expiry)}</span>` : '—'}</td>
+      <td style="color:var(--ink2);font-size:12px">${a.fourn || '—'}</td>
+      <td onclick="event.stopPropagation()">
+        <div class="action-btns">
+          <button class="btn btn-secondary btn-sm" onclick="editArticle(${a.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="onDeleteArticle(${a.id})">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateInvTabCounts() {
+  const crecheFilter = currentCreche !== 'all' ? currentCreche : null;
+  const mat = ARTICLES.filter(a => a.depreciable !== false && (!crecheFilter || a.creche === crecheFilter)).length;
+  const con = ARTICLES.filter(a => a.depreciable === false && (!crecheFilter || a.creche === crecheFilter)).length;
+  const elM = document.getElementById('inv-count-materiel'); if (elM) elM.textContent = mat;
+  const elC = document.getElementById('inv-count-consommable'); if (elC) elC.textContent = con;
+}
+
+function renderActiveInvTable() {
+  if (currentInvTab === 'consommable') renderTableConso();
+  else renderTable();
+}
+
+function toggleSort(col) {
+  if (window._sortCol === col) {
+    window._sortDir = window._sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    window._sortCol = col;
+    window._sortDir = 'asc';
+  }
+  renderActiveInvTable();
 }
 
 // ─── FILTERS ──────────────────────────────────────────────────────────────
@@ -6053,7 +5401,7 @@ function filterCreche(creche, el) {
       if ([...s.options].some(o => o.value === creche)) s.value = creche;
     }
   });
-  if (currentPage === 'inventaire') renderTable();
+  if (currentPage === 'inventaire') renderActiveInvTable();
   else if (currentPage === 'commandes') renderCommandes();
   else if (currentPage === 'historique') renderHistorique();
   else if (currentPage === 'planning') renderActiveTab();
@@ -6066,7 +5414,7 @@ function filterCrecheFromSelect(val) {
   filterCreche(val, null);
 }
 
-function filterTable() { renderTable(); }
+function filterTable() { renderActiveInvTable(); }
 
 function filterHisto(type, el) {
   currentHisto = type;
@@ -6233,6 +5581,9 @@ function openModal(type) {
     const fExpiry = document.getElementById('f-expiry'); if (fExpiry) fExpiry.value = '';
     const fBarcode = document.getElementById('f-barcode'); if (fBarcode) fBarcode.value = '';
     const fType = document.getElementById('f-type-hidden'); if (fType) fType.value = 'pedagogique';
+    const fDateAchat = document.getElementById('f-date-achat'); if (fDateAchat) fDateAchat.value = '';
+    const fEt = document.getElementById('f-etat'); if (fEt) fEt.value = '';
+    const fDep = document.getElementById('f-depreciable'); if (fDep) fDep.checked = true;
     resetPhotoUpload();
   }
   document.getElementById(`modal-${type}`).classList.add('open');
@@ -6267,11 +5618,16 @@ function editArticle(id) {
   if (fBarcode) fBarcode.value = a.barcode || '';
   const fExpiry = document.getElementById('f-expiry');
   if (fExpiry) fExpiry.value = a.expiry || '';
-  // f-min et f-notes supprimés — utiliser les champs cachés si présents
   const fMin = document.getElementById('f-min');
   if (fMin) fMin.value = a.min || 0;
   const fNotes = document.getElementById('f-notes');
   if (fNotes) fNotes.value = a.notes || '';
+  const fDateAchat = document.getElementById('f-date-achat');
+  if (fDateAchat) fDateAchat.value = a.date_achat || '';
+  const fEtat = document.getElementById('f-etat');
+  if (fEtat) fEtat.value = a.etat_override || '';
+  const fDep = document.getElementById('f-depreciable');
+  if (fDep) fDep.checked = a.depreciable !== false;
 
   // Restore photo preview if article has one
   if (a.photo) {
@@ -6323,6 +5679,9 @@ async function saveArticle() {
     expiry: (document.getElementById('f-expiry')||{}).value || '',
     barcode: ((document.getElementById('f-barcode')||{}).value||'').trim(),
     type: (document.getElementById('f-type-hidden')||{}).value || 'pedagogique',
+    date_achat: (document.getElementById('f-date-achat')||{}).value || null,
+    etat_override: (document.getElementById('f-etat')||{}).value || null,
+    depreciable: document.getElementById('f-depreciable')?.checked !== false,
     photo: currentPhotoData || (editingId ? (ARTICLES.find(a=>a.id===editingId)||{}).photo : null),
     photoName: currentPhotoName || null,
   };
@@ -6349,7 +5708,7 @@ async function saveArticle() {
   if (article.type === 'entretien') {
     renderEntretien();
   } else {
-    renderTable();
+    renderActiveInvTable();
   }
   renderHistorique();
   updateCounts();
@@ -6367,7 +5726,7 @@ async function deleteArticle(id) {
   }
   addHisto('sortie', a.nom + ' (supprimé)', 0, a.creche, 'Vous');
   await saveHistoDB(HISTORIQUE[0]).catch(()=>{});
-  renderTable();
+  renderActiveInvTable();
   renderHistorique();
   updateCounts();
   showNotif('🗑 ' + a.nom + ' supprimé');
@@ -6520,6 +5879,8 @@ async function confirmerLivraison(id) {
         notes: '',
         url: art.url || '',
         photo: null,
+        date_achat: c.livraison || c.date || new Date().toISOString().split('T')[0],
+        etat_override: null,
       };
       ARTICLES.push(article);
       created++;
@@ -6528,6 +5889,9 @@ async function confirmerLivraison(id) {
       if (art.prix > 0 && article.prix === 0) article.prix = art.prix;
       if (art.url && !article.url) article.url = art.url;
       if (art.fourn && !article.fourn) article.fourn = art.fourn;
+      // Mise à jour date d'achat → état repart à Neuf
+      article.date_achat = c.livraison || c.date || new Date().toISOString().split('T')[0];
+      article.etat_override = null;
       updated++;
     }
     addHisto('entrée', article.nom, qty, article.creche, 'Vous', `Réception ${c.bc}`);
@@ -6536,7 +5900,7 @@ async function confirmerLivraison(id) {
   c.status = 'livrees';
   saveData();
   closeModal('modal-detail');
-  renderTable();
+  renderActiveInvTable();
   renderCommandes();
   renderHistorique();
   renderStats();
@@ -6693,7 +6057,7 @@ function deleteFournisseur(id) {
   saveData();
   if (!IS_LOCAL) sbDelete('fournisseurs', id).catch(e => console.warn(e.message));
   renderFournisseurs();
-  renderTable();
+  renderActiveInvTable();
   showNotif(`🗑 ${f.nom} supprimé`);
 }
 
@@ -6721,7 +6085,7 @@ async function saveFournisseur() {
       // Mettre à jour le nom dans les articles si changé
       if (oldNom && oldNom !== nom) {
         ARTICLES.forEach(a => { if (a.fourn === oldNom) a.fourn = nom; });
-        renderTable();
+        renderActiveInvTable();
       }
     }
     editingFournisseurId = null;
@@ -6786,6 +6150,17 @@ function showDetail(id) {
           <tr><td style="color:var(--ink3);padding:3px 0">Valeur stock</td><td style="font-weight:600;color:var(--accent)">${(a.stock*a.prix).toFixed(2)} €</td></tr>
           ${a.url ? `<tr><td style="color:var(--ink3);padding:3px 0">Lien</td><td><a href="${a.url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px">🔗 Voir</a></td></tr>` : ''}
           ${a.expiry ? `<tr><td style="color:var(--ink3);padding:3px 0">Péremption</td><td style="font-weight:600;color:${expiryColor(a.expiry)}">${formatExpiry(a.expiry)}</td></tr>` : ''}
+          ${a.date_achat ? `<tr><td style="color:var(--ink3);padding:3px 0">Date d'achat</td><td style="font-weight:500">${new Date(a.date_achat).toLocaleDateString('fr-FR')}</td></tr>` : ''}
+          ${a.depreciable === false
+            ? `<tr><td style="color:var(--ink3);padding:3px 0">Type</td><td><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:#F0FDF4;color:#065F46">🧴 Consommable</span></td></tr>`
+            : (() => {
+                const etat = getArticleEtat(a);
+                if (!etat) return '';
+                const annees = a.date_achat ? ((Date.now() - new Date(a.date_achat)) / (365.25*24*3600*1000)).toFixed(1) : null;
+                const residuel = annees ? Math.max(0, Math.round((1 - 0.20 * parseFloat(annees)) * 100)) : null;
+                return `<tr><td style="color:var(--ink3);padding:3px 0">État</td><td>${getEtatBadgeHtml(etat)}${annees ? `<span style="font-size:11px;color:var(--ink3);margin-left:6px">${annees} ans · résiduel ${residuel}%</span>` : ''}</td></tr>`;
+              })()
+          }
         </table>
       </div>
     </div>
@@ -6817,7 +6192,7 @@ async function quickAdjust(id, delta) {
   a.stock = Math.max(0, a.stock + delta);
   addHisto(delta > 0 ? 'entrée' : 'sortie', a.nom, delta, a.creche, 'Vous', 'Ajustement rapide');
   saveData();
-  renderTable();
+  renderActiveInvTable();
   renderHistorique();
   showNotif(`${delta > 0 ? '📥 +1 entrée' : '📤 -1 sortie'} — ${a.nom} : ${a.stock} en stock`);
 }
@@ -6828,7 +6203,7 @@ async function adjustStock(id, delta) {
   a.stock = Math.max(0, a.stock + delta);
   addHisto(delta > 0 ? 'entrée' : 'sortie', a.nom, delta, a.creche, 'Vous', 'Ajustement manuel');
   saveData();
-  renderTable();
+  renderActiveInvTable();
   renderHistorique();
   showDetail(id);
   showNotif(`${delta > 0 ? '📥' : '📤'} Stock mis à jour : ${a.stock} unité(s)`);
@@ -6850,15 +6225,13 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  // Arrêter le scan si on quitte la page pointage familles
-  if (page !== 'pointage-familles') stopFamillesScan();
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','pointage-familles'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', 'pointage-familles':'Pointage familles' };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -6868,14 +6241,13 @@ function showPage(page, btn) {
   if (page === 'dashboard') { renderHub(); }
   if (page === 'entretien') { renderEntretien(); }
   if (page === 'historique') { renderHistorique(); }
-  if (page === 'inventaire') { renderTable(); renderStats(); }
+  if (page === 'inventaire') { switchInvTab(currentInvTab); renderStats(); }
   if (page === 'parametres') { renderParametres(); }
   if (page === 'familles') { renderFamilles(); }
   if (page === 'admin') { showAdminPage(); }
   if (page === 'rh')       { showRhPage(); }
   if (page === 'planning') { showPlanningEquipePage(); }
   if (page === 'salarie')  { showPage('planning', null); }
-  if (page === 'pointage-familles') { initPointageFamillesPage(); }
 }
 
 function showTab(tab, btn) {
@@ -7741,7 +7113,7 @@ function importBackup(event) {
       if (data.souscats)  SOUSCATS.splice(0,  SOUSCATS.length,  ...data.souscats);
 
       saveData();
-      renderTable(); renderStats(); renderCommandes();
+      renderActiveInvTable(); renderStats(); renderCommandes();
       renderFournisseurs(); renderHistorique(); updateCounts();
       showNotif(`⏳ Restauration locale OK — synchronisation Supabase en cours…`);
 
@@ -8031,7 +7403,7 @@ function handleDetailPhotoUpload(event, id) {
       a.photoName = file.name;
       saveData();
       showNotif('📷 Photo ajoutée');
-      renderTable();
+      renderActiveInvTable();
       showDetail(id);
     }
   };
@@ -8045,7 +7417,7 @@ async function removeArticlePhoto(id) {
     a.photoName = null;
     saveData();
     showNotif('🗑 Photo supprimée');
-    renderTable();
+    renderActiveInvTable();
     showDetail(id);
   }
 }
@@ -8053,7 +7425,7 @@ async function removeArticlePhoto(id) {
 // ─── SUPABASE CLOUD SYNC ──────────────────────────────────────────────────
 
 // ── Projet Stocks (articles, commandes, fournisseurs, historique, univers, planning)
-const SUPA_URL = 'https://drxqjeilbunpfqyecpdg.supabase.co';
+const SUPA_URL = 'https://xqtntbsehareltsldaad.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyeHFqZWlsYnVucGZxeWVjcGRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ2MzgsImV4cCI6MjA5NTQ2MDYzOH0.vTQZwnbrmL6zaUxYb3qzMMWp3Jhs-fWeSJiBdmn_6m8';
 let SUPA_HEADERS = {
   'Content-Type': 'application/json',
@@ -8075,8 +7447,7 @@ let SUPA_RH_HEADERS = {
 // Tables hébergées dans le projet RH — routage automatique dans les helpers
 const RH_TABLES = new Set([
   'utilisateurs','recrutements','contrats','conges',
-  'formations_rh','documents_rh','stagiaires','planning','pointages',
-  'pointages_enfants'
+  'formations_rh','documents_rh','stagiaires','planning','pointages'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -8117,9 +7488,11 @@ async function syncFromCloud() {
         const fromCloud = rowToArticle(r);
         const local = localById[fromCloud.id];
         if (local) {
-          if (!fromCloud.url     && local.url)     fromCloud.url     = local.url;
-          if (!fromCloud.expiry  && local.expiry)  fromCloud.expiry  = local.expiry;
-          if (!fromCloud.barcode && local.barcode) fromCloud.barcode = local.barcode;
+          if (!fromCloud.url        && local.url)        fromCloud.url        = local.url;
+          if (!fromCloud.expiry     && local.expiry)     fromCloud.expiry     = local.expiry;
+          if (!fromCloud.barcode    && local.barcode)    fromCloud.barcode    = local.barcode;
+          if (!fromCloud.date_achat && local.date_achat) fromCloud.date_achat = local.date_achat;
+          if (!fromCloud.etat_override && local.etat_override) fromCloud.etat_override = local.etat_override;
         }
         return fromCloud;
       }));
@@ -8132,7 +7505,7 @@ async function syncFromCloud() {
       UNIVERS.splice(0, UNIVERS.length, ...mapped);
     }
     saveData();
-    renderTable(); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique(); updateCounts();
+    renderActiveInvTable(); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique(); updateCounts();
     if (typeof currentPage !== 'undefined' && currentPage === 'univers') renderUnivers();
     const now = new Date();
     setIndicator('☁️ À jour — ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}), 'var(--green)');
@@ -8217,14 +7590,20 @@ function articleToRow(a) {
            stock: a.stock, min: a.min, prix: a.prix, fourn: a.fourn,
            notes: a.notes||'', url: a.url||'', expiry: a.expiry||'',
            barcode: a.barcode||'', type: a.type||'pedagogique',
-           photo: a.photo||null, photo_name: a.photoName||null };
+           photo: a.photo||null, photo_name: a.photoName||null,
+           date_achat: a.date_achat||null,
+           etat: a.etat||'Neuf', depreciable: a.depreciable !== false,
+           etat_override: a.etat_override||null };
 }
 function rowToArticle(r) {
   return { id: r.id, nom: r.nom, ref: r.ref, cat: r.cat, creche: r.creche,
            stock: r.stock, min: r.min, prix: parseFloat(r.prix)||0,
            fourn: r.fourn||'', notes: r.notes||'', url: r.url||'', expiry: r.expiry||'',
            barcode: r.barcode||'', type: r.type||'pedagogique',
-           photo: r.photo||null, photoName: r.photo_name||null };
+           photo: r.photo||null, photoName: r.photo_name||null,
+           date_achat: r.date_achat||null,
+           etat: r.etat||'Neuf', depreciable: r.depreciable !== false,
+           etat_override: r.etat_override||null };
 }
 function commandeToRow(c) {
   return { id: c.id, fourn: c.fourn, creche: c.creche, date: c.date,
@@ -8478,7 +7857,7 @@ function saveCrecheName() {
   applyNomCreche(nom);
   saveData();
   showNotif(`✅ Nom mis à jour : ${nom}`);
-  renderTable();
+  renderActiveInvTable();
   renderStats();
 }
 const LS_KEY = 'stocks-solo-v1';
@@ -9266,7 +8645,7 @@ let peGanttDay = -1; // -1 = jour courant ou lundi
 
 function switchPlanningTab(tab) {
   pePlanningTab = tab;
-  const tabs = ['gantt','hebdo','gantt2','encadrement'];
+  const tabs = ['gantt','hebdo','gantt2'];
   tabs.forEach(t => {
     const btn  = document.getElementById('pe-tab-' + t);
     const view = document.getElementById('pe-view-' + t);
@@ -9275,17 +8654,15 @@ function switchPlanningTab(tab) {
   });
   const addBtn = document.getElementById('pe-add-btn');
   if (addBtn) addBtn.style.display = tab==='gantt' ? '' : 'none';
-  if (tab === 'gantt')        renderPlanningEquipe();
-  else if (tab === 'hebdo')   renderPlanningHebdo();
-  else if (tab === 'gantt2')  renderPlanningGantt();
-  else if (tab === 'encadrement') renderEncadrement();
+  if (tab === 'gantt')  renderPlanningEquipe();
+  else if (tab === 'hebdo')  renderPlanningHebdo();
+  else if (tab === 'gantt2') renderPlanningGantt();
 }
 
 function renderActiveTab() {
-  if (pePlanningTab === 'gantt')        renderPlanningEquipe();
-  else if (pePlanningTab === 'hebdo')   renderPlanningHebdo();
-  else if (pePlanningTab === 'gantt2')  renderPlanningGantt();
-  else if (pePlanningTab === 'encadrement') renderEncadrement();
+  if (pePlanningTab === 'gantt')  renderPlanningEquipe();
+  else if (pePlanningTab === 'hebdo')  renderPlanningHebdo();
+  else if (pePlanningTab === 'gantt2') renderPlanningGantt();
 }
 
 // ── PLANNING ÉQUIPE (Horaire × Jours) ───────────────────────────────
@@ -10696,7 +10073,7 @@ function importExcel(event) {
       addHisto('entrée', `Import Excel — ${imported} articles`, imported, 'Toutes', 'Import',
                `Mode : ${mode === 'remplacer' ? 'remplacement total' : 'ajout'}`);
 
-      renderTable();
+      renderActiveInvTable();
       renderHistorique();
       updateCounts();
       renderStats();
@@ -11449,33 +10826,230 @@ function deleteSalarie() {
 }
 </script>
 
-<script>
-// ── RESPONSIVE MOBILE — sidebar burger ───────────────────────────
-function toggleMobileSidebar() {
-  const sidebar  = document.querySelector('.sidebar');
-  const overlay  = document.getElementById('sidebar-overlay');
-  const isOpen   = sidebar.classList.contains('open');
-  sidebar.classList.toggle('open', !isOpen);
-  overlay.classList.toggle('open', !isOpen);
-}
-
-// Fermer sidebar quand on clique un nav-item sur mobile
-document.querySelectorAll('.nav-item').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (window.innerWidth <= 768) {
-      document.querySelector('.sidebar').classList.remove('open');
-      document.getElementById('sidebar-overlay').classList.remove('open');
-    }
-  });
-});
-</script>
-
 
 
 <!-- ── MODAL ENFANT ──────────────────────────────────────────────── -->
 
 
 <!-- ── MODAL BERCEAU ENTREPRISE ──────────────────────────────────── -->
+
+<!-- ── BOUTON FLOTTANT AIDE ── -->
+<button onclick="openNotice()" title="Aide & Notice d'utilisation"
+  style="position:fixed;bottom:28px;right:28px;width:52px;height:52px;border-radius:50%;
+         background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:22px;
+         font-weight:700;box-shadow:0 4px 16px rgba(37,99,235,0.4);z-index:999;
+         display:flex;align-items:center;justify-content:center;
+         transition:transform 0.15s,box-shadow 0.15s;font-family:'Syne',sans-serif"
+  onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 6px 24px rgba(37,99,235,0.5)'"
+  onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 16px rgba(37,99,235,0.4)'"
+>?</button>
+
+<!-- ── MODAL NOTICE ── -->
+<div class="modal-overlay" id="modal-notice" onclick="closeModalClick(event,'modal-notice')" style="z-index:1200">
+  <div class="modal" style="max-width:720px;height:80vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <h2>📖 Notice d'utilisation</h2>
+      <button class="modal-close" onclick="closeModal('modal-notice')">✕</button>
+    </div>
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--border);flex-shrink:0;overflow-x:auto">
+      <button class="notice-tab active" onclick="switchNoticeTab('inventaire',this)" style="padding:10px 16px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;color:var(--accent);white-space:nowrap">📦 Inventaire</button>
+      <button class="notice-tab" onclick="switchNoticeTab('commandes',this)" style="padding:10px 16px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--ink3);white-space:nowrap">🛒 Commandes</button>
+      <button class="notice-tab" onclick="switchNoticeTab('fournisseurs',this)" style="padding:10px 16px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--ink3);white-space:nowrap">🏭 Fournisseurs</button>
+      <button class="notice-tab" onclick="switchNoticeTab('univers',this)" style="padding:10px 16px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--ink3);white-space:nowrap">🌟 Univers</button>
+      <button class="notice-tab" onclick="switchNoticeTab('depreciation',this)" style="padding:10px 16px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--ink3);white-space:nowrap">🔄 État articles</button>
+      <button class="notice-tab" onclick="switchNoticeTab('sauvegardes',this)" style="padding:10px 16px;border:none;background:none;font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--ink3);white-space:nowrap">💾 Sauvegardes</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px" id="notice-content"></div>
+    <div class="modal-footer" style="flex-shrink:0">
+      <button class="btn btn-secondary" onclick="closeModal('modal-notice')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const NOTICE_CONTENT = {
+
+inventaire: `
+<h3 style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:16px">📦 Gestion de l'inventaire</h3>
+<div style="background:var(--accent-lt);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1E40AF">
+  💡 L'inventaire est divisé en deux onglets : <strong>Matériel pédagogique</strong> (articles dépréciables) et <strong>Consommables</strong> (gel, couches, peintures...).
+</div>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">🧸 Ajouter un article</div>
+<ol style="font-size:13px;line-height:2;color:var(--ink2);padding-left:20px;margin-bottom:20px">
+  <li>Cliquez sur <strong>+ Ajouter un article</strong></li>
+  <li>Remplissez le <strong>Nom</strong>, la <strong>Catégorie</strong> et la <strong>Structure</strong> (obligatoires)</li>
+  <li>Indiquez la <strong>Quantité en stock</strong> et le <strong>Prix unitaire</strong></li>
+  <li>Pour un consommable : décochez <strong>Article dépréciable</strong> et renseignez le <strong>Stock minimum</strong></li>
+  <li>Pour du matériel : renseignez la <strong>Date d'achat</strong> pour activer la dépréciation automatique</li>
+  <li>Cliquez sur <strong>💾 Enregistrer</strong></li>
+</ol>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">✏️ Modifier ou ajuster le stock</div>
+<ol style="font-size:13px;line-height:2;color:var(--ink2);padding-left:20px;margin-bottom:20px">
+  <li>Cliquez sur une ligne du tableau pour ouvrir la <strong>fiche détail</strong></li>
+  <li>Utilisez les boutons <strong>− Retirer 1</strong> / <strong>+ Ajouter 1</strong> pour ajuster rapidement</li>
+  <li>Pour modifier toutes les infos : cliquez sur ✏️ dans la fiche ou dans le tableau</li>
+</ol>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">🔍 Filtres et recherche</div>
+<ul style="font-size:13px;line-height:2;color:var(--ink2);padding-left:20px;margin-bottom:20px">
+  <li>Utilisez la <strong>barre de recherche</strong> en haut pour trouver un article par nom</li>
+  <li>Filtrez par <strong>catégorie</strong> avec les chips (Sensoriel, Motricité...)</li>
+  <li>Filtrez par <strong>structure</strong> en cliquant sur une crèche dans la sidebar</li>
+  <li>Cliquez sur les en-têtes de colonnes <strong>↕</strong> pour trier le tableau</li>
+</ul>
+<div style="background:var(--amber-lt);border-left:4px solid var(--amber);border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;color:#92400E">
+  ⚠ <strong>Stock bas :</strong> quand le stock d'un consommable passe sous son minimum, une alerte 🔴 apparaît dans le badge de navigation.
+</div>
+<hr style="border:none;border-top:1px solid var(--border);margin:24px 0">
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">❓ Questions fréquentes</div>
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">Pourquoi mon article n'apparaît pas dans l'inventaire ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7">Vérifiez que vous n'avez pas un filtre actif (catégorie ou crèche). Cliquez sur "Tout" dans les chips et sur "Toutes les crèches" dans la sidebar. Vérifiez aussi que vous êtes sur le bon onglet (Matériel ou Consommables).</div>
+</details>
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">Quelle est la différence entre Matériel et Consommable ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7"><strong>Matériel pédagogique</strong> : jouets, portiques, tapis... Ces articles se déprécient de 20% par an. Leur état est calculé automatiquement à partir de la date d'achat.<br><br><strong>Consommables</strong> : gel hydroalcoolique, couches, peintures... Ces articles ne se déprécient pas. On surveille leur stock minimum et leur date de péremption.</div>
+</details>`,
+
+commandes: `
+<h3 style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:16px">🛒 Gestion des commandes</h3>
+<div style="background:var(--accent-lt);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1E40AF">
+  💡 Les commandes passent par 3 états : <strong>En cours</strong> → <strong>Livrée</strong> → <strong>Annulée</strong>. La confirmation de livraison met automatiquement à jour les stocks et la date d'achat.
+</div>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">📝 Créer une commande</div>
+<ol style="font-size:13px;line-height:2;color:var(--ink2);padding-left:20px;margin-bottom:20px">
+  <li>Cliquez sur <strong>+ Nouvelle commande</strong></li>
+  <li>Le numéro de bon de commande est <strong>généré automatiquement</strong></li>
+  <li>Ajoutez les articles ligne par ligne : quantité, nom, fournisseur, catégorie, prix</li>
+  <li>Le montant total est <strong>calculé automatiquement</strong></li>
+  <li>Cliquez <strong>🛒 Passer la commande</strong></li>
+</ol>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">✅ Confirmer une livraison</div>
+<ol style="font-size:13px;line-height:2;color:var(--ink2);padding-left:20px;margin-bottom:20px">
+  <li>Dans l'onglet <strong>En cours</strong>, cliquez sur <strong>✅ Marquer livré</strong></li>
+  <li>Vérifiez les quantités reçues</li>
+  <li>Cliquez <strong>✅ Confirmer la réception</strong></li>
+  <li>Les stocks sont mis à jour automatiquement, et la <strong>date d'achat</strong> est enregistrée → l'état repart à 🟢 Neuf</li>
+</ol>
+<hr style="border:none;border-top:1px solid var(--border);margin:24px 0">
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">❓ Questions fréquentes</div>
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">Puis-je modifier une commande après l'avoir créée ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7">Oui, tant qu'elle est <strong>En cours</strong>. Cliquez sur ✏️ Modifier sur la carte. Une commande livrée ou annulée ne peut plus être modifiée.</div>
+</details>
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">Que se passe-t-il si un article n'existe pas encore dans l'inventaire ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7">Il est <strong>créé automatiquement</strong> lors de la confirmation de livraison, avec les informations saisies dans la commande.</div>
+</details>`,
+
+fournisseurs: `
+<h3 style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:16px">🏭 Gestion des fournisseurs</h3>
+<div style="background:var(--accent-lt);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1E40AF">
+  💡 Les fournisseurs enregistrés apparaissent automatiquement dans les listes déroulantes lors de la création d'articles et de commandes.
+</div>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">➕ Ajouter un fournisseur</div>
+<ol style="font-size:13px;line-height:2;color:var(--ink2);padding-left:20px;margin-bottom:20px">
+  <li>Allez dans <strong>🏭 Fournisseurs</strong> dans la sidebar</li>
+  <li>Cliquez sur <strong>+ Ajouter fournisseur</strong></li>
+  <li>Remplissez au minimum le <strong>Nom</strong> (obligatoire)</li>
+  <li>Ajoutez contact, email, site web, délai de livraison et spécialité</li>
+</ol>
+<hr style="border:none;border-top:1px solid var(--border);margin:24px 0">
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">Comment changer le nom d'un fournisseur sans perdre les liens ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7">Utilisez le bouton ✏️ Modifier sur la fiche fournisseur. Le nouveau nom est automatiquement répercuté sur tous les articles liés.</div>
+</details>`,
+
+univers: `
+<h3 style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:16px">🌟 Univers ludiques</h3>
+<div style="background:var(--accent-lt);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1E40AF">
+  💡 Un univers ludique est un regroupement thématique d'articles. Il permet de préparer et documenter une installation pédagogique complète.
+</div>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">✨ Créer un univers</div>
+<ol style="font-size:13px;line-height:2;color:var(--ink2);padding-left:20px;margin-bottom:20px">
+  <li>Cliquez sur <strong>+ Créer un univers</strong></li>
+  <li>Donnez-lui un nom, choisissez la crèche et la catégorie</li>
+  <li>Sélectionnez les articles dans le picker — deux onglets : <strong>🧸 Matériel</strong> et <strong>🧴 Consommables</strong></li>
+  <li>Ajoutez vos conseils de mise en scène</li>
+  <li>Enregistrez — la fiche PDF est générée automatiquement</li>
+</ol>
+<hr style="border:none;border-top:1px solid var(--border);margin:24px 0">
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">Puis-je utiliser le même article dans plusieurs univers ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7">Oui, un article peut apparaître dans autant d'univers que vous souhaitez.</div>
+</details>`,
+
+depreciation: `
+<h3 style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:16px">🔄 État et dépréciation des articles</h3>
+<div style="background:var(--accent-lt);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1E40AF">
+  💡 La dépréciation est <strong>automatique</strong> : il suffit de renseigner la date d'achat. L'état est recalculé chaque jour sans intervention.
+</div>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">📊 Comment fonctionne la dépréciation ?</div>
+<div style="font-size:13px;color:var(--ink2);line-height:1.8;margin-bottom:16px">Chaque article perd <strong>20% de sa valeur par an</strong>. L'état est calculé selon la valeur résiduelle :</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+  <div style="background:#D1FAE5;border-radius:8px;padding:10px 14px;font-size:13px"><strong style="color:#065F46">🟢 Neuf</strong><br><span style="color:#065F46;font-size:12px">0 à 1 an — résiduel ≥ 80%</span></div>
+  <div style="background:#DBEAFE;border-radius:8px;padding:10px 14px;font-size:13px"><strong style="color:#1E40AF">🔵 Bon état</strong><br><span style="color:#1E40AF;font-size:12px">1 à 2 ans — résiduel 60–80%</span></div>
+  <div style="background:#FEF3C7;border-radius:8px;padding:10px 14px;font-size:13px"><strong style="color:#92400E">🟠 Usagé</strong><br><span style="color:#92400E;font-size:12px">2 à 3 ans — résiduel 40–60%</span></div>
+  <div style="background:#FEE2E2;border-radius:8px;padding:10px 14px;font-size:13px"><strong style="color:#991B1B">🔴 À remplacer</strong><br><span style="color:#991B1B;font-size:12px">3+ ans — résiduel &lt; 40%</span></div>
+</div>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">🔧 Forcer un état manuellement</div>
+<div style="font-size:13px;color:var(--ink2);line-height:1.7;margin-bottom:20px">
+  Si un article est abîmé prématurément, forcez son état via le champ <strong>🏷 État</strong> dans le formulaire. L'état manuel a toujours la priorité sur le calcul automatique.
+</div>
+<div style="background:var(--amber-lt);border-left:4px solid var(--amber);border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;color:#92400E;margin-bottom:20px">
+  ⚠ Quand une commande est <strong>confirmée livrée</strong>, la date d'achat est automatiquement mise à jour → l'état repart à 🟢 Neuf.
+</div>
+<hr style="border:none;border-top:1px solid var(--border);margin:24px 0">
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">Un article n'a pas de badge d'état — pourquoi ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7">Soit la <strong>date d'achat n'est pas renseignée</strong> (aucun calcul possible), soit l'article est un <strong>consommable</strong> (dépréciation désactivée).</div>
+</details>
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">Où voir tous les articles à remplacer ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7">La tuile <strong>🔴 À remplacer</strong> sur la page Inventaire affiche le nombre d'articles concernés. Le badge de navigation inclut aussi ce compteur.</div>
+</details>`,
+
+sauvegardes: `
+<h3 style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:16px">💾 Sauvegardes & restauration</h3>
+<div style="background:var(--green-lt);border-left:4px solid var(--green);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#065F46">
+  ✅ Vos données sont <strong>sauvegardées automatiquement</strong> dans Supabase à chaque action.
+</div>
+<div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--ink)">🗂 Les 3 niveaux de sauvegarde</div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+  <div style="border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px"><strong>☁️ Supabase</strong> — automatique, en temps réel<br><span style="color:var(--ink3)">Toutes vos données synchronisées dans le cloud à chaque modification.</span></div>
+  <div style="border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px"><strong>💻 Cache local</strong> — automatique, dans votre navigateur<br><span style="color:var(--ink3)">Copie locale pour un chargement rapide.</span></div>
+  <div style="border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px"><strong>📄 Export JSON</strong> — manuel, sur votre disque<br><span style="color:var(--ink3)">Recommandé une fois par semaine.</span></div>
+</div>
+<hr style="border:none;border-top:1px solid var(--border);margin:24px 0">
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">Le statut affiche "⚠️ Hors ligne" — mes données sont-elles perdues ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7">Non. Vos données sont conservées dans le cache local. Dès que la connexion revient, l'app se re-synchronise automatiquement.</div>
+</details>
+<details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  <summary style="padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">À quelle fréquence faire une sauvegarde JSON ?</summary>
+  <div style="padding:12px 16px;font-size:13px;color:var(--ink2);line-height:1.7">Une fois par semaine est recommandé. Supabase conserve ses propres sauvegardes automatiques sur 7 jours.</div>
+</details>`
+
+};
+
+function openNotice() {
+  switchNoticeTab('inventaire', document.querySelector('.notice-tab'));
+  document.getElementById('modal-notice').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function switchNoticeTab(tab, btn) {
+  document.querySelectorAll('.notice-tab').forEach(b => {
+    b.style.borderBottomColor = 'transparent';
+    b.style.color = 'var(--ink3)';
+  });
+  if (btn) {
+    btn.style.borderBottomColor = 'var(--accent)';
+    btn.style.color = 'var(--accent)';
+  }
+  const content = document.getElementById('notice-content');
+  if (content) content.innerHTML = NOTICE_CONTENT[tab] || '';
+}
+</script>
 
 </body>
 </html>
