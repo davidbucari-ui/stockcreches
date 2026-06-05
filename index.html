@@ -617,6 +617,79 @@ textarea { resize: vertical; min-height: 72px; }
   .fi-row { grid-template-columns: 1fr; }
   .fi-row.triple { grid-template-columns: 1fr; }
 }
+
+/* ── RESPONSIVE MOBILE ── */
+@media (max-width: 768px) {
+  /* Layout : sidebar cachée, main plein écran */
+  .app { grid-template-columns: 1fr; }
+  .sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0; bottom: 0;
+    width: 240px;
+    z-index: 1000;
+    transition: left 0.25s ease;
+  }
+  .sidebar.open { left: 0; }
+  .main { min-height: 100dvh; }
+
+  /* Header mobile */
+  .topbar {
+    padding: 10px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--surface);
+  }
+
+  /* Bouton burger */
+  #mobile-menu-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* Overlay sidebar */
+  #sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+  }
+  #sidebar-overlay.open { display: block; }
+
+  /* Contenu pages */
+  .content { padding: 14px !important; }
+
+  /* Tableaux scrollables */
+  .table-wrap, table { display: block; overflow-x: auto; }
+
+  /* Topbar title tronqué */
+  #pageTitle { font-size: 15px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+
+  /* Grilles → 1 colonne */
+  .hub-grid,
+  .fam-grid,
+  .rh-grid { grid-template-columns: 1fr !important; }
+
+  /* Modales plein écran */
+  .modal-box { max-width: 100% !important; margin: 0 !important; border-radius: 16px 16px 0 0 !important; position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; max-height: 90dvh; overflow-y: auto; }
+  .modal-overlay { align-items: flex-end !important; }
+
+  /* Boutons topbar cachés sur mobile */
+  .topbar-actions .btn-secondary { display: none; }
+
+  /* Fiche enfant tabs scrollable */
+  #fiche-tabs-bar { overflow-x: auto; flex-wrap: nowrap !important; }
+}
 /* ── NOTIFICATION ── */
 .notif {
   position: fixed;
@@ -860,6 +933,7 @@ textarea { resize: vertical; min-height: 72px; }
 <body>
 
 <div class="offline-badge" id="offlineBadge">📵 Hors ligne</div>
+<div id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
 
 <div class="install-bar" id="installBar">
   <div class="install-bar-text">
@@ -966,7 +1040,8 @@ textarea { resize: vertical; min-height: 72px; }
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="topbar-left">
+    <div class="topbar-left" style="display:flex;align-items:center;gap:10px">
+      <button id="mobile-menu-btn" style="display:none" onclick="toggleMobileSidebar()">☰</button>
       <div class="page-title" id="pageTitle">Inventaire</div>
     </div>
     <div style="display:flex;gap:10px;align-items:center">
@@ -4935,6 +5010,7 @@ let pfCooldown      = false;
 let pfLastScan      = 0;
 let pfDetecting     = false;
 let pfBarcodeDetector = null;
+let pfScanInterval  = null;
 
 function initPointageFamillesPage() {
   const crecheId = getCrecheId();
@@ -5010,6 +5086,7 @@ function pfHidKeydown(e) {
   pfGlobalKeydown(e);
 }
 
+
 async function startFamillesScan() {
   const startBtn = document.getElementById('pf-start-btn');
   const errEl    = document.getElementById('pf-error');
@@ -5022,17 +5099,15 @@ async function startFamillesScan() {
     return;
   }
   try {
-    // Initialiser BarcodeDetector natif si disponible
-    if ('BarcodeDetector' in window) {
-      pfBarcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
-    } else {
-      pfBarcodeDetector = null;
-    }
-    pfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+    // Désactiver BarcodeDetector — trop instable sur Android, jsQR uniquement
+    pfBarcodeDetector = null;
+    pfStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } }
+    });
     if (video) { video.srcObject = pfStream; await video.play(); }
     pfScanning = true;
-    pfLastScan = 0;
-    requestAnimationFrame(pfScanFrame);
+    // setInterval toutes les 500ms — stable, pas de freeze
+    pfScanInterval = setInterval(pfScanTick, 500);
   } catch(e) {
     if (errEl) { errEl.textContent = 'Accès caméra refusé : ' + e.message; errEl.style.display = 'block'; }
     if (startBtn) startBtn.style.display = 'inline-block';
@@ -5044,6 +5119,8 @@ function stopFamillesScan() {
   pfCurrentMode = 'camera';
   pfHidBuffer   = '';
   pfDetecting   = false;
+  clearInterval(pfScanInterval);
+  pfScanInterval = null;
   clearTimeout(pfHidTimer);
   document.removeEventListener('keydown', pfGlobalKeydown);
   if (pfStream) { pfStream.getTracks().forEach(t => t.stop()); pfStream = null; }
@@ -5051,49 +5128,25 @@ function stopFamillesScan() {
   if (v) { v.srcObject = null; }
 }
 
-
-function pfScanFrame(timestamp) {
-  if (!pfScanning) return;
-
-  if (timestamp - pfLastScan < 300) { requestAnimationFrame(pfScanFrame); return; }
-  pfLastScan = timestamp;
-
-  if (pfCooldown || pfDetecting) { requestAnimationFrame(pfScanFrame); return; }
-
-  const video = document.getElementById('pf-video');
-  if (!video || video.readyState < 2 || video.videoWidth === 0) {
-    requestAnimationFrame(pfScanFrame); return;
-  }
-
-  // BarcodeDetector natif (Android Chrome) — non bloquant
-  if (pfBarcodeDetector) {
-    pfDetecting = true;
-    pfBarcodeDetector.detect(video)
-      .then(codes => {
-        pfDetecting = false;
-        if (codes.length > 0 && codes[0].rawValue.startsWith('ENFANT:')) {
-          pfHandleScan(codes[0].rawValue);
-        }
-      })
-      .catch(() => { pfDetecting = false; });
-    requestAnimationFrame(pfScanFrame);
-    return;
-  }
-
-  // Fallback jsQR via canvas
+function pfScanTick() {
+  if (!pfScanning || pfCooldown || pfDetecting) return;
+  const video  = document.getElementById('pf-video');
   const canvas = document.getElementById('pf-canvas');
-  if (!canvas) { requestAnimationFrame(pfScanFrame); return; }
+  if (!video || !canvas || video.readyState < 2 || video.videoWidth === 0) return;
+
   canvas.width  = video.videoWidth;
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  if (typeof jsQR === 'undefined') return;
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  if (typeof jsQR !== 'undefined') {
-    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
-    if (code && code.data.startsWith('ENFANT:')) pfHandleScan(code.data);
-  }
-  requestAnimationFrame(pfScanFrame);
+  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+  if (code && code.data.startsWith('ENFANT:')) pfHandleScan(code.data);
 }
+
+// pfScanFrame gardé vide pour éviter les erreurs si appelé ailleurs
+function pfScanFrame() {}
 
 async function pfHandleScan(data) {
   if (pfCooldown) return;
@@ -11106,6 +11159,27 @@ function deleteSalarie() {
   renderSalaries();
   showNotif('🗑 Salarié supprimé');
 }
+</script>
+
+<script>
+// ── RESPONSIVE MOBILE — sidebar burger ───────────────────────────
+function toggleMobileSidebar() {
+  const sidebar  = document.querySelector('.sidebar');
+  const overlay  = document.getElementById('sidebar-overlay');
+  const isOpen   = sidebar.classList.contains('open');
+  sidebar.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('open', !isOpen);
+}
+
+// Fermer sidebar quand on clique un nav-item sur mobile
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+      document.querySelector('.sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.remove('open');
+    }
+  });
+});
 </script>
 
 
