@@ -5024,8 +5024,34 @@ function logoutUser() {
 
 async function checkSession() {
   if (IS_LOCAL) { hideLoginScreen(); startApp(); return; }
+
+  // Vérifier si un token est présent dans l'URL (magic link ou reset password)
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token=')) {
+    const params = new URLSearchParams(hash.replace('#', ''));
+    const token = params.get('access_token');
+    if (token) {
+      localStorage.setItem('sb_token', token);
+      SUPA_HEADERS['Authorization'] = 'Bearer ' + token;
+      // Récupérer l'utilisateur
+      try {
+        const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
+          headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.email) {
+          currentUser = data;
+          currentUserRole = await fetchUserRole(data.email);
+          window.location.hash = '';
+          hideLoginScreen();
+          startApp();
+          return;
+        }
+      } catch(e) { console.warn('[MagicLink]', e.message); }
+    }
+  }
+
   // Toujours afficher le login au démarrage
-  // L'utilisateur doit se connecter manuellement à chaque session
   showLoginScreen();
 }
 
