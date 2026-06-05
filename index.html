@@ -854,6 +854,7 @@ textarea { resize: vertical; min-height: 72px; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 </head>
 <body>
@@ -920,6 +921,9 @@ textarea { resize: vertical; min-height: 72px; }
   </button>
   <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('planning', this)">
     <span class="nav-icon">📅</span> Planning
+  </button>
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('pointage-familles', this)">
+    <span class="nav-icon">📷</span> Pointage familles
   </button>
   <button class="nav-item" data-roles="admin,directrice" onclick="showPage('fournisseurs', this)">
     <span class="nav-icon">🏭</span> Fournisseurs
@@ -1486,6 +1490,7 @@ textarea { resize: vertical; min-height: 72px; }
           <button onclick="showFamillesFromFiche()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink3)">← Retour</button>
           <div style="flex:1"></div>
           <button onclick="deleteFicheEnfant()" style="background:none;border:1.5px solid #FECACA;border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--red)">🗑 Supprimer</button>
+          <button onclick="openQrEnfant()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink2)">🔲 QR Code</button>
           <button onclick="saveFicheEnfant()" class="btn btn-primary">💾 Enregistrer</button>
         </div>
 
@@ -1640,11 +1645,30 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
         </div>
 
-        <!-- PLANNING -->
+        <!-- PLANNING / POINTAGE -->
         <div id="fi-planning" style="display:none">
-          <div style="padding:48px;text-align:center;color:var(--ink3)">
-            <div style="font-size:40px;margin-bottom:12px">📅</div>
-            <div style="font-weight:700;font-size:15px;margin-bottom:6px">Lié au module Planning</div>
+          <!-- Section A : Pointage du jour -->
+          <div class="fiche-card" style="margin-bottom:14px">
+            <div class="fiche-card-title">Pointage du jour</div>
+            <div id="fi-planning-statut" style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+              <div style="color:var(--ink3);font-size:13px">Chargement…</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+              <button id="fi-btn-arrivee" onclick="pointageEnfant(ficheEnfantId,'arrivee')"
+                style="border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--green-lt);color:var(--green);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+                ✅ Arrivée
+              </button>
+              <button id="fi-btn-depart" onclick="pointageEnfant(ficheEnfantId,'depart')"
+                style="border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--red-lt);color:var(--red);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+                🚪 Départ
+              </button>
+            </div>
+            <div id="fi-planning-today" style="font-size:13px"></div>
+          </div>
+          <!-- Section B : Historique semaine -->
+          <div class="fiche-card">
+            <div class="fiche-card-title">Historique de la semaine</div>
+            <div id="fi-planning-historique" style="font-size:13px;color:var(--ink3)">Chargement…</div>
           </div>
         </div>
 
@@ -1664,6 +1688,50 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
         </div>
 
+    </div>
+
+
+    </div>
+
+
+    <!-- ── PAGE POINTAGE FAMILLES ── -->
+    <div id="page-pointage-familles" style="display:none;margin:-24px -28px;padding:0">
+      <div style="min-height:100vh;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;gap:24px">
+        <!-- Titre -->
+        <div style="text-align:center">
+          <div id="pf-creche-label" style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">—</div>
+          <div style="font-size:28px;font-weight:800;color:#fff;font-family:'Syne',sans-serif">Pointage familles</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:6px">Présentez le QR code de l'enfant</div>
+        </div>
+
+        <!-- Viewfinder -->
+        <div style="position:relative;width:260px;height:260px">
+          <video id="pf-video" autoplay playsinline muted style="width:260px;height:260px;object-fit:cover;border-radius:16px;display:block"></video>
+          <canvas id="pf-canvas" style="display:none"></canvas>
+          <!-- Coins scanner -->
+          <div style="position:absolute;top:0;left:0;width:32px;height:32px;border-top:4px solid var(--accent);border-left:4px solid var(--accent);border-radius:8px 0 0 0;pointer-events:none"></div>
+          <div style="position:absolute;top:0;right:0;width:32px;height:32px;border-top:4px solid var(--accent);border-right:4px solid var(--accent);border-radius:0 8px 0 0;pointer-events:none"></div>
+          <div style="position:absolute;bottom:0;left:0;width:32px;height:32px;border-bottom:4px solid var(--accent);border-left:4px solid var(--accent);border-radius:0 0 0 8px;pointer-events:none"></div>
+          <div style="position:absolute;bottom:0;right:0;width:32px;height:32px;border-bottom:4px solid var(--accent);border-right:4px solid var(--accent);border-radius:0 0 8px 0;pointer-events:none"></div>
+        </div>
+
+        <!-- Confirmation (cachée par défaut) -->
+        <div id="pf-confirm" style="display:none;width:100%;max-width:320px;border-radius:16px;padding:24px;text-align:center">
+          <div id="pf-confirm-icon" style="font-size:48px;margin-bottom:10px"></div>
+          <div id="pf-confirm-nom" style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:4px"></div>
+          <div id="pf-confirm-type" style="font-size:15px;font-weight:600;margin-bottom:4px"></div>
+          <div id="pf-confirm-heure" style="font-size:13px;opacity:0.7"></div>
+        </div>
+
+        <!-- Erreur caméra -->
+        <div id="pf-error" style="display:none;color:rgba(255,255,255,0.5);font-size:13px;text-align:center;max-width:280px"></div>
+
+        <!-- Bouton démarrer (si caméra non encore démarrée) -->
+        <button id="pf-start-btn" onclick="startFamillesScan()"
+          style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">
+          📷 Démarrer le scan
+        </button>
+      </div>
     </div>
 
 
@@ -1890,6 +1958,23 @@ textarea { resize: vertical; min-height: 72px; }
 
   </div><!-- /content -->
 
+
+
+<!-- ── MODALE QR ENFANT ── -->
+<div class="modal-overlay" id="modal-qr-enfant" onclick="closeModalClick(event,'modal-qr-enfant')">
+  <div class="modal-box" style="max-width:360px;text-align:center">
+    <div class="modal-header">
+      <h2 id="modal-qr-enfant-title">🔲 QR Code</h2>
+      <button class="modal-close" onclick="closeModal('modal-qr-enfant')">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:8px">
+      <div id="modal-qr-enfant-canvas" style="background:#fff;padding:16px;border-radius:12px;border:1px solid var(--border);line-height:0"></div>
+      <div id="modal-qr-enfant-name" style="font-size:16px;font-weight:700;font-family:'Syne',sans-serif"></div>
+      <div style="font-size:12px;color:var(--ink3);text-align:center">Présentez ce QR code à l'entrée de la crèche</div>
+      <button onclick="printQrEnfant()" class="btn btn-primary" style="width:100%;justify-content:center">🖨 Imprimer</button>
+    </div>
+  </div>
+</div>
 
 
 <div class="modal-overlay" id="modal-famille" onclick="closeModalClick(event,'modal-famille')">
@@ -4511,6 +4596,7 @@ function switchFicheTab(tabId, btn) {
     activeBtn.style.borderBottom = '2px solid var(--accent)';
     activeBtn.style.fontWeight = '700';
   }
+  if (tabId === 'fi-planning' && ficheEnfantId) renderFiPlanning(ficheEnfantId);
 }
 
 function renderReferents() {
@@ -4612,6 +4698,336 @@ function deleteFicheEnfant() {
 
 // ══════════════════════════════════════════════════════════════════
 // FIN MODULE FICHE ENFANT
+// ══════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════
+// MODULE POINTAGE ENFANTS
+// ══════════════════════════════════════════════════════════════════
+
+// ── Helpers ──────────────────────────────────────────────────────
+
+async function loadPointagesEnfant(enfantId, depuis) {
+  return await sbGet('pointages_enfants',
+    `enfant_id=eq.${enfantId}&horodatage=gte.${depuis}T00:00:00&order=horodatage.asc`
+  );
+}
+
+function calculerDureeEnfant(pointages) {
+  let totalMs = 0, lastArrivee = null;
+  const sorted = [...pointages].sort((a,b) => new Date(a.horodatage) - new Date(b.horodatage));
+  sorted.forEach(p => {
+    const ts = new Date(p.horodatage);
+    if (p.type === 'arrivee') lastArrivee = ts;
+    if (p.type === 'depart' && lastArrivee) { totalMs += ts - lastArrivee; lastArrivee = null; }
+  });
+  const enCours = lastArrivee !== null;
+  const depuisMs = enCours ? Date.now() - lastArrivee.getTime() : 0;
+  return { totalMs, enCours, depuisMs, lastArrivee };
+}
+
+function fmtDureeMs(ms) {
+  const m = Math.floor(ms / 60000);
+  return `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`;
+}
+
+function fmtHeure(iso) {
+  return new Date(iso).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+}
+
+function fmtJour(iso) {
+  return new Date(iso.split('T')[0]+'T12:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'2-digit', month:'long' });
+}
+
+// ── Enregistrer un pointage ───────────────────────────────────────
+
+async function pointageEnfant(enfantId, type) {
+  if (!enfantId) return;
+  const crecheId = getCrecheId();
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    const pts = await loadPointagesEnfant(enfantId, today);
+    const { enCours } = calculerDureeEnfant(pts);
+    // Vérifier cohérence
+    if (type === 'arrivee' && enCours)  { showNotif('⚠ Enfant déjà présent — pointez un départ d\'abord'); return; }
+    if (type === 'depart'  && !enCours) { showNotif('⚠ Aucune arrivée en cours à clôturer'); return; }
+    await sbInsert('pointages_enfants', { enfant_id: enfantId, creche_id: crecheId, type });
+    showNotif(type === 'arrivee' ? '✅ Arrivée enregistrée' : '🚪 Départ enregistré');
+    renderFiPlanning(enfantId);
+  } catch(e) {
+    showNotif('⚠ Erreur : ' + e.message);
+  }
+}
+
+// ── Render onglet Planning fiche enfant ───────────────────────────
+
+async function renderFiPlanning(enfantId) {
+  const statutEl  = document.getElementById('fi-planning-statut');
+  const todayEl   = document.getElementById('fi-planning-today');
+  const histoEl   = document.getElementById('fi-planning-historique');
+  const btnArr    = document.getElementById('fi-btn-arrivee');
+  const btnDep    = document.getElementById('fi-btn-depart');
+  if (!statutEl) return;
+
+  const today    = new Date().toISOString().split('T')[0];
+  const monday   = getMondayOfDate(new Date()).toISOString().split('T')[0];
+  const TLABEL   = { arrivee:'Arrivée', depart:'Départ' };
+  const TBADGE   = {
+    arrivee: `background:var(--green-lt);color:var(--green)`,
+    depart:  `background:var(--red-lt);color:var(--red)`
+  };
+
+  try {
+    const pts = await loadPointagesEnfant(enfantId, monday);
+
+    // ── Section A : aujourd'hui ──────────────────────────────────
+    const todayPts = pts.filter(p => p.horodatage.startsWith(today));
+    const { enCours, depuisMs, totalMs } = calculerDureeEnfant(todayPts);
+
+    // Statut
+    if (enCours) {
+      const arr = todayPts.filter(p=>p.type==='arrivee').at(-1);
+      statutEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;background:var(--green-lt);border-radius:20px;padding:6px 14px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+          <span style="font-size:13px;font-weight:700;color:var(--green)">Présent(e)</span>
+          <span style="font-size:12px;color:var(--ink3)">· Arrivée à ${arr?fmtHeure(arr.horodatage):'—'} · depuis ${fmtDureeMs(depuisMs)}</span>
+        </div>`;
+    } else {
+      statutEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;background:var(--red-lt);border-radius:20px;padding:6px 14px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--red)"></div>
+          <span style="font-size:13px;font-weight:700;color:var(--red)">Absent(e)</span>
+        </div>`;
+    }
+
+    // Boutons
+    if (btnArr) { btnArr.style.opacity = enCours ? '0.4' : '1'; btnArr.style.pointerEvents = enCours ? 'none' : 'auto'; }
+    if (btnDep) { btnDep.style.opacity = enCours ? '1' : '0.4'; btnDep.style.pointerEvents = enCours ? 'auto' : 'none'; }
+
+    // Timeline du jour
+    if (todayPts.length) {
+      const lignes = todayPts.map(p => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;${TBADGE[p.type]}">${TLABEL[p.type]}</span>
+          <span style="font-size:14px;font-weight:700;font-family:'Syne',sans-serif">${fmtHeure(p.horodatage)}</span>
+        </div>`).join('');
+      const dureeJour = totalMs + (enCours ? depuisMs : 0);
+      todayEl.innerHTML = lignes + `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:8px 12px;background:var(--bg);border-radius:8px">
+          <span style="font-size:12px;color:var(--ink3)">Temps de présence aujourd'hui</span>
+          <span style="font-size:14px;font-weight:700;color:var(--green)">${fmtDureeMs(dureeJour)}${enCours?' (en cours)':''}</span>
+        </div>`;
+    } else {
+      todayEl.innerHTML = `<div style="text-align:center;color:var(--ink3);padding:20px;font-size:13px">Aucun pointage aujourd'hui.</div>`;
+    }
+
+    // ── Section B : historique semaine (sans aujourd'hui) ────────
+    const pastPts = pts.filter(p => !p.horodatage.startsWith(today));
+    if (!pastPts.length) {
+      histoEl.innerHTML = `<div style="text-align:center;color:var(--ink3);padding:20px;font-size:13px">Aucun pointage cette semaine.</div>`;
+    } else {
+      const byDay = {};
+      pastPts.forEach(p => { const d=p.horodatage.split('T')[0]; (byDay[d]=byDay[d]||[]).push(p); });
+      histoEl.innerHTML = Object.keys(byDay).sort().reverse().map(day => {
+        const dayPts = byDay[day];
+        const { totalMs: tm, enCours: ec, depuisMs: dm } = calculerDureeEnfant(dayPts);
+        const duree = tm + (ec ? dm : 0);
+        const chips = dayPts.map(p =>
+          `<div style="display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:4px 10px;margin:3px">
+            <span style="font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;${TBADGE[p.type]}">${TLABEL[p.type]}</span>
+            <span style="font-size:13px;font-weight:700">${fmtHeure(p.horodatage)}</span>
+          </div>`).join('');
+        return `<div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:12px;font-weight:700;color:var(--ink2);text-transform:capitalize">${fmtJour(day)}</span>
+            <span style="font-size:11px;color:var(--ink3)">Présence : <strong style="color:var(--green)">${fmtDureeMs(duree)}</strong></span>
+          </div>
+          <div>${chips}</div>
+        </div>`;
+      }).join('');
+    }
+
+  } catch(e) {
+    if (statutEl) statutEl.innerHTML = `<span style="color:var(--red);font-size:12px">Erreur Supabase : ${e.message}</span>`;
+  }
+}
+
+// ── QR Code enfant ────────────────────────────────────────────────
+
+function openQrEnfant() {
+  if (!ficheEnfantId) return;
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId);
+  const e = enfants.find(x => x.id === ficheEnfantId);
+  if (!e) return;
+
+  const titleEl = document.getElementById('modal-qr-enfant-title');
+  const nameEl  = document.getElementById('modal-qr-enfant-name');
+  const canvEl  = document.getElementById('modal-qr-enfant-canvas');
+  if (titleEl) titleEl.textContent = `🔲 QR — ${e.prenom} ${e.nom}`;
+  if (nameEl)  nameEl.textContent  = `${e.prenom} ${e.nom}`;
+  if (canvEl)  canvEl.innerHTML    = '';
+
+  const qrData = `ENFANT:${e.id}:${crecheId}`;
+  if (typeof QRCode !== 'undefined' && canvEl) {
+    new QRCode(canvEl, { text: qrData, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+  }
+  document.getElementById('modal-qr-enfant').classList.add('open');
+}
+
+function printQrEnfant() {
+  if (!ficheEnfantId) return;
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId);
+  const e = enfants.find(x => x.id === ficheEnfantId);
+  if (!e) return;
+  const canvEl = document.getElementById('modal-qr-enfant-canvas');
+  const img    = canvEl ? canvEl.querySelector('img,canvas') : null;
+  const imgSrc = img ? (img.tagName === 'CANVAS' ? img.toDataURL() : img.src) : '';
+  const html = `<!DOCTYPE html><html><head><title>QR — ${e.prenom} ${e.nom}</title>
+  <style>body{font-family:sans-serif;text-align:center;padding:40px}img{width:200px;height:200px}h2{margin:16px 0 4px;font-size:20px}p{color:#666;font-size:13px}</style></head>
+  <body>
+    <p style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">Orevy · Réseau Koalakids</p>
+    ${imgSrc ? `<img src="${imgSrc}">` : ''}
+    <h2>${e.prenom} ${e.nom}</h2>
+    <p>Présentez ce QR code à l'entrée de la crèche</p>
+  <script>window.onload=()=>setTimeout(()=>{window.print();window.close();},500);<\/script>
+  </body></html>`;
+  const w = window.open('','_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+// ── Page scan tablette ────────────────────────────────────────────
+
+let pfStream = null;
+let pfScanning = false;
+let pfCooldown = false;
+
+function initPointageFamillesPage() {
+  const crecheId = getCrecheId();
+  const labelEl  = document.getElementById('pf-creche-label');
+  if (labelEl) labelEl.textContent = crecheId || 'Crèche';
+  document.getElementById('pf-confirm').style.display = 'none';
+  document.getElementById('pf-error').style.display   = 'none';
+  document.getElementById('pf-start-btn').style.display = 'inline-block';
+  const v = document.getElementById('pf-video');
+  if (v) v.style.display = 'block';
+}
+
+async function startFamillesScan() {
+  const startBtn = document.getElementById('pf-start-btn');
+  const errEl    = document.getElementById('pf-error');
+  const video    = document.getElementById('pf-video');
+  if (startBtn) startBtn.style.display = 'none';
+  if (errEl)    errEl.style.display    = 'none';
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (errEl) { errEl.textContent = 'Caméra non disponible sur cet appareil.'; errEl.style.display = 'block'; }
+    return;
+  }
+  try {
+    pfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    if (video) { video.srcObject = pfStream; video.play(); }
+    pfScanning = true;
+    requestAnimationFrame(pfScanFrame);
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Accès caméra refusé : ' + e.message; errEl.style.display = 'block'; }
+    if (startBtn) startBtn.style.display = 'inline-block';
+  }
+}
+
+function stopFamillesScan() {
+  pfScanning = false;
+  if (pfStream) { pfStream.getTracks().forEach(t => t.stop()); pfStream = null; }
+  const v = document.getElementById('pf-video');
+  if (v) { v.srcObject = null; }
+}
+
+function pfScanFrame() {
+  if (!pfScanning) return;
+  const video  = document.getElementById('pf-video');
+  const canvas = document.getElementById('pf-canvas');
+  if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+    requestAnimationFrame(pfScanFrame); return;
+  }
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (typeof jsQR !== 'undefined' && !pfCooldown) {
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+    if (code && code.data.startsWith('ENFANT:')) {
+      pfHandleScan(code.data);
+    }
+  }
+  requestAnimationFrame(pfScanFrame);
+}
+
+async function pfHandleScan(data) {
+  if (pfCooldown) return;
+  pfCooldown = true;
+  const parts     = data.split(':');
+  const enfantId  = parts[1];
+  const qrCreche  = parts[2];
+  const crecheId  = getCrecheId();
+
+  const confirmEl = document.getElementById('pf-confirm');
+  const iconEl    = document.getElementById('pf-confirm-icon');
+  const nomEl     = document.getElementById('pf-confirm-nom');
+  const typeEl    = document.getElementById('pf-confirm-type');
+  const heureEl   = document.getElementById('pf-confirm-heure');
+
+  if (qrCreche && qrCreche !== crecheId && crecheId !== 'all') {
+    confirmEl.style.cssText = 'display:block;background:#FEF2F2;border-radius:16px;padding:24px;text-align:center;width:100%;max-width:320px';
+    iconEl.textContent = '⚠️';
+    nomEl.textContent  = 'QR d\'une autre crèche';
+    typeEl.textContent = '';
+    heureEl.textContent = '';
+    setTimeout(() => { confirmEl.style.display='none'; pfCooldown=false; }, 3000);
+    return;
+  }
+
+  // Trouver l'enfant dans localStorage
+  const enfants = getFamilles(crecheId);
+  const enfant  = enfants.find(x => x.id === enfantId);
+  const nom     = enfant ? `${enfant.prenom} ${enfant.nom}` : 'Enfant inconnu';
+
+  // Déterminer arrivée ou départ
+  const today = new Date().toISOString().split('T')[0];
+  let type = 'arrivee';
+  try {
+    const pts = await loadPointagesEnfant(enfantId, today);
+    const { enCours } = calculerDureeEnfant(pts);
+    type = enCours ? 'depart' : 'arrivee';
+    await sbInsert('pointages_enfants', { enfant_id: enfantId, creche_id: crecheId, type });
+  } catch(e) {
+    confirmEl.style.cssText = 'display:block;background:#FEF2F2;border-radius:16px;padding:24px;text-align:center;width:100%;max-width:320px';
+    iconEl.textContent  = '❌';
+    nomEl.textContent   = 'Erreur Supabase';
+    typeEl.textContent  = e.message;
+    heureEl.textContent = '';
+    setTimeout(() => { confirmEl.style.display='none'; pfCooldown=false; }, 3000);
+    return;
+  }
+
+  const heure = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  const bg    = type === 'arrivee' ? '#F0FDF4' : '#FEF2F2';
+  const color = type === 'arrivee' ? '#16A34A' : '#DC2626';
+  confirmEl.style.cssText = `display:block;background:${bg};border-radius:16px;padding:24px;text-align:center;width:100%;max-width:320px`;
+  iconEl.textContent  = type === 'arrivee' ? '✅' : '🚪';
+  nomEl.style.color   = color;
+  nomEl.textContent   = nom;
+  typeEl.style.color  = color;
+  typeEl.textContent  = type === 'arrivee' ? 'Arrivée enregistrée' : 'Départ enregistré';
+  heureEl.textContent = heure;
+
+  setTimeout(() => { confirmEl.style.display='none'; pfCooldown=false; }, 3500);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FIN MODULE POINTAGE ENFANTS
 // ══════════════════════════════════════════════════════════════════
 
 // ── PERSONNALISATION ─────────────────────────────────────────────
@@ -5965,13 +6381,15 @@ function addHisto(type, article, qty, creche, user, note='') {
 // ─── PAGES ────────────────────────────────────────────────────────────────
 function showPage(page, btn) {
   currentPage = page;
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant'].forEach(p => {
+  // Arrêter le scan si on quitte la page pointage familles
+  if (page !== 'pointage-familles') stopFamillesScan();
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','pointage-familles'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant' };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', 'pointage-familles':'Pointage familles' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -5988,6 +6406,7 @@ function showPage(page, btn) {
   if (page === 'rh')       { showRhPage(); }
   if (page === 'planning') { showPlanningEquipePage(); }
   if (page === 'salarie')  { showPage('planning', null); }
+  if (page === 'pointage-familles') { initPointageFamillesPage(); }
 }
 
 function showTab(tab, btn) {
@@ -7187,7 +7606,8 @@ let SUPA_RH_HEADERS = {
 // Tables hébergées dans le projet RH — routage automatique dans les helpers
 const RH_TABLES = new Set([
   'utilisateurs','recrutements','contrats','conges',
-  'formations_rh','documents_rh','stagiaires','planning','pointages'
+  'formations_rh','documents_rh','stagiaires','planning','pointages',
+  'pointages_enfants'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
