@@ -4926,9 +4926,13 @@ function printQrEnfant() {
 
 // ── Page scan tablette ────────────────────────────────────────────
 
-let pfCurrentMode = 'camera'; // 'camera' | 'hid'
+let pfCurrentMode = 'camera';
 let pfHidBuffer   = '';
 let pfHidTimer    = null;
+let pfStream      = null;
+let pfScanning    = false;
+let pfCooldown    = false;
+let pfLastScan    = 0;
 
 function initPointageFamillesPage() {
   const crecheId = getCrecheId();
