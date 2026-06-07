@@ -939,31 +939,31 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item active" data-roles="admin,directrice,auxiliaire,stagiaire" onclick="showPage('dashboard', this)">
     <span class="nav-icon">🏠</span> Tableau de bord
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="stocks" onclick="showPage('inventaire', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('inventaire', this)">
     <span class="nav-icon">📦</span> Stocks pédagogiques
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="entretien" onclick="showPage('entretien', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('entretien', this)">
     <span class="nav-icon">🧹</span> Stocks entretien
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="univers" onclick="showPage('univers', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('univers', this)">
     <span class="nav-icon">🌟</span> Univers ludiques
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="familles" onclick="showPage('familles', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('familles', this)">
     <span class="nav-icon">👨‍👩‍👧</span> Familles
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="planning" onclick="showPage('planning', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('planning', this)">
     <span class="nav-icon">📅</span> Planning
   </button>
-  <button class="nav-item" data-roles="admin,directrice" data-module="rh" onclick="showPage('rh', this)">
+  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('rh', this)">
     <span class="nav-icon">👥</span> Ressources humaines
   </button>
-  <button class="nav-item" data-roles="admin,directrice" data-module="fournisseurs" onclick="showPage('fournisseurs', this)">
+  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('fournisseurs', this)">
     <span class="nav-icon">🏭</span> Fournisseurs
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="commandes" onclick="showPage('commandes', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('commandes', this)">
     <span class="nav-icon">🛒</span> Commandes
   </button>
-  <button class="nav-item" data-roles="admin,directrice" data-module="statistiques" onclick="showPage('statistiques', this)">
+  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('statistiques', this)">
     <span class="nav-icon">📊</span> Statistiques
     <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
@@ -972,9 +972,6 @@ textarea { resize: vertical; min-height: 72px; }
   </button>
   <button class="nav-item" data-roles="admin,directrice" onclick="showPage('parametres', this)">
     <span class="nav-icon">⚙️</span> Paramètres
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,stagiaire" data-module="formations" onclick="window.open('https://davidbucari-ui.github.io/orevy-formations/','_blank')" style="color:#52B788">
-    <span class="nav-icon">🎓</span> Formations
   </button>
   <button class="nav-item" data-roles="admin" onclick="showPage('admin', this)">
     <span class="nav-icon">🔐</span> Administration
@@ -1108,19 +1105,6 @@ textarea { resize: vertical; min-height: 72px; }
             <div style="font-size:32px;margin-bottom:10px">🌟</div>
             <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Univers ludiques</div>
             <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Bibliothèque pédagogique · Fiches PDF</div>
-          </button>
-          <button data-module-gate="formations" onclick="window.open('https://davidbucari-ui.github.io/orevy-formations/','_blank')"
-            style="background:linear-gradient(135deg,#2D6A4F,#52B788);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(45,106,79,0.3);position:relative;overflow:hidden;grid-column:1/-1"
-            onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
-            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">🎓</div>
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="font-size:32px">🎓</div>
-              <div>
-                <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:4px">Orevy Formations</div>
-                <div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5">12 formations · Posture · Pédagogie · Management · Gestion</div>
-              </div>
-              <div style="margin-left:auto;font-size:12px;color:rgba(255,255,255,0.5);font-weight:600">↗ Ouvrir</div>
-            </div>
           </button>
         </div>
       </div>
@@ -5134,11 +5118,9 @@ async function renderDashboardDirectrice(dateStr) {
       '<div style="display:flex;flex-direction:column;gap:8px">' +
       '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Valeur stock</span><span style="font-weight:700">'+ARTICLES.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)+' €</span></div>' +
       '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Commandes en cours</span><span style="font-weight:700;color:'+(commEnCours>0?'var(--amber)':'var(--ink)')+'">'+commEnCours+'</span></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Salariés actifs</span><span style="font-weight:700">'+SALARIES.filter(s=>s.statut==='actif').length+'</span></div>' +
-      '</div>' +
-      '<button data-module-gate="formations" onclick="window.open(\'https://davidbucari-ui.github.io/orevy-formations/\',\'_blank\')" style="margin-top:12px;width:100%;padding:9px;background:linear-gradient(135deg,#2D6A4F,#52B788);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">🎓 Orevy Formations ↗</button>';
+      '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0"><span style="color:var(--ink2)">Salariés actifs</span><span style="font-weight:700">'+SALARIES.filter(s=>s.statut==='actif').length+'</span></div>' +
+      '</div>';
   }
-  if (typeof applyModuleAccess === 'function') applyModuleAccess();
 }
 
 async function renderDashboardAuxiliaire(dateStr) {
@@ -5193,13 +5175,6 @@ async function renderDashboardAuxiliaire(dateStr) {
       <div style="font-size:28px;margin-bottom:8px">📦</div>
       <div style="font-size:14px;font-weight:700;font-family:'Syne',sans-serif">Gérer les stocks</div>
       <div style="font-size:12px;color:${low.length>0?'var(--red)':'var(--ink3)'};margin-top:4px">${low.length>0?low.length+' alerte(s) en cours':'Stocks à jour'}</div>
-    </button>
-    <button data-module-gate="formations" onclick="window.open('https://davidbucari-ui.github.io/orevy-formations/','_blank')"
-      style="background:linear-gradient(135deg,#2D6A4F,#52B788);border:none;border-radius:var(--radius);padding:18px;text-align:left;cursor:pointer"
-      onmouseover="this.style.boxShadow='0 4px 12px rgba(45,106,79,0.3)'" onmouseout="this.style.boxShadow=''">
-      <div style="font-size:28px;margin-bottom:8px">🎓</div>
-      <div style="font-size:14px;font-weight:700;font-family:'Syne',sans-serif;color:#fff">Mes formations</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px">Orevy Formations ↗</div>
     </button>`;
 
   const enfEl = document.getElementById('dash-aux-enfants');
@@ -5220,7 +5195,6 @@ async function renderDashboardAuxiliaire(dateStr) {
     } catch(e) { enfHtml = '<div style="font-size:13px;color:var(--ink3)">Données indisponibles</div>'; }
     enfEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:12px">👶 Enfants présents aujourd\'hui</div>' + enfHtml;
   }
-  if (typeof applyModuleAccess === 'function') applyModuleAccess();
 }
 
 // ── (ancien renderDashboard conservé pour page Statistiques) ──
@@ -5349,59 +5323,6 @@ const ROLE_LABELS = {
   auxiliaire: '🌿 Auxiliaire', stagiaire: '🎓 Stagiaire',
 };
 
-// ════════════════════════════════════════════════════════════
-//  SYSTÈME MODULAIRE — souscriptions
-//  Pilote l'affichage des modules selon le tier souscrit
-// ════════════════════════════════════════════════════════════
-
-// Modules disponibles par tier (fallback si pas de souscription en base)
-const TIER_MODULES = {
-  starter:   ['stocks'],
-  essentiel: ['stocks','familles','planning'],
-  pro:       ['stocks','familles','planning','rh','formations'],
-  reseau:    ['stocks','familles','planning','rh','entretien','univers','statistiques','fournisseurs','commandes','formations'],
-};
-
-// Souscription active de l'utilisateur courant (chargée au login)
-let currentSouscription = null;
-
-async function fetchSouscription() {
-  // Réseau Koalakids = accès complet par défaut tant qu'aucune souscription n'est trouvée
-  try {
-    const rows = await sbGet('souscriptions', 'actif=eq.true&order=created_at.desc&limit=1');
-    if (Array.isArray(rows) && rows.length > 0) {
-      currentSouscription = rows[0];
-      // Normaliser modules en tableau
-      if (typeof currentSouscription.modules === 'string') {
-        try { currentSouscription.modules = JSON.parse(currentSouscription.modules); } catch { currentSouscription.modules = []; }
-      }
-      return currentSouscription;
-    }
-  } catch(e) { console.warn('[Souscription]', e.message); }
-  // Aucune souscription → accès complet (réseau) par défaut
-  currentSouscription = { tier: 'reseau', modules: TIER_MODULES.reseau, entite_nom: 'Orevy' };
-  return currentSouscription;
-}
-
-// Renvoie true si le module est inclus dans la souscription active
-function hasModule(moduleName) {
-  if (!currentSouscription) return true; // pas encore chargé → ne rien masquer
-  const mods = Array.isArray(currentSouscription.modules) ? currentSouscription.modules : (TIER_MODULES[currentSouscription.tier] || []);
-  return mods.includes(moduleName);
-}
-
-// Applique les permissions modules : masque les nav-items non souscrits
-function applyModuleAccess() {
-  document.querySelectorAll('.nav-item[data-module]').forEach(btn => {
-    const mod = btn.getAttribute('data-module');
-    if (!hasModule(mod)) btn.style.display = 'none';
-  });
-  // Boutons passerelle Formations (dashboard + hub) : masqués si module absent
-  if (!hasModule('formations')) {
-    document.querySelectorAll('[data-module-gate="formations"]').forEach(el => el.style.display = 'none');
-  }
-}
-
 async function fetchUserRole(email) {
   const VALID_ROLES = ['admin','directrice','auxiliaire','stagiaire'];
   try {
@@ -5452,6 +5373,7 @@ function logoutUser() {
   currentUser = null;
   currentUserRole = null;
   currentUserDbId = null;
+  hideHub();
   location.reload();
 }
 
@@ -5686,8 +5608,120 @@ function startApp() {
   appliquerPrefs();
   init();
   applyRoleAccess();
-  // Charger la souscription puis appliquer les permissions modules
-  fetchSouscription().then(() => applyModuleAccess());
+  // Afficher le hub d'accueil avant l'app
+  showHub();
+}
+
+function showHub() {
+  const hub = document.getElementById('hub-screen');
+  if (!hub) { return; }
+  hub.style.display = 'block';
+
+  const role = (currentUserRole || 'admin').toLowerCase();
+  const email = (currentUser && currentUser.email) ? currentUser.email : '';
+  const prenomMatch = email.match(/^([^.@]+)/);
+  const prenom = prenomMatch ? (prenomMatch[1].charAt(0).toUpperCase() + prenomMatch[1].slice(1)) : 'vous';
+
+  // Initiales avatar
+  const initials = prenom.substring(0,2).toUpperCase();
+  const avEl = document.getElementById('hub-av-initials');
+  if (avEl) avEl.textContent = initials;
+  const avName = document.getElementById('hub-av-name');
+  if (avName) avName.textContent = email || 'Utilisateur';
+  const avRole = document.getElementById('hub-av-role');
+  const roleLabels = { admin:'Administrateur', directrice:'Directrice', auxiliaire:'Auxiliaire', stagiaire:'Stagiaire' };
+  if (avRole) avRole.textContent = roleLabels[role] || 'Utilisateur';
+
+  // Greeting
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+  const grTitle = document.getElementById('hub-s-greeting-title');
+  if (grTitle) grTitle.textContent = 'Bonjour, ' + prenom + ' \uD83D\uDC4B';
+  const grSub = document.getElementById('hub-s-greeting-sub');
+
+  // Afficher la vue du rôle
+  ['admin','directrice','auxiliaire'].forEach(r => {
+    const el = document.getElementById('hub-v-' + r);
+    if (el) el.style.display = 'none';
+  });
+  const roleView = (role === 'admin' || role === 'stagiaire') ? 'admin'
+                  : role === 'directrice' ? 'directrice' : 'auxiliaire';
+  const vEl = document.getElementById('hub-v-' + roleView);
+  if (vEl) vEl.style.display = 'block';
+
+  if (grSub) {
+    const creche = (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all')
+      ? currentCreche : `R\u00e9seau Koalakids`;
+    grSub.textContent = dateStr + ' \u00B7 ' + creche;
+  }
+
+  // Charger KPIs légers depuis Supabase
+  hubLoadKPIs(role);
+}
+
+function hideHub() {
+  const hub = document.getElementById('hub-screen');
+  if (hub) hub.style.display = 'none';
+}
+
+function enterStructures() {
+  hideHub();
+}
+
+async function hubLoadKPIs(role) {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Enfants présents aujourd'hui (pointages)
+    let enfants = '—';
+    try {
+      const pts = await sbGet('pointages_enfants',
+        'select=id&horodatage=gte.' + todayStr + 'T00:00:00&type=eq.arrivee');
+      if (Array.isArray(pts)) enfants = pts.length;
+    } catch(e) { console.warn('[Hub KPI enfants]', e.message); }
+
+    // Stocks bas
+    let stocksBas = 0;
+    try {
+      const arts = await sbGet('articles', 'select=id,stock,stock_min&actif=eq.true');
+      if (Array.isArray(arts)) stocksBas = arts.filter(a => a.stock !== null && a.stock_min !== null && a.stock <= a.stock_min).length;
+    } catch(e) { console.warn('[Hub KPI stocks]', e.message); }
+
+    if (role === 'admin' || role === 'stagiaire') {
+      const elE = document.getElementById('hk-enfants');
+      const elA = document.getElementById('hk-alertes');
+      const elT = document.getElementById('hk-taux');
+      if (elE) { elE.textContent = enfants; elE.style.color = '#3B6D11'; }
+      if (elA) elA.textContent = stocksBas;
+      if (elT) elT.textContent = '—';
+
+      // Alertes chips
+      const alertsEl = document.getElementById('hub-alerts-admin');
+      if (alertsEl) {
+        const chips = [];
+        if (stocksBas > 0) chips.push(`<div class="hub-s-chip warn">⚠ ${stocksBas} stock${stocksBas>1?'s':''} bas</div>`);
+        else chips.push('<div class="hub-s-chip ok">✓ Stocks OK</div>');
+        chips.push('<div class="hub-s-chip ok">✓ Connexion active</div>');
+        alertsEl.innerHTML = chips.join('');
+      }
+    } else if (role === 'directrice') {
+      const elE = document.getElementById('hk-dir-enfants');
+      const elA = document.getElementById('hk-dir-alertes');
+      if (elE) { elE.textContent = enfants; elE.style.color = '#3B6D11'; }
+      if (elA) elA.textContent = stocksBas;
+      const alertsEl = document.getElementById('hub-alerts-dir');
+      if (alertsEl) {
+        const chips = [];
+        if (stocksBas > 0) chips.push(`<div class="hub-s-chip warn">⚠ ${stocksBas} stock${stocksBas>1?'s':''} bas</div>`);
+        else chips.push('<div class="hub-s-chip ok">✓ Stocks OK</div>');
+        chips.push(`<div class="hub-s-chip ok">\u2713 Ratio \u00e0 v\u00e9rifier dans Structures</div>`);
+        alertsEl.innerHTML = chips.join('');
+      }
+    } else {
+      const elE = document.getElementById('hk-aux-enfants');
+      if (elE) { elE.textContent = enfants; }
+    }
+  } catch(e) { console.warn('[Hub KPIs]', e.message); }
 }
 // ── FIN AUTH ─────────────────────────────────────────────────────
 
@@ -8140,8 +8174,7 @@ let SUPA_RH_HEADERS = {
 const RH_TABLES = new Set([
   'utilisateurs','recrutements','contrats','conges',
   'formations_rh','documents_rh','stagiaires','planning','pointages','pointages_enfants',
-  'enfants','berceaux','salaries','planning_semaines','parametres',
-  'souscriptions','formations','chapitres','ressources','participants','acces_formations'
+  'enfants','berceaux','salaries','planning_semaines','parametres'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -11193,6 +11226,208 @@ function showImportResult(type, html) {
 </div>
 
 <!-- ── ÉCRAN DE CONNEXION ── -->
+<!-- ── HUB SCREEN ──────────────────────────────────────────────── -->
+<div id="hub-screen" style="display:none;position:fixed;inset:0;background:#FAF6F0;z-index:9990;overflow-y:auto;font-family:'Outfit',sans-serif">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fraunces:ital,wght@0,400;1,400&display=swap');
+.hub-s-header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px 13px;border-bottom:1px solid rgba(88,80,77,0.1);background:#FAF6F0;position:sticky;top:0;z-index:10}
+.hub-s-logo{display:flex;align-items:center;gap:10px}
+.hub-s-logomark{width:34px;height:34px;background:#8FAF8A;border-radius:9px;display:flex;align-items:center;justify-content:center}
+.hub-s-logotext{font-size:19px;font-weight:800;color:#58504D;letter-spacing:-0.5px}
+.hub-s-logotext span{color:#8FAF8A}
+.hub-s-avatar{display:flex;align-items:center;gap:9px}
+.hub-s-av-circle{width:30px;height:30px;border-radius:50%;background:#8FAF8A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.hub-s-body{max-width:860px;margin:0 auto;padding:28px 24px 40px}
+.hub-s-greeting{margin-bottom:26px}
+.hub-s-title{font-family:'Fraunces',serif;font-size:24px;font-weight:400;color:#58504D;line-height:1.2}
+.hub-s-sub{font-size:13px;color:#58504D;opacity:.5;margin-top:4px}
+.hub-s-pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px}
+.hub-s-card{border-radius:18px;padding:22px 20px 18px;cursor:pointer;transition:transform .15s,box-shadow .12s;position:relative;overflow:hidden;text-decoration:none;display:block}
+.hub-s-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,0.08)}
+.hub-s-card.str{background:#EFF5EE;border:1px solid rgba(143,175,138,0.35)}
+.hub-s-card.frm{background:#F5EDE8;border:1px solid rgba(201,123,90,0.28)}
+.hub-s-card.sol{background:#EEF0F5;border:1px solid rgba(88,80,77,0.14)}
+.hub-s-card.dis{opacity:.38;pointer-events:none}
+.hub-s-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin-bottom:15px}
+.hub-s-card.str .hub-s-icon{background:#8FAF8A}
+.hub-s-card.frm .hub-s-icon{background:#C97B5A}
+.hub-s-card.sol .hub-s-icon{background:#58504D}
+.hub-s-name{font-size:15px;font-weight:700;color:#58504D;margin-bottom:4px}
+.hub-s-desc{font-size:12px;color:#58504D;opacity:.55;line-height:1.5;margin-bottom:12px}
+.hub-s-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px}
+.hub-s-tag{font-size:10px;font-weight:500;padding:2px 9px;border-radius:20px}
+.hub-s-card.str .hub-s-tag{background:rgba(143,175,138,.25);color:#3B6D11}
+.hub-s-card.frm .hub-s-tag{background:rgba(201,123,90,.2);color:#854F0B}
+.hub-s-card.sol .hub-s-tag{background:rgba(88,80,77,.12);color:#444441}
+.hub-s-cta{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:7px 13px;border-radius:9px;border:none;cursor:pointer;font-family:'Outfit',sans-serif;transition:background .12s}
+.hub-s-card.str .hub-s-cta{color:#3B6D11;background:rgba(143,175,138,.22)}
+.hub-s-card.str .hub-s-cta:hover{background:rgba(143,175,138,.38)}
+.hub-s-card.frm .hub-s-cta{color:#854F0B;background:rgba(201,123,90,.15)}
+.hub-s-card.frm .hub-s-cta:hover{background:rgba(201,123,90,.28)}
+.hub-s-card.sol .hub-s-cta{color:#444441;background:rgba(88,80,77,.1)}
+.hub-s-card.sol .hub-s-cta:hover{background:rgba(88,80,77,.18)}
+.hub-s-extbadge{position:absolute;top:14px;right:14px;font-size:11px;color:#58504D;opacity:.3}
+.hub-s-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:18px}
+.hub-s-kpi{background:#fff;border-radius:13px;padding:13px 15px;border:1px solid rgba(88,80,77,.09)}
+.hub-s-kpi-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:#58504D;opacity:.45;margin-bottom:5px}
+.hub-s-kpi-val{font-size:22px;font-weight:700;color:#58504D;line-height:1}
+.hub-s-kpi-sub{font-size:10.5px;color:#58504D;opacity:.4;margin-top:3px}
+.hub-s-section-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#58504D;opacity:.38;margin-bottom:10px}
+.hub-s-alerts{display:flex;gap:10px;flex-wrap:wrap}
+.hub-s-chip{display:flex;align-items:center;gap:7px;padding:8px 13px;border-radius:11px;font-size:12px;font-weight:500;flex:1;min-width:150px}
+.hub-s-chip.warn{background:#FAEEDA;color:#854F0B;border:1px solid rgba(201,123,90,.22)}
+.hub-s-chip.dngr{background:#FCEBEB;color:#A32D2D;border:1px solid rgba(226,75,74,.22)}
+.hub-s-chip.ok{background:#EAF3DE;color:#3B6D11;border:1px solid rgba(99,153,34,.18)}
+.hub-s-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
+/* Auxiliaire 2 cols */
+.hub-s-pillars-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+.hub-s-journee{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.hub-s-journee .hub-s-kpi{flex:1;min-width:130px}
+#hub-screen::before{content:'';position:fixed;inset:0;background-image:url('Visuel_Orevy.png');background-repeat:no-repeat;background-position:center center;background-size:500px auto;opacity:0.07;pointer-events:none;z-index:0}
+#hub-screen>*{position:relative;z-index:1}
+</style>
+
+<div class="hub-s-header">
+  <div class="hub-s-logo">
+    <div class="hub-s-logomark">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#fff" stroke-width="1.6"/><circle cx="10" cy="10" r="2.5" fill="#fff"/></svg>
+    </div>
+    <div class="hub-s-logotext">OREVY<span> ·</span></div>
+    <span style="font-size:11px;color:#8FAF8A;font-weight:500;letter-spacing:.5px">Plateforme Petite Enfance</span>
+  </div>
+  <div class="hub-s-avatar">
+    <div class="hub-s-av-circle" id="hub-av-initials">DB</div>
+    <div>
+      <div id="hub-av-name" style="font-size:12px;font-weight:600;color:#58504D"></div>
+      <div id="hub-av-role" style="font-size:10.5px;color:#8FAF8A"></div>
+    </div>
+    <button onclick="logoutUser()" title="Se déconnecter"
+      style="margin-left:10px;background:rgba(88,80,77,.08);border:none;border-radius:8px;padding:6px 10px;font-size:11px;color:#58504D;cursor:pointer;font-family:'Outfit',sans-serif">
+      Déconnexion
+    </button>
+  </div>
+</div>
+
+<div class="hub-s-body">
+  <div class="hub-s-greeting">
+    <div class="hub-s-title" id="hub-s-greeting-title">Bonjour</div>
+    <div class="hub-s-sub" id="hub-s-greeting-sub"></div>
+  </div>
+
+  <!-- VUE ADMIN -->
+  <div id="hub-v-admin" style="display:none">
+    <div class="hub-s-section-lbl" style="margin-bottom:14px">Vos espaces</div>
+    <div class="hub-s-pillars">
+      <div class="hub-s-card str" onclick="enterStructures()">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="#fff"/><rect x="12" y="2" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="2" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".4"/></svg></div>
+        <div class="hub-s-name">Orevy Structures</div>
+        <div class="hub-s-desc">Gestion quotidienne de vos micro-crèches</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Planning</span><span class="hub-s-tag">Familles</span><span class="hub-s-tag">RH</span><span class="hub-s-tag">Stocks</span><span class="hub-s-tag">Pointage</span></div>
+        <div class="hub-s-cta">Accéder →</div>
+      </div>
+      <a class="hub-s-card frm" href="https://davidbucari-ui.github.io/orevy-formations" target="_blank">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3L3 7l8 4 8-4-8-4z" fill="#fff"/><path d="M3 11l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M3 15l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".6"/></svg></div>
+        <div class="hub-s-name">Orevy Formations</div>
+        <div class="hub-s-desc">Formations continues pour vos équipes</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span><span class="hub-s-tag">Attestations</span><span class="hub-s-tag">Quiz</span></div>
+        <div class="hub-s-cta">Accéder →</div>
+      </a>
+      <a class="hub-s-card sol" href="https://davidbucari-ui.github.io/orevy-solutions/" target="_blank">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="#fff" stroke-width="1.5"/><path d="M8 11l2.5 2.5L14 8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="hub-s-name">Orevy Solutions</div>
+        <div class="hub-s-desc">Accompagnement &amp; conseil pédagogique</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Analyse pratique</span><span class="hub-s-tag">Conseil</span><span class="hub-s-tag">Vitrine</span></div>
+        <div class="hub-s-cta">Accéder →</div>
+      </a>
+    </div>
+    <div class="hub-s-section-lbl">Vue réseau du jour</div>
+    <div class="hub-s-kpis" id="hub-kpis-admin">
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Enfants présents</div><div class="hub-s-kpi-val" id="hk-enfants">—</div><div class="hub-s-kpi-sub">sur inscrits</div></div>
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Taux occupation</div><div class="hub-s-kpi-val" id="hk-taux">—</div><div class="hub-s-kpi-sub">cible 85%</div></div>
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Structures actives</div><div class="hub-s-kpi-val">6</div><div class="hub-s-kpi-sub">Réseau Koalakids</div></div>
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Alertes actives</div><div class="hub-s-kpi-val" id="hk-alertes" style="color:#A32D2D">—</div><div class="hub-s-kpi-sub">à traiter</div></div>
+    </div>
+    <div class="hub-s-section-lbl" style="margin-top:6px">Alertes</div>
+    <div class="hub-s-alerts" id="hub-alerts-admin">
+      <div class="hub-s-chip warn">⚠ Stocks bas — chargement…</div>
+    </div>
+  </div>
+
+  <!-- VUE DIRECTRICE -->
+  <div id="hub-v-directrice" style="display:none">
+    <div class="hub-s-section-lbl" style="margin-bottom:14px">Vos espaces</div>
+    <div class="hub-s-pillars">
+      <div class="hub-s-card str" onclick="enterStructures()">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="#fff"/><rect x="12" y="2" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="2" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".4"/></svg></div>
+        <div class="hub-s-name">Orevy Structures</div>
+        <div class="hub-s-desc">Ma crèche au quotidien</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Planning</span><span class="hub-s-tag">Familles</span><span class="hub-s-tag">RH</span><span class="hub-s-tag">Stocks</span></div>
+        <div class="hub-s-cta">Accéder →</div>
+      </div>
+      <a class="hub-s-card frm" href="https://davidbucari-ui.github.io/orevy-formations" target="_blank">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3L3 7l8 4 8-4-8-4z" fill="#fff"/><path d="M3 11l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M3 15l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".6"/></svg></div>
+        <div class="hub-s-name">Orevy Formations</div>
+        <div class="hub-s-desc">Formations de mon équipe</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span><span class="hub-s-tag">Suivi équipe</span></div>
+        <div class="hub-s-cta">Accéder →</div>
+      </a>
+      <div class="hub-s-card sol dis">
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="#fff" stroke-width="1.5"/><path d="M8 11l2.5 2.5L14 8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="hub-s-name">Orevy Solutions</div>
+        <div class="hub-s-desc">Accès réservé admin</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Non disponible</span></div>
+      </div>
+    </div>
+    <div class="hub-s-section-lbl">Ma crèche aujourd'hui</div>
+    <div class="hub-s-kpis">
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Enfants présents</div><div class="hub-s-kpi-val" id="hk-dir-enfants">—</div><div class="hub-s-kpi-sub">sur inscrits</div></div>
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Équipe</div><div class="hub-s-kpi-val" id="hk-dir-equipe">—</div><div class="hub-s-kpi-sub">professionnels</div></div>
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Taux occupation</div><div class="hub-s-kpi-val" id="hk-dir-taux">—</div><div class="hub-s-kpi-sub">cible 85%</div></div>
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Alertes</div><div class="hub-s-kpi-val" id="hk-dir-alertes" style="color:#854F0B">—</div><div class="hub-s-kpi-sub">à vérifier</div></div>
+    </div>
+    <div class="hub-s-section-lbl" style="margin-top:6px">Alertes</div>
+    <div class="hub-s-alerts" id="hub-alerts-dir">
+      <div class="hub-s-chip warn">⚠ Chargement…</div>
+    </div>
+  </div>
+
+  <!-- VUE AUXILIAIRE -->
+  <div id="hub-v-auxiliaire" style="display:none">
+    <div class="hub-s-section-lbl" style="margin-bottom:14px">Vos espaces</div>
+    <div class="hub-s-pillars-2">
+      <div class="hub-s-card str" onclick="enterStructures()">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="#fff"/><rect x="12" y="2" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="2" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".4"/></svg></div>
+        <div class="hub-s-name">Orevy Structures</div>
+        <div class="hub-s-desc">Mon outil quotidien</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Planning</span><span class="hub-s-tag">Familles</span><span class="hub-s-tag">Pointage</span><span class="hub-s-tag">Stocks</span></div>
+        <div class="hub-s-cta">Accéder →</div>
+      </div>
+      <a class="hub-s-card frm" href="https://davidbucari-ui.github.io/orevy-formations" target="_blank">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3L3 7l8 4 8-4-8-4z" fill="#fff"/><path d="M3 11l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M3 15l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".6"/></svg></div>
+        <div class="hub-s-name">Orevy Formations</div>
+        <div class="hub-s-desc">Mes formations en cours</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Maltraitance</span><span class="hub-s-tag">Attestations</span></div>
+        <div class="hub-s-cta">Accéder →</div>
+      </a>
+    </div>
+    <div class="hub-s-section-lbl">Ma journée</div>
+    <div class="hub-s-journee">
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Mon planning</div><div class="hub-s-kpi-val" style="font-size:15px" id="hk-aux-horaire">—</div><div class="hub-s-kpi-sub" id="hk-aux-pause"></div></div>
+      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Enfants présents</div><div class="hub-s-kpi-val" id="hk-aux-enfants" style="color:#3B6D11">—</div><div class="hub-s-kpi-sub">dans ma structure</div></div>
+      <div class="hub-s-chip ok" style="align-self:center;flex:1">✓ Ratio conforme</div>
+    </div>
+  </div>
+</div>
+</div>
+<!-- ── FIN HUB SCREEN ──────────────────────────────────────────── -->
+
 <div id="login-screen" style="display:flex;position:fixed;inset:0;background:linear-gradient(135deg,#1C1917,#292524,#1E1B4B);z-index:9999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:24px;padding:40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
     <div style="text-align:center;margin-bottom:32px">
