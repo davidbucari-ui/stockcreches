@@ -1904,8 +1904,9 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
 
     <!-- ── PAGE ADMIN ── -->
-    <div id="page-admin" style="display:none">
-      <div style="padding:28px 24px;max-width:900px">
+    <div id="page-admin" style="display:none;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;pointer-events:none;z-index:0;display:flex;align-items:center;justify-content:center"><img src="Visuel_Orevy.png" style="width:480px;opacity:0.05;user-select:none" alt=""></div>
+      <div style="padding:28px 24px;max-width:900px;position:relative;z-index:1">
         <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif;margin-bottom:4px">🔐 Administration</div>
         <div style="font-size:13px;color:var(--ink3);margin-bottom:28px">Gestion des comptes utilisateurs</div>
 
@@ -11237,7 +11238,7 @@ function showImportResult(type, html) {
 .hub-s-logotext span{color:#8FAF8A}
 .hub-s-avatar{display:flex;align-items:center;gap:9px}
 .hub-s-av-circle{width:30px;height:30px;border-radius:50%;background:#8FAF8A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-.hub-s-body{max-width:860px;margin:0 auto;padding:28px 24px 40px}
+.hub-s-body{max-width:860px;margin:0 auto;padding:28px 24px 40px;position:relative;z-index:1}
 .hub-s-greeting{margin-bottom:26px}
 .hub-s-title{font-family:'Fraunces',serif;font-size:24px;font-weight:400;color:#58504D;line-height:1.2}
 .hub-s-sub{font-size:13px;color:#58504D;opacity:.5;margin-top:4px}
@@ -11283,11 +11284,11 @@ function showImportResult(type, html) {
 .hub-s-pillars-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
 .hub-s-journee{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .hub-s-journee .hub-s-kpi{flex:1;min-width:130px}
-#hub-screen::before{content:'';position:fixed;inset:0;background-image:url('Visuel_Orevy.png');background-repeat:no-repeat;background-position:center center;background-size:500px auto;opacity:0.07;pointer-events:none;z-index:0}
-#hub-screen>*{position:relative;z-index:1}
+
 </style>
 
-<div class="hub-s-header">
+<div style="position:fixed;inset:0;pointer-events:none;z-index:0;display:flex;align-items:center;justify-content:center"><img src="Visuel_Orevy.png" style="width:480px;opacity:0.07;user-select:none" alt=""></div>
+<div class="hub-s-header" style="position:relative;z-index:1">
   <div class="hub-s-logo">
     <div class="hub-s-logomark">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#fff" stroke-width="1.6"/><circle cx="10" cy="10" r="2.5" fill="#fff"/></svg>
