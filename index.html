@@ -336,6 +336,39 @@ body {
   overflow: hidden;
 }
 
+/* Planning : contenu aligné en haut */
+.planning-wrap { display: block; }
+
+/* Plein écran : remplir l'écran et aligner en haut (pas de centrage navigateur) */
+:fullscreen, :-webkit-full-screen {
+  width: 100% !important;
+  height: 100% !important;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.app:fullscreen, .app:-webkit-full-screen {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  align-content: start;
+}
+:fullscreen .main, :-webkit-full-screen .main { justify-content: flex-start; }
+
+/* Stocks pédagogiques : en-têtes fixes + scroll interne */
+#inv-table-materiel { max-height: 62vh; overflow-y: auto; overflow-x: auto; }
+#inv-table-materiel thead th { position: sticky; top: 0; z-index: 5; }
+#inv-table-consommable { max-height: 62vh; overflow-y: auto; overflow-x: auto; }
+#inv-table-consommable thead th { position: sticky; top: 0; z-index: 5; }
+#entretien-scroll { max-height: 62vh; overflow-y: auto; overflow-x: auto; }
+#entretien-scroll thead th { position: sticky; top: 0; z-index: 5; background: var(--bg); }
+
+.inv-pagination { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:12px; padding-right:76px; }
+.inv-pagination .pg-info { font-size:12px; color:var(--ink3); }
+.inv-pagination .pg-btns { display:flex; align-items:center; gap:6px; }
+.inv-pg-btn { padding:6px 12px; border:1px solid var(--border); background:var(--surface2); border-radius:8px; font-family:inherit; font-size:13px; font-weight:600; color:var(--ink2); cursor:pointer; transition:background 0.15s; }
+.inv-pg-btn:hover:not(:disabled) { background:var(--bg); }
+.inv-pg-btn:disabled { opacity:0.4; cursor:default; }
+.inv-pg-cur { font-size:13px; font-weight:700; color:var(--ink); min-width:70px; text-align:center; }
+
 table { width: 100%; border-collapse: collapse; }
 
 thead th {
@@ -906,25 +939,31 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item active" data-roles="admin,directrice,auxiliaire,stagiaire" onclick="showPage('dashboard', this)">
     <span class="nav-icon">🏠</span> Tableau de bord
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('inventaire', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="stocks" onclick="showPage('inventaire', this)">
     <span class="nav-icon">📦</span> Stocks pédagogiques
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('entretien', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="entretien" onclick="showPage('entretien', this)">
     <span class="nav-icon">🧹</span> Stocks entretien
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('univers', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="univers" onclick="showPage('univers', this)">
     <span class="nav-icon">🌟</span> Univers ludiques
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('familles', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="familles" onclick="showPage('familles', this)">
     <span class="nav-icon">👨‍👩‍👧</span> Familles
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('planning', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="planning" onclick="showPage('planning', this)">
     <span class="nav-icon">📅</span> Planning
   </button>
-  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('fournisseurs', this)">
+  <button class="nav-item" data-roles="admin,directrice" data-module="rh" onclick="showPage('rh', this)">
+    <span class="nav-icon">👥</span> Ressources humaines
+  </button>
+  <button class="nav-item" data-roles="admin,directrice" data-module="fournisseurs" onclick="showPage('fournisseurs', this)">
     <span class="nav-icon">🏭</span> Fournisseurs
   </button>
-  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('statistiques', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire" data-module="commandes" onclick="showPage('commandes', this)">
+    <span class="nav-icon">🛒</span> Commandes
+  </button>
+  <button class="nav-item" data-roles="admin,directrice" data-module="statistiques" onclick="showPage('statistiques', this)">
     <span class="nav-icon">📊</span> Statistiques
     <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
@@ -933,6 +972,9 @@ textarea { resize: vertical; min-height: 72px; }
   </button>
   <button class="nav-item" data-roles="admin,directrice" onclick="showPage('parametres', this)">
     <span class="nav-icon">⚙️</span> Paramètres
+  </button>
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,stagiaire" data-module="formations" onclick="window.open('https://davidbucari-ui.github.io/orevy-formations/','_blank')" style="color:#52B788">
+    <span class="nav-icon">🎓</span> Formations
   </button>
   <button class="nav-item" data-roles="admin" onclick="showPage('admin', this)">
     <span class="nav-icon">🔐</span> Administration
@@ -944,6 +986,14 @@ textarea { resize: vertical; min-height: 72px; }
       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;cursor:pointer">
       <option value="all">Toutes les crèches</option>
     </select>
+  </div>
+
+  <div style="padding:0 16px 16px">
+    <button id="btn-fullscreen" onclick="toggleFullscreen()" title="Basculer en plein écran (Échap pour sortir)"
+      style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.75);font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s"
+      onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+      <span id="btn-fullscreen-icon">⛶</span> <span id="btn-fullscreen-label">Plein écran</span>
+    </button>
   </div>
 
   <div class="sidebar-creches">
@@ -988,95 +1038,90 @@ textarea { resize: vertical; min-height: 72px; }
 
     <!-- ── PAGE DASHBOARD ── -->
     <div id="page-dashboard">
-      <div style="padding:28px 24px;max-width:700px">
+      <!-- Dashboard DIRECTRICE/ADMIN -->
+      <div id="dash-directrice" style="display:none;padding:24px;max-width:960px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">Vue pilotage</div>
+            <div style="font-size:13px;color:var(--ink3);margin-top:2px" id="hub-date-dir"></div>
+          </div>
+          <div id="dash-dir-creche" style="font-size:13px;color:var(--ink3);font-weight:600"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px" id="dash-dir-kpis"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
+          <div id="dash-dir-equipe" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
+          <div id="dash-dir-taux" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
+          <div id="dash-dir-alertes" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div id="dash-dir-planning" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
+          <div id="dash-dir-stats" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
+        </div>
+      </div>
 
-        <!-- Titre + date -->
+      <!-- Dashboard AUXILIAIRE -->
+      <div id="dash-auxiliaire" style="display:none;padding:24px;max-width:800px">
+        <div style="margin-bottom:20px">
+          <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">Ma journée</div>
+          <div style="font-size:13px;color:var(--ink3);margin-top:2px" id="hub-date-aux"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px" id="dash-aux-kpis"></div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px" id="dash-aux-actions"></div>
+        <div id="dash-aux-enfants" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
+      </div>
+
+      <!-- Dashboard HUB (stagiaire + fallback) -->
+      <div id="dash-hub" style="display:none;padding:28px 24px;max-width:700px">
         <div style="margin-bottom:24px">
           <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif">Tableau de bord</div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px" id="hub-date"></div>
         </div>
-
-        <!-- Grille 2x3 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-
           <button onclick="showPage('inventaire', document.querySelectorAll('.nav-item')[1])"
             style="background:linear-gradient(135deg,#4F46E5,#7C3AED);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(79,70,229,0.3);position:relative;overflow:hidden"
-            onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(79,70,229,0.4)'"
-            onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(79,70,229,0.3)'">
+            onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
             <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">📦</div>
             <div style="font-size:32px;margin-bottom:10px">📦</div>
             <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Stocks pédagogiques</div>
             <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Inventaire · Commandes · Fournisseurs</div>
           </button>
-
-          <button onclick="showPage('univers', document.querySelectorAll('.nav-item')[3])"
-            style="background:linear-gradient(135deg,#7C3AED,#C026D3);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(124,58,237,0.3);position:relative;overflow:hidden"
-            onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(124,58,237,0.4)'"
-            onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(124,58,237,0.3)'">
-            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">🌟</div>
-            <div style="font-size:32px;margin-bottom:10px">🌟</div>
-            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Univers ludiques</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Bibliothèque pédagogique · Fiches PDF</div>
-          </button>
-
-          <button onclick="window.open('reglementaire.html','_blank')"
-            style="background:linear-gradient(135deg,#292018,#7C5328);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(0,0,0,0.2);position:relative;overflow:hidden"
+          <button onclick="showPage('familles', null)"
+            style="background:linear-gradient(135deg,#134E4A,#0891B2);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(8,145,178,0.3);position:relative;overflow:hidden"
             onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
-            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">📋</div>
-            <div style="font-size:32px;margin-bottom:10px">📋</div>
-            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Base réglementaire</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">35 fiches · Décret 2025-304</div>
-          </button>
-
-          <button onclick="window.open('protocoles.html','_blank')"
-            style="background:linear-gradient(135deg,#0D2137,#1A4B7A);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(0,0,0,0.2);position:relative;overflow:hidden"
-            onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
-            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">📚</div>
-            <div style="font-size:32px;margin-bottom:10px">📚</div>
-            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Base documentaire</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Protocoles · Documents RH</div>
-          </button>
-
-          <button onclick="showPage('entretien', document.querySelectorAll('.nav-item')[2])"
-            style="background:linear-gradient(135deg,#134E4A,#0D9488);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(13,148,136,0.3);position:relative;overflow:hidden"
-            onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
-            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">🧹</div>
-            <div style="font-size:32px;margin-bottom:10px">🧹</div>
-            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Stocks entretien</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Nettoyage · Désinfection · Hygiène</div>
-          </button>
-
-          <button id="dashboard-card-rh" onclick="showPage('rh', null)" style="display:none;background:linear-gradient(135deg,#1A3A2A,#0D6B4A);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(13,107,74,0.3);position:relative;overflow:hidden"
-            onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(13,107,74,0.45)'"
-            onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(13,107,74,0.3)'">
-            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">🧑‍💼</div>
-            <div style="font-size:32px;margin-bottom:10px">🧑‍💼</div>
-            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Ressources humaines</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Contrats · Congés · Recrutement · Formation</div>
-          </button>
-
-          <button id="dashboard-card-familles" onclick="showPage('familles', null)" style="background:linear-gradient(135deg,#134E4A,#0891B2);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(8,145,178,0.3);position:relative;overflow:hidden"
-            onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(8,145,178,0.45)'"
-            onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(8,145,178,0.3)'">
             <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">👨‍👩‍👧</div>
             <div style="font-size:32px;margin-bottom:10px">👨‍👩‍👧</div>
             <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Familles & Enfants</div>
-            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-              <span class="fam-nm" style="background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700">— NM</span>
-              <span class="fam-m"  style="background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700">— M</span>
-              <span class="fam-pros" style="background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700">—</span>
-            </div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Fiches · Planning · Pointage</div>
           </button>
-
-          <button id="dashboard-card-planning" onclick="showPage('planning', null)" style="display:none;background:linear-gradient(135deg,#1e3a5f,#2563EB);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(37,99,235,0.3);position:relative;overflow:hidden"
-            onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(37,99,235,0.45)'"
-            onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(37,99,235,0.3)'">
+          <button onclick="showPage('planning', null)"
+            style="background:linear-gradient(135deg,#1e3a5f,#2563EB);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(37,99,235,0.3);position:relative;overflow:hidden"
+            onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
             <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">📅</div>
             <div style="font-size:32px;margin-bottom:10px">📅</div>
             <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Planning</div>
             <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Gantt · Taux d'encadrement · Horaires</div>
           </button>
-
+          <button onclick="showPage('univers', null)"
+            style="background:linear-gradient(135deg,#7C3AED,#C026D3);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(124,58,237,0.3);position:relative;overflow:hidden"
+            onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">🌟</div>
+            <div style="font-size:32px;margin-bottom:10px">🌟</div>
+            <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:6px">Univers ludiques</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5">Bibliothèque pédagogique · Fiches PDF</div>
+          </button>
+          <button data-module-gate="formations" onclick="window.open('https://davidbucari-ui.github.io/orevy-formations/','_blank')"
+            style="background:linear-gradient(135deg,#2D6A4F,#52B788);border:none;border-radius:20px;padding:24px;text-align:left;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 16px rgba(45,106,79,0.3);position:relative;overflow:hidden;grid-column:1/-1"
+            onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+            <div style="position:absolute;right:-10px;bottom:-10px;font-size:80px;opacity:0.1">🎓</div>
+            <div style="display:flex;align-items:center;gap:14px">
+              <div style="font-size:32px">🎓</div>
+              <div>
+                <div style="font-weight:800;font-size:16px;color:#fff;font-family:'Syne',sans-serif;margin-bottom:4px">Orevy Formations</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5">12 formations · Posture · Pédagogie · Management · Gestion</div>
+              </div>
+              <div style="margin-left:auto;font-size:12px;color:rgba(255,255,255,0.5);font-weight:600">↗ Ouvrir</div>
+            </div>
+          </button>
         </div>
       </div>
     </div>
@@ -1295,6 +1340,7 @@ textarea { resize: vertical; min-height: 72px; }
           <tbody id="tableBody"></tbody>
         </table>
       </div>
+      <div id="inv-pagination" class="inv-pagination"></div>
 
       <!-- Tableau consommables -->
       <div id="inv-table-consommable" class="table-wrap" style="display:none">
@@ -1315,6 +1361,7 @@ textarea { resize: vertical; min-height: 72px; }
           <tbody id="tableBodyConso"></tbody>
         </table>
       </div>
+      <div id="conso-pagination" class="inv-pagination" style="display:none"></div>
     </div>
 
     <!-- ── PAGE ENTRETIEN ── -->
@@ -1333,12 +1380,12 @@ textarea { resize: vertical; min-height: 72px; }
           <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink3)">🔍</span>
           <input type="text" id="searchEntretien" placeholder="Rechercher un article d'entretien…"
             style="width:100%;padding:10px 10px 10px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Instrument Sans',sans-serif;font-size:14px;background:var(--surface2)"
-            oninput="renderEntretien()">
+            oninput="window._entretienPage=1;renderEntretien()">
         </div>
       </div>
 
       <!-- Table -->
-      <div style="padding:0 20px 20px;overflow-x:auto">
+      <div id="entretien-scroll" style="padding:0 20px 20px;overflow-x:auto">
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr>
@@ -1354,6 +1401,7 @@ textarea { resize: vertical; min-height: 72px; }
           <tbody id="entretienBody"></tbody>
         </table>
       </div>
+      <div id="entretien-pagination" class="inv-pagination" style="padding:0 76px 20px 20px"></div>
     </div>
 
     <!-- ── PAGE COMMANDES ── -->
@@ -1720,7 +1768,7 @@ textarea { resize: vertical; min-height: 72px; }
 
 
     <div id="page-planning" style="display:none">
-      <div style="padding:20px 28px">
+      <div class="planning-wrap" style="padding:12px 28px 20px">
 
         <!-- En-tête commun -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
@@ -1897,8 +1945,8 @@ textarea { resize: vertical; min-height: 72px; }
               <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Rôle</label>
               <select id="admin-new-role"
                 style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
-                <option value="directrice">🌸 Directrice</option>
-                <option value="auxiliaire">🌿 Auxiliaire</option>
+                <option value="Directrice">🌸 Directrice</option>
+                <option value="Auxiliaire">🌿 Auxiliaire</option>
                 <option value="stagiaire">🎓 Stagiaire</option>
                 <option value="admin">👑 Admin</option>
               </select>
@@ -2246,12 +2294,7 @@ textarea { resize: vertical; min-height: 72px; }
         <div class="form-group">
           <label>Structure *</label>
           <select id="f-creche">
-            <option>Brunet</option>
-            <option>Cuers</option>
-            <option>Ollioules</option>
-            <option>St Jean</option>
-            <option>Picot 1</option>
-            <option>Picot 2</option>
+            <option value="">-- Choisir --</option>
           </select>
         </div>
         <div class="form-group">
@@ -3770,12 +3813,22 @@ function renderEntretien() {
   }).sort((a,b) => a.nom.localeCompare(b.nom,'fr',{sensitivity:'base'}));
 
   const tb = document.getElementById('entretienBody');
+  const ENT_PER_PAGE = 10;
+  const entTotal = data.length;
+  const entPages = Math.max(1, Math.ceil(entTotal / ENT_PER_PAGE));
+  if (!window._entretienPage) window._entretienPage = 1;
+  if (window._entretienPage > entPages) window._entretienPage = entPages;
+  if (window._entretienPage < 1) window._entretienPage = 1;
+  const entStart = (window._entretienPage - 1) * ENT_PER_PAGE;
+  const entData  = data.slice(entStart, entStart + ENT_PER_PAGE);
+  const entPagEl = document.getElementById('entretien-pagination');
   if (data.length === 0) {
     tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink3)">Aucun article d'entretien — cliquez sur + Ajouter</td></tr>`;
+    if (entPagEl) entPagEl.innerHTML = '';
     return;
   }
 
-  tb.innerHTML = data.map(a => {
+  tb.innerHTML = entData.map(a => {
     const stockColor = a.stock === 0 ? '#DC2626' : a.min > 0 && a.stock <= a.min ? '#D97706' : 'var(--ink)';
     return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="showDetail(${a.id})">
       <td style="padding:12px">
@@ -3798,6 +3851,14 @@ function renderEntretien() {
       </td>
     </tr>`;
   }).join('');
+
+  if (entPagEl) entPagEl.innerHTML = _pagerHTML(entTotal, ENT_PER_PAGE, window._entretienPage, entPages, 'gotoEntretienPage');
+}
+function gotoEntretienPage(p) {
+  window._entretienPage = p;
+  renderEntretien();
+  const wrap = document.getElementById('entretien-scroll');
+  if (wrap) wrap.scrollTop = 0;
 }
 
 function openAddEntretien() {
@@ -3908,12 +3969,107 @@ function getFamilles(crecheId) {
 }
 function saveFamilles(data, crecheId) {
   localStorage.setItem('orevy_familles_' + (crecheId || 'all'), JSON.stringify(data));
+  pushFamillesCloud(data, crecheId);  // write-through Supabase RH
 }
 function getBerceaux(crecheId) {
   try { return JSON.parse(localStorage.getItem('orevy_berceaux_' + (crecheId||'all')) || '[]'); } catch { return []; }
 }
 function saveBerceaux(data, crecheId) {
   localStorage.setItem('orevy_berceaux_' + (crecheId||'all'), JSON.stringify(data));
+  pushBerceauxCloud(data, crecheId);  // write-through Supabase RH
+}
+
+// ── Sync Supabase Familles (projet RH) ────────────────────────────
+function enfantToRow(e, crecheId) {
+  return {
+    id: e.id, creche_id: crecheId || 'all',
+    data: e,  // objet enfant complet : garantit qu'aucun champ n'est perdu
+
+    prenom: e.prenom||'', nom: e.nom||'', ddn: e.ddn||null,
+    type: e.type||'', contrat_caf: e.contrat_caf||'', num_caf: e.num_caf||'',
+    nss1: e.nss1||'', nss2: e.nss2||'', qf: e.qf||'',
+    allergies: e.allergies||'', pai: e.pai||'', medecin: e.medecin||'',
+    entree: e.entree||null, sortie: e.sortie||null,
+    jours: (e.jours ?? null), heures: (e.heures ?? null),
+    jours_presence: e.jours_presence||[], notes_libres: e.notes_libres||'',
+    parent1: e.parent1||{}, parent2: e.parent2||{}, referents: e.referents||[],
+    factures: e.factures||[], documents: e.documents||[],
+  };
+}
+function rowToEnfant(r) {
+  // La colonne data contient l'objet enfant complet -> fidélité totale
+  if (r.data && typeof r.data === 'object' && Object.keys(r.data).length) {
+    return Object.assign({}, r.data, { id: r.id });
+  }
+  // Fallback : reconstruction depuis les colonnes plates (lignes legacy)
+  return {
+    id: r.id, prenom: r.prenom||'', nom: r.nom||'', ddn: r.ddn||'',
+    type: r.type||'2.5-6', contrat_caf: r.contrat_caf||'PSU', num_caf: r.num_caf||'',
+    nss1: r.nss1||'', nss2: r.nss2||'', qf: r.qf||'',
+    allergies: r.allergies||'', pai: r.pai||'', medecin: r.medecin||'',
+    entree: r.entree||'', sortie: r.sortie||'',
+    jours: (r.jours ?? 5), heures: (r.heures ?? 40),
+    jours_presence: r.jours_presence||[], notes_libres: r.notes_libres||'',
+    parent1: r.parent1||{}, parent2: r.parent2||{}, referents: r.referents||[],
+    factures: r.factures||[], documents: r.documents||[],
+  };
+}
+
+// Remplace l'ensemble des enfants d'une crèche dans Supabase (atomique côté local)
+async function pushFamillesCloud(data, crecheId) {
+  if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
+  const cid = crecheId || 'all';
+  try {
+    await sbDeleteWhere('enfants', `creche_id=eq.${encodeURIComponent(cid)}`);
+    if (data.length) await sbInsert('enfants', data.map(e => enfantToRow(e, cid)));
+  } catch(e) { console.error('[pushFamilles]', e.message); showNotif('⚠ Sync familles : ' + e.message); }
+}
+async function pushBerceauxCloud(data, crecheId) {
+  if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
+  const cid = crecheId || 'all';
+  try {
+    await sbDeleteWhere('berceaux', `creche_id=eq.${encodeURIComponent(cid)}`);
+    if (data.length) await sbInsert('berceaux', data.map(b => ({ id: b.id, creche_id: cid, data: b })));
+  } catch(e) { console.error('[pushBerceaux]', e.message); showNotif('⚠ Sync berceaux : ' + e.message); }
+}
+
+// Migration unique : pousse vers le cloud toutes les clés localStorage d'un préfixe
+async function migrateLocalKeys(prefix, pushFn) {
+  const tasks = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(prefix)) {
+      const cid = k.slice(prefix.length);
+      let arr = []; try { arr = JSON.parse(localStorage.getItem(k) || '[]'); } catch {}
+      if (Array.isArray(arr) && arr.length) tasks.push(pushFn(arr, cid));
+    }
+  }
+  if (tasks.length) { await Promise.all(tasks); showNotif('☁️ Données familles migrées vers le cloud'); }
+}
+
+// Chargement au démarrage : cloud -> cache localStorage (ou migration si cloud vide)
+async function loadFamillesCloud() {
+  if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
+  try {
+    const [enfRows, bercRows] = await Promise.all([
+      sbGet('enfants').catch(() => []),
+      sbGet('berceaux').catch(() => []),
+    ]);
+    // Enfants
+    if (enfRows.length === 0) {
+      await migrateLocalKeys('orevy_familles_', pushFamillesCloud);
+    } else {
+      const by = {}; enfRows.forEach(r => { (by[r.creche_id] = by[r.creche_id] || []).push(rowToEnfant(r)); });
+      Object.entries(by).forEach(([cid, arr]) => localStorage.setItem('orevy_familles_' + cid, JSON.stringify(arr)));
+    }
+    // Berceaux
+    if (bercRows.length === 0) {
+      await migrateLocalKeys('orevy_berceaux_', pushBerceauxCloud);
+    } else {
+      const by = {}; bercRows.forEach(r => { (by[r.creche_id] = by[r.creche_id] || []).push(Object.assign({ id: r.id }, r.data || {})); });
+      Object.entries(by).forEach(([cid, arr]) => localStorage.setItem('orevy_berceaux_' + cid, JSON.stringify(arr)));
+    }
+  } catch(e) { console.warn('[loadFamillesCloud]', e.message); }
 }
 
 // ── Utilitaires ───────────────────────────────────────────────────
@@ -4846,15 +5002,229 @@ function renderSidebarCreches() {
   sel.innerHTML =
     `<option value="all" ${currentCreche === 'all' ? 'selected' : ''}>Toutes les crèches</option>` +
     CRECHES_DATA.map(c => {
-      const cnt = ARTICLES.filter(a => a.creche === c.nom).length;
-      return `<option value="${c.nom}" ${currentCreche === c.nom ? 'selected' : ''}>${c.nom} (${cnt})</option>`;
+      return `<option value="${c.nom}" ${currentCreche === c.nom ? 'selected' : ''}>${c.nom}</option>`;
     }).join('');
 }
 // ── FIN PARAMÈTRES ────────────────────────────────────────────────
 // ── FIN HUB ───────────────────────────────────────────────────────
 let dashCharts = {};
 
+// ── DASHBOARDS PAR RÔLE ────────────────────────────────────────────
+
 function renderDashboard() {
+  const role = (currentUserRole || 'stagiaire').toLowerCase();
+  const dirEl  = document.getElementById('dash-directrice');
+  const auxEl  = document.getElementById('dash-auxiliaire');
+  const hubEl  = document.getElementById('dash-hub');
+  if (dirEl) dirEl.style.display = 'none';
+  if (auxEl) auxEl.style.display = 'none';
+  if (hubEl) hubEl.style.display = 'none';
+
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  if (role === 'admin' || role === 'directrice') {
+    if (dirEl) { dirEl.style.display = 'block'; renderDashboardDirectrice(dateStr); }
+  } else if (role === 'auxiliaire') {
+    if (auxEl) { auxEl.style.display = 'block'; renderDashboardAuxiliaire(dateStr); }
+  } else {
+    if (hubEl) { hubEl.style.display = 'block'; }
+    const el = document.getElementById('hub-date');
+    if (el) el.textContent = dateStr;
+    if (typeof renderDashboardFamillesTile === 'function') renderDashboardFamillesTile();
+  }
+}
+
+async function renderDashboardDirectrice(dateStr) {
+  const el = document.getElementById('hub-date-dir');
+  if (el) el.textContent = dateStr;
+  const crecheLabel = document.getElementById('dash-dir-creche');
+  if (crecheLabel) crecheLabel.textContent = currentCreche === 'all' ? 'Toutes les structures' : currentCreche;
+
+  const low = getLowStockArticles();
+  const exp = getExpiryAlerts();
+
+  let enfantsPresents = '—';
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const pts = await sbGet('pointages_enfants',
+      'date=eq.'+todayStr+'&statut=eq.present&select=id' + (currentCreche !== 'all' ? '&creche=eq.'+encodeURIComponent(currentCreche) : '')
+    ).catch(() => []);
+    enfantsPresents = pts.length;
+  } catch(e) {}
+
+  const kpiEl = document.getElementById('dash-dir-kpis');
+  if (kpiEl) kpiEl.innerHTML = `
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Enfants présents</div>
+      <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif;color:var(--green)">${enfantsPresents}</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Articles en stock</div>
+      <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif">${ARTICLES.length}</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);${low.length>0?'border-left:3px solid var(--red)':''}">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Alertes stock</div>
+      <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif;color:${low.length>0?'var(--red)':'var(--ink)'}">${low.length + exp.length}</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Valeur stock</div>
+      <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif">${ARTICLES.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)} €</div>
+    </div>`;
+
+  const equipeEl = document.getElementById('dash-dir-equipe');
+  if (equipeEl) {
+    loadSalaries();
+    const actifs = SALARIES.filter(s => s.statut === 'actif').slice(0, 5);
+    equipeEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">👥 Équipe</div>' +
+      (actifs.length === 0 ? '<div style="font-size:13px;color:var(--ink3)">Aucun salarié</div>' :
+        actifs.map(s => `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <span>${s.prenom||''} ${(s.nom||'').charAt(0)}.</span>
+          <span style="font-size:11px;background:var(--green-lt);color:var(--green);padding:2px 8px;border-radius:10px;font-weight:600">Actif</span>
+        </div>`).join('') +
+        (SALARIES.filter(s=>s.statut==='actif').length > 5 ? `<div style="font-size:12px;color:var(--ink3);margin-top:6px">+ ${SALARIES.filter(s=>s.statut==='actif').length - 5} autres</div>` : ''));
+  }
+
+  const tauxEl = document.getElementById('dash-dir-taux');
+  if (tauxEl) tauxEl.innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">📊 Taux encadrement</div>
+    <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Consultez le planning pour le détail</div>
+    <button onclick="showPage('planning', document.querySelector('.nav-item[onclick*=planning]'))"
+      style="width:100%;padding:8px;background:var(--accent-lt);color:var(--accent);border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+      Voir le planning →
+    </button>`;
+
+  const alertesEl = document.getElementById('dash-dir-alertes');
+  if (alertesEl) {
+    const allAlerts = [
+      ...low.map(a => ({ icon:'🔴', msg: 'Stock bas — '+a.nom, sub: a.creche+' : '+a.stock+'/'+a.min })),
+      ...exp.map(a => ({ icon:'⏰', msg: 'Péremption — '+a.nom, sub: formatExpiry(a.expiry) }))
+    ];
+    alertesEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">⚠ Alertes ('+allAlerts.length+')</div>' +
+      (allAlerts.length === 0
+        ? '<div style="font-size:13px;color:var(--green)">✅ Tout est en ordre</div>'
+        : allAlerts.slice(0,4).map(al =>
+          '<div style="padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<div style="font-size:12px;font-weight:600">'+al.icon+' '+al.msg+'</div>' +
+          '<div style="font-size:11px;color:var(--ink3)">'+al.sub+'</div></div>').join('')
+        + (allAlerts.length > 4 ? '<div style="font-size:12px;color:var(--ink3);margin-top:6px">+ '+(allAlerts.length-4)+' autres</div>' : ''));
+  }
+
+  const planEl = document.getElementById('dash-dir-planning');
+  if (planEl) {
+    const jours = ['Lun','Mar','Mer','Jeu','Ven'];
+    const todayDate = new Date();
+    const monday = new Date(todayDate);
+    monday.setDate(todayDate.getDate() - (todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1));
+    planEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">📅 Semaine en cours</div>' +
+      jours.map((j, i) => {
+        const d = new Date(monday); d.setDate(monday.getDate() + i);
+        const isToday = d.toDateString() === todayDate.toDateString();
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px'+(isToday?';font-weight:700;color:var(--accent)':'')+'">'+
+          '<span>'+j+' '+d.getDate()+'/'+(d.getMonth()+1)+'</span>'+
+          '<span style="font-size:11px;color:var(--ink3)">'+(isToday ? "Aujourd'hui" : '')+'</span></div>';
+      }).join('') +
+      '<button onclick="showPage(\'planning\', document.querySelector(\'.nav-item[onclick*=planning]\'))" style="width:100%;margin-top:10px;padding:7px;background:none;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Planning complet →</button>';
+  }
+
+  const statsEl = document.getElementById('dash-dir-stats');
+  if (statsEl) {
+    const commEnCours = COMMANDES.filter(c=>c.status==='en-cours').length;
+    statsEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">📈 Résumé</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Valeur stock</span><span style="font-weight:700">'+ARTICLES.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)+' €</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Commandes en cours</span><span style="font-weight:700;color:'+(commEnCours>0?'var(--amber)':'var(--ink)')+'">'+commEnCours+'</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Salariés actifs</span><span style="font-weight:700">'+SALARIES.filter(s=>s.statut==='actif').length+'</span></div>' +
+      '</div>' +
+      '<button data-module-gate="formations" onclick="window.open(\'https://davidbucari-ui.github.io/orevy-formations/\',\'_blank\')" style="margin-top:12px;width:100%;padding:9px;background:linear-gradient(135deg,#2D6A4F,#52B788);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">🎓 Orevy Formations ↗</button>';
+  }
+  if (typeof applyModuleAccess === 'function') applyModuleAccess();
+}
+
+async function renderDashboardAuxiliaire(dateStr) {
+  const el = document.getElementById('hub-date-aux');
+  if (el) el.textContent = dateStr;
+
+  const low = getLowStockArticles();
+
+  let enfantsPresents = '—';
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const pts = await sbGet('pointages_enfants',
+      'date=eq.'+todayStr+'&statut=eq.present&select=id' + (currentCreche !== 'all' ? '&creche=eq.'+encodeURIComponent(currentCreche) : '')
+    ).catch(() => []);
+    enfantsPresents = pts.length;
+  } catch(e) {}
+
+  const kpiEl = document.getElementById('dash-aux-kpis');
+  if (kpiEl) kpiEl.innerHTML = `
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Enfants présents</div>
+      <div style="font-size:28px;font-weight:800;font-family:'Syne',sans-serif;color:var(--green)">${enfantsPresents}</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border);${low.length>0?'border-left:3px solid var(--red)':''}">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Alertes stock</div>
+      <div style="font-size:28px;font-weight:800;font-family:'Syne',sans-serif;color:${low.length>0?'var(--red)':'var(--ink)'}">${low.length}</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Ma structure</div>
+      <div style="font-size:16px;font-weight:800;font-family:'Syne',sans-serif">${currentCreche !== 'all' ? currentCreche : 'Toutes'}</div>
+    </div>`;
+
+  const actEl = document.getElementById('dash-aux-actions');
+  if (actEl) actEl.innerHTML = `
+    <button onclick="showPage('familles', document.querySelector('.nav-item[onclick*=familles]'))"
+      style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:left;cursor:pointer"
+      onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow=''">
+      <div style="font-size:28px;margin-bottom:8px">📋</div>
+      <div style="font-size:14px;font-weight:700;font-family:'Syne',sans-serif">Pointer les enfants</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:4px">Entrées / sorties du jour</div>
+    </button>
+    <button onclick="showPage('planning', document.querySelector('.nav-item[onclick*=planning]'))"
+      style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:left;cursor:pointer"
+      onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow=''">
+      <div style="font-size:28px;margin-bottom:8px">📅</div>
+      <div style="font-size:14px;font-weight:700;font-family:'Syne',sans-serif">Mon planning</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:4px">Semaine en cours</div>
+    </button>
+    <button onclick="showPage('inventaire', document.querySelectorAll('.nav-item')[1])"
+      style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:left;cursor:pointer${low.length>0?';border-left:3px solid var(--red)':''}"
+      onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow=''">
+      <div style="font-size:28px;margin-bottom:8px">📦</div>
+      <div style="font-size:14px;font-weight:700;font-family:'Syne',sans-serif">Gérer les stocks</div>
+      <div style="font-size:12px;color:${low.length>0?'var(--red)':'var(--ink3)'};margin-top:4px">${low.length>0?low.length+' alerte(s) en cours':'Stocks à jour'}</div>
+    </button>
+    <button data-module-gate="formations" onclick="window.open('https://davidbucari-ui.github.io/orevy-formations/','_blank')"
+      style="background:linear-gradient(135deg,#2D6A4F,#52B788);border:none;border-radius:var(--radius);padding:18px;text-align:left;cursor:pointer"
+      onmouseover="this.style.boxShadow='0 4px 12px rgba(45,106,79,0.3)'" onmouseout="this.style.boxShadow=''">
+      <div style="font-size:28px;margin-bottom:8px">🎓</div>
+      <div style="font-size:14px;font-weight:700;font-family:'Syne',sans-serif;color:#fff">Mes formations</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px">Orevy Formations ↗</div>
+    </button>`;
+
+  const enfEl = document.getElementById('dash-aux-enfants');
+  if (enfEl) {
+    let enfHtml = '<div style="font-size:13px;color:var(--ink3)">Chargement…</div>';
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const pts = await sbGet('pointages_enfants',
+        'date=eq.'+todayStr+'&select=enfant_nom,heure_arrivee,statut' +
+        (currentCreche !== 'all' ? '&creche=eq.'+encodeURIComponent(currentCreche) : '') +
+        '&order=heure_arrivee.asc&limit=12'
+      ).catch(() => []);
+      enfHtml = pts.length === 0
+        ? '<div style="font-size:13px;color:var(--ink3)">Aucun enfant point\u00e9 aujourd\'hui</div>'
+        : '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">' +
+          pts.map(p => '<div style="background:var(--bg);border-radius:8px;padding:8px 12px"><div style="font-size:13px;font-weight:600">'+(p.enfant_nom||'—')+'</div><div style="font-size:11px;color:var(--ink3)">arr. '+(p.heure_arrivee||'—')+'</div></div>').join('') +
+          '</div>';
+    } catch(e) { enfHtml = '<div style="font-size:13px;color:var(--ink3)">Données indisponibles</div>'; }
+    enfEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:12px">👶 Enfants présents aujourd\'hui</div>' + enfHtml;
+  }
+  if (typeof applyModuleAccess === 'function') applyModuleAccess();
+}
+
+// ── (ancien renderDashboard conservé pour page Statistiques) ──
+function renderDashboardStats() {
   // KPI
   const low = getLowStockArticles();
   const exp = getExpiryAlerts();
@@ -4979,6 +5349,59 @@ const ROLE_LABELS = {
   auxiliaire: '🌿 Auxiliaire', stagiaire: '🎓 Stagiaire',
 };
 
+// ════════════════════════════════════════════════════════════
+//  SYSTÈME MODULAIRE — souscriptions
+//  Pilote l'affichage des modules selon le tier souscrit
+// ════════════════════════════════════════════════════════════
+
+// Modules disponibles par tier (fallback si pas de souscription en base)
+const TIER_MODULES = {
+  starter:   ['stocks'],
+  essentiel: ['stocks','familles','planning'],
+  pro:       ['stocks','familles','planning','rh','formations'],
+  reseau:    ['stocks','familles','planning','rh','entretien','univers','statistiques','fournisseurs','commandes','formations'],
+};
+
+// Souscription active de l'utilisateur courant (chargée au login)
+let currentSouscription = null;
+
+async function fetchSouscription() {
+  // Réseau Koalakids = accès complet par défaut tant qu'aucune souscription n'est trouvée
+  try {
+    const rows = await sbGet('souscriptions', 'actif=eq.true&order=created_at.desc&limit=1');
+    if (Array.isArray(rows) && rows.length > 0) {
+      currentSouscription = rows[0];
+      // Normaliser modules en tableau
+      if (typeof currentSouscription.modules === 'string') {
+        try { currentSouscription.modules = JSON.parse(currentSouscription.modules); } catch { currentSouscription.modules = []; }
+      }
+      return currentSouscription;
+    }
+  } catch(e) { console.warn('[Souscription]', e.message); }
+  // Aucune souscription → accès complet (réseau) par défaut
+  currentSouscription = { tier: 'reseau', modules: TIER_MODULES.reseau, entite_nom: 'Orevy' };
+  return currentSouscription;
+}
+
+// Renvoie true si le module est inclus dans la souscription active
+function hasModule(moduleName) {
+  if (!currentSouscription) return true; // pas encore chargé → ne rien masquer
+  const mods = Array.isArray(currentSouscription.modules) ? currentSouscription.modules : (TIER_MODULES[currentSouscription.tier] || []);
+  return mods.includes(moduleName);
+}
+
+// Applique les permissions modules : masque les nav-items non souscrits
+function applyModuleAccess() {
+  document.querySelectorAll('.nav-item[data-module]').forEach(btn => {
+    const mod = btn.getAttribute('data-module');
+    if (!hasModule(mod)) btn.style.display = 'none';
+  });
+  // Boutons passerelle Formations (dashboard + hub) : masqués si module absent
+  if (!hasModule('formations')) {
+    document.querySelectorAll('[data-module-gate="formations"]').forEach(el => el.style.display = 'none');
+  }
+}
+
 async function fetchUserRole(email) {
   const VALID_ROLES = ['admin','directrice','auxiliaire','stagiaire'];
   try {
@@ -5004,10 +5427,15 @@ function applyRoleAccess() {
   if (typeof currentPage !== 'undefined' && !allowed.includes(currentPage)) {
     showPage('dashboard', document.querySelector('.nav-item[data-roles]'));
   }
-  const rhCard = document.getElementById('dashboard-card-rh');
+  // Cards dashboard directrice (IDs réels dans le HTML)
+  const rhCard = document.getElementById('dash-dir-equipe');
   if (rhCard) rhCard.style.display = ['admin','directrice'].includes(role) ? '' : 'none';
-  const planningCard = document.getElementById('dashboard-card-planning');
+  const tauxCard = document.getElementById('dash-dir-taux');
+  if (tauxCard) tauxCard.style.display = ['admin','directrice'].includes(role) ? '' : 'none';
+  const planningCard = document.getElementById('dash-dir-planning');
   if (planningCard) planningCard.style.display = ['admin','directrice','auxiliaire'].includes(role) ? '' : 'none';
+  const famillesCard = document.getElementById('dash-aux-enfants');
+  if (famillesCard) famillesCard.style.display = ['admin','directrice','auxiliaire'].includes(role) ? '' : 'none';
   const badge = document.getElementById('user-role-badge');
   if (badge) badge.style.display = 'block';
   const roleLabel = document.getElementById('user-role-label');
@@ -5019,6 +5447,11 @@ function applyRoleAccess() {
 function logoutUser() {
   if (!confirm('Se déconnecter ?')) return;
   localStorage.removeItem('sb_token');
+  localStorage.removeItem('sb_token_rh');
+  localStorage.removeItem('sb_token_stocks');
+  currentUser = null;
+  currentUserRole = null;
+  currentUserDbId = null;
   location.reload();
 }
 
@@ -5030,13 +5463,20 @@ async function checkSession() {
   if (hash && hash.includes('access_token=')) {
     const params = new URLSearchParams(hash.replace('#', ''));
     const token = params.get('access_token');
+    const type  = params.get('type');
     if (token) {
-      localStorage.setItem('sb_token', token);
-      SUPA_HEADERS['Authorization'] = 'Bearer ' + token;
-      // Récupérer l'utilisateur
+      // ── Mode reset password ──────────────────────────────────────
+      if (type === 'recovery') {
+        window.location.hash = '';
+        showResetPasswordScreen(token);
+        return;
+      }
+      // ── Mode magic link / connexion directe ──────────────────────
+      localStorage.setItem('sb_token_rh', token);
+      SUPA_RH_HEADERS['Authorization'] = 'Bearer ' + token;
       try {
-        const res = await fetch(`${SUPA_URL}/auth/v1/user`, {
-          headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token }
+        const res = await fetch(`${SUPA_RH_URL}/auth/v1/user`, {
+          headers: { 'apikey': SUPA_RH_KEY, 'Authorization': 'Bearer ' + token }
         });
         const data = await res.json();
         if (data.email) {
@@ -5053,6 +5493,90 @@ async function checkSession() {
 
   // Toujours afficher le login au démarrage
   showLoginScreen();
+}
+
+function showResetPasswordScreen(token) {
+  const s = document.getElementById('login-screen');
+  if (!s) return;
+  s.style.display = 'flex';
+  s.innerHTML = `
+    <div style="background:#fff;border-radius:24px;padding:40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="font-size:48px;margin-bottom:12px">🔑</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#1C1917">Nouveau mot de passe</div>
+        <div style="font-size:13px;color:#A8A29E;margin-top:4px">Choisissez un mot de passe sécurisé</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#44403C;display:block;margin-bottom:5px">Nouveau mot de passe</label>
+          <input type="password" id="reset-password-new" placeholder="••••••••"
+            style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #E7E5E0;font-size:14px;outline:none;font-family:'Instrument Sans',sans-serif"
+            onfocus="this.style.borderColor='#6366F1'" onblur="this.style.borderColor='#E7E5E0'">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#44403C;display:block;margin-bottom:5px">Confirmer le mot de passe</label>
+          <input type="password" id="reset-password-confirm" placeholder="••••••••"
+            style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #E7E5E0;font-size:14px;outline:none;font-family:'Instrument Sans',sans-serif"
+            onfocus="this.style.borderColor='#6366F1'" onblur="this.style.borderColor='#E7E5E0'">
+        </div>
+        <div id="reset-error" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 12px;font-size:13px;color:#DC2626"></div>
+        <button id="reset-btn"
+          onclick="confirmResetPassword('${token}')"
+          style="background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif">
+          Enregistrer le mot de passe
+        </button>
+      </div>
+    </div>`;
+}
+
+async function confirmResetPassword(token) {
+  const pwd1 = document.getElementById('reset-password-new').value;
+  const pwd2 = document.getElementById('reset-password-confirm').value;
+  const errEl = document.getElementById('reset-error');
+  const btn   = document.getElementById('reset-btn');
+
+  if (!pwd1 || pwd1.length < 6) {
+    errEl.textContent = '⚠ Mot de passe trop court (6 caractères minimum)';
+    errEl.style.display = 'block'; return;
+  }
+  if (pwd1 !== pwd2) {
+    errEl.textContent = '⚠ Les mots de passe ne correspondent pas';
+    errEl.style.display = 'block'; return;
+  }
+
+  btn.textContent = '⏳ Enregistrement…'; btn.disabled = true;
+  try {
+    const res = await fetch(`${SUPA_RH_URL}/auth/v1/user`, {
+      method: 'PUT',
+      headers: {
+        'apikey': SUPA_RH_KEY,
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password: pwd1 })
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      throw new Error(d.message || 'Erreur lors du changement');
+    }
+    // Succès — connecter directement
+    localStorage.setItem('sb_token_rh', token);
+    SUPA_RH_HEADERS['Authorization'] = 'Bearer ' + token;
+    const userRes = await fetch(`${SUPA_RH_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPA_RH_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    const userData = await userRes.json();
+    if (userData.email) {
+      currentUser = userData;
+      currentUserRole = await fetchUserRole(userData.email);
+    }
+    hideLoginScreen();
+    startApp();
+  } catch(e) {
+    errEl.textContent = '⚠ ' + e.message;
+    errEl.style.display = 'block';
+    btn.textContent = 'Enregistrer le mot de passe'; btn.disabled = false;
+  }
 }
 
 function showLoginScreen() {
@@ -5074,19 +5598,36 @@ async function loginUser() {
   btn.textContent = '⏳ Connexion…'; btn.disabled = true;
   errEl.style.display = 'none';
   try {
-    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+    // ── Auth projet RH (obligatoire) ──────────────────────────────
+    const res = await fetch(`${SUPA_RH_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_RH_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
     if (!res.ok || !data.access_token) throw new Error(data.error_description || 'Email ou mot de passe incorrect');
-    localStorage.setItem('sb_token', data.access_token);
+    localStorage.setItem('sb_token_rh', data.access_token);
+    SUPA_RH_HEADERS['Authorization'] = 'Bearer ' + data.access_token;
     currentUser = data.user;
     currentUserRole = await fetchUserRole(email);
     if (currentUserDbId) {
       sbUpdate('utilisateurs', currentUserDbId, { derniere_connexion: new Date().toISOString() }).catch(() => {});
     }
+
+    // ── Auth projet Stocks (parallèle, silencieux si absent) ──────
+    try {
+      const resS = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const dataS = await resS.json();
+      if (resS.ok && dataS.access_token) {
+        localStorage.setItem('sb_token_stocks', dataS.access_token);
+        SUPA_HEADERS['Authorization'] = 'Bearer ' + dataS.access_token;
+      }
+    } catch(e) { console.warn('[Stocks auth]', e.message); }
+
     hideLoginScreen();
     const btnLogout = document.getElementById('btn-logout');
     if (btnLogout) btnLogout.style.display = 'flex';
@@ -5104,9 +5645,9 @@ async function motDePasseOublie() {
     return;
   }
   try {
-    const res = await fetch(`${SUPA_URL}/auth/v1/recover`, {
+    const res = await fetch(`${SUPA_RH_URL}/auth/v1/recover`, {
       method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_RH_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
     if (res.ok) {
@@ -5131,11 +5672,22 @@ function showLoginError(msg) {
 
 function startApp() {
   if (IS_LOCAL) currentUserRole = 'admin';
-  const token = localStorage.getItem('sb_token');
-  if (token && !IS_LOCAL) SUPA_HEADERS['Authorization'] = 'Bearer ' + token;
+  // Restaurer les deux tokens au démarrage
+  // Compatibilité : migrer l'ancien sb_token vers sb_token_rh si nécessaire
+  const legacyToken = localStorage.getItem('sb_token');
+  if (legacyToken && !localStorage.getItem('sb_token_rh')) {
+    localStorage.setItem('sb_token_rh', legacyToken);
+  }
+  localStorage.removeItem('sb_token'); // nettoyage ancien token
+  const tokenRH     = localStorage.getItem('sb_token_rh');
+  const tokenStocks = localStorage.getItem('sb_token_stocks');
+  if (tokenRH     && !IS_LOCAL) SUPA_RH_HEADERS['Authorization'] = 'Bearer ' + tokenRH;
+  if (tokenStocks && !IS_LOCAL) SUPA_HEADERS['Authorization']    = 'Bearer ' + tokenStocks;
   appliquerPrefs();
   init();
   applyRoleAccess();
+  // Charger la souscription puis appliquer les permissions modules
+  fetchSouscription().then(() => applyModuleAccess());
 }
 // ── FIN AUTH ─────────────────────────────────────────────────────
 
@@ -5154,11 +5706,20 @@ function init() {
   // Interface immédiate
   switchInvTab('materiel'); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique();
 
+  // Afficher le dashboard selon le rôle dès le démarrage
+  renderDashboard();
+
+  // Sync Familles depuis Supabase RH (arrière-plan)
+  if (typeof loadFamillesCloud === 'function') {
+    loadFamillesCloud().then(() => { try { if (typeof renderFamilles === 'function') renderFamilles(); } catch(_) {} });
+  }
+
   // Sync Supabase en arrière-plan
   loadData().then(() => {
     switchInvTab(currentInvTab); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique(); updateCounts();
     if (typeof updateAlertBadge === 'function') updateAlertBadge();
     if (typeof startPolling === 'function') startPolling(30);
+    renderDashboard(); // re-render avec les données fraîches
   }).catch(e => {
     console.warn('Supabase unavailable:', e.message);
     setIndicator('💻 Mode local', 'var(--ink3)');
@@ -5186,16 +5747,27 @@ function renderTable() {
 
   const tb = document.getElementById('tableBody');
 
+  // ── Pagination (10 articles / page) ──────────────────────────────
+  const INV_PER_PAGE = 10;
+  const totalItems = data.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / INV_PER_PAGE));
+  if (!window._invPage) window._invPage = 1;
+  if (window._invPage > totalPages) window._invPage = totalPages;
+  if (window._invPage < 1) window._invPage = 1;
+  const pageStart = (window._invPage - 1) * INV_PER_PAGE;
+  const pageData  = data.slice(pageStart, pageStart + INV_PER_PAGE);
+
   // Toujours supprimer l'ancien footer d'abord
   const oldFootEarly = document.getElementById('tableFooter');
   if (oldFootEarly && oldFootEarly.parentNode) oldFootEarly.parentNode.removeChild(oldFootEarly);
 
   if (data.length === 0) {
     tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink3)">Aucun article trouvé</td></tr>`;
+    _renderInvPagination(0, 1, INV_PER_PAGE);
     return;
   }
 
-  tb.innerHTML = data.map(a => {
+  tb.innerHTML = pageData.map(a => {
     const CAT_ICONS = { 'Sensoriel':'👂','Manipulation':'🤲','Construction':'🧱','Motricité':'🏃','Imitation':'🎭','Expression artistique':'🎨','Mobilier':'🪑','Puériculture':'🍼','Bureautique':'💻','Rangement':'🗂' };
     const thumb = a.photo
       ? `<img class="article-thumb" src="${a.photo}" alt="${a.nom}" loading="lazy">`
@@ -5270,9 +5842,38 @@ function renderTable() {
     </tr>`;
   tb.parentNode.appendChild(tfoot);
 
+  _renderInvPagination(totalItems, totalPages, INV_PER_PAGE);
+
   renderStats();
   updateCounts();
   updateInvTabCounts();
+}
+
+// ── Contrôles de pagination (générateur commun) ──────────────────────
+function _pagerHTML(total, per, cur, pages, gotoFn) {
+  if (total === 0) return '';
+  const start = (cur - 1) * per + 1;
+  const end   = Math.min(cur * per, total);
+  return `
+    <div class="pg-info">${start}–${end} sur ${total} article${total > 1 ? 's' : ''}</div>
+    <div class="pg-btns">
+      <button class="inv-pg-btn" onclick="${gotoFn}(${cur - 1})" ${cur <= 1 ? 'disabled' : ''}>‹ Précédent</button>
+      <span class="inv-pg-cur">Page ${cur} / ${pages}</span>
+      <button class="inv-pg-btn" onclick="${gotoFn}(${cur + 1})" ${cur >= pages ? 'disabled' : ''}>Suivant ›</button>
+    </div>`;
+}
+
+// ── Contrôles de pagination Stocks pédagogiques ──────────────────────
+function _renderInvPagination(total, pages, per) {
+  const el = document.getElementById('inv-pagination');
+  if (!el) return;
+  el.innerHTML = _pagerHTML(total, per, window._invPage || 1, pages, 'gotoInvPage');
+}
+function gotoInvPage(p) {
+  window._invPage = p;
+  renderTable();
+  const wrap = document.getElementById('inv-table-materiel');
+  if (wrap) wrap.scrollTop = 0;
 }
 
 function renderStats() {
@@ -5319,11 +5920,16 @@ function switchInvTab(tab) {
   const tbCon = document.getElementById('inv-table-consommable');
   if (tbMat) tbMat.style.display = isMat ? 'block' : 'none';
   if (tbCon) tbCon.style.display = !isMat ? 'block' : 'none';
+  const invPag = document.getElementById('inv-pagination');
+  if (invPag) invPag.style.display = isMat ? 'flex' : 'none';
+  const consoPag = document.getElementById('conso-pagination');
+  if (consoPag) consoPag.style.display = !isMat ? 'flex' : 'none';
   if (isMat) renderTable();
   else renderTableConso();
 }
 
 function filterCatConso(cat, el) {
+  window._consoPage = 1;
   currentCatConso = cat;
   document.querySelectorAll('#inv-filters-consommable .filter-chip').forEach(e => e.classList.remove('active'));
   if (el) el.classList.add('active');
@@ -5348,11 +5954,21 @@ function renderTableConso() {
   });
   const tb = document.getElementById('tableBodyConso');
   if (!tb) return;
+  const CONSO_PER_PAGE = 10;
+  const consoTotal = data.length;
+  const consoPages = Math.max(1, Math.ceil(consoTotal / CONSO_PER_PAGE));
+  if (!window._consoPage) window._consoPage = 1;
+  if (window._consoPage > consoPages) window._consoPage = consoPages;
+  if (window._consoPage < 1) window._consoPage = 1;
+  const consoStart = (window._consoPage - 1) * CONSO_PER_PAGE;
+  const consoData  = data.slice(consoStart, consoStart + CONSO_PER_PAGE);
+  const consoPagEl = document.getElementById('conso-pagination');
   if (data.length === 0) {
     tb.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--ink3)">Aucun consommable trouvé</td></tr>`;
+    if (consoPagEl) consoPagEl.innerHTML = '';
     return;
   }
-  tb.innerHTML = data.map(a => {
+  tb.innerHTML = consoData.map(a => {
     const CAT_ICONS_L = { 'Sensoriel':'👂','Manipulation':'🤲','Construction':'🧱','Motricité':'🏃','Imitation':'🎭','Expression artistique':'🎨','Mobilier':'🪑','Puériculture':'🍼','Bureautique':'💻','Rangement':'🗂' };
     const thumb = a.photo
       ? `<img class="article-thumb" src="${a.photo}" alt="${a.nom}" loading="lazy">`
@@ -5383,6 +5999,14 @@ function renderTableConso() {
       </td>
     </tr>`;
   }).join('');
+
+  if (consoPagEl) consoPagEl.innerHTML = _pagerHTML(consoTotal, CONSO_PER_PAGE, window._consoPage, consoPages, 'gotoConsoPage');
+}
+function gotoConsoPage(p) {
+  window._consoPage = p;
+  renderTableConso();
+  const wrap = document.getElementById('inv-table-consommable');
+  if (wrap) wrap.scrollTop = 0;
 }
 
 function updateInvTabCounts() {
@@ -5399,6 +6023,8 @@ function renderActiveInvTable() {
 }
 
 function toggleSort(col) {
+  window._invPage = 1;
+  window._consoPage = 1;
   if (window._sortCol === col) {
     window._sortDir = window._sortDir === 'asc' ? 'desc' : 'asc';
   } else {
@@ -5410,6 +6036,7 @@ function toggleSort(col) {
 
 // ─── FILTERS ──────────────────────────────────────────────────────────────
 function filterCat(cat, el) {
+  window._invPage = 1;
   currentCat = cat;
   document.querySelectorAll('.filter-chip').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
@@ -5427,7 +6054,7 @@ function filterCreche(creche, el) {
       if ([...s.options].some(o => o.value === creche)) s.value = creche;
     }
   });
-  if (currentPage === 'inventaire') renderActiveInvTable();
+  if (currentPage === 'inventaire') { window._invPage = 1; window._consoPage = 1; renderActiveInvTable(); }
   else if (currentPage === 'commandes') renderCommandes();
   else if (currentPage === 'historique') renderHistorique();
   else if (currentPage === 'planning') renderActiveTab();
@@ -5440,7 +6067,7 @@ function filterCrecheFromSelect(val) {
   filterCreche(val, null);
 }
 
-function filterTable() { renderActiveInvTable(); }
+function filterTable() { window._invPage = 1; window._consoPage = 1; renderActiveInvTable(); }
 
 function filterHisto(type, el) {
   currentHisto = type;
@@ -5593,6 +6220,8 @@ function openModal(type) {
   if (type === 'commande') {
     resetCommandeModal();
     resetArticleRows();
+    const ccreche = document.getElementById('c-creche');
+    if (ccreche) ccreche.value = (currentCreche && currentCreche !== 'all') ? currentCreche : '';
     const bcField = document.getElementById('c-bc');
     if (bcField && !bcField.dataset.editing) bcField.value = generateBC();
   }
@@ -5609,7 +6238,12 @@ function openModal(type) {
     const fType = document.getElementById('f-type-hidden'); if (fType) fType.value = 'pedagogique';
     const fDateAchat = document.getElementById('f-date-achat'); if (fDateAchat) fDateAchat.value = '';
     const fEt = document.getElementById('f-etat'); if (fEt) fEt.value = '';
-    const fDep = document.getElementById('f-depreciable'); if (fDep) fDep.checked = true;
+    // Si on est dans l'onglet consommables, décocher dépréciable par défaut
+    const fDep = document.getElementById('f-depreciable');
+    if (fDep) fDep.checked = (typeof currentInvTab === 'undefined' || currentInvTab !== 'consommable');
+    // Peupler le select crèches
+    const fCreche = document.getElementById('f-creche');
+    if (fCreche) fCreche.innerHTML = '<option value="">-- Choisir --</option>' + CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
     resetPhotoUpload();
   }
   document.getElementById(`modal-${type}`).classList.add('open');
@@ -5622,6 +6256,10 @@ function editArticle(id) {
   editingId = id;
   const isEntretien = a.type === 'entretien';
   document.getElementById('modalAddTitle').textContent = isEntretien ? '🧹 Modifier l\'article d\'entretien' : 'Modifier l\'article';
+
+  // Peupler le select crèches
+  const fCreche = document.getElementById('f-creche');
+  if (fCreche) fCreche.innerHTML = '<option value="">-- Choisir --</option>' + CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
 
   // Remplir les catégories selon le type
   const catSel = document.getElementById('f-cat');
@@ -5760,7 +6398,10 @@ async function deleteArticle(id) {
 
 // ─── SAVE COMMANDE ────────────────────────────────────────────────────────
 function generateBC() {
-  const nom = getCrecheName().replace(/\s+/g, '').substring(0, 8).toUpperCase();
+  const crecheSel = (document.getElementById('c-creche')?.value)
+    || (currentCreche && currentCreche !== 'all' ? currentCreche : '')
+    || getCrecheName();
+  const nom = crecheSel.replace(/\s+/g, '').substring(0, 8).toUpperCase();
   const now = new Date();
   const date = String(now.getFullYear()).slice(2) +
     String(now.getMonth()+1).padStart(2,'0') +
@@ -6249,6 +6890,31 @@ function addHisto(type, article, qty, creche, user, note='') {
 }
 
 // ─── PAGES ────────────────────────────────────────────────────────────────
+function toggleFullscreen() {
+  const el = document.querySelector('.app') || document.documentElement;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen)?.call(el)
+      ?.catch?.(err => showNotif('⚠ Plein écran indisponible : ' + (err?.message || '')));
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen)?.call(document);
+  }
+}
+function _syncFullscreenBtn() {
+  const on = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const icon = document.getElementById('btn-fullscreen-icon');
+  const label = document.getElementById('btn-fullscreen-label');
+  if (icon)  icon.textContent  = on ? '🗗' : '⛶';
+  if (label) label.textContent = on ? 'Quitter le plein écran' : 'Plein écran';
+  // Forçage layout : éviter tout centrage vertical du navigateur en plein écran
+  const app  = document.querySelector('.app');
+  const main = document.querySelector('.main');
+  if (app)  { app.style.height = on ? '100%' : ''; app.style.alignContent = on ? 'start' : ''; }
+  if (main) { main.style.justifyContent = on ? 'flex-start' : ''; main.style.minHeight = on ? '100%' : ''; }
+  if (on) { try { (app || document.documentElement).scrollTop = 0; window.scrollTo(0, 0); } catch(_) {} }
+}
+document.addEventListener('fullscreenchange', _syncFullscreenBtn);
+document.addEventListener('webkitfullscreenchange', _syncFullscreenBtn);
+
 function showPage(page, btn) {
   currentPage = page;
   ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant'].forEach(p => {
@@ -6263,8 +6929,8 @@ function showPage(page, btn) {
   if (page === 'commandes') { renderCommandes(); }
   if (page === 'univers') { renderUnivers(); if(typeof updateSouscatFilters==='function') updateSouscatFilters(); }
   if (page === 'fournisseurs') { renderFournisseurs(); }
-  if (page === 'statistiques') { renderDashboard(); }
-  if (page === 'dashboard') { renderHub(); }
+  if (page === 'statistiques') { renderDashboardStats(); }
+  if (page === 'dashboard') { renderDashboard(); }
   if (page === 'entretien') { renderEntretien(); }
   if (page === 'historique') { renderHistorique(); }
   if (page === 'inventaire') { switchInvTab(currentInvTab); renderStats(); }
@@ -7473,7 +8139,9 @@ let SUPA_RH_HEADERS = {
 // Tables hébergées dans le projet RH — routage automatique dans les helpers
 const RH_TABLES = new Set([
   'utilisateurs','recrutements','contrats','conges',
-  'formations_rh','documents_rh','stagiaires','planning','pointages'
+  'formations_rh','documents_rh','stagiaires','planning','pointages','pointages_enfants',
+  'enfants','berceaux','salaries','planning_semaines','parametres',
+  'souscriptions','formations','chapitres','ressources','participants','acces_formations'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -7497,6 +8165,8 @@ let isPolling = false;
 async function syncFromCloud() {
   if (IS_LOCAL) return;
   if (isPolling) return;
+  // Ne pas sync si un modal est ouvert
+  if (document.querySelector('.modal-overlay.open')) return;
   isPolling = true;
   try {
     const [arts, cmds, fourns, histos, univs] = await Promise.all([
@@ -7594,7 +8264,11 @@ async function sbUpdate(table, id, data) {
     headers: _sbHeaders(table),
     body: JSON.stringify(data),
   });
-  if (!r.ok) throw new Error(`UPDATE ${table} : ${r.status}`);
+  if (!r.ok) {
+    const errBody = await r.text().catch(() => '');
+    console.error(`UPDATE ${table} ${r.status}:`, errBody);
+    throw new Error(`UPDATE ${table} : ${r.status}`);
+  }
 }
 
 async function sbDelete(table, id) {
@@ -7609,21 +8283,37 @@ async function sbDelete(table, id) {
   if (!r.ok) throw new Error(`DELETE ${table} : ${r.status}`);
 }
 
+// Suppression par filtre PostgREST (ex: creche_id=eq.brunet)
+async function sbDeleteWhere(table, filter) {
+  const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}?${filter}`, {
+    method: 'DELETE', headers: _sbHeaders(table),
+  });
+  if (!r.ok) throw new Error(`DELETE ${table} : ${r.status}`);
+}
+
 // ── Map between app object ↔ DB row ───────────────────────────────────────
 
-function articleToRow(a) {
-  return { id: a.id, nom: a.nom, ref: a.ref, cat: a.cat, creche: a.creche,
-           stock: a.stock, min: a.min, prix: a.prix, fourn: a.fourn,
-           notes: a.notes||'', url: a.url||'', expiry: a.expiry||'',
-           barcode: a.barcode||'', type: a.type||'pedagogique',
-           photo: a.photo||null, photo_name: a.photoName||null,
-           date_achat: a.date_achat||null,
-           etat: a.etat||'Neuf', depreciable: a.depreciable !== false,
-           etat_override: a.etat_override||null };
+function articleToRow(a, isNew = false) {
+  // Ne jamais inclure l'id dans le body Supabase (ni INSERT ni UPDATE)
+  return {
+    nom: a.nom, ref: a.ref, cat: a.cat, creche: a.creche,
+    stock: parseInt(a.stock) || 0,
+    min: parseInt(a.min) || 0,
+    prix: parseFloat(a.prix) || 0,
+    fourn: a.fourn,
+    notes: a.notes||'', url: a.url||'', expiry: a.expiry||'',
+    barcode: a.barcode||'', type: a.type||'pedagogique',
+    photo: a.photo||null, photo_name: a.photoName||null,
+    date_achat: a.date_achat||null,
+    etat: a.etat||'Neuf', depreciable: a.depreciable !== false,
+    etat_override: a.etat_override||null
+  };
 }
 function rowToArticle(r) {
   return { id: r.id, nom: r.nom, ref: r.ref, cat: r.cat, creche: r.creche,
-           stock: r.stock, min: r.min, prix: parseFloat(r.prix)||0,
+           stock: (r.stock !== null && r.stock !== undefined) ? parseInt(r.stock) : 0,
+           min: (r.min !== null && r.min !== undefined) ? parseInt(r.min) : 0,
+           prix: parseFloat(r.prix)||0,
            fourn: r.fourn||'', notes: r.notes||'', url: r.url||'', expiry: r.expiry||'',
            barcode: r.barcode||'', type: r.type||'pedagogique',
            photo: r.photo||null, photoName: r.photo_name||null,
@@ -7632,7 +8322,8 @@ function rowToArticle(r) {
            etat_override: r.etat_override||null };
 }
 function commandeToRow(c) {
-  return { id: c.id, fourn: c.fourn, creche: c.creche, date: c.date,
+  // Ne jamais envoyer id dans le corps (colonne identity) — comme articleToRow
+  return { fourn: c.fourn, creche: c.creche, date: c.date||null,
            livraison: c.livraison||null, montant: c.montant||0,
            bc: c.bc, status: c.status||'en-cours',
            articles: c.articles||'', notes: c.notes||'', url: c.url||'' };
@@ -7644,7 +8335,8 @@ function rowToCommande(r) {
            notes: r.notes||'', url: r.url||'' };
 }
 function fournisseurToRow(f) {
-  return { id: f.id, nom: f.nom, contact: f.contact||'—', tel: f.tel||'—',
+  // Ne jamais envoyer id dans le corps (colonne identity)
+  return { nom: f.nom, contact: f.contact||'—', tel: f.tel||'—',
            email: f.email||'', web: f.web||'', delai: f.delai||'',
            spec: f.spec||'', notes: f.notes||'' };
 }
@@ -7696,6 +8388,8 @@ async function loadData() {
           if (!fromCloud.url     && local.url)     fromCloud.url     = local.url;
           if (!fromCloud.expiry  && local.expiry)  fromCloud.expiry  = local.expiry;
           if (!fromCloud.barcode && local.barcode) fromCloud.barcode = local.barcode;
+          if ((!fromCloud.stock || fromCloud.stock === 0) && local.stock > 0) fromCloud.stock = local.stock;
+          if ((!fromCloud.prix  || fromCloud.prix  === 0) && local.prix  > 0) fromCloud.prix  = local.prix;
         }
         return fromCloud;
       }));
@@ -7738,7 +8432,7 @@ async function saveArticleDB(article, isNew) {
   if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
   try {
     if (isNew) {
-      const rows = await sbInsert('articles', articleToRow(article));
+      const rows = await sbInsert('articles', articleToRow(article, true));
       if (rows && rows[0]) article.id = rows[0].id; // use DB id
     } else {
       await sbUpdate('articles', article.id, articleToRow(article));
@@ -7988,7 +8682,7 @@ if (!navigator.onLine) document.getElementById('offlineBadge').classList.add('vi
 // sur certains navigateurs mobiles — on les enveloppe
 function onSaveArticle()       { saveArticle().catch(e => { showNotif('⚠ Erreur : '+e.message); console.error(e); }); }
 function onDeleteArticle(id)   { deleteArticle(id).catch(e => { showNotif('⚠ Erreur : '+e.message); console.error(e); }); }
-function onSaveCommande()      { saveCommande().catch(e => { showNotif('⚠ Erreur : '+e.message); console.error(e); }); }
+function onSaveCommande()      { saveCommande_db().catch(e => { showNotif('⚠ Erreur : '+e.message); console.error(e); }); }
 function onMarkLivree(id)      { markLivree(id).catch(e => { showNotif('⚠ Erreur : '+e.message); console.error(e); }); }
 function onAnnulerCommande(id) { annulerCommande(id).catch(e => { showNotif('⚠ Erreur : '+e.message); console.error(e); }); }
 
@@ -8090,17 +8784,21 @@ async function createAdminUser() {
   if (password.length < 6) { errEl.textContent = 'Le mot de passe doit faire au moins 6 caractères.'; errEl.style.display = 'block'; return; }
   btn.disabled = true; btn.textContent = '⏳ Création…';
   try {
-    const res = await fetch(`${SUPA_RH_URL}/auth/v1/signup`, {
+    // Création via Cloudflare Worker (service_role) pour contourner la restriction Supabase
+    const WORKER_URL = 'https://orevy-proxy.david-bucari.workers.dev/admin-users';
+    const res = await fetch(WORKER_URL, {
       method: 'POST',
-      headers: { 'apikey': SUPA_RH_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'create', email, password,
+        userData: { email, role, creche_id: creche || null, actif: true }
+      })
     });
     const data = await res.json();
     if (!res.ok) {
-      console.error('[createAdminUser] Supabase Auth error:', data);
-      throw new Error(data.message || data.msg || data.error_description || `Erreur ${res.status}`);
+      console.error('[createAdminUser] Worker error:', data);
+      throw new Error(data.detail?.message || data.error || data.message || `Erreur ${res.status}`);
     }
-    await sbInsert('utilisateurs', { email, role, creche_id: creche || null, actif: true });
     okEl.textContent = `✅ Compte créé pour ${email}. L'utilisateur peut se connecter dès maintenant.`;
     okEl.style.display = 'block';
     document.getElementById('admin-new-email').value = '';
@@ -8837,6 +9535,10 @@ function renderPlanningHebdo() {
     .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
   const crNames = (week.creneaux||[]).map(c => c.pro);
   const pros = [...new Set([...rhNames, ...crNames])].sort();
+  const volanteOtherNames = new Set(
+    crecheId ? salaries.filter(s => s.volante && s.creche !== crecheId)
+      .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean) : []
+  );
 
   if (pros.length === 0) {
     grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
@@ -8865,7 +9567,16 @@ function renderPlanningHebdo() {
         if (h.debut && h.fin) {
           const [dh,dm] = h.debut.split(':').map(Number);
           const [fh,fm] = h.fin.split(':').map(Number);
-          dayMin += (fh*60+fm) - (dh*60+dm);
+          let slotMin = (fh*60+fm) - (dh*60+dm);
+          if (cr.pause) {
+            const pm = cr.pause.match(/(\d+)h(\d*)\s*[–-]\s*(\d+)h(\d*)/);
+            if (pm) {
+              const pStart = parseInt(pm[1])*60 + (parseInt(pm[2])||0);
+              const pEnd   = parseInt(pm[3])*60 + (parseInt(pm[4])||0);
+              slotMin -= Math.max(0, pEnd - pStart);
+            }
+          }
+          dayMin += Math.max(0, slotMin);
         }
         return `<div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:${c.text};line-height:1.2">${h.debut||''}–${h.fin||''}</div>
           ${cr.pause ? `<div style="font-size:10px;color:var(--ink3);margin-top:1px">⏸ ${cr.pause}</div>` : ''}`;
@@ -8890,7 +9601,7 @@ function renderPlanningHebdo() {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
         <div style="width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initial}</div>
         <div style="flex:1">
-          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--ink)">${pro}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--ink)">${pro}${volanteOtherNames.has(pro) ? ` <span style="font-family:inherit;font-size:10px;font-weight:700;background:var(--accent-lt);color:var(--accent);padding:2px 7px;border-radius:10px;vertical-align:middle">✈ Volante</span>` : ''}</div>
           <div style="font-size:11px;color:var(--ink3);margin-top:1px">Semaine ${weekNum}</div>
         </div>
         <div style="text-align:right">
@@ -9120,14 +9831,16 @@ function peRefreshPause() {
 }
 
 function peSetOccurrence(val) {
-  document.getElementById('pe-occ-day').checked  = val === 'day';
-  document.getElementById('pe-occ-week').checked = val === 'week';
+  // Radio buttons supprimés — occurrence gérée via boutons footer (Ce jour / Toute la semaine)
+  const dayEl  = document.getElementById('pe-occ-day');
+  const weekEl = document.getElementById('pe-occ-week');
+  if (dayEl)  dayEl.checked  = val === 'day';
+  if (weekEl) weekEl.checked = val === 'week';
   const dayLbl  = document.getElementById('pe-occ-day-label');
   const weekLbl = document.getElementById('pe-occ-week-label');
   const jourGrp = document.getElementById('pe-jour-group');
   if (dayLbl)  dayLbl.style.borderColor  = val==='day'  ? 'var(--accent)' : 'var(--border)';
   if (weekLbl) weekLbl.style.borderColor = val==='week' ? 'var(--accent)' : 'var(--border)';
-  // Masquer le sélecteur de jour si "toute la semaine"
   if (jourGrp) jourGrp.style.opacity = val==='week' ? '0.4' : '1';
   if (jourGrp) jourGrp.style.pointerEvents = val==='week' ? 'none' : 'auto';
 }
@@ -9149,18 +9862,30 @@ function openModalPE(horaireIdx, jour, id) {
   document.getElementById('modal-pe-title').textContent = id ? '✏️ Modifier le créneau' : '➕ Ajouter une pro';
   document.getElementById('modal-pe-delete').style.display = id ? 'inline-flex' : 'none';
 
-  // Populate pros list filtrées par crèche
+  // Populate pros list : équipe de la crèche + volantes des autres structures
   let salaries = [];
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
-  const rhNames = salaries
+  const nameOf = s => [s.prenom, s.nom].filter(Boolean).join(' ');
+  const homeNames = salaries
     .filter(s => !crecheId || s.creche === crecheId)
-    .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
-  const creneauxNames = (week.creneaux||[]).map(c => c.pro);
-  const prosSet = new Set([...rhNames, ...creneauxNames]);
+    .map(nameOf).filter(Boolean);
+  const volNames = crecheId ? salaries
+    .filter(s => s.volante && s.creche !== crecheId)
+    .map(nameOf).filter(Boolean) : [];
+  const creneauxNames = (week.creneaux||[]).map(c => c.pro).filter(Boolean);
+  const known = new Set([...homeNames, ...volNames]);
+  // Noms déjà posés cette semaine mais hors listes (ex. nom libre) → rattachés à l'équipe
+  const extra = [...new Set(creneauxNames)].filter(n => !known.has(n));
+  const homeAll = [...new Set([...homeNames, ...extra])].sort();
+  const volAll  = [...new Set(volNames)].sort();
+  const prosSet = new Set([...homeAll, ...volAll]);
+  const opt = p => `<option value="${p}">${p}</option>`;
   const sel = document.getElementById('pe-pro-sel');
-  sel.innerHTML = '<option value="">— Choisir —</option>' +
-    [...prosSet].sort().map(p => `<option value="${p}">${p}</option>`).join('') +
-    '<option value="__new__">+ Nom libre…</option>';
+  let selHtml = '<option value="">— Choisir —</option>';
+  if (homeAll.length) selHtml += '<optgroup label="Équipe">' + homeAll.map(opt).join('') + '</optgroup>';
+  if (volAll.length)  selHtml += '<optgroup label="✈ Volantes / autres structures">' + volAll.map(opt).join('') + '</optgroup>';
+  selHtml += '<option value="__new__">+ Nom libre…</option>';
+  sel.innerHTML = selHtml;
 
   // Horaire select
   const hSel = document.getElementById('pe-horaire-sel');
@@ -9187,7 +9912,8 @@ function openModalPE(horaireIdx, jour, id) {
     if (cr) {
       hSel.value = cr.horaire_idx;
       jSel.value = cr.jour;
-      if ([...prosSet].includes(cr.pro)) sel.value = cr.pro; else sel.value = cr.pro;
+      if (!prosSet.has(cr.pro)) sel.insertAdjacentHTML('beforeend', `<option value="${cr.pro}">${cr.pro}</option>`);
+      sel.value = cr.pro;
       if (cr.pause) {
         const pm = cr.pause.match(/(\d+)h(\d*)[–-](\d+)h(\d*)/);
         if (pm && pauseEl) {
@@ -9277,7 +10003,10 @@ function exportPlanningPDF() {
   const endFri   = new Date(monday); endFri.setDate(monday.getDate()+4);
   const crecheId = document.getElementById('pe-creche')?.value || '';
   const title    = `Planning ${crecheId ? '— ' + crecheId + ' — ' : ''}Semaine ${weekNum} · ${fmtD(monday)} au ${fmtD(endFri)}`;
-  const ganttEl  = document.getElementById('pe-grid');
+  // Cibler le conteneur de l'onglet actif (Gantt, Par salarié, Gantt visuel)
+  const tab    = (typeof pePlanningTab !== 'undefined' && pePlanningTab) || 'gantt';
+  const srcId  = tab === 'hebdo' ? 'ph-grid' : tab === 'gantt2' ? 'pe-grid2' : 'pe-grid';
+  const ganttEl = document.getElementById(srcId);
   if (!ganttEl) return;
 
   // Lire les vraies valeurs des variables CSS depuis la page
@@ -9287,8 +10016,10 @@ function exportPlanningPDF() {
     '--amber-lt','--purple','--purple-lt','--radius'];
   const cssVarBlock = vars.map(v => `${v}:${root.getPropertyValue(v).trim()}`).join(';');
 
-  // Cloner le gantt SANS modifier l'original
-  const ganttHTML = ganttEl.outerHTML;
+  // Cloner SANS modifier l'original ; normaliser l'id pour le script de mise en page
+  const cloneEl = ganttEl.cloneNode(true);
+  cloneEl.id = 'pe-grid';
+  const ganttHTML = cloneEl.outerHTML;
 
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -9314,11 +10045,11 @@ function exportPlanningPDF() {
   <h1>📅 ${title}</h1>
   <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
   ${ganttHTML}
-  <div class="legend">
+  ${tab === 'hebdo' ? '' : `<div class="legend">
     <span style="background:#F0FDF4;color:#16A34A">✓ Conforme</span>
     <span style="background:#FFFBEB;color:#D97706">! Limite</span>
     <span style="background:#FEF2F2;color:#DC2626">✗ Non conforme</span>
-  </div>
+  </div>`}
   <script>
     window.onload = function() {
       const grid = document.getElementById('pe-grid');
@@ -10560,8 +11291,14 @@ function showImportResult(type, html) {
           </select>
         </div>
         <div class="form-group">
-          <label>Structure</label>
+          <label>Structure *</label>
           <select id="sal-creche"></select>
+        </div>
+        <div class="form-group full">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
+            <input type="checkbox" id="sal-volante" style="width:auto;margin:0">
+            ✈ Salariée volante <span style="font-weight:400;color:var(--ink3);font-size:12px">— peut intervenir en remplacement dans les autres structures</span>
+          </label>
         </div>
         <div class="form-group">
           <label>Type de contrat</label>
@@ -10762,8 +11499,14 @@ function openModalSalarie() {
   ['sal-naissance','sal-entree','sal-fin','sal-psc1-date']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('sal-statut').value = 'actif';
+  document.getElementById('sal-volante').checked = false;
   document.getElementById('sal-psc1').value   = '';
   _salPopulateCreche();
+  // Pré-sélection de la structure courante (frictionless)
+  if (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all') {
+    const cSel = document.getElementById('sal-creche');
+    if (cSel && [...cSel.options].some(o => o.value === currentCreche)) cSel.value = currentCreche;
+  }
   document.getElementById('modal-salarie').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -10796,6 +11539,7 @@ function editSalarie(id) {
   fill('sal-notes',     s.notes);
   _salPopulateCreche();
   document.getElementById('sal-creche').value = s.creche || '';
+  document.getElementById('sal-volante').checked = !!s.volante;
   document.getElementById('modal-salarie').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -10804,6 +11548,8 @@ function saveSalarie() {
   const prenom = document.getElementById('sal-prenom').value.trim();
   const nom    = document.getElementById('sal-nom').value.trim();
   if (!prenom || !nom) { showNotif('⚠ Prénom et nom obligatoires'); return; }
+  const crecheSal = document.getElementById('sal-creche').value;
+  if (!crecheSal) { showNotif('⚠ Rattachez la salariée à une crèche'); return; }
   const s = {
     id:         salEditingId || 'sal_' + Date.now(),
     prenom, nom,
@@ -10813,6 +11559,7 @@ function saveSalarie() {
     adresse:    document.getElementById('sal-adresse').value.trim(),
     fonction:   document.getElementById('sal-fonction').value,
     creche:     document.getElementById('sal-creche').value,
+    volante:    document.getElementById('sal-volante').checked,
     contrat:    document.getElementById('sal-contrat').value,
     temps:      document.getElementById('sal-temps').value,
     entree:     document.getElementById('sal-entree').value,
