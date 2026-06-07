@@ -5617,6 +5617,8 @@ function showHub() {
   const hub = document.getElementById('hub-screen');
   if (!hub) { return; }
   hub.style.display = 'block';
+  const wm = hub.querySelector('img[src*=Visuel]');
+  if (wm) { const s = wm.src; wm.src = ''; wm.src = s; }
 
   const role = (currentUserRole || 'admin').toLowerCase();
   const email = (currentUser && currentUser.email) ? currentUser.email : '';
