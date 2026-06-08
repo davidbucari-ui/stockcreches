@@ -9567,12 +9567,12 @@ function renderPlanningHebdo() {
   let salaries = [];
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
   const rhNames = salaries
-    .filter(s => !crecheId || s.creche === crecheId)
+    .filter(s => !crecheId || crecheId === 'all' || s.creche === crecheId)
     .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
   const crNames = (week.creneaux||[]).map(c => c.pro);
   const pros = [...new Set([...rhNames, ...crNames])].sort();
   const volanteOtherNames = new Set(
-    crecheId ? salaries.filter(s => s.volante && s.creche !== crecheId)
+    (crecheId && crecheId !== 'all') ? salaries.filter(s => s.volante && s.creche !== crecheId)
       .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean) : []
   );
 
@@ -9699,7 +9699,7 @@ function renderPlanningGantt() {
 
   let salaries = [];
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
-  const rhNames = salaries.filter(s => !crecheId || s.creche === crecheId)
+  const rhNames = salaries.filter(s => !crecheId || crecheId === 'all' || s.creche === crecheId)
     .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
   const crNames = (week.creneaux||[]).map(c => c.pro);
   const allPros = [...new Set([...rhNames, ...crNames])].sort();
@@ -9903,9 +9903,9 @@ function openModalPE(horaireIdx, jour, id) {
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
   const nameOf = s => [s.prenom, s.nom].filter(Boolean).join(' ');
   const homeNames = salaries
-    .filter(s => !crecheId || s.creche === crecheId)
+    .filter(s => !crecheId || crecheId === 'all' || s.creche === crecheId)
     .map(nameOf).filter(Boolean);
-  const volNames = crecheId ? salaries
+  const volNames = (crecheId && crecheId !== 'all') ? salaries
     .filter(s => s.volante && s.creche !== crecheId)
     .map(nameOf).filter(Boolean) : [];
   const creneauxNames = (week.creneaux||[]).map(c => c.pro).filter(Boolean);
