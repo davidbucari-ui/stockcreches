@@ -13962,7 +13962,7 @@ function dsVeilleOpenForm(id) {
 
   if (id) {
     const a = DS_VEILLE_DATA.find(x => x.id === id);
-    titleEl.textContent = 'Modifier l'alerte';
+    titleEl.textContent = "Modifier l'alerte";
     document.getElementById('dv-titre').value = a.titre || '';
     document.getElementById('dv-impact').value = a.impact || 'info';
     document.getElementById('dv-date').value = a.date_publication || '';
@@ -13976,7 +13976,7 @@ function dsVeilleOpenForm(id) {
     ['dv-titre','dv-source','dv-resume','dv-actions'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('dv-impact').value = 'info';
     document.getElementById('dv-fiche').value = '';
-    document.getElementById('dv-save-btn').textContent = 'Publier l'alerte';
+    document.getElementById('dv-save-btn').textContent = "Publier l'alerte";
   }
   document.getElementById('dv-msg').style.display = 'none';
   modal.style.display = 'flex';
