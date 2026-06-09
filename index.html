@@ -9567,12 +9567,12 @@ function renderPlanningHebdo() {
   let salaries = [];
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
   const rhNames = salaries
-    .filter(s => !crecheId || crecheId === 'all' || s.creche === crecheId)
+    .filter(s => !crecheId || s.creche === crecheId)
     .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
   const crNames = (week.creneaux||[]).map(c => c.pro);
   const pros = [...new Set([...rhNames, ...crNames])].sort();
   const volanteOtherNames = new Set(
-    (crecheId && crecheId !== 'all') ? salaries.filter(s => s.volante && s.creche !== crecheId)
+    crecheId ? salaries.filter(s => s.volante && s.creche !== crecheId)
       .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean) : []
   );
 
@@ -9699,7 +9699,7 @@ function renderPlanningGantt() {
 
   let salaries = [];
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
-  const rhNames = salaries.filter(s => !crecheId || crecheId === 'all' || s.creche === crecheId)
+  const rhNames = salaries.filter(s => !crecheId || s.creche === crecheId)
     .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
   const crNames = (week.creneaux||[]).map(c => c.pro);
   const allPros = [...new Set([...rhNames, ...crNames])].sort();
@@ -9903,9 +9903,9 @@ function openModalPE(horaireIdx, jour, id) {
   try { salaries = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
   const nameOf = s => [s.prenom, s.nom].filter(Boolean).join(' ');
   const homeNames = salaries
-    .filter(s => !crecheId || crecheId === 'all' || s.creche === crecheId)
+    .filter(s => !crecheId || s.creche === crecheId)
     .map(nameOf).filter(Boolean);
-  const volNames = (crecheId && crecheId !== 'all') ? salaries
+  const volNames = crecheId ? salaries
     .filter(s => s.volante && s.creche !== crecheId)
     .map(nameOf).filter(Boolean) : [];
   const creneauxNames = (week.creneaux||[]).map(c => c.pro).filter(Boolean);
@@ -11284,6 +11284,34 @@ function showImportResult(type, html) {
 .hub-s-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
 /* Auxiliaire 2 cols */
 .hub-s-pillars-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+/* Admin 4 cols */
+.hub-s-pillars-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+/* Doc card */
+.hub-s-card.doc{background:#F0EEF8;border:1px solid rgba(124,58,237,0.22)}
+.hub-s-card.doc .hub-s-icon{background:#7C3AED}
+.hub-s-card.doc .hub-s-tag{background:rgba(124,58,237,.15);color:#5B21B6}
+.hub-s-card.doc .hub-s-cta{color:#5B21B6;background:rgba(124,58,237,.12)}
+.hub-s-card.doc .hub-s-cta:hover{background:rgba(124,58,237,.22)}
+/* Modal documents */
+#hub-docs-modal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(28,25,23,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+#hub-docs-modal.open{display:flex}
+.hub-docs-panel{background:#FAF6F0;border-radius:22px;width:100%;max-width:640px;max-height:88vh;overflow-y:auto;padding:28px 28px 32px;box-shadow:0 20px 60px rgba(0,0,0,0.2);position:relative}
+.hub-docs-close{position:absolute;top:16px;right:18px;background:rgba(88,80,77,.1);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;color:#58504D;display:flex;align-items:center;justify-content:center}
+.hub-docs-title{font-family:'Fraunces',serif;font-size:21px;color:#58504D;margin-bottom:6px}
+.hub-docs-sub{font-size:12px;color:#58504D;opacity:.45;margin-bottom:24px}
+.hub-docs-tabs{display:flex;gap:8px;margin-bottom:20px}
+.hub-docs-tab{padding:7px 16px;border-radius:20px;border:1.5px solid rgba(124,58,237,.25);font-size:12px;font-weight:600;color:#5B21B6;background:transparent;cursor:pointer;font-family:'Outfit',sans-serif;transition:background .12s}
+.hub-docs-tab.active{background:#7C3AED;color:#fff;border-color:#7C3AED}
+.hub-docs-folder{display:none}
+.hub-docs-folder.active{display:block}
+.hub-docs-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:11px;border:1px solid rgba(88,80,77,.1);background:#fff;margin-bottom:8px;cursor:pointer;transition:box-shadow .12s}
+.hub-docs-item:hover{box-shadow:0 2px 10px rgba(124,58,237,.12)}
+.hub-docs-item-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.hub-docs-item-info{flex:1}
+.hub-docs-item-name{font-size:13px;font-weight:600;color:#58504D}
+.hub-docs-item-meta{font-size:11px;color:#58504D;opacity:.45;margin-top:2px}
+.hub-docs-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(124,58,237,.12);color:#5B21B6}
+.hub-docs-empty{text-align:center;padding:32px 16px;color:#58504D;opacity:.4;font-size:13px}
 .hub-s-journee{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .hub-s-journee .hub-s-kpi{flex:1;min-width:130px}
 
@@ -11292,8 +11320,8 @@ function showImportResult(type, html) {
 <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:0;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="Visuel_Orevy.png" style="width:100vw;height:100vh;object-fit:cover;opacity:0.12;user-select:none;display:block" alt=""></div>
 <div class="hub-s-header" style="position:relative;z-index:1">
   <div class="hub-s-logo">
-    <div class="hub-s-logomark" style="background:transparent;overflow:hidden">
-      <img src="logo_orevy.png" alt="Orevy" style="width:34px;height:34px;object-fit:contain;border-radius:9px">
+    <div class="hub-s-logomark">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#fff" stroke-width="1.6"/><circle cx="10" cy="10" r="2.5" fill="#fff"/></svg>
     </div>
     <div class="hub-s-logotext">OREVY<span> ·</span></div>
     <span style="font-size:11px;color:#8FAF8A;font-weight:500;letter-spacing:.5px">Plateforme Petite Enfance</span>
@@ -11320,13 +11348,13 @@ function showImportResult(type, html) {
   <!-- VUE ADMIN -->
   <div id="hub-v-admin" style="display:none">
     <div class="hub-s-section-lbl" style="margin-bottom:14px">Vos espaces</div>
-    <div class="hub-s-pillars">
+    <div class="hub-s-pillars-4">
       <div class="hub-s-card str" onclick="enterStructures()">
         <div class="hub-s-extbadge">↗</div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="#fff"/><rect x="12" y="2" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="2" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".4"/></svg></div>
         <div class="hub-s-name">Orevy Structures</div>
         <div class="hub-s-desc">Gestion quotidienne de vos micro-crèches</div>
-        <div class="hub-s-tags"><span class="hub-s-tag">Planning</span><span class="hub-s-tag">Familles</span><span class="hub-s-tag">RH</span><span class="hub-s-tag">Stocks</span><span class="hub-s-tag">Pointage</span></div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Planning</span><span class="hub-s-tag">Familles</span><span class="hub-s-tag">RH</span><span class="hub-s-tag">Stocks</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </div>
       <a class="hub-s-card frm" href="https://davidbucari-ui.github.io/orevy-formations" target="_blank">
@@ -11334,7 +11362,7 @@ function showImportResult(type, html) {
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3L3 7l8 4 8-4-8-4z" fill="#fff"/><path d="M3 11l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M3 15l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".6"/></svg></div>
         <div class="hub-s-name">Orevy Formations</div>
         <div class="hub-s-desc">Formations continues pour vos équipes</div>
-        <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span><span class="hub-s-tag">Attestations</span><span class="hub-s-tag">Quiz</span></div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span><span class="hub-s-tag">Attestations</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
       <a class="hub-s-card sol" href="https://davidbucari-ui.github.io/orevy-solutions/" target="_blank">
@@ -11342,9 +11370,16 @@ function showImportResult(type, html) {
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="#fff" stroke-width="1.5"/><path d="M8 11l2.5 2.5L14 8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="hub-s-name">Orevy Solutions</div>
         <div class="hub-s-desc">Accompagnement &amp; conseil pédagogique</div>
-        <div class="hub-s-tags"><span class="hub-s-tag">Analyse pratique</span><span class="hub-s-tag">Conseil</span><span class="hub-s-tag">Vitrine</span></div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Analyse pratique</span><span class="hub-s-tag">Conseil</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
+      <div class="hub-s-card doc" onclick="openHubDocs()">
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div class="hub-s-name">Orevy Documents</div>
+        <div class="hub-s-desc">Base documentaire &amp; réglementaire</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Protocoles</span><span class="hub-s-tag">Réglementation</span></div>
+        <div class="hub-s-cta">Consulter →</div>
+      </div>
     </div>
     <div class="hub-s-section-lbl">Vue réseau du jour</div>
     <div class="hub-s-kpis" id="hub-kpis-admin">
@@ -11362,13 +11397,13 @@ function showImportResult(type, html) {
   <!-- VUE DIRECTRICE -->
   <div id="hub-v-directrice" style="display:none">
     <div class="hub-s-section-lbl" style="margin-bottom:14px">Vos espaces</div>
-    <div class="hub-s-pillars">
+    <div class="hub-s-pillars-4">
       <div class="hub-s-card str" onclick="enterStructures()">
         <div class="hub-s-extbadge">↗</div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="#fff"/><rect x="12" y="2" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="2" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".4"/></svg></div>
         <div class="hub-s-name">Orevy Structures</div>
         <div class="hub-s-desc">Ma crèche au quotidien</div>
-        <div class="hub-s-tags"><span class="hub-s-tag">Planning</span><span class="hub-s-tag">Familles</span><span class="hub-s-tag">RH</span><span class="hub-s-tag">Stocks</span></div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Planning</span><span class="hub-s-tag">Familles</span><span class="hub-s-tag">RH</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </div>
       <a class="hub-s-card frm" href="https://davidbucari-ui.github.io/orevy-formations" target="_blank">
@@ -11376,7 +11411,7 @@ function showImportResult(type, html) {
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3L3 7l8 4 8-4-8-4z" fill="#fff"/><path d="M3 11l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M3 15l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".6"/></svg></div>
         <div class="hub-s-name">Orevy Formations</div>
         <div class="hub-s-desc">Formations de mon équipe</div>
-        <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span><span class="hub-s-tag">Suivi équipe</span></div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
       <div class="hub-s-card sol dis">
@@ -11384,6 +11419,13 @@ function showImportResult(type, html) {
         <div class="hub-s-name">Orevy Solutions</div>
         <div class="hub-s-desc">Accès réservé admin</div>
         <div class="hub-s-tags"><span class="hub-s-tag">Non disponible</span></div>
+      </div>
+      <div class="hub-s-card doc" onclick="openHubDocs()">
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div class="hub-s-name">Orevy Documents</div>
+        <div class="hub-s-desc">Base documentaire &amp; réglementaire</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Protocoles</span><span class="hub-s-tag">Réglementation</span></div>
+        <div class="hub-s-cta">Consulter →</div>
       </div>
     </div>
     <div class="hub-s-section-lbl">Ma crèche aujourd'hui</div>
@@ -11408,7 +11450,7 @@ function showImportResult(type, html) {
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="#fff"/><rect x="12" y="2" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="2" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".4"/></svg></div>
         <div class="hub-s-name">Orevy Structures</div>
         <div class="hub-s-desc">Mon outil quotidien</div>
-        <div class="hub-s-tags"><span class="hub-s-tag">Planning</span><span class="hub-s-tag">Familles</span><span class="hub-s-tag">Pointage</span><span class="hub-s-tag">Stocks</span></div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Planning</span><span class="hub-s-tag">Familles</span><span class="hub-s-tag">Pointage</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </div>
       <a class="hub-s-card frm" href="https://davidbucari-ui.github.io/orevy-formations" target="_blank">
@@ -11416,9 +11458,16 @@ function showImportResult(type, html) {
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3L3 7l8 4 8-4-8-4z" fill="#fff"/><path d="M3 11l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M3 15l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".6"/></svg></div>
         <div class="hub-s-name">Orevy Formations</div>
         <div class="hub-s-desc">Mes formations en cours</div>
-        <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Maltraitance</span><span class="hub-s-tag">Attestations</span></div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Attestations</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
+      <div class="hub-s-card doc" onclick="openHubDocs()" style="grid-column:1/-1">
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div class="hub-s-name">Orevy Documents</div>
+        <div class="hub-s-desc">Protocoles, procédures et textes réglementaires de référence pour votre pratique professionnelle</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Base documentaire</span><span class="hub-s-tag">Base réglementaire</span></div>
+        <div class="hub-s-cta">Consulter →</div>
+      </div>
     </div>
     <div class="hub-s-section-lbl">Ma journée</div>
     <div class="hub-s-journee">
@@ -11429,6 +11478,144 @@ function showImportResult(type, html) {
   </div>
 </div>
 </div>
+<!-- ── MODAL OREVY DOCUMENTS ── -->
+<div id="hub-docs-modal" onclick="if(event.target===this)closeHubDocs()">
+  <div class="hub-docs-panel">
+    <button class="hub-docs-close" onclick="closeHubDocs()">✕</button>
+    <div class="hub-docs-title">📁 Orevy Documents</div>
+    <div class="hub-docs-sub">Base documentaire &amp; réglementaire — Petite Enfance</div>
+    <div class="hub-docs-tabs">
+      <button class="hub-docs-tab active" onclick="switchDocsFolder('documentaire', this)">📂 Base documentaire</button>
+      <button class="hub-docs-tab" onclick="switchDocsFolder('reglementaire', this)">⚖️ Base réglementaire</button>
+    </div>
+
+    <!-- DOSSIER BASE DOCUMENTAIRE -->
+    <div id="hub-docs-documentaire" class="hub-docs-folder active">
+      <div class="hub-docs-item" onclick="alert('Document à venir')">
+        <div class="hub-docs-item-icon" style="background:#EFF5EE">📋</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Protocole de change</div>
+          <div class="hub-docs-item-meta">Hygiène · Soins · 0–3 ans</div>
+        </div>
+        <span class="hub-docs-badge">PDF</span>
+      </div>
+      <div class="hub-docs-item" onclick="alert('Document à venir')">
+        <div class="hub-docs-item-icon" style="background:#FFF7ED">🍽️</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Protocole repas &amp; diversification</div>
+          <div class="hub-docs-item-meta">Alimentation · PAP · Allergies</div>
+        </div>
+        <span class="hub-docs-badge">PDF</span>
+      </div>
+      <div class="hub-docs-item" onclick="alert('Document à venir')">
+        <div class="hub-docs-item-icon" style="background:#EFF5EE">😴</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Protocole sommeil &amp; sieste</div>
+          <div class="hub-docs-item-meta">Sécurité · MSN · Positionnement</div>
+        </div>
+        <span class="hub-docs-badge">PDF</span>
+      </div>
+      <div class="hub-docs-item" onclick="alert('Document à venir')">
+        <div class="hub-docs-item-icon" style="background:#F5EDE8">🤒</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Protocole santé &amp; éviction</div>
+          <div class="hub-docs-item-meta">Maladies · Médicaments · PAI</div>
+        </div>
+        <span class="hub-docs-badge">PDF</span>
+      </div>
+      <div class="hub-docs-item" onclick="alert('Document à venir')">
+        <div class="hub-docs-item-icon" style="background:#F0EEF8">🎨</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Projet pédagogique</div>
+          <div class="hub-docs-item-meta">Valeurs · Postures · Accompagnement</div>
+        </div>
+        <span class="hub-docs-badge">DOCX</span>
+      </div>
+      <div class="hub-docs-item" onclick="alert('Document à venir')">
+        <div class="hub-docs-item-icon" style="background:#FEF2F2">🚨</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Protocole urgence &amp; accident</div>
+          <div class="hub-docs-item-meta">Conduite à tenir · SAMU · Familles</div>
+        </div>
+        <span class="hub-docs-badge">PDF</span>
+      </div>
+      <div style="margin-top:16px;padding:12px 14px;border-radius:10px;background:rgba(124,58,237,.07);border:1px dashed rgba(124,58,237,.2);font-size:12px;color:#5B21B6;text-align:center;cursor:pointer" onclick="alert('Fonctionnalité à venir — ajout de documents personnalisés')">
+        + Ajouter un document à cette base
+      </div>
+    </div>
+
+    <!-- DOSSIER BASE RÉGLEMENTAIRE -->
+    <div id="hub-docs-reglementaire" class="hub-docs-folder">
+      <div class="hub-docs-item" onclick="window.open('https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000051307658','_blank')">
+        <div class="hub-docs-item-icon" style="background:#EEF0F5">⚖️</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Décret 2025-304 — Réforme EAJE</div>
+          <div class="hub-docs-item-meta">En vigueur depuis sept. 2025 · Légifrance</div>
+        </div>
+        <span class="hub-docs-badge">Lien</span>
+      </div>
+      <div class="hub-docs-item" onclick="window.open('https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006072665/LEGISCTA000006171022/','_blank')">
+        <div class="hub-docs-item-icon" style="background:#EEF0F5">📜</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Code de la santé publique — Art. R2324</div>
+          <div class="hub-docs-item-meta">Autorisation · Encadrement · Taux</div>
+        </div>
+        <span class="hub-docs-badge">Lien</span>
+      </div>
+      <div class="hub-docs-item" onclick="window.open('https://www.has-sante.fr/jcms/p_3261767/fr/accueil','_blank')">
+        <div class="hub-docs-item-icon" style="background:#EFF5EE">🏥</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Recommandations HAS — Petite enfance</div>
+          <div class="hub-docs-item-meta">Santé · Développement · Prévention</div>
+        </div>
+        <span class="hub-docs-badge">Lien</span>
+      </div>
+      <div class="hub-docs-item" onclick="window.open('https://www.caf.fr/professionnels/informations-generales/accueil-du-jeune-enfant','_blank')">
+        <div class="hub-docs-item-icon" style="background:#EFF5EE">👶</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">CNAF — Prestation de Service Unique (PSU)</div>
+          <div class="hub-docs-item-meta">Financement · Barème · Contrats</div>
+        </div>
+        <span class="hub-docs-badge">Lien</span>
+      </div>
+      <div class="hub-docs-item" onclick="alert('Document à venir')">
+        <div class="hub-docs-item-icon" style="background:#FFFBEB">📋</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">FAQ Réglementation EAJE — Fév. 2026</div>
+          <div class="hub-docs-item-meta">Questions-réponses officielles · 33 pages</div>
+        </div>
+        <span class="hub-docs-badge">PDF</span>
+      </div>
+      <div class="hub-docs-item" onclick="alert('Document à venir')">
+        <div class="hub-docs-item-icon" style="background:#EEF0F5">📚</div>
+        <div class="hub-docs-item-info">
+          <div class="hub-docs-item-name">Vadémécum EAJE — Réseau Devenir d'Enfance</div>
+          <div class="hub-docs-item-meta">Référentiel · Version Jan. 2023 · 42 pages</div>
+        </div>
+        <span class="hub-docs-badge">PDF</span>
+      </div>
+      <div style="margin-top:16px;padding:12px 14px;border-radius:10px;background:rgba(124,58,237,.07);border:1px dashed rgba(124,58,237,.2);font-size:12px;color:#5B21B6;text-align:center;cursor:pointer" onclick="alert('Fonctionnalité à venir — ajout de textes réglementaires')">
+        + Ajouter un texte réglementaire
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openHubDocs() {
+  document.getElementById('hub-docs-modal').classList.add('open');
+}
+function closeHubDocs() {
+  document.getElementById('hub-docs-modal').classList.remove('open');
+}
+function switchDocsFolder(folder, btn) {
+  document.querySelectorAll('.hub-docs-folder').forEach(f => f.classList.remove('active'));
+  document.querySelectorAll('.hub-docs-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('hub-docs-' + folder).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+
 <!-- ── FIN HUB SCREEN ──────────────────────────────────────────── -->
 
 <div id="login-screen" style="display:flex;position:fixed;inset:0;background:linear-gradient(135deg,#1C1917,#292524,#1E1B4B);z-index:9999;align-items:center;justify-content:center"><div style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:0;overflow:hidden"><img src="Visuel_Orevy.png" style="width:100vw;height:100vh;object-fit:cover;opacity:0.08;user-select:none;display:block" alt=""></div>
