@@ -5125,9 +5125,9 @@ async function loginUser() {
   btn.textContent = '⏳ Connexion…'; btn.disabled = true;
   errEl.style.display = 'none';
   try {
-    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+    const res = await fetch(`${SUPA_RH_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_RH_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
@@ -5155,9 +5155,9 @@ async function motDePasseOublie() {
     return;
   }
   try {
-    const res = await fetch(`${SUPA_URL}/auth/v1/recover`, {
+    const res = await fetch(`${SUPA_RH_URL}/auth/v1/recover`, {
       method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_RH_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
     if (res.ok) {
