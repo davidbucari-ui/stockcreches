@@ -14122,6 +14122,16 @@ function dsRenderCards() {
   }
 }
 
+const DS_CAT = {
+  agrement:    { label:'Agrément & Création',     color:'#C4623A', bg:'#FEF0EA', text:'#9A3D1E' },
+  encadrement: { label:'Encadrement & Personnel',  color:'#5C7A5E', bg:'#EEF5EE', text:'#375239' },
+  financement: { label:'Financement & Aides',      color:'#D4891A', bg:'#FEF5E5', text:'#8A5700' },
+  locaux:      { label:'Locaux & Sécurité',        color:'#4A6275', bg:'#EBF0F4', text:'#2D4255' },
+  sante:       { label:'Santé & Hygiène',          color:'#9B59B6', bg:'#F5EEF8', text:'#6C3483' },
+  gestion:     { label:'Gestion & Administratif',  color:'#E74C3C', bg:'#FDEDEC', text:'#A93226' },
+  decret2025:  { label:'Décret 2025-304',          color:'#7C3AED', bg:'#F5F3FF', text:'#4C1D95' }
+};
+
 function dsRenderGridCard(d, i) {
   const cat = DS_CAT[d.category];
   const b25 = d.tags && d.tags.includes('decret2025') ? `<span class="ds-badge-2025">⚡ Décret 2025</span>` : '';
