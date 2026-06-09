@@ -11771,15 +11771,139 @@ function showImportResult(type, html) {
 </div>
 
 <!-- SECTION DOCUMENTAIRE -->
-<div id="ds-section-documentaire" style="display:none;max-width:1300px;margin:0 auto;padding:24px 28px 40px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
-    <div>
-      <h2 style="font-family:'Playfair Display',serif;font-size:23px;font-weight:700;color:#1A1208">Base documentaire</h2>
-      <p style="font-size:12px;color:#888;margin-top:3px">Protocoles, procédures et outils pédagogiques pour votre pratique quotidienne</p>
+<!-- SECTION BASE DOCUMENTAIRE -->
+<div id="ds-section-documentaire" style="display:none">
+<div class="ds-body" id="ds-doc-layout">
+  <!-- SIDEBAR DOCUMENTAIRE -->
+  <aside class="ds-sidebar">
+    <div class="ds-sidebar-section">
+      <div class="ds-sidebar-title">Catégories</div>
+      <button class="ds-filter-btn ds-active" onclick="dsDocFilter('all',this)">
+        <span class="ds-dot" style="background:#1A1208"></span>Tous les documents
+        <span class="ds-count" id="ddc-all">0</span>
+      </button>
+      <button class="ds-filter-btn" onclick="dsDocFilter('protocoles',this)">
+        <span class="ds-dot" style="background:#5C7A5E"></span>Protocoles
+        <span class="ds-count" id="ddc-protocoles">0</span>
+      </button>
+      <button class="ds-filter-btn" onclick="dsDocFilter('administratif',this)">
+        <span class="ds-dot" style="background:#D4891A"></span>Documents administratifs
+        <span class="ds-count" id="ddc-administratif">0</span>
+      </button>
+      <button class="ds-filter-btn" onclick="dsDocFilter('sante',this)">
+        <span class="ds-dot" style="background:#9B59B6"></span>Documents santé
+        <span class="ds-count" id="ddc-sante">0</span>
+      </button>
+      <div id="ddc-extra-cats"></div>
+      <button class="ds-filter-btn" id="ddc-add-cat-btn" onclick="dsDocAddCat()" style="color:#7C3AED;font-weight:600;border-top:1px dashed #E2D9CC">
+        <span style="font-size:15px">+</span> Ajouter une catégorie
+      </button>
     </div>
-    <button onclick="alert('À venir — import de document')" style="padding:8px 16px;background:#5C7A5E;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">+ Ajouter un document</button>
+    <div class="ds-sidebar-section">
+      <div class="ds-sidebar-title">Actions</div>
+      <button class="ds-filter-btn" id="ddc-add-doc-btn" onclick="dsDocOpenForm()" style="color:#5C7A5E;font-weight:600">
+        <span>📄</span> Nouveau document
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN DOCUMENTAIRE -->
+  <main>
+    <div class="ds-main-header">
+      <div>
+        <h2 id="ds-doc-title">Tous les documents</h2>
+        <span class="ds-results-count" id="ds-doc-count"></span>
+      </div>
+      <div class="ds-view-toggle">
+        <button class="ds-view-btn ds-active" id="ds-doc-grid-btn" onclick="dsDocSetView('grid')" title="Grille">⊞</button>
+        <button class="ds-view-btn" id="ds-doc-list-btn" onclick="dsDocSetView('list')" title="Liste">☰</button>
+      </div>
+    </div>
+    <div id="ds-doc-container" class="ds-cards-grid"></div>
+    <div id="ds-doc-empty" class="ds-empty" style="display:none">
+      <div class="icon">📄</div>
+      <p>Aucun document dans cette catégorie</p>
+      <p style="font-size:12px;margin-top:6px;color:#bbb">Cliquez sur "Nouveau document" pour en ajouter un</p>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- MODAL NOUVEAU DOCUMENT -->
+<div id="ds-doc-modal" style="display:none;position:fixed;inset:0;z-index:10200;background:rgba(26,18,8,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;pointer-events:none">
+  <div style="background:#FFF9F2;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,0.3);position:relative">
+    <button onclick="dsDocCloseForm()" style="position:absolute;top:16px;right:16px;background:#E2D9CC;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center">✕</button>
+    <h3 id="ds-doc-form-title" style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1A1208;margin-bottom:6px">Nouveau document</h3>
+    <p style="font-size:12px;color:#888;margin-bottom:22px">Référencez un document dans la base documentaire</p>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Nom du document *</label>
+        <input id="dd-nom" type="text" placeholder="Ex: Protocole de change — MAJ 2026" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff" onfocus="this.style.borderColor='#5C7A5E'" onblur="this.style.borderColor='#E2D9CC'">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Catégorie *</label>
+          <select id="dd-cat" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;cursor:pointer">
+            <option value="protocoles">Protocoles</option>
+            <option value="administratif">Documents administratifs</option>
+            <option value="sante">Documents santé</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Statut</label>
+          <select id="dd-statut" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;cursor:pointer">
+            <option value="en_vigueur">✓ En vigueur</option>
+            <option value="a_valider">⏳ À valider</option>
+            <option value="archive">📦 Archivé</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Description</label>
+        <textarea id="dd-desc" rows="3" placeholder="Décrivez brièvement le contenu et l'usage de ce document…" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:vertical;background:#fff;line-height:1.6" onfocus="this.style.borderColor='#5C7A5E'" onblur="this.style.borderColor='#E2D9CC'"></textarea>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Tags (séparés par des virgules)</label>
+        <input id="dd-tags" type="text" placeholder="Ex: Hygiène, 0-3 ans, Change" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff" onfocus="this.style.borderColor='#5C7A5E'" onblur="this.style.borderColor='#E2D9CC'">
+      </div>
+      <div id="dd-msg" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:6px">
+        <button onclick="dsDocCloseForm()" style="padding:10px 20px;background:#E2D9CC;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:#1A1208">Annuler</button>
+        <button onclick="dsDocSave()" id="dd-save-btn" style="padding:10px 20px;background:#5C7A5E;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Enregistrer</button>
+      </div>
+    </div>
   </div>
-  <div class="ds-proto-grid" id="ds-proto-grid"></div>
+</div>
+
+<!-- MODAL NOUVELLE CATÉGORIE -->
+<div id="ds-doc-cat-modal" style="display:none;position:fixed;inset:0;z-index:10300;background:rgba(26,18,8,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;pointer-events:none">
+  <div style="background:#FFF9F2;border-radius:16px;width:100%;max-width:380px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative">
+    <button onclick="dsDocCloseCatModal()" style="position:absolute;top:14px;right:14px;background:#E2D9CC;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px">✕</button>
+    <h3 style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#1A1208;margin-bottom:16px">Nouvelle catégorie</h3>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Nom *</label>
+        <input id="dd-cat-nom" type="text" placeholder="Ex: Pédagogie & projet" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff" onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E2D9CC'">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Couleur</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="dd-cat-colors">
+          <div onclick="dsDocSelectColor(this,'#5C7A5E')" style="width:28px;height:28px;border-radius:50%;background:#5C7A5E;cursor:pointer;border:3px solid transparent" title="Vert"></div>
+          <div onclick="dsDocSelectColor(this,'#D4891A')" style="width:28px;height:28px;border-radius:50%;background:#D4891A;cursor:pointer;border:3px solid transparent" title="Ambre"></div>
+          <div onclick="dsDocSelectColor(this,'#9B59B6')" style="width:28px;height:28px;border-radius:50%;background:#9B59B6;cursor:pointer;border:3px solid transparent" title="Violet"></div>
+          <div onclick="dsDocSelectColor(this,'#C4623A')" style="width:28px;height:28px;border-radius:50%;background:#C4623A;cursor:pointer;border:3px solid transparent" title="Terra"></div>
+          <div onclick="dsDocSelectColor(this,'#4A6275')" style="width:28px;height:28px;border-radius:50%;background:#4A6275;cursor:pointer;border:3px solid transparent" title="Acier"></div>
+          <div onclick="dsDocSelectColor(this,'#E74C3C')" style="width:28px;height:28px;border-radius:50%;background:#E74C3C;cursor:pointer;border:3px solid transparent" title="Rouge"></div>
+          <div onclick="dsDocSelectColor(this,'#7C3AED')" style="width:28px;height:28px;border-radius:50%;background:#7C3AED;cursor:pointer;border:3px solid transparent" title="Indigo"></div>
+        </div>
+        <input type="hidden" id="dd-cat-color" value="#5C7A5E">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+        <button onclick="dsDocCloseCatModal()" style="padding:9px 18px;background:#E2D9CC;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:#1A1208">Annuler</button>
+        <button onclick="dsDocSaveCat()" style="padding:9px 18px;background:#7C3AED;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Créer</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- SECTION VEILLE RÉGLEMENTAIRE -->
@@ -13608,16 +13732,294 @@ const DS_DATA = [
 // ═══════════════════════════════════════════════════════
 
 // ─── DONNÉES PROTOCOLES (Base documentaire) ─────────────
-const DS_PROTOCOLES = [
-  { id:'p1', name:'Protocole de change', desc:'Hygiène, soins, respect du rythme de l\'enfant. Prévention des érythèmes et des infections.', icon:'🧴', color:'#5C7A5E', bg:'#EEF5EE', tags:['Hygiène','Soins','0–3 ans'], status:'✓ En vigueur', statusBg:'#EEF5EE', statusColor:'#375239' },
-  { id:'p2', name:'Protocole repas & diversification', desc:'Alimentation de l\'enfant de 4 mois à 3 ans, gestion du PAP, allergies, diversification alimentaire.', icon:'🍽️', color:'#D4891A', bg:'#FEF5E5', tags:['Alimentation','PAP','Allergies'], status:'✓ En vigueur', statusBg:'#FEF5E5', statusColor:'#8A5700' },
-  { id:'p3', name:'Protocole sommeil & sieste', desc:'Sécurité du couchage, prévention MSN, positionnement, gestion du réveil progressif.', icon:'😴', color:'#4A6275', bg:'#EBF0F4', tags:['Sécurité','MSN','Sieste'], status:'✓ En vigueur', statusBg:'#EBF0F4', statusColor:'#2D4255' },
-  { id:'p4', name:'Protocole santé & éviction', desc:'Maladies infantiles, tableau d\'éviction, gestion des PAI, administration de médicaments sur prescription.', icon:'🤒', color:'#9B59B6', bg:'#F5EEF8', tags:['Santé','PAI','Éviction'], status:'✓ En vigueur', statusBg:'#F5EEF8', statusColor:'#6C3483' },
-  { id:'p5', name:'Projet pédagogique', desc:'Valeurs de la structure, postures professionnelles, modalités d\'accueil et accompagnement du jeune enfant.', icon:'🎨', color:'#7C3AED', bg:'#F5F3FF', tags:['Pédagogie','Valeurs','Équipe'], status:'✓ En vigueur', statusBg:'#F5F3FF', statusColor:'#4C1D95' },
-  { id:'p6', name:'Protocole urgence & accident', desc:'Conduite à tenir en cas d\'urgence médicale, numéros d\'urgence, information des familles.', icon:'🚨', color:'#E74C3C', bg:'#FDEDEC', tags:['Urgence','SAMU','Familles'], status:'✓ En vigueur', statusBg:'#FDEDEC', statusColor:'#A93226' },
-  { id:'p7', name:'Protocole accueil de l\'enfant & famille', desc:'Modalités d\'adaptation, temps de séparation, accueil des parents, transmissions quotidiennes.', icon:'👨‍👩‍👧', color:'#C4623A', bg:'#FEF0EA', tags:['Famille','Adaptation','Transmissions'], status:'✓ En vigueur', statusBg:'#FEF0EA', statusColor:'#9A3D1E' },
-  { id:'p8', name:'Protocole maltraitance & signalement', desc:'Repérage des signes de danger, procédure IP/CRIP, signalement au procureur. Obligation légale.', icon:'🛡️', color:'#1A1208', bg:'#F0EDE8', tags:['Protection','IP','CRIP','119'], status:'⚠ Obligatoire', statusBg:'#FEF2F2', statusColor:'#DC2626' },
+// ══════════════════════════════════════════════════════
+//  BASE DOCUMENTAIRE — Catégories + Documents
+// ══════════════════════════════════════════════════════
+
+const DS_DOC_CATS = {
+  protocoles:    { label:'Protocoles',               color:'#5C7A5E', bg:'#EEF5EE', text:'#375239' },
+  administratif: { label:'Documents administratifs', color:'#D4891A', bg:'#FEF5E5', text:'#8A5700' },
+  sante:         { label:'Documents santé',          color:'#9B59B6', bg:'#F5EEF8', text:'#6C3483' },
+};
+
+// Catégories supplémentaires ajoutées par l'utilisateur
+let DS_DOC_CATS_EXTRA = JSON.parse(localStorage.getItem('orevy_doc_cats_extra') || '{}');
+
+let DS_DOC_FILTER = 'all';
+let DS_DOC_VIEW = 'grid';
+let DS_DOC_EDIT_ID = null;
+let DS_DOC_SEL_COLOR = '#5C7A5E';
+
+// Documents initiaux (enrichis avec catégorie)
+let DS_DOCS = JSON.parse(localStorage.getItem('orevy_docs') || 'null') || [
+  { id:'p1', cat:'protocoles', name:'Protocole de change', desc:"Hygiène, soins, respect du rythme de l'enfant. Prévention des érythèmes et infections.", tags:['Hygiène','Soins','0–3 ans'], statut:'en_vigueur' },
+  { id:'p2', cat:'protocoles', name:'Protocole repas & diversification', desc:"Alimentation de 4 mois à 3 ans, gestion du PAP, allergies, diversification alimentaire.", tags:['Alimentation','PAP','Allergies'], statut:'en_vigueur' },
+  { id:'p3', cat:'protocoles', name:'Protocole sommeil & sieste', desc:"Sécurité du couchage, prévention MSN, positionnement, gestion du réveil progressif.", tags:['Sécurité','MSN','Sieste'], statut:'en_vigueur' },
+  { id:'p4', cat:'protocoles', name:'Protocole accueil & adaptation', desc:"Modalités d'adaptation, temps de séparation, accueil des parents, transmissions.", tags:['Famille','Adaptation','Transmissions'], statut:'en_vigueur' },
+  { id:'p5', cat:'protocoles', name:'Protocole urgence & accident', desc:"Conduite à tenir en cas d'urgence médicale, numéros d'urgence, information des familles.", tags:['Urgence','SAMU'], statut:'en_vigueur' },
+  { id:'p6', cat:'protocoles', name:'Protocole maltraitance & signalement', desc:"Repérage des signes de danger, procédure IP/CRIP, signalement au procureur.", tags:['Protection','CRIP','119'], statut:'en_vigueur' },
+  { id:'p7', cat:'administratif', name:'Règlement de fonctionnement', desc:"Document contractuel remis aux familles. Horaires, tarifs, modalités d'accueil, règles de vie.", tags:['Familles','Contrat'], statut:'en_vigueur' },
+  { id:'p8', cat:'administratif', name:"Projet d'établissement", desc:"Valeurs, postures professionnelles, projet éducatif et social de la structure.", tags:['Pédagogie','Valeurs'], statut:'en_vigueur' },
+  { id:'p9', cat:'administratif', name:"Livret d'accueil familles", desc:"Document de bienvenue remis à chaque famille. Présentation de la structure, équipe, fonctionnement.", tags:['Familles','Accueil'], statut:'en_vigueur' },
+  { id:'p10', cat:'sante', name:'Protocole santé & éviction', desc:"Maladies infantiles, tableau d'éviction, gestion des PAI, administration médicaments.", tags:['Santé','PAI','Éviction'], statut:'en_vigueur' },
+  { id:'p11', cat:'sante', name:"Plan d'accueil individualisé (PAI)", desc:"Modèle de PAI vierge. Allergies, pathologies chroniques, protocoles d'urgence spécifiques.", tags:['PAI','Handicap','Allergie'], statut:'en_vigueur' },
+  { id:'p12', cat:'sante', name:'Registre des accidents / incidents', desc:"Modèle de registre obligatoire. Consignation des accidents, incidents et transmissions PMI.", tags:['Registre','PMI','Obligatoire'], statut:'en_vigueur' },
 ];
+
+function dsSaveDocsLocal() {
+  localStorage.setItem('orevy_docs', JSON.stringify(DS_DOCS));
+}
+
+// ── Rendu catégories + compteurs ───────────────────────────────
+function dsDocGetAllCats() {
+  return { ...DS_DOC_CATS, ...DS_DOC_CATS_EXTRA };
+}
+
+function dsDocUpdateCounts() {
+  const all = DS_DOCS.length;
+  const el = document.getElementById('ddc-all');
+  if (el) el.textContent = all;
+  Object.keys(DS_DOC_CATS).forEach(cat => {
+    const el = document.getElementById('ddc-' + cat);
+    if (el) el.textContent = DS_DOCS.filter(d => d.cat === cat).length;
+  });
+  // Catégories extras
+  Object.keys(DS_DOC_CATS_EXTRA).forEach(cat => {
+    const el = document.getElementById('ddc-extra-' + cat);
+    if (el) el.textContent = DS_DOCS.filter(d => d.cat === cat).length;
+  });
+  // Mettre à jour le select catégorie dans le formulaire
+  dsDocUpdateCatSelect();
+}
+
+function dsDocRenderExtraCats() {
+  const container = document.getElementById('ddc-extra-cats');
+  if (!container) return;
+  container.innerHTML = Object.entries(DS_DOC_CATS_EXTRA).map(([id, cat]) => `
+    <button class="ds-filter-btn${DS_DOC_FILTER === id ? ' ds-active' : ''}" onclick="dsDocFilter('${id}',this)">
+      <span class="ds-dot" style="background:${cat.color}"></span>${cat.label}
+      <span class="ds-count" id="ddc-extra-${id}">${DS_DOCS.filter(d => d.cat === id).length}</span>
+    </button>`).join('');
+}
+
+function dsDocUpdateCatSelect() {
+  const sel = document.getElementById('dd-cat');
+  if (!sel) return;
+  const allCats = dsDocGetAllCats();
+  const current = sel.value;
+  sel.innerHTML = Object.entries(allCats)
+    .map(([id, cat]) => `<option value="${id}"${id === current ? ' selected' : ''}>${cat.label}</option>`)
+    .join('');
+}
+
+// ── Filtre + rendu ─────────────────────────────────────────────
+function dsDocFilter(cat, btn) {
+  DS_DOC_FILTER = cat;
+  document.querySelectorAll('#ds-doc-layout .ds-filter-btn').forEach(b => b.classList.remove('ds-active'));
+  if (btn) btn.classList.add('ds-active');
+  const titles = { all: 'Tous les documents', ...Object.fromEntries(Object.entries(dsDocGetAllCats()).map(([k,v]) => [k, v.label])) };
+  const titleEl = document.getElementById('ds-doc-title');
+  if (titleEl) titleEl.textContent = titles[cat] || cat;
+  dsDocRender();
+}
+
+function dsDocSetView(v) {
+  DS_DOC_VIEW = v;
+  document.getElementById('ds-doc-grid-btn').classList.toggle('ds-active', v === 'grid');
+  document.getElementById('ds-doc-list-btn').classList.toggle('ds-active', v === 'list');
+  dsDocRender();
+}
+
+function dsDocRender(query) {
+  const q = query || dsSearchQuery || '';
+  const allCats = dsDocGetAllCats();
+  let data = DS_DOC_FILTER === 'all' ? DS_DOCS : DS_DOCS.filter(d => d.cat === DS_DOC_FILTER);
+  if (q) data = data.filter(d =>
+    d.name.toLowerCase().includes(q) ||
+    (d.desc||'').toLowerCase().includes(q) ||
+    (d.tags||[]).some(t => t.toLowerCase().includes(q))
+  );
+
+  const container = document.getElementById('ds-doc-container');
+  const empty = document.getElementById('ds-doc-empty');
+  const countEl = document.getElementById('ds-doc-count');
+  if (countEl) countEl.textContent = data.length === DS_DOCS.length ? `${data.length} documents` : `${data.length} résultat${data.length > 1 ? 's' : ''}`;
+
+  if (!data.length) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  const isAdmin = typeof currentUserRole !== 'undefined' && (currentUserRole === 'admin' || currentUserRole === 'Admin');
+
+  const statutCfg = {
+    en_vigueur: { label:'✓ En vigueur', bg:'#EEF5EE', color:'#375239' },
+    a_valider:  { label:'⏳ À valider', bg:'#FEF5E5', color:'#8A5700' },
+    archive:    { label:'📦 Archivé',   bg:'#F0EDE8', color:'#6B4C2A' },
+  };
+
+  if (DS_DOC_VIEW === 'grid') {
+    container.className = 'ds-cards-grid';
+    container.innerHTML = data.map((d, i) => {
+      const cat = allCats[d.cat] || { color:'#888', bg:'#f5f5f5', text:'#444', label: d.cat };
+      const st = statutCfg[d.statut] || statutCfg.en_vigueur;
+      const adminBtns = isAdmin ? `
+        <div style="display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid ${cat.bg}" onclick="event.stopPropagation()">
+          <button onclick="dsDocEdit('${d.id}')" style="padding:3px 9px;background:${cat.bg};color:${cat.text};border:1px solid ${cat.color}33;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Modifier</button>
+          <button onclick="dsDocDelete('${d.id}')" style="padding:3px 9px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Supprimer</button>
+        </div>` : '';
+      return `<div class="ds-card" style="animation-delay:${i*0.04}s">
+        <div class="ds-card-stripe" style="background:${cat.color}"></div>
+        <div class="ds-card-body">
+          <div class="ds-card-meta">
+            <span class="ds-tag" style="background:${cat.bg};color:${cat.text}">${cat.label}</span>
+          </div>
+          <h3 style="font-size:15px">${d.name}</h3>
+          ${d.desc ? `<p>${d.desc}</p>` : ''}
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${(d.tags||[]).map(t => `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${cat.bg};color:${cat.text};font-weight:500">${t}</span>`).join('')}</div>
+          <div class="ds-card-footer">
+            <span style="font-size:10px;padding:3px 8px;border-radius:10px;background:${st.bg};color:${st.color};font-weight:600">${st.label}</span>
+            <button class="ds-expand-btn" onclick="alert('Fichier à venir — ${d.name.replace(/'/g,"\'")}')">Consulter →</button>
+          </div>
+          ${adminBtns}
+        </div></div>`;
+    }).join('');
+  } else {
+    container.className = 'ds-cards-list';
+    container.innerHTML = data.map((d, i) => {
+      const cat = allCats[d.cat] || { color:'#888', bg:'#f5f5f5', text:'#444', label: d.cat };
+      const st = statutCfg[d.statut] || statutCfg.en_vigueur;
+      return `<div class="ds-list-item" style="animation-delay:${i*0.03}s">
+        <div class="ds-list-stripe" style="background:${cat.color}"></div>
+        <div class="ds-list-info">
+          <h3>${d.name}</h3>
+          <p><span style="color:${cat.text}">● ${cat.label}</span><span style="color:${st.color}">${st.label}</span>${(d.tags||[]).slice(0,3).map(t=>`<span>${t}</span>`).join('')}</p>
+        </div>
+        <span style="font-size:18px;color:#ccc">›</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ── Formulaire document ────────────────────────────────────────
+function dsDocOpenForm(id) {
+  DS_DOC_EDIT_ID = id || null;
+  const modal = document.getElementById('ds-doc-modal');
+  dsDocUpdateCatSelect();
+  if (id) {
+    const d = DS_DOCS.find(x => x.id === id);
+    document.getElementById('ds-doc-form-title').textContent = 'Modifier le document';
+    document.getElementById('dd-nom').value = d.name || '';
+    document.getElementById('dd-cat').value = d.cat || 'protocoles';
+    document.getElementById('dd-statut').value = d.statut || 'en_vigueur';
+    document.getElementById('dd-desc').value = d.desc || '';
+    document.getElementById('dd-tags').value = (d.tags||[]).join(', ');
+    document.getElementById('dd-save-btn').textContent = 'Enregistrer';
+  } else {
+    document.getElementById('ds-doc-form-title').textContent = 'Nouveau document';
+    ['dd-nom','dd-desc','dd-tags'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('dd-statut').value = 'en_vigueur';
+    document.getElementById('dd-save-btn').textContent = 'Enregistrer';
+  }
+  document.getElementById('dd-msg').style.display = 'none';
+  modal.style.display = 'flex';
+  modal.style.pointerEvents = 'auto';
+}
+
+function dsDocCloseForm() {
+  const m = document.getElementById('ds-doc-modal');
+  m.style.display = 'none';
+  m.style.pointerEvents = 'none';
+  DS_DOC_EDIT_ID = null;
+}
+
+function dsDocSave() {
+  const nom = document.getElementById('dd-nom').value.trim();
+  if (!nom) { dsDocMsg('Le nom est obligatoire', false); return; }
+  const doc = {
+    id: DS_DOC_EDIT_ID || 'd' + Date.now(),
+    name: nom,
+    cat: document.getElementById('dd-cat').value,
+    statut: document.getElementById('dd-statut').value,
+    desc: document.getElementById('dd-desc').value.trim(),
+    tags: document.getElementById('dd-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+  };
+  if (DS_DOC_EDIT_ID) {
+    const idx = DS_DOCS.findIndex(x => x.id === DS_DOC_EDIT_ID);
+    if (idx >= 0) DS_DOCS[idx] = doc;
+  } else {
+    DS_DOCS.unshift(doc);
+  }
+  dsSaveDocsLocal();
+  dsDocMsg('✓ Document enregistré', true);
+  setTimeout(() => { dsDocCloseForm(); dsDocUpdateCounts(); dsDocRender(); }, 600);
+}
+
+function dsDocEdit(id) { dsDocOpenForm(id); }
+
+function dsDocDelete(id) {
+  if (!confirm('Supprimer ce document ?')) return;
+  DS_DOCS = DS_DOCS.filter(d => d.id !== id);
+  dsSaveDocsLocal();
+  dsDocUpdateCounts();
+  dsDocRender();
+}
+
+function dsDocMsg(msg, ok) {
+  const el = document.getElementById('dd-msg');
+  el.textContent = msg;
+  el.style.background = ok ? '#F0FDF4' : '#FEF2F2';
+  el.style.color = ok ? '#166534' : '#DC2626';
+  el.style.border = '1px solid ' + (ok ? '#BBF7D0' : '#FECACA');
+  el.style.display = 'block';
+}
+
+// ── Ajout de catégorie ─────────────────────────────────────────
+function dsDocAddCat() {
+  document.getElementById('dd-cat-nom').value = '';
+  document.getElementById('dd-cat-color').value = '#5C7A5E';
+  // Réinitialiser sélection couleur
+  document.querySelectorAll('#dd-cat-colors div').forEach(el => el.style.border = '3px solid transparent');
+  document.querySelector('#dd-cat-colors div').style.border = '3px solid #1A1208';
+  const m = document.getElementById('ds-doc-cat-modal');
+  m.style.display = 'flex';
+  m.style.pointerEvents = 'auto';
+}
+
+function dsDocCloseCatModal() {
+  const m = document.getElementById('ds-doc-cat-modal');
+  m.style.display = 'none';
+  m.style.pointerEvents = 'none';
+}
+
+function dsDocSelectColor(el, color) {
+  document.querySelectorAll('#dd-cat-colors div').forEach(d => d.style.border = '3px solid transparent');
+  el.style.border = '3px solid #1A1208';
+  document.getElementById('dd-cat-color').value = color;
+  DS_DOC_SEL_COLOR = color;
+}
+
+function dsDocSaveCat() {
+  const nom = document.getElementById('dd-cat-nom').value.trim();
+  if (!nom) return;
+  const color = document.getElementById('dd-cat-color').value;
+  const id = nom.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_');
+  // Générer bg/text depuis color
+  DS_DOC_CATS_EXTRA[id] = { label: nom, color, bg: color + '22', text: color };
+  localStorage.setItem('orevy_doc_cats_extra', JSON.stringify(DS_DOC_CATS_EXTRA));
+  dsDocCloseCatModal();
+  dsDocRenderExtraCats();
+  dsDocUpdateCounts();
+}
+
+// ── Init documentaire ──────────────────────────────────────────
+function dsDocInit() {
+  dsDocUpdateCounts();
+  dsDocRenderExtraCats();
+  dsDocRender();
+  // Afficher bouton admin
+  const isAdmin = typeof currentUserRole !== 'undefined' && (currentUserRole === 'admin' || currentUserRole === 'Admin');
+  const addBtn = document.getElementById('ddc-add-doc-btn');
+  if (addBtn) addBtn.style.display = isAdmin ? 'flex' : 'none';
+}
 
 // ─── NAVIGATION ENTRE SECTIONS ──────────────────────────
 let dsCurrentSection = 'reglementaire';
@@ -13633,7 +14035,7 @@ function dsSwitchSection(section) {
   if (vTab) vTab.classList.toggle('ds-tab-active', section === 'veille');
   document.getElementById('ds-search-input').value = '';
   dsSearchQuery = '';
-  if (section === 'documentaire') dsRenderProtocoles('');
+  if (section === 'documentaire') dsDocInit();
   else if (section === 'reglementaire') dsRenderCards();
   else if (section === 'veille') dsVeilleLoad();
 }
@@ -13641,7 +14043,7 @@ function dsSwitchSection(section) {
 function dsOnSearch(val) {
   dsSearchQuery = val.toLowerCase();
   if (dsCurrentSection === 'reglementaire') dsRenderCards();
-  else dsRenderProtocoles(dsSearchQuery);
+  else dsDocRender(dsSearchQuery);
 }
 
 // ─── OPEN / CLOSE DOCS SCREEN ────────────────────────────
@@ -13657,46 +14059,12 @@ function closeDocsScreen() {
 }
 
 // ─── PROTOCOLES (Base documentaire) ─────────────────────
-function dsRenderProtocoles(query) {
-  const grid = document.getElementById('ds-proto-grid');
-  const filtered = query
-    ? DS_PROTOCOLES.filter(p => p.name.toLowerCase().includes(query) || p.desc.toLowerCase().includes(query) || p.tags.some(t => t.toLowerCase().includes(query)))
-    : DS_PROTOCOLES;
-  grid.innerHTML = filtered.map((p, i) => `
-    <div class="ds-proto-card" onclick="alert('Document à venir — ${p.name}')" style="animation-delay:${i*0.04}s">
-      <div class="ds-proto-stripe" style="background:${p.color}"></div>
-      <div class="ds-proto-body">
-        <div class="ds-proto-icon" style="background:${p.bg}">${p.icon}</div>
-        <div class="ds-proto-name">${p.name}</div>
-        <div class="ds-proto-desc">${p.desc}</div>
-        <div class="ds-proto-tags">${p.tags.map(t => `<span class="ds-proto-tag" style="background:${p.bg};color:${p.color}">${t}</span>`).join('')}</div>
-        <div class="ds-proto-footer">
-          <span class="ds-proto-status" style="background:${p.statusBg};color:${p.statusColor}">${p.status}</span>
-          <button class="ds-proto-btn">Consulter →</button>
-        </div>
-      </div>
-    </div>`).join('');
-}
-
-// ─── BASE RÉGLEMENTAIRE ──────────────────────────────────
-let dsFilter_current = 'all';
-let dsView = 'grid';
-let dsSearchQuery = '';
-
-const DS_CAT = {
-  agrement:    { label:'Agrément & Création',     color:'#C4623A', bg:'#FEF0EA', text:'#9A3D1E' },
-  encadrement: { label:'Encadrement & Personnel',  color:'#5C7A5E', bg:'#EEF5EE', text:'#375239' },
-  financement: { label:'Financement & Aides',      color:'#D4891A', bg:'#FEF5E5', text:'#8A5700' },
-  locaux:      { label:'Locaux & Sécurité',        color:'#4A6275', bg:'#EBF0F4', text:'#2D4255' },
-  sante:       { label:'Santé & Hygiène',          color:'#9B59B6', bg:'#F5EEF8', text:'#6C3483' },
-  gestion:     { label:'Gestion & Administratif',  color:'#E74C3C', bg:'#FDEDEC', text:'#A93226' },
-  decret2025:  { label:'Décret 2025-304',          color:'#7C3AED', bg:'#F5F3FF', text:'#4C1D95' }
-};
+// dsRenderProtocoles → remplacé par dsDocRender
 
 function dsInit() {
   dsUpdateCounts();
   dsRenderCards();
-  dsRenderProtocoles('');
+  dsDocInit();
 }
 
 function dsUpdateCounts() {
