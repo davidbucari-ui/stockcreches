@@ -11315,6 +11315,22 @@ function showImportResult(type, html) {
 .hub-s-journee{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .hub-s-journee .hub-s-kpi{flex:1;min-width:130px}
 
+/* Badge veille sur carte Documents */
+.hub-s-card.doc { position: relative; }
+.hub-docs-badge-count {
+  position: absolute; top: 12px; right: 12px;
+  background: #DC2626; color: #fff;
+  font-size: 11px; font-weight: 700;
+  min-width: 20px; height: 20px;
+  border-radius: 10px; padding: 0 6px;
+  display: none; align-items: center; justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  box-shadow: 0 2px 6px rgba(220,38,38,0.4);
+  z-index: 2;
+}
+.hub-docs-badge-count.visible { display: flex; }
+
+
 </style>
 
 <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:0;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="Visuel_Orevy.png" style="width:100vw;height:100vh;object-fit:cover;opacity:0.12;user-select:none;display:block" alt=""></div>
@@ -11374,6 +11390,7 @@ function showImportResult(type, html) {
         <div class="hub-s-cta">Accéder →</div>
       </a>
       <div class="hub-s-card doc" onclick="openHubDocs()">
+        <div class="hub-docs-badge-count" id="hub-docs-badge-admin"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
         <div class="hub-s-name">Orevy Documents</div>
         <div class="hub-s-desc">Base documentaire &amp; réglementaire</div>
@@ -11421,6 +11438,7 @@ function showImportResult(type, html) {
         <div class="hub-s-tags"><span class="hub-s-tag">Non disponible</span></div>
       </div>
       <div class="hub-s-card doc" onclick="openHubDocs()">
+        <div class="hub-docs-badge-count" id="hub-docs-badge-dir"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
         <div class="hub-s-name">Orevy Documents</div>
         <div class="hub-s-desc">Base documentaire &amp; réglementaire</div>
@@ -11462,6 +11480,7 @@ function showImportResult(type, html) {
         <div class="hub-s-cta">Accéder →</div>
       </a>
       <div class="hub-s-card doc" onclick="openHubDocs()" style="grid-column:1/-1">
+        <div class="hub-docs-badge-count" id="hub-docs-badge-aux"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
         <div class="hub-s-name">Orevy Documents</div>
         <div class="hub-s-desc">Protocoles, procédures et textes réglementaires de référence pour votre pratique professionnelle</div>
@@ -11706,6 +11725,7 @@ function showImportResult(type, html) {
   <div class="ds-section-tabs">
     <button class="ds-section-tab ds-tab-active" id="ds-tab-regl" onclick="dsSwitchSection('reglementaire')">⚖️ Base réglementaire</button>
     <button class="ds-section-tab" id="ds-tab-docs" onclick="dsSwitchSection('documentaire')">📂 Base documentaire</button>
+      <button class="ds-section-tab" id="ds-tab-veille" onclick="dsSwitchSection('veille')">🔔 Veille <span id="ds-veille-badge" style="display:none;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px"></span></button>
   </div>
 </div>
 
@@ -11760,6 +11780,99 @@ function showImportResult(type, html) {
     <button onclick="alert('À venir — import de document')" style="padding:8px 16px;background:#5C7A5E;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">+ Ajouter un document</button>
   </div>
   <div class="ds-proto-grid" id="ds-proto-grid"></div>
+</div>
+
+<!-- SECTION VEILLE RÉGLEMENTAIRE -->
+<div id="ds-section-veille" style="display:none;max-width:1300px;margin:0 auto;padding:24px 28px 40px">
+
+  <!-- Bandeau nouvelles alertes -->
+  <div id="ds-veille-bandeau" style="display:none;background:linear-gradient(135deg,#7C3AED,#4F46E5);color:#fff;border-radius:12px;padding:14px 20px;margin-bottom:20px;display:none;align-items:center;gap:12px">
+    <div style="width:8px;height:8px;background:#A5F3FC;border-radius:50%;flex-shrink:0;animation:dsPulse 2s infinite"></div>
+    <div style="flex:1;font-size:13px"><strong id="ds-bandeau-txt">Nouvelles alertes réglementaires</strong> — cliquez pour consulter</div>
+    <button onclick="dsMarquerToutLu()" style="background:rgba(255,255,255,0.2);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;font-family:'DM Sans',sans-serif">Tout marquer lu</button>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:23px;font-weight:700;color:#1A1208">Veille réglementaire</h2>
+      <p style="font-size:12px;color:#888;margin-top:3px">Alertes, mises à jour et nouveaux textes impactant vos structures</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <!-- Filtre impact -->
+      <select id="ds-veille-filtre" onchange="dsVeilleRender()" style="padding:7px 12px;border:1.5px solid #E2D9CC;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;color:#1A1208;background:#fff;cursor:pointer">
+        <option value="all">Tous les niveaux</option>
+        <option value="urgent">🔴 Urgent</option>
+        <option value="important">🟠 Important</option>
+        <option value="info">🟡 Information</option>
+      </select>
+      <!-- Bouton admin uniquement -->
+      <button id="ds-veille-add-btn" onclick="dsVeilleOpenForm()" style="display:none;padding:8px 16px;background:#7C3AED;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">+ Nouvelle alerte</button>
+    </div>
+  </div>
+
+  <!-- Liste des alertes -->
+  <div id="ds-veille-list"></div>
+  <div id="ds-veille-empty" style="display:none;text-align:center;padding:48px 20px;color:#aaa">
+    <div style="font-size:44px;margin-bottom:12px">🔔</div>
+    <p style="font-size:14px">Aucune alerte pour le moment</p>
+    <p style="font-size:12px;margin-top:6px">Les nouvelles publications réglementaires apparaîtront ici</p>
+  </div>
+
+</div>
+
+<!-- MODAL FORMULAIRE NOUVELLE ALERTE (admin) -->
+<div id="ds-veille-modal" style="display:none;position:fixed;inset:0;z-index:10200;background:rgba(26,18,8,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+  <div style="background:#FFF9F2;border-radius:20px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,0.3);position:relative">
+    <button onclick="dsVeilleCloseForm()" style="position:absolute;top:16px;right:16px;background:#E2D9CC;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center">✕</button>
+    <h3 style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1A1208;margin-bottom:6px" id="ds-veille-form-title">Nouvelle alerte réglementaire</h3>
+    <p style="font-size:12px;color:#888;margin-bottom:22px">Cette alerte sera visible par toute l'équipe dans la veille réglementaire</p>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Titre de l'alerte *</label>
+        <input type="text" id="dv-titre" placeholder="Ex: Nouveau barème PSU CAF 2026" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff" onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E2D9CC'">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Niveau d'impact *</label>
+          <select id="dv-impact" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;cursor:pointer">
+            <option value="urgent">🔴 Urgent — Action requise</option>
+            <option value="important">🟠 Important — À surveiller</option>
+            <option value="info" selected>🟡 Information — Pour info</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Date de publication</label>
+          <input type="date" id="dv-date" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff" onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E2D9CC'">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Source (lien officiel)</label>
+        <input type="url" id="dv-source" placeholder="https://legifrance.gouv.fr/..." style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff" onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E2D9CC'">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Fiche réglementaire concernée</label>
+        <select id="dv-fiche" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;cursor:pointer">
+          <option value="">— Aucune fiche liée —</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Résumé en langage professionnel *</label>
+        <textarea id="dv-resume" rows="4" placeholder="Décrivez l'impact concret sur vos structures, en langage EJE/gestionnaire…" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:vertical;background:#fff;line-height:1.6" onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E2D9CC'"></textarea>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Actions concrètes à mener</label>
+        <textarea id="dv-actions" rows="3" placeholder="Ex: Vérifier les contrats en cours, informer les familles avant le 1er sept…" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:vertical;background:#fff;line-height:1.6" onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E2D9CC'"></textarea>
+      </div>
+
+      <div id="dv-msg" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:6px">
+        <button onclick="dsVeilleCloseForm()" style="padding:10px 20px;background:#E2D9CC;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:#1A1208">Annuler</button>
+        <button onclick="dsVeilleSave()" id="dv-save-btn" style="padding:10px 20px;background:#7C3AED;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Publier l'alerte</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL RÉGLEMENTAIRE -->
@@ -13684,6 +13797,324 @@ function dsOpenModal(id) {
 }
 function dsCloseModal() { document.getElementById('ds-modal-overlay').classList.remove('ds-open'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { dsCloseModal(); } });
+
+// ══════════════════════════════════════════════════════════════
+//  VEILLE RÉGLEMENTAIRE — Niveau 1
+// ══════════════════════════════════════════════════════════════
+
+const SUPA_RH_URL_V = 'https://gokfxejoffzttzvdkoll.supabase.co';
+const SUPA_RH_KEY_V = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0';
+const SUPA_HDRS_V = { 'Content-Type':'application/json', 'apikey':SUPA_RH_KEY_V, 'Authorization':'Bearer '+SUPA_RH_KEY_V, 'Prefer':'return=representation' };
+
+let DS_VEILLE_DATA = [];
+let DS_VEILLE_EDIT_ID = null;
+
+// ── SQL à exécuter une fois dans Supabase (commentaire) ────────
+// CREATE TABLE IF NOT EXISTS veille_alertes (
+//   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+//   titre text NOT NULL,
+//   impact text DEFAULT 'info',   -- urgent | important | info
+//   date_publication date,
+//   source_url text,
+//   fiche_liee text,
+//   resume text,
+//   actions text,
+//   lu boolean DEFAULT false,
+//   created_at timestamptz DEFAULT now(),
+//   created_by text
+// );
+
+// ── Chargement depuis Supabase ─────────────────────────────────
+async function dsVeilleLoad() {
+  try {
+    const r = await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes?select=*&order=created_at.desc', { headers: SUPA_HDRS_V });
+    if (!r.ok) { DS_VEILLE_DATA = []; dsVeilleRender(); return; }
+    DS_VEILLE_DATA = await r.json();
+  } catch(e) { DS_VEILLE_DATA = []; }
+  dsVeilleRender();
+  dsVeilleUpdateBadges();
+}
+
+// ── Rendu liste alertes ────────────────────────────────────────
+function dsVeilleRender() {
+  const list = document.getElementById('ds-veille-list');
+  const empty = document.getElementById('ds-veille-empty');
+  const filtre = document.getElementById('ds-veille-filtre').value;
+  const isAdmin = typeof currentUserRole !== 'undefined' && currentUserRole === 'admin';
+
+  // Afficher bouton add si admin
+  const addBtn = document.getElementById('ds-veille-add-btn');
+  if (addBtn) addBtn.style.display = isAdmin ? 'block' : 'none';
+
+  let data = DS_VEILLE_DATA;
+  if (filtre !== 'all') data = data.filter(a => a.impact === filtre);
+
+  if (!data.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  const impactConfig = {
+    urgent:    { label:'🔴 Urgent',    bg:'#FEF2F2', border:'#FECACA', titleColor:'#991B1B', badgeBg:'#DC2626' },
+    important: { label:'🟠 Important', bg:'#FFF7ED', border:'#FED7AA', titleColor:'#9A3412', badgeBg:'#EA580C' },
+    info:      { label:'🟡 Information',bg:'#FEFCE8', border:'#FDE68A', titleColor:'#854D0E', badgeBg:'#CA8A04' }
+  };
+
+  list.innerHTML = data.map((a, i) => {
+    const cfg = impactConfig[a.impact] || impactConfig.info;
+    const date = a.date_publication ? new Date(a.date_publication).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : '';
+    const nonLuBadge = !a.lu ? '<span style="display:inline-block;width:8px;height:8px;background:#DC2626;border-radius:50%;margin-left:6px;vertical-align:middle"></span>' : '';
+    const adminActions = isAdmin ? `
+      <button onclick="dsVeilleEdit('${a.id}')" style="padding:4px 10px;background:rgba(124,58,237,.1);color:#5B21B6;border:1px solid rgba(124,58,237,.2);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Modifier</button>
+      <button onclick="dsVeilleDelete('${a.id}')" style="padding:4px 10px;background:rgba(220,38,38,.08);color:#DC2626;border:1px solid rgba(220,38,38,.2);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Supprimer</button>` : '';
+    return `
+    <div style="background:#fff;border:1px solid ${cfg.border};border-left:4px solid ${cfg.badgeBg};border-radius:12px;padding:18px 20px;margin-bottom:12px;animation:dsFadeIn 0.3s ease both;animation-delay:${i*0.05}s;cursor:pointer;transition:box-shadow 0.15s" onclick="dsVeilleMarkLu('${a.id}')" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow=''">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${cfg.bg};color:${cfg.titleColor};text-transform:uppercase;letter-spacing:.7px">${cfg.label}</span>
+            ${nonLuBadge}
+            ${date ? `<span style="font-size:11px;color:#aaa">${date}</span>` : ''}
+          </div>
+          <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:#1A1208;line-height:1.3">${a.titre}</div>
+        </div>
+        ${a.source_url ? `<a href="${a.source_url}" target="_blank" onclick="event.stopPropagation()" style="flex-shrink:0;font-size:11px;color:#7C3AED;text-decoration:none;padding:4px 10px;border:1px solid rgba(124,58,237,.25);border-radius:6px;font-weight:600;white-space:nowrap">Source ↗</a>` : ''}
+      </div>
+      ${a.resume ? `<p style="font-size:13px;color:#555;line-height:1.65;margin-bottom:${a.actions ? '10px' : '0'}">${a.resume}</p>` : ''}
+      ${a.actions ? `<div style="background:#F5F3FF;border-radius:8px;padding:10px 14px;margin-top:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7C3AED;margin-bottom:5px">Actions à mener</div><div style="font-size:12.5px;color:#4C1D95;line-height:1.6">${a.actions}</div></div>` : ''}
+      ${a.fiche_liee ? `<div style="margin-top:8px;font-size:11px;color:#888">📋 Fiche liée : <strong style="color:#1A1208">${a.fiche_liee}</strong></div>` : ''}
+      ${isAdmin ? `<div style="display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid #f0ede8" onclick="event.stopPropagation()">${adminActions}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Badge hub + bandeau ────────────────────────────────────────
+function dsVeilleUpdateBadges() {
+  const nonLus = DS_VEILLE_DATA.filter(a => !a.lu).length;
+  const urgents = DS_VEILLE_DATA.filter(a => !a.lu && a.impact === 'urgent').length;
+
+  // Badges sur les 3 cartes hub
+  ['admin','dir','aux'].forEach(id => {
+    const el = document.getElementById('hub-docs-badge-' + id);
+    if (!el) return;
+    if (nonLus > 0) { el.textContent = nonLus; el.classList.add('visible'); }
+    else { el.classList.remove('visible'); }
+  });
+
+  // Badge sur l'onglet veille dans l'écran docs
+  const vb = document.getElementById('ds-veille-badge');
+  if (vb) { vb.textContent = nonLus; vb.style.display = nonLus > 0 ? 'inline-block' : 'none'; }
+
+  // Bandeau dans l'écran docs
+  const bandeau = document.getElementById('ds-veille-bandeau');
+  if (bandeau && nonLus > 0) {
+    const txt = document.getElementById('ds-bandeau-txt');
+    if (txt) txt.textContent = urgents > 0
+      ? `${urgents} alerte${urgents>1?'s':''} urgente${urgents>1?'s':''} non lue${urgents>1?'s':''}`
+      : `${nonLus} nouvelle${nonLus>1?'s':''} alerte${nonLus>1?'s':''} réglementaire${nonLus>1?'s':''}`;
+    bandeau.style.display = 'flex';
+  } else if (bandeau) {
+    bandeau.style.display = 'none';
+  }
+}
+
+// ── Marquer lu ─────────────────────────────────────────────────
+async function dsVeilleMarkLu(id) {
+  const alerte = DS_VEILLE_DATA.find(a => a.id === id);
+  if (!alerte || alerte.lu) return;
+  try {
+    await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes?id=eq.' + id, {
+      method: 'PATCH', headers: SUPA_HDRS_V, body: JSON.stringify({ lu: true })
+    });
+    alerte.lu = true;
+    dsVeilleRender();
+    dsVeilleUpdateBadges();
+  } catch(e) {}
+}
+
+async function dsMarquerToutLu() {
+  try {
+    await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes?lu=eq.false', {
+      method: 'PATCH', headers: SUPA_HDRS_V, body: JSON.stringify({ lu: true })
+    });
+    DS_VEILLE_DATA.forEach(a => a.lu = true);
+    dsVeilleRender();
+    dsVeilleUpdateBadges();
+  } catch(e) {}
+}
+
+// ── Formulaire admin ───────────────────────────────────────────
+function dsVeilleOpenForm(id) {
+  DS_VEILLE_EDIT_ID = id || null;
+  const modal = document.getElementById('ds-veille-modal');
+  const titleEl = document.getElementById('ds-veille-form-title');
+
+  // Remplir le select des fiches
+  const sel = document.getElementById('dv-fiche');
+  sel.innerHTML = '<option value="">— Aucune fiche liée —</option>';
+  DS_DATA.forEach(d => { const o = document.createElement('option'); o.value = d.title; o.textContent = '#' + String(d.id).padStart(2,'0') + ' ' + d.title; sel.appendChild(o); });
+
+  // Set date par défaut
+  document.getElementById('dv-date').value = new Date().toISOString().split('T')[0];
+
+  if (id) {
+    const a = DS_VEILLE_DATA.find(x => x.id === id);
+    titleEl.textContent = 'Modifier l'alerte';
+    document.getElementById('dv-titre').value = a.titre || '';
+    document.getElementById('dv-impact').value = a.impact || 'info';
+    document.getElementById('dv-date').value = a.date_publication || '';
+    document.getElementById('dv-source').value = a.source_url || '';
+    document.getElementById('dv-fiche').value = a.fiche_liee || '';
+    document.getElementById('dv-resume').value = a.resume || '';
+    document.getElementById('dv-actions').value = a.actions || '';
+    document.getElementById('dv-save-btn').textContent = 'Enregistrer';
+  } else {
+    titleEl.textContent = 'Nouvelle alerte réglementaire';
+    ['dv-titre','dv-source','dv-resume','dv-actions'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('dv-impact').value = 'info';
+    document.getElementById('dv-fiche').value = '';
+    document.getElementById('dv-save-btn').textContent = 'Publier l'alerte';
+  }
+  document.getElementById('dv-msg').style.display = 'none';
+  modal.style.display = 'flex';
+}
+
+function dsVeilleCloseForm() {
+  document.getElementById('ds-veille-modal').style.display = 'none';
+  DS_VEILLE_EDIT_ID = null;
+}
+
+async function dsVeilleSave() {
+  const titre = document.getElementById('dv-titre').value.trim();
+  const resume = document.getElementById('dv-resume').value.trim();
+  if (!titre || !resume) { dsVeilleMsg('Titre et résumé obligatoires', false); return; }
+
+  const btn = document.getElementById('dv-save-btn');
+  btn.textContent = '⏳ Enregistrement…'; btn.disabled = true;
+
+  const payload = {
+    titre,
+    impact: document.getElementById('dv-impact').value,
+    date_publication: document.getElementById('dv-date').value || null,
+    source_url: document.getElementById('dv-source').value.trim() || null,
+    fiche_liee: document.getElementById('dv-fiche').value || null,
+    resume,
+    actions: document.getElementById('dv-actions').value.trim() || null,
+    lu: false,
+    created_by: typeof currentUser !== 'undefined' && currentUser ? currentUser.email : 'admin'
+  };
+
+  try {
+    let r;
+    if (DS_VEILLE_EDIT_ID) {
+      r = await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes?id=eq.' + DS_VEILLE_EDIT_ID, {
+        method: 'PATCH', headers: SUPA_HDRS_V, body: JSON.stringify(payload)
+      });
+    } else {
+      r = await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes', {
+        method: 'POST', headers: SUPA_HDRS_V, body: JSON.stringify(payload)
+      });
+    }
+    if (!r.ok) throw new Error('Erreur Supabase: ' + r.status);
+    dsVeilleMsg('✓ Alerte publiée avec succès', true);
+    setTimeout(() => { dsVeilleCloseForm(); dsVeilleLoad(); }, 800);
+  } catch(e) {
+    dsVeilleMsg('Erreur : ' + e.message, false);
+    btn.textContent = 'Réessayer'; btn.disabled = false;
+  }
+}
+
+async function dsVeilleEdit(id) { dsVeilleOpenForm(id); }
+
+async function dsVeilleDelete(id) {
+  if (!confirm('Supprimer cette alerte définitivement ?')) return;
+  try {
+    await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes?id=eq.' + id, { method: 'DELETE', headers: SUPA_HDRS_V });
+    DS_VEILLE_DATA = DS_VEILLE_DATA.filter(a => a.id !== id);
+    dsVeilleRender();
+    dsVeilleUpdateBadges();
+  } catch(e) { alert('Erreur suppression'); }
+}
+
+function dsVeilleMsg(msg, ok) {
+  const el = document.getElementById('dv-msg');
+  el.textContent = msg;
+  el.style.background = ok ? '#F0FDF4' : '#FEF2F2';
+  el.style.color = ok ? '#166534' : '#DC2626';
+  el.style.border = '1px solid ' + (ok ? '#BBF7D0' : '#FECACA');
+  el.style.display = 'block';
+}
+
+// ── Patch dsSwitchSection pour gérer 'veille' ──────────────────
+const _origDsSwitchSection = dsSwitchSection;
+dsSwitchSection = function(section) {
+  // Gérer l'onglet veille en plus des 2 existants
+  document.getElementById('ds-section-reglementaire').style.display = section === 'reglementaire' ? 'grid' : 'none';
+  document.getElementById('ds-section-documentaire').style.display = section === 'documentaire' ? 'block' : 'none';
+  document.getElementById('ds-section-veille').style.display = section === 'veille' ? 'block' : 'none';
+
+  document.getElementById('ds-tab-regl').classList.toggle('ds-tab-active', section === 'reglementaire');
+  document.getElementById('ds-tab-docs').classList.toggle('ds-tab-active', section === 'documentaire');
+  const vTab = document.getElementById('ds-tab-veille');
+  if (vTab) vTab.classList.toggle('ds-tab-active', section === 'veille');
+
+  document.getElementById('ds-search-input').value = '';
+  dsSearchQuery = '';
+  dsCurrentSection = section;
+
+  if (section === 'documentaire') dsRenderProtocoles('');
+  else if (section === 'reglementaire') dsRenderCards();
+  else if (section === 'veille') dsVeilleLoad();
+};
+
+// ── Patch openHubDocs pour charger les alertes dès l'ouverture ─
+const _origOpenHubDocs = openHubDocs;
+openHubDocs = function() {
+  document.getElementById('docs-screen').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  dsInit();
+  dsVeilleLoad(); // charge les alertes pour mettre à jour les badges
+};
+
+// ── Patch hubLoadKPIs pour afficher le badge dès le hub ────────
+const _origHubLoadKPIs = typeof hubLoadKPIs !== 'undefined' ? hubLoadKPIs : null;
+async function dsVeilleLoadBadgeOnly() {
+  try {
+    const r = await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes?select=id,lu,impact&lu=eq.false', { headers: SUPA_HDRS_V });
+    if (!r.ok) return;
+    const data = await r.json();
+    DS_VEILLE_DATA = [...DS_VEILLE_DATA.filter(a => a.lu), ...data];
+    dsVeilleUpdateBadges();
+  } catch(e) {}
+}
+
+// Charger les badges dès que le hub s'affiche
+const _origShowHub = typeof showHub !== 'undefined' ? showHub : null;
+document.addEventListener('DOMContentLoaded', () => {
+  // Déclencher après connexion
+  const obs = new MutationObserver(() => {
+    const hub = document.getElementById('hub-screen');
+    if (hub && hub.style.display !== 'none') dsVeilleLoadBadgeOnly();
+  });
+  const hub = document.getElementById('hub-screen');
+  if (hub) obs.observe(hub, { attributes: true, attributeFilter: ['style'] });
+});
+
+// SQL à copier dans Supabase SQL Editor :
+// CREATE TABLE IF NOT EXISTS veille_alertes (
+//   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+//   titre text NOT NULL,
+//   impact text DEFAULT 'info',
+//   date_publication date,
+//   source_url text,
+//   fiche_liee text,
+//   resume text,
+//   actions text,
+//   lu boolean DEFAULT false,
+//   created_at timestamptz DEFAULT now(),
+//   created_by text
+// );
+// ALTER TABLE veille_alertes ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "allow_all" ON veille_alertes FOR ALL USING (true) WITH CHECK (true);
+
 </script>
 
 </body>
