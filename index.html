@@ -11656,8 +11656,8 @@ function showImportResult(type, html) {
 .ds-proto-btn { background: none; border: 1px solid var(--dborder); border-radius: 5px; padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--dbrown); font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
 .ds-proto-btn:hover { background: var(--dsage); color: #fff; border-color: var(--dsage); }
 /* MODAL */
-.ds-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,18,8,0.6); z-index: 10100; backdrop-filter: blur(4px); }
-.ds-modal-overlay.ds-open { display: flex; align-items: center; justify-content: center; padding: 20px; }
+.ds-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,18,8,0.6); z-index: 10100; pointer-events: none; backdrop-filter: blur(4px); }
+.ds-modal-overlay.ds-open { display: flex; align-items: center; justify-content: center; padding: 20px; pointer-events: auto; }
 .ds-modal { background: var(--dwarm); border-radius: 18px; width: 100%; max-width: 660px; max-height: 85vh; overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.3); animation: dsSlideUp 0.25s ease; }
 @keyframes dsSlideUp { from{transform:translateY(20px);opacity:0;} to{transform:translateY(0);opacity:1;} }
 .ds-modal-header { padding: 22px 26px 18px; border-bottom: 1px solid var(--dborder); position: sticky; top: 0; background: var(--dwarm); border-radius: 18px 18px 0 0; z-index: 1; }
@@ -11821,7 +11821,7 @@ function showImportResult(type, html) {
 </div>
 
 <!-- MODAL FORMULAIRE NOUVELLE ALERTE (admin) -->
-<div id="ds-veille-modal" style="display:none;position:fixed;inset:0;z-index:10200;background:rgba(26,18,8,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+<div id="ds-veille-modal" style="display:none;position:fixed;inset:0;z-index:10200;background:rgba(26,18,8,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;pointer-events:none">
   <div style="background:#FFF9F2;border-radius:20px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,0.3);position:relative">
     <button onclick="dsVeilleCloseForm()" style="position:absolute;top:16px;right:16px;background:#E2D9CC;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center">✕</button>
     <h3 style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1A1208;margin-bottom:6px" id="ds-veille-form-title">Nouvelle alerte réglementaire</h3>
@@ -13980,10 +13980,13 @@ function dsVeilleOpenForm(id) {
   }
   document.getElementById('dv-msg').style.display = 'none';
   modal.style.display = 'flex';
+  modal.style.pointerEvents = 'auto';
 }
 
 function dsVeilleCloseForm() {
-  document.getElementById('ds-veille-modal').style.display = 'none';
+  const dvm = document.getElementById('ds-veille-modal');
+  dvm.style.display = 'none';
+  dvm.style.pointerEvents = 'none';
   DS_VEILLE_EDIT_ID = null;
 }
 
