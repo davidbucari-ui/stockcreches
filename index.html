@@ -805,6 +805,122 @@ textarea { resize: vertical; min-height: 72px; }
 }
 .offline-badge.visible { display: block; }
 
+
+/* ── MODULE PLANNING COORDINATEUR EJE ── */
+.coord-panel {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 24px;
+  box-shadow: var(--shadow);
+}
+.coord-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+}
+.coord-title {
+  font-family: 'Syne', sans-serif; font-size: 16px;
+  font-weight: 800; color: var(--ink);
+}
+.coord-tabs {
+  display: flex; gap: 4px; background: var(--bg);
+  border-radius: 10px; padding: 4px; margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.coord-tab-btn {
+  padding: 7px 14px; border-radius: 8px; border: none;
+  background: none; font-family: 'Instrument Sans', sans-serif;
+  font-size: 12px; font-weight: 500; color: var(--ink2);
+  cursor: pointer; transition: all 0.15s;
+}
+.coord-tab-btn.active {
+  background: var(--surface2); color: var(--ink);
+  font-weight: 700; box-shadow: var(--shadow);
+}
+.coord-tab-panel { display: none; }
+.coord-tab-panel.active { display: block; }
+
+/* Rotation grid */
+.coord-rotation-grid {
+  overflow-x: auto; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--surface2);
+}
+.coord-rotation-table {
+  width: 100%; border-collapse: collapse; min-width: 640px;
+}
+.coord-rotation-table th {
+  padding: 10px 14px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--ink3); background: var(--bg);
+  border-bottom: 1px solid var(--border); text-align: left;
+}
+.coord-rotation-table td {
+  padding: 10px 14px; font-size: 13px;
+  border-bottom: 1px solid var(--border); vertical-align: middle;
+}
+.coord-rotation-table tr:last-child td { border-bottom: none; }
+.coord-creche-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.coord-shift-badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 8px; font-size: 12px; font-weight: 600;
+}
+/* Semaine type */
+.coord-semaine-table { width: 100%; border-collapse: collapse; }
+.coord-semaine-table th {
+  padding: 9px 12px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--ink3); background: var(--bg);
+  border-bottom: 1px solid var(--border); text-align: left;
+}
+.coord-semaine-table td {
+  padding: 9px 12px; font-size: 12px;
+  border-bottom: 1px solid var(--border); vertical-align: middle;
+}
+.coord-prio-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 8px; font-size: 11px; font-weight: 600;
+}
+/* Missions */
+.coord-mission-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--border);
+}
+.coord-mission-row:last-child { border-bottom: none; }
+.coord-mission-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+/* Suivi mensuel */
+.coord-suivi-table { width: 100%; border-collapse: collapse; }
+.coord-suivi-table th {
+  padding: 9px 12px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--ink3); background: var(--bg);
+  border-bottom: 1px solid var(--border); text-align: center;
+}
+.coord-suivi-table th:first-child { text-align: left; }
+.coord-suivi-table td {
+  padding: 8px 10px; font-size: 12px; border-bottom: 1px solid var(--border);
+  text-align: center; vertical-align: middle;
+}
+.coord-suivi-table td:first-child { text-align: left; font-weight: 600; }
+.coord-suivi-input {
+  width: 60px; padding: 5px 8px; border: 1.5px solid var(--border);
+  border-radius: 6px; font-family: 'Instrument Sans', sans-serif;
+  font-size: 12px; text-align: center; background: var(--bg);
+  color: var(--ink); outline: none;
+}
+.coord-suivi-input:focus { border-color: var(--accent); background: var(--accent-lt); }
+.coord-total-cell {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 14px; color: var(--accent);
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
@@ -850,61 +966,6 @@ textarea { resize: vertical; min-height: 72px; }
 .pg-shift { border-radius: 5px; padding: 3px 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
 .pg-shift:hover { filter: brightness(0.9); }
 .pg-shift-label { display: block; font-size: 10px; font-weight: 500; opacity: 0.8; margin-top: 1px; }
-.pg-shift-label { display: block; font-size: 10px; font-weight: 500; opacity: 0.8; margin-top: 1px; }
-
-/* ===== PLANNING COORDINATEUR ===== */
-.coord-panel{background:#fff;border-radius:14px;box-shadow:0 2px 16px rgba(45,106,79,.10);overflow:hidden;margin:20px 24px 0}
-.coord-panel-header{background:linear-gradient(135deg,#2D6A4F 0%,#52B788 100%);color:#fff;padding:16px 22px 12px;display:flex;align-items:center;gap:12px}
-.coord-panel-header h2{font-size:1.05rem;font-weight:700;margin:0}
-.coord-panel-header .coord-subtitle{font-size:.76rem;opacity:.85;margin:2px 0 0}
-.coord-tabs{display:flex;border-bottom:2px solid #e8f5e9;background:#f8fffe;overflow-x:auto}
-.coord-tab{padding:9px 18px;font-size:.8rem;font-weight:600;color:#666;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap}
-.coord-tab.active{color:#2D6A4F;border-bottom-color:#2D6A4F;background:#fff}
-.coord-tab:hover:not(.active){color:#52B788;background:#f0faf3}
-.coord-tab-content{padding:16px 18px 18px;display:none}
-.coord-tab-content.active{display:block}
-.coord-rotation-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
-.coord-sem{border:1px solid #e0f0e8;border-radius:10px;overflow:hidden}
-.coord-sem-header{background:#52B788;color:#fff;font-size:.78rem;font-weight:700;padding:5px 10px;text-align:center}
-.coord-sem-row{display:grid;grid-template-columns:56px repeat(5,1fr);font-size:.7rem}
-.coord-sem-cell{padding:4px 3px;text-align:center;border-right:1px solid #eee;border-bottom:1px solid #eee}
-.coord-sem-cell:last-child{border-right:none}
-.coord-sem-label{background:#2D6A4F;color:#fff;font-weight:700;font-size:.68rem;display:flex;align-items:center;justify-content:center}
-.coord-sem-jour{background:#EBEBEB;color:#444;font-weight:600;font-size:.66rem}
-.coord-sem-mat{background:#D4E6F1;color:#1A3C34;font-weight:600}
-.coord-sem-am{background:#FAD7A0;color:#1A3C34;font-weight:600}
-.coord-sem-table{width:100%;border-collapse:collapse;font-size:.73rem}
-.coord-sem-table th{background:#2D6A4F;color:#fff;padding:6px 5px;text-align:center;font-weight:700;font-size:.71rem}
-.coord-sem-table td{padding:5px 4px;text-align:center;border:1px solid #e0e0e0;vertical-align:middle;line-height:1.3}
-.csem-horaire{background:#EBEBEB;font-weight:700;color:#1A3C34;white-space:nowrap;font-size:.68rem}
-.csem-terrain{background:#D4E6F1}.csem-famille{background:#FAD7A0}.csem-admin{background:#D5DBDB}
-.csem-urg{background:#FADBD8}.csem-pause{background:#F5F5F5;color:#888;font-style:italic}
-.csem-h{background:#B7E4C7;color:#2D6A4F;font-weight:700}
-.csem-total-row td{background:#52B788!important;color:#fff!important;font-weight:700}
-.coord-missions-hdr{display:grid;grid-template-columns:160px 1fr 82px 82px 82px;background:#2D6A4F;color:#fff;font-size:.7rem;font-weight:700;border-radius:8px 8px 0 0;overflow:hidden}
-.coord-missions-hdr div{padding:6px 8px;text-align:center}
-.coord-missions-hdr div:nth-child(2){text-align:left}
-.coord-mission-row{display:grid;grid-template-columns:160px 1fr 82px 82px 82px;align-items:center;border-bottom:1px solid #e8e8e8;font-size:.72rem}
-.coord-mission-lbl{padding:7px 8px;font-weight:700;color:#1A3C34}
-.coord-mission-desc{padding:7px 8px;color:#555;font-size:.7rem;line-height:1.4;background:#fafafa}
-.coord-mission-pct{padding:7px 5px;text-align:center;font-weight:700;color:#2D6A4F;font-size:.78rem;white-space:pre-line}
-.coord-alerte{background:#FDEDEC;border-left:4px solid #e74c3c;border-radius:0 8px 8px 0;padding:9px 12px;font-size:.72rem;color:#c0392b;margin-top:10px;line-height:1.5}
-.coord-suivi-controls{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-.coord-suivi-controls select{border:1px solid #c8e6c9;border-radius:6px;padding:5px 8px;font-size:.8rem;color:#1A3C34;background:#fff}
-.coord-suivi-btn{background:#2D6A4F;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.8rem;font-weight:600;cursor:pointer}
-.coord-suivi-btn:hover{background:#52B788}
-.coord-suivi-table{width:100%;border-collapse:collapse;font-size:.72rem}
-.coord-suivi-table th{background:#2D6A4F;color:#fff;padding:6px 5px;text-align:center;font-weight:700;font-size:.68rem;white-space:pre-line}
-.coord-suivi-table td{padding:3px 4px;border:1px solid #e0e0e0;text-align:center;vertical-align:middle}
-.coord-suivi-table td:first-child{font-weight:700;color:#1A3C34;text-align:left;padding-left:8px;width:100px}
-.coord-suivi-table input[type=number]{width:36px;border:1px solid #c8e6c9;border-radius:4px;padding:2px 3px;text-align:center;font-size:.7rem;color:#1A3C34}
-.coord-suivi-table textarea{width:100%;border:1px solid #c8e6c9;border-radius:4px;padding:2px 4px;font-size:.7rem;resize:vertical;min-height:32px;color:#1A3C34;font-family:inherit}
-.coord-suivi-total td{background:#B7E4C7;font-weight:700;color:#2D6A4F}
-.coord-saved-badge{background:#27ae60;color:#fff;border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:600;display:none}
-.coord-saved-badge.show{display:inline-block}
-.coord-legende{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.coord-legende-item{display:flex;align-items:center;gap:5px;font-size:.7rem;color:#444}
-.coord-legende-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
@@ -1133,29 +1194,52 @@ textarea { resize: vertical; min-height: 72px; }
           </button>
 
         </div>
-
-        <!-- ══ PLANNING COORDINATEUR EJE ══ -->
-        <div class="coord-panel" id="coord-planning-panel">
-          <div class="coord-panel-header">
-            <span style="font-size:1.5rem">🗓️</span>
-            <div>
-              <h2>Planning Coordinateur EJE</h2>
-              <p class="coord-subtitle">Rotation 4 semaines · Semaine type · Répartition missions · Suivi mensuel</p>
-            </div>
-          </div>
-          <div class="coord-tabs" role="tablist">
-            <div class="coord-tab active" onclick="coordShowTab('rotation')" role="tab">🔄 Rotation</div>
-            <div class="coord-tab" onclick="coordShowTab('semaine')" role="tab">📋 Semaine type</div>
-            <div class="coord-tab" onclick="coordShowTab('missions')" role="tab">📊 Missions</div>
-            <div class="coord-tab" onclick="coordShowTab('suivi')" role="tab">📅 Suivi mensuel</div>
-          </div>
-          <div class="coord-tab-content active" id="coord-tab-rotation"></div>
-          <div class="coord-tab-content" id="coord-tab-semaine"></div>
-          <div class="coord-tab-content" id="coord-tab-missions"></div>
-          <div class="coord-tab-content" id="coord-tab-suivi"></div>
-        </div>
       </div>
     </div>
+
+
+      <!-- ── MODULE PLANNING COORDINATEUR EJE ── -->
+      <div id="coord-panel" style="display:none;padding:0 0 20px">
+        <div class="coord-panel">
+          <div class="coord-header">
+            <div>
+              <div class="coord-title">🗓 Planning Coordinateur EJE</div>
+              <div style="font-size:12px;color:var(--ink3);margin-top:2px">Réseau Koalakids · 6 structures</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="coord-periode-sel" onchange="coordChangeSuiviPeriode()"
+                style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--surface2)">
+                <option value="2025-06">Juin 2025</option>
+                <option value="2025-07">Juillet 2025</option>
+                <option value="2025-08">Août 2025</option>
+                <option value="2025-09">Septembre 2025</option>
+              </select>
+            </div>
+          </div>
+          <div class="coord-tabs">
+            <button class="coord-tab-btn active" onclick="coordShowTab('rotation',this)">🔄 Rotation 4 semaines</button>
+            <button class="coord-tab-btn" onclick="coordShowTab('semaine',this)">📅 Semaine type</button>
+            <button class="coord-tab-btn" onclick="coordShowTab('missions',this)">🎯 Missions</button>
+            <button class="coord-tab-btn" onclick="coordShowTab('suivi',this)">📊 Suivi mensuel</button>
+          </div>
+          <!-- ROTATION -->
+          <div id="coord-tab-rotation" class="coord-tab-panel active">
+            <div id="coord-rotation-content"></div>
+          </div>
+          <!-- SEMAINE TYPE -->
+          <div id="coord-tab-semaine" class="coord-tab-panel">
+            <div id="coord-semaine-content"></div>
+          </div>
+          <!-- MISSIONS -->
+          <div id="coord-tab-missions" class="coord-tab-panel">
+            <div id="coord-missions-content"></div>
+          </div>
+          <!-- SUIVI MENSUEL -->
+          <div id="coord-tab-suivi" class="coord-tab-panel">
+            <div id="coord-suivi-content"></div>
+          </div>
+        </div>
+      </div>
 
     <div id="page-statistiques" style="display:none">
       <!-- KPI row -->
@@ -3970,7 +4054,7 @@ function renderHub() {
     dateEl.textContent = now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   }
   if (typeof renderDashboardFamillesTile === 'function') renderDashboardFamillesTile();
-  coordInitPanel();
+  if (typeof coordInitPanel === 'function') coordInitPanel();
 }
 
 
@@ -5125,9 +5209,9 @@ async function loginUser() {
   btn.textContent = '⏳ Connexion…'; btn.disabled = true;
   errEl.style.display = 'none';
   try {
-    const res = await fetch(`${SUPA_RH_URL}/auth/v1/token?grant_type=password`, {
+    const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
-      headers: { 'apikey': SUPA_RH_KEY, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
@@ -5155,9 +5239,9 @@ async function motDePasseOublie() {
     return;
   }
   try {
-    const res = await fetch(`${SUPA_RH_URL}/auth/v1/recover`, {
+    const res = await fetch(`${SUPA_URL}/auth/v1/recover`, {
       method: 'POST',
-      headers: { 'apikey': SUPA_RH_KEY, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
     if (res.ok) {
@@ -11127,178 +11211,335 @@ function switchNoticeTab(tab, btn) {
   if (content) content.innerHTML = NOTICE_CONTENT[tab] || '';
 }
 
-// ══════════════════════════════════════════════════════════════════
-// MODULE PLANNING COORDINATEUR EJE — Orevy Structures
-// ══════════════════════════════════════════════════════════════════
-const COORD_STRUCTURES    = ['Cuers','Brunet','Picot 1','Picot 2','Ollioules','St Jean'];
-const COORD_JOURS         = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-const COORD_STRUCT_COLORS = ['#D4E6F1','#FAD7A0','#D7BDE2','#FADBD8','#D5DBDB','#B7E4C7'];
+// ══════════════════════════════════════════════════
+// MODULE PLANNING COORDINATEUR EJE
+// ══════════════════════════════════════════════════
 
-const COORD_ROTATION = [
-  { mat:['Cuers','Brunet','Picot 1','Ollioules','St Jean'],   am:['Ollioules','St Jean','Picot 2','Cuers','Brunet'] },
-  { mat:['Picot 2','Cuers','Brunet','Picot 1','Ollioules'],   am:['Picot 1','Ollioules','St Jean','Picot 2','Cuers'] },
-  { mat:['St Jean','Picot 2','Cuers','Brunet','Picot 1'],     am:['Brunet','Picot 1','Ollioules','St Jean','Picot 2'] },
-  { mat:['Ollioules','St Jean','Picot 2','Cuers','Brunet'],   am:['Cuers','Brunet','Picot 1','Ollioules','St Jean'] },
+const COORD_CRECHES = [
+  { nom: 'Brunet',   color: '#F59E0B', bg: '#FEF3C7' },
+  { nom: 'Cuers',    color: '#10B981', bg: '#D1FAE5' },
+  { nom: 'Ollioules',color: '#EF4444', bg: '#FEE2E2' },
+  { nom: 'St Jean',  color: '#8B5CF6', bg: '#EDE9FE' },
+  { nom: 'Picot 1',  color: '#0EA5E9', bg: '#E0F2FE' },
+  { nom: 'Picot 2',  color: '#F43F5E', bg: '#FFE4E6' },
 ];
 
-const COORD_SEMAINE = [
-  { horaire:'7h30–9h30',   L:'Arrivées\nAccueil familles\n(terrain)', Ma:'Arrivées\nAccueil familles\n(terrain)', Me:'Arrivées\nAccueil familles\n(terrain)', J:'Arrivées\nAccueil familles\n(terrain)', V:'Arrivées\nAccueil familles\n(terrain)', h:'10h', cls:'csem-terrain' },
-  { horaire:'9h30–11h30',  L:'Observation &\nsoutien péda\n(terrain)', Ma:'Réunion équipe\n/ analyse pratiques', Me:'Temps admin\nOrevy + docs\n(bureau)', J:'Observation &\nsoutien péda\n(terrain)', V:'Bilan semaine\n+ prépa suivante', h:'10h', cls:'csem-terrain' },
-  { horaire:'11h30–12h30', L:'⏸ Pause repas', Ma:'⏸ Pause repas', Me:'⏸ Pause repas', J:'⏸ Pause repas', V:'⏸ Pause repas', h:'5h', cls:'csem-pause' },
-  { horaire:'12h30–14h00', L:'Transmissions\nfamilles\nsorties', Ma:'Transmissions\nfamilles\nsorties', Me:'Transmissions\nfamilles\nsorties', J:'Transmissions\nfamilles\nsorties', V:'Transmissions\nfamilles\nsorties', h:'7h30', cls:'csem-famille' },
-  { horaire:'14h00–16h00', L:'Suivi RH\n(contrats,\nplannings)', Ma:'Prépa outils\npéda / docs\nformation', Me:'Coordination\nréseau /\ngestionnaire', J:'Entretiens\nsalariés ou\nstagiaires', V:'Archivage docs\n+ Orevy', h:'10h', cls:'csem-admin' },
-  { horaire:'16h00–17h30', L:'Disponibilité\néquipe / urgences', Ma:'Disponibilité\néquipe / urgences', Me:'Formation\ncontinue\npersonnelle', J:'Disponibilité\néquipe / urgences', V:'Clôture hebdo\n+ bien-être', h:'7h30', cls:'csem-urg' },
+// Rotation 4 semaines (matin M = 07h30-15h30, après-midi AM = 11h00-19h00)
+const COORD_ROTATION = [
+  { sem: 1, label: 'Semaine 1', jours: [
+    { jour: 'Lundi',    creche: 'Brunet',    shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mardi',    creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mercredi', creche: 'Ollioules', shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Jeudi',    creche: 'St Jean',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Vendredi', creche: 'Picot 1',   shift: 'M',  debut: '07:30', fin: '15:30' },
+  ]},
+  { sem: 2, label: 'Semaine 2', jours: [
+    { jour: 'Lundi',    creche: 'Picot 2',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mardi',    creche: 'Brunet',    shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Mercredi', creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Jeudi',    creche: 'Ollioules', shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Vendredi', creche: 'St Jean',   shift: 'AM', debut: '11:00', fin: '19:00' },
+  ]},
+  { sem: 3, label: 'Semaine 3', jours: [
+    { jour: 'Lundi',    creche: 'Picot 1',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Mardi',    creche: 'Picot 2',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mercredi', creche: 'Brunet',    shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Jeudi',    creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Vendredi', creche: 'Ollioules', shift: 'M',  debut: '07:30', fin: '15:30' },
+  ]},
+  { sem: 4, label: 'Semaine 4', jours: [
+    { jour: 'Lundi',    creche: 'St Jean',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mardi',    creche: 'Picot 1',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mercredi', creche: 'Picot 2',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Jeudi',    creche: 'Brunet',    shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Vendredi', creche: 'Cuers',     shift: 'AM', debut: '11:00', fin: '19:00' },
+  ]},
+];
+
+const COORD_SEMAINE_TYPE = [
+  { tranche: '07:30 – 09:00', priorite: 'terrain', label: 'Présence terrain', desc: 'Accueil familles, observation équipe, pointage enfants', icon: '👶' },
+  { tranche: '09:00 – 10:30', priorite: 'terrain', label: 'Réunion / APP / Supervision', desc: 'Analyse pratiques, cas particuliers, soutien équipe', icon: '🤝' },
+  { tranche: '10:30 – 11:30', priorite: 'familles', label: 'Entretiens familles', desc: 'Contrats, situations complexes, PAI, adaptation', icon: '👨‍👩‍👧' },
+  { tranche: '11:30 – 13:00', priorite: 'terrain', label: 'Repas & transmissions', desc: 'Présence repas, transmissions équipe', icon: '🍽' },
+  { tranche: '13:00 – 14:30', priorite: 'admin', label: 'Administratif', desc: 'Stocks, commandes, fichiers CAF, dossiers enfants', icon: '💻' },
+  { tranche: '14:30 – 16:00', priorite: 'rh', label: 'RH & Plannings', desc: 'Plannings équipe, absences, recrutement, entretiens pro', icon: '📋' },
+  { tranche: '16:00 – 17:30', priorite: 'familles', label: 'Sorties & Familles', desc: 'Présence sorties, échanges parents, incidents du jour', icon: '🚪' },
+  { tranche: '17:30 – 19:00', priorite: 'admin', label: 'Bilan & transmissions', desc: 'Synthèse journée, mails, préparation lendemain', icon: '📝' },
 ];
 
 const COORD_MISSIONS = [
-  { icon:'🏠', nom:'Présence Terrain',    desc:"Observation, soutien pédagogique direct, accompagnement équipe auprès des enfants", s12:'40%\n~14h', s34:'30%\n~10h', s56:'20%\n~7h',    bg:'#D4E6F1' },
-  { icon:'🤝', nom:'Familles',            desc:'Accueil, transmissions, entretiens parents, suivi inscriptions et fiches enfants',   s12:'20%\n~7h',  s34:'20%\n~7h',  s56:'20%\n~7h',   bg:'#FAD7A0' },
-  { icon:'👥', nom:'Management RH & QVT', desc:"Réunions équipe, entretiens pro, formation, gestion conflits, bien-être équipe",    s12:'15%\n~5h',  s34:'20%\n~7h',  s56:'25%\n~8h45', bg:'#D7BDE2' },
-  { icon:'📋', nom:'Coordination Réseau', desc:'Suivi pédagogique inter-structures, harmonisation pratiques, lien gestionnaire',    s12:'10%\n~3h30',s34:'15%\n~5h',  s56:'20%\n~7h',   bg:'#FADBD8' },
-  { icon:'📂', nom:'Administration',      desc:'Gestion documentaire, stocks, commandes, compliance réglementaire (décret 2025)',   s12:'10%\n~3h30',s34:'10%\n~3h30',s56:'10%\n~3h30', bg:'#D5DBDB' },
-  { icon:'🔔', nom:'Disponibilité',       desc:'Plage tampon urgences, remplacement exceptionnel, accueil stagiaires',              s12:'5%\n~1h45', s34:'5%\n~1h45', s56:'5%\n~1h45',  bg:'#B7E4C7' },
+  { mission: 'Coordination pédagogique', pct1: 35, pct2: 30, pct3: 25, icon: '🎯', bg: '#EDE9FE', color: '#6D28D9', desc: 'Projets éducatifs, APP, formation équipe' },
+  { mission: 'Gestion familles', pct1: 20, pct2: 20, pct3: 18, icon: '👨‍👩‍👧', bg: '#E0F2FE', color: '#0284C7', desc: 'Contrats, entretiens, situations complexes' },
+  { mission: 'Présence terrain', pct1: 25, pct2: 20, pct3: 15, icon: '👶', bg: '#DCFCE7', color: '#15803D', desc: 'Observation, soutien équipe, accueil familles' },
+  { mission: 'Administratif', pct1: 10, pct2: 15, pct3: 20, icon: '💻', bg: '#FEF3C7', color: '#B45309', desc: 'Suivi CAF, dossiers, stocks, commandes' },
+  { mission: 'RH & Management', pct1: 5,  pct2: 10, pct3: 15, icon: '📋', bg: '#FEE2E2', color: '#DC2626', desc: 'Plannings, entretiens, recrutement' },
+  { mission: 'Coordination réseau', pct1: 5,  pct2: 5,  pct3: 7,  icon: '🌐', bg: '#F5F3FF', color: '#7C3AED', desc: 'Réunions réseau, échanges coordinateurs' },
 ];
 
-const COORD_SUIVI_COLS = ['Visites\nTerrain','Réunions\nÉquipe','Entretiens\nFamilles','Entretiens\nSalariés','Incidents\n/ Alertes','Actions Péda\nEngagées'];
-const COORD_SUIVI_KEYS = ['visites','reunions','familles','salaries','incidents','actions'];
-const COORD_SUIVI_LSKEY = 'orevy_coord_suivi';
+const COORD_SUIVI_KEY = 'orevy_coord_suivi';
 
-function coordInitPanel() {
-  const panel = document.getElementById('coord-planning-panel');
-  if (!panel) return;
-  coordRenderRotation();
-  coordRenderSemaine();
-  coordRenderMissions();
-  coordRenderSuivi();
+function coordGetSuivi() {
+  try { return JSON.parse(localStorage.getItem(COORD_SUIVI_KEY) || '{}'); } catch { return {}; }
+}
+function coordSaveSuivi(data) {
+  localStorage.setItem(COORD_SUIVI_KEY, JSON.stringify(data));
 }
 
-function coordShowTab(tab) {
-  const tabs = ['rotation','semaine','missions','suivi'];
-  document.querySelectorAll('.coord-tab').forEach((t,i) => t.classList.toggle('active', tabs[i]===tab));
-  document.querySelectorAll('.coord-tab-content').forEach(c => c.classList.remove('active'));
-  const el = document.getElementById('coord-tab-'+tab);
-  if (el) el.classList.add('active');
+function coordInitPanel() {
+  const role = (typeof currentUserRole !== 'undefined' ? currentUserRole : '').toLowerCase();
+  const panel = document.getElementById('coord-panel');
+  if (!panel) return;
+  // Afficher pour admin uniquement
+  if (role === 'admin') {
+    panel.style.display = 'block';
+    coordRenderRotation();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function coordShowTab(tab, btn) {
+  document.querySelectorAll('.coord-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.coord-tab-panel').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('coord-tab-' + tab);
+  if (panel) panel.classList.add('active');
+  if (tab === 'rotation')  coordRenderRotation();
+  if (tab === 'semaine')   coordRenderSemaine();
+  if (tab === 'missions')  coordRenderMissions();
+  if (tab === 'suivi')     coordRenderSuivi();
 }
 
 function coordRenderRotation() {
-  const el = document.getElementById('coord-tab-rotation');
+  const el = document.getElementById('coord-rotation-content');
   if (!el) return;
-  const now = new Date();
-  const soy = new Date(now.getFullYear(), 0, 1);
-  const weekNum = Math.ceil(((now - soy) / 86400000 + soy.getDay() + 1) / 7);
-  const semCourante = ((weekNum - 1) % 4) + 1;
-  let html = `<p style="font-size:.73rem;color:#666;margin:0 0 10px"><strong style="color:#2D6A4F">Semaine en cours : S${semCourante}</strong> (semaine ISO ${weekNum})</p><div class="coord-rotation-grid">`;
-  COORD_ROTATION.forEach((sem, idx) => {
-    const cur = (idx+1)===semCourante;
-    html += `<div class="coord-sem" style="${cur?'border:2px solid #2D6A4F;':''}">
-      <div class="coord-sem-header" style="${cur?'background:#1A3C34':''}">SEMAINE ${idx+1}${cur?' ← EN COURS':''}</div>
-      <div class="coord-sem-row"><div class="coord-sem-cell" style="background:#eee"></div>${COORD_JOURS.map(j=>`<div class="coord-sem-cell coord-sem-jour">${j.substring(0,3)}</div>`).join('')}</div>
-      <div class="coord-sem-row"><div class="coord-sem-cell coord-sem-label">Matin</div>${sem.mat.map(s=>`<div class="coord-sem-cell coord-sem-mat">${s}</div>`).join('')}</div>
-      <div class="coord-sem-row"><div class="coord-sem-cell coord-sem-label">A-Midi</div>${sem.am.map(s=>`<div class="coord-sem-cell coord-sem-am">${s}</div>`).join('')}</div>
+  const rows = COORD_ROTATION.map(sem => {
+    const cells = sem.jours.map(j => {
+      const c = COORD_CRECHES.find(x => x.nom === j.creche) || { color: '#888', bg: '#f5f5f5' };
+      const shiftBg = j.shift === 'M' ? '#DBEAFE' : '#FEF3C7';
+      const shiftColor = j.shift === 'M' ? '#1D4ED8' : '#B45309';
+      return `<td>
+        <span class="coord-creche-badge" style="background:${c.bg};color:${c.color}">● ${j.creche}</span>
+        <br><span class="coord-shift-badge" style="background:${shiftBg};color:${shiftColor};margin-top:4px">${j.shift} ${j.debut}–${j.fin}</span>
+      </td>`;
+    }).join('');
+    return `<tr>
+      <td style="font-weight:700;color:var(--ink);white-space:nowrap">${sem.label}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--ink3);margin-bottom:12px">
+      Rotation sur 4 semaines · M = Matin (07:30–15:30) · AM = Après-midi (11:00–19:00)
+    </div>
+    <div class="coord-rotation-grid">
+      <table class="coord-rotation-table">
+        <thead>
+          <tr>
+            <th style="min-width:100px">Semaine</th>
+            <th>Lundi</th><th>Mardi</th><th>Mercredi</th><th>Jeudi</th><th>Vendredi</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      ${COORD_CRECHES.map(c => `<span style="background:${c.bg};color:${c.color};padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600">● ${c.nom}</span>`).join('')}
     </div>`;
-  });
-  html += `</div><div class="coord-legende"><div class="coord-legende-item"><div class="coord-legende-dot" style="background:#D4E6F1"></div>Matin — Présence Terrain</div><div class="coord-legende-item"><div class="coord-legende-dot" style="background:#FAD7A0"></div>A-Midi — Coordination</div></div>`;
-  el.innerHTML = html;
 }
 
 function coordRenderSemaine() {
-  const el = document.getElementById('coord-tab-semaine');
+  const el = document.getElementById('coord-semaine-content');
   if (!el) return;
-  let html = `<div style="overflow-x:auto"><table class="coord-sem-table"><thead><tr><th style="width:84px">Horaire</th><th>Lundi</th><th>Mardi</th><th>Mercredi</th><th>Jeudi</th><th>Vendredi</th><th style="width:50px">⏱</th></tr></thead><tbody>`;
-  COORD_SEMAINE.forEach(row => {
-    html += `<tr><td class="csem-horaire">${row.horaire}</td>${[row.L,row.Ma,row.Me,row.J,row.V].map(v=>`<td class="${row.cls}" style="white-space:pre-line;font-size:.7rem">${v}</td>`).join('')}<td class="csem-h">${row.h}</td></tr>`;
-  });
-  html += `</tbody><tfoot><tr class="csem-total-row"><td colspan="6" style="text-align:center;font-size:.78rem">TOTAL (hors pause repas) = 35h · Convention Collective ALISFA</td><td>35h</td></tr></tfoot></table></div>
-  <div class="coord-legende" style="margin-top:10px">
-    ${[['#D4E6F1','🏠 Terrain — P1'],['#FAD7A0','🤝 Familles — P2'],['#D7BDE2','📚 RH/Form — P3'],['#D5DBDB','📂 Admin — P4'],['#FADBD8','🔔 Dispo/QVT'],['#F5F5F5','⏸ Pause']].map(([c,l])=>`<div class="coord-legende-item"><div class="coord-legende-dot" style="background:${c};border:1px solid #ccc"></div>${l}</div>`).join('')}
-  </div>`;
-  el.innerHTML = html;
+  const prioConfig = {
+    terrain:  { bg: '#DCFCE7', color: '#15803D', label: 'Terrain' },
+    familles: { bg: '#E0F2FE', color: '#0284C7', label: 'Familles' },
+    rh:       { bg: '#EDE9FE', color: '#6D28D9', label: 'RH' },
+    admin:    { bg: '#FEF3C7', color: '#B45309', label: 'Admin' },
+  };
+  const rows = COORD_SEMAINE_TYPE.map(s => {
+    const p = prioConfig[s.priorite] || prioConfig.admin;
+    return `<tr>
+      <td style="font-weight:700;white-space:nowrap;color:var(--ink)">${s.tranche}</td>
+      <td>${s.icon} <strong>${s.label}</strong></td>
+      <td style="color:var(--ink2)">${s.desc}</td>
+      <td><span class="coord-prio-badge" style="background:${p.bg};color:${p.color}">${p.label}</span></td>
+    </tr>`;
+  }).join('');
+
+  const totalH = (COORD_SEMAINE_TYPE.length * 1.5).toFixed(0);
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--ink3);margin-bottom:14px">
+      Journée type sur une structure · 35h/semaine sur 5 jours
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px">
+      <table class="coord-semaine-table">
+        <thead>
+          <tr>
+            <th style="min-width:130px">Créneau horaire</th>
+            <th>Mission</th>
+            <th>Description</th>
+            <th>Priorité</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+      ${Object.entries(prioConfig).map(([k,v]) => `<span style="background:${v.bg};color:${v.color};padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600">${v.label}</span>`).join('')}
+    </div>`;
 }
 
 function coordRenderMissions() {
-  const el = document.getElementById('coord-tab-missions');
+  const el = document.getElementById('coord-missions-content');
   if (!el) return;
-  let html = `<div class="coord-missions-hdr"><div style="text-align:left">Mission</div><div style="text-align:left">Description</div><div>1–2 struct.</div><div>3–4 struct.</div><div>5–6 struct.</div></div><div style="border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;overflow:hidden">`;
-  COORD_MISSIONS.forEach(m => {
-    html += `<div class="coord-mission-row"><div class="coord-mission-lbl" style="background:${m.bg}">${m.icon} ${m.nom}</div><div class="coord-mission-desc">${m.desc}</div>${[m.s12,m.s34,m.s56].map(v=>`<div class="coord-mission-pct" style="background:${m.bg}99">${v}</div>`).join('')}</div>`;
-  });
-  html += `</div><div class="coord-alerte">⚠️ <strong>Décret 2025-304 (en vigueur sept. 2026)</strong> : Direction 0,5 ETP min/structure · Max 2 structures par directeur.<br>Pour 5–6 structures : envisager 3 coordinateurs (2 structures chacun). La surcharge est un risque d'épuisement professionnel et de baisse de qualité d'accueil.</div>`;
-  el.innerHTML = html;
-}
+  const rows = COORD_MISSIONS.map(m => `
+    <div class="coord-mission-row">
+      <div class="coord-mission-icon" style="background:${m.bg}">
+        <span>${m.icon}</span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px">${m.mission}</div>
+        <div style="font-size:11px;color:var(--ink3)">${m.desc}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+        <div style="text-align:center;min-width:44px">
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:${m.color}">${m.pct1}%</div>
+          <div style="font-size:9px;color:var(--ink3)">1–2 struct.</div>
+        </div>
+        <div style="text-align:center;min-width:44px">
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:${m.color}">${m.pct2}%</div>
+          <div style="font-size:9px;color:var(--ink3)">3–4 struct.</div>
+        </div>
+        <div style="text-align:center;min-width:44px">
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:${m.color}">${m.pct3}%</div>
+          <div style="font-size:9px;color:var(--ink3)">5–6 struct.</div>
+        </div>
+      </div>
+    </div>`).join('');
 
-function coordLoadSuivi(mois, annee) {
-  try { return JSON.parse(localStorage.getItem(COORD_SUIVI_LSKEY+'_'+annee+'_'+mois)) || {}; } catch { return {}; }
-}
-
-function coordSaveSuivi(mois, annee) {
-  const data = {};
-  COORD_STRUCTURES.forEach(struct => {
-    data[struct] = {};
-    COORD_SUIVI_KEYS.forEach(key => {
-      const inp = document.getElementById('csuivi_'+struct+'_'+key);
-      if (inp) data[struct][key] = parseInt(inp.value) || 0;
-    });
-    const bilan = document.getElementById('csuivi_'+struct+'_bilan');
-    if (bilan) data[struct].bilan = bilan.value;
-  });
-  localStorage.setItem(COORD_SUIVI_LSKEY+'_'+annee+'_'+mois, JSON.stringify(data));
-  const badge = document.getElementById('coord-saved-badge');
-  if (badge) { badge.classList.add('show'); setTimeout(()=>badge.classList.remove('show'), 2500); }
-  coordUpdateTotaux();
-}
-
-function coordUpdateTotaux() {
-  COORD_SUIVI_KEYS.forEach(key => {
-    let total = 0;
-    COORD_STRUCTURES.forEach(struct => {
-      const inp = document.getElementById('csuivi_'+struct+'_'+key);
-      if (inp) total += (parseInt(inp.value)||0);
-    });
-    const tot = document.getElementById('csuivi_total_'+key);
-    if (tot) tot.textContent = total;
-  });
-}
-
-function coordFillSuiviTable(mois, annee) {
-  const tbody = document.getElementById('coord-suivi-tbody');
-  if (!tbody) return;
-  const data = coordLoadSuivi(mois, annee);
-  tbody.innerHTML = COORD_STRUCTURES.map((struct, si) => {
-    const sData = data[struct] || {};
-    const bg = COORD_STRUCT_COLORS[si];
-    return '<tr><td style="background:'+bg+'">'+struct+'</td>'+
-      COORD_SUIVI_KEYS.map(key=>'<td><input type="number" id="csuivi_'+struct+'_'+key+'" value="'+(sData[key]||0)+'" min="0" max="99" onchange="coordUpdateTotaux()" style="background:'+bg+'30"></td>').join('')+
-      '<td><textarea id="csuivi_'+struct+'_bilan" rows="2">'+(sData.bilan||'')+'</textarea></td></tr>';
-  }).join('');
-  coordUpdateTotaux();
-}
-
-function coordChangeSuiviPeriode() {
-  coordFillSuiviTable(
-    parseInt(document.getElementById('csuivi-mois').value),
-    parseInt(document.getElementById('csuivi-annee').value)
-  );
+  el.innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 16px;font-size:12px;flex:1;min-width:120px;text-align:center">
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">Nb structures actuel</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent)">6</div>
+      </div>
+      <div style="background:var(--amber-lt);border:1.5px solid #FDE68A;border-radius:10px;padding:10px 16px;font-size:12px;flex:2;min-width:200px">
+        <div style="font-size:11px;font-weight:700;color:#B45309;margin-bottom:3px">⚠ Décret 2025-304</div>
+        <div style="font-size:12px;color:#B45309;line-height:1.5">Direction : 0,5 ETP min. par structure au 1er sept. 2026.<br>Max 2 structures par coordinateur.</div>
+      </div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:10px;padding:0 16px">
+      ${rows}
+    </div>`;
 }
 
 function coordRenderSuivi() {
-  const el = document.getElementById('coord-tab-suivi');
+  const el = document.getElementById('coord-suivi-content');
   if (!el) return;
-  const now = new Date();
-  const mc = now.getMonth()+1, ac = now.getFullYear();
-  const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  el.innerHTML = `<div class="coord-suivi-controls">
-    <label style="font-size:.78rem;font-weight:600;color:#1A3C34">Mois :</label>
-    <select id="csuivi-mois" onchange="coordChangeSuiviPeriode()">${MOIS.map((m,i)=>'<option value="'+(i+1)+'"'+(i+1===mc?' selected':'')+'>'+m+'</option>').join('')}</select>
-    <select id="csuivi-annee" onchange="coordChangeSuiviPeriode()">${[ac-1,ac,ac+1].map(a=>'<option value="'+a+'"'+(a===ac?' selected':'')+'>'+(a)+'</option>').join('')}</select>
-    <button class="coord-suivi-btn" onclick="coordSaveSuivi(parseInt(document.getElementById('csuivi-mois').value),parseInt(document.getElementById('csuivi-annee').value))">💾 Enregistrer</button>
-    <span id="coord-saved-badge" class="coord-saved-badge">✓ Sauvegardé</span>
-  </div>
-  <div style="overflow-x:auto"><table class="coord-suivi-table">
-    <thead><tr><th>Structure</th>${COORD_SUIVI_COLS.map(c=>'<th>'+c+'</th>').join('')}<th style="width:150px">Bilan / Actions</th></tr></thead>
-    <tbody id="coord-suivi-tbody"></tbody>
-    <tfoot><tr class="coord-suivi-total"><td>TOTAUX</td>${COORD_SUIVI_KEYS.map(k=>'<td id="csuivi_total_'+k+'">0</td>').join('')}<td></td></tr></tfoot>
-  </table></div>`;
-  coordFillSuiviTable(mc, ac);
+  const periodeEl = document.getElementById('coord-periode-sel');
+  const periode = periodeEl ? periodeEl.value : '2025-06';
+  coordFillSuiviTable(el, periode);
+}
+
+function coordFillSuiviTable(el, periode) {
+  const suivi = coordGetSuivi();
+  const key = 'suivi_' + periode;
+  const data = suivi[key] || {};
+
+  const metrics = [
+    { id: 'visites',    label: 'Visites terrain',          unit: 'jours' },
+    { id: 'entretiens', label: 'Entretiens familles',       unit: 'nb' },
+    { id: 'formations', label: 'Formations / APP animées',  unit: 'nb' },
+    { id: 'dossiers',   label: 'Dossiers traités',          unit: 'nb' },
+    { id: 'incidents',  label: 'Incidents / signalements',  unit: 'nb' },
+    { id: 'heures',     label: 'Heures totales',            unit: 'h' },
+  ];
+
+  const headerCreches = COORD_CRECHES.map(c =>
+    `<th><span style="color:${c.color}">${c.nom}</span></th>`
+  ).join('');
+
+  const rows = metrics.map(m => {
+    const cells = COORD_CRECHES.map(c => {
+      const val = data[m.id + '_' + c.nom] || '';
+      return `<td><input type="number" min="0" class="coord-suivi-input"
+        value="${val}"
+        data-metric="${m.id}" data-creche="${c.nom}"
+        oninput="coordUpdateTotaux('${periode}')"></td>`;
+    }).join('');
+    // Total ligne
+    let total = 0;
+    COORD_CRECHES.forEach(c => {
+      const v = parseInt(data[m.id + '_' + c.nom]) || 0;
+      total += v;
+    });
+    return `<tr>
+      <td>${m.label} <span style="font-size:10px;color:var(--ink3)">(${m.unit})</span></td>
+      ${cells}
+      <td class="coord-total-cell" id="coord-total-${m.id}">${total || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:12px;color:var(--ink3)">Saisissez vos données par structure pour la période sélectionnée</div>
+      <button onclick="coordSaveSuiviBtn()" class="btn btn-primary btn-sm">💾 Sauvegarder</button>
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px">
+      <table class="coord-suivi-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;min-width:180px">Indicateur</th>
+            ${headerCreches}
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function coordUpdateTotaux(periode) {
+  const suivi = coordGetSuivi();
+  const key = 'suivi_' + periode;
+  if (!suivi[key]) suivi[key] = {};
+
+  // Lire toutes les inputs
+  document.querySelectorAll('.coord-suivi-input').forEach(inp => {
+    const metric = inp.dataset.metric;
+    const creche = inp.dataset.creche;
+    suivi[key][metric + '_' + creche] = inp.value;
+  });
+
+  // Mettre à jour les totaux par ligne
+  const metrics = ['visites','entretiens','formations','dossiers','incidents','heures'];
+  metrics.forEach(m => {
+    let total = 0;
+    COORD_CRECHES.forEach(c => {
+      const v = parseInt(suivi[key][m + '_' + c.nom]) || 0;
+      total += v;
+    });
+    const el = document.getElementById('coord-total-' + m);
+    if (el) el.textContent = total > 0 ? total : '—';
+  });
+
+  coordSaveSuivi(suivi);
+}
+
+function coordSaveSuiviBtn() {
+  const periodeEl = document.getElementById('coord-periode-sel');
+  const periode = periodeEl ? periodeEl.value : '';
+  coordUpdateTotaux(periode);
+  showNotif('✅ Suivi coordinateur sauvegardé');
+}
+
+function coordChangeSuiviPeriode() {
+  const tabSuivi = document.getElementById('coord-tab-suivi');
+  if (tabSuivi && tabSuivi.classList.contains('active')) {
+    coordRenderSuivi();
+  }
 }
 
 </script>
