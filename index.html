@@ -13626,12 +13626,16 @@ function dsSwitchSection(section) {
   dsCurrentSection = section;
   document.getElementById('ds-section-reglementaire').style.display = section === 'reglementaire' ? 'grid' : 'none';
   document.getElementById('ds-section-documentaire').style.display = section === 'documentaire' ? 'block' : 'none';
+  document.getElementById('ds-section-veille').style.display = section === 'veille' ? 'block' : 'none';
   document.getElementById('ds-tab-regl').classList.toggle('ds-tab-active', section === 'reglementaire');
   document.getElementById('ds-tab-docs').classList.toggle('ds-tab-active', section === 'documentaire');
+  const vTab = document.getElementById('ds-tab-veille');
+  if (vTab) vTab.classList.toggle('ds-tab-active', section === 'veille');
   document.getElementById('ds-search-input').value = '';
   dsSearchQuery = '';
   if (section === 'documentaire') dsRenderProtocoles('');
-  else dsRenderCards();
+  else if (section === 'reglementaire') dsRenderCards();
+  else if (section === 'veille') dsVeilleLoad();
 }
 
 function dsOnSearch(val) {
@@ -13645,6 +13649,7 @@ function openHubDocs() {
   document.getElementById('docs-screen').style.display = 'block';
   document.body.style.overflow = 'hidden';
   dsInit();
+  dsVeilleLoad();
 }
 function closeDocsScreen() {
   document.getElementById('docs-screen').style.display = 'none';
@@ -14043,39 +14048,7 @@ function dsVeilleMsg(msg, ok) {
   el.style.display = 'block';
 }
 
-// ── Patch dsSwitchSection pour gérer 'veille' ──────────────────
-const _origDsSwitchSection = dsSwitchSection;
-dsSwitchSection = function(section) {
-  // Gérer l'onglet veille en plus des 2 existants
-  document.getElementById('ds-section-reglementaire').style.display = section === 'reglementaire' ? 'grid' : 'none';
-  document.getElementById('ds-section-documentaire').style.display = section === 'documentaire' ? 'block' : 'none';
-  document.getElementById('ds-section-veille').style.display = section === 'veille' ? 'block' : 'none';
-
-  document.getElementById('ds-tab-regl').classList.toggle('ds-tab-active', section === 'reglementaire');
-  document.getElementById('ds-tab-docs').classList.toggle('ds-tab-active', section === 'documentaire');
-  const vTab = document.getElementById('ds-tab-veille');
-  if (vTab) vTab.classList.toggle('ds-tab-active', section === 'veille');
-
-  document.getElementById('ds-search-input').value = '';
-  dsSearchQuery = '';
-  dsCurrentSection = section;
-
-  if (section === 'documentaire') dsRenderProtocoles('');
-  else if (section === 'reglementaire') dsRenderCards();
-  else if (section === 'veille') dsVeilleLoad();
-};
-
-// ── Patch openHubDocs pour charger les alertes dès l'ouverture ─
-const _origOpenHubDocs = openHubDocs;
-openHubDocs = function() {
-  document.getElementById('docs-screen').style.display = 'block';
-  document.body.style.overflow = 'hidden';
-  dsInit();
-  dsVeilleLoad(); // charge les alertes pour mettre à jour les badges
-};
-
-// ── Patch hubLoadKPIs pour afficher le badge dès le hub ────────
-const _origHubLoadKPIs = typeof hubLoadKPIs !== 'undefined' ? hubLoadKPIs : null;
+// ── Charger le badge veille dès que le hub s'affiche ──────────
 async function dsVeilleLoadBadgeOnly() {
   try {
     const r = await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes?select=id,lu,impact&lu=eq.false', { headers: SUPA_HDRS_V });
@@ -14087,7 +14060,6 @@ async function dsVeilleLoadBadgeOnly() {
 }
 
 // Charger les badges dès que le hub s'affiche
-const _origShowHub = typeof showHub !== 'undefined' ? showHub : null;
 document.addEventListener('DOMContentLoaded', () => {
   // Déclencher après connexion
   const obs = new MutationObserver(() => {
