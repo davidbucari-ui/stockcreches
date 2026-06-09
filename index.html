@@ -13765,6 +13765,7 @@ let DS_DOCS = JSON.parse(localStorage.getItem('orevy_docs') || 'null') || [
   { id:'p11', cat:'sante', name:"Plan d'accueil individualisé (PAI)", desc:"Modèle de PAI vierge. Allergies, pathologies chroniques, protocoles d'urgence spécifiques.", tags:['PAI','Handicap','Allergie'], statut:'en_vigueur' },
   { id:'p12', cat:'sante', name:'Registre des accidents / incidents', desc:"Modèle de registre obligatoire. Consignation des accidents, incidents et transmissions PMI.", tags:['Registre','PMI','Obligatoire'], statut:'en_vigueur' },
 ];
+let dsSearchQuery = '';
 
 function dsSaveDocsLocal() {
   localStorage.setItem('orevy_docs', JSON.stringify(DS_DOCS));
@@ -14022,6 +14023,8 @@ function dsDocInit() {
 }
 
 // ─── NAVIGATION ENTRE SECTIONS ──────────────────────────
+let dsFilter_current = 'all';
+let dsView = 'grid';
 let dsCurrentSection = 'reglementaire';
 
 function dsSwitchSection(section) {
