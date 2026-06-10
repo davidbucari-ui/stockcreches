@@ -936,41 +936,41 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 
   <div class="sidebar-section-title">Navigation</div>
-  <button class="nav-item active" data-roles="admin,directrice,auxiliaire,stagiaire" onclick="showPage('dashboard', this)">
+  <button class="nav-item active" data-roles="admin,directrice,auxiliaire,stagiaire,coordinateur" onclick="showPage('dashboard', this)">
     <span class="nav-icon">🏠</span> Tableau de bord
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('inventaire', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('inventaire', this)">
     <span class="nav-icon">📦</span> Stocks pédagogiques
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('entretien', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('entretien', this)">
     <span class="nav-icon">🧹</span> Stocks entretien
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('univers', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('univers', this)">
     <span class="nav-icon">🌟</span> Univers ludiques
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('familles', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('familles', this)">
     <span class="nav-icon">👨‍👩‍👧</span> Familles
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('planning', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('planning', this)">
     <span class="nav-icon">📅</span> Planning
   </button>
-  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('rh', this)">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('rh', this)">
     <span class="nav-icon">👥</span> Ressources humaines
   </button>
-  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('fournisseurs', this)">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('fournisseurs', this)">
     <span class="nav-icon">🏭</span> Fournisseurs
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire" onclick="showPage('commandes', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('commandes', this)">
     <span class="nav-icon">🛒</span> Commandes
   </button>
-  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('statistiques', this)">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('statistiques', this)">
     <span class="nav-icon">📊</span> Statistiques
     <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
-  <button class="nav-item" data-roles="admin,directrice" onclick="window.open('notice.html','_blank')">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="window.open('notice.html','_blank')">
     <span class="nav-icon">📖</span> Notice d'utilisation
   </button>
-  <button class="nav-item" data-roles="admin,directrice" onclick="showPage('parametres', this)">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('parametres', this)">
     <span class="nav-icon">⚙️</span> Paramètres
   </button>
   <button class="nav-item" data-roles="admin" onclick="showPage('admin', this)">
@@ -1787,6 +1787,11 @@ textarea { resize: vertical; min-height: 72px; }
             style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
             📊 Gantt
           </button>
+          <button id="pe-tab-coord" onclick="switchPlanningTab('coord')"
+            style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;display:none"
+            data-coord-tab>
+            🗓 Coordinateur
+          </button>
         </div>
 
         <!-- Vue Gantt -->
@@ -1821,6 +1826,11 @@ textarea { resize: vertical; min-height: 72px; }
             <span style="background:#FEF3C7;color:#B45309;padding:2px 8px;border-radius:12px;font-weight:600">! Limite</span>
             <span style="background:#FFE4E6;color:#BE123C;padding:2px 8px;border-radius:12px;font-weight:600">✗ Non conforme</span>
           </div>
+        </div>
+
+        <!-- Vue Coordinateur EJE -->
+        <div id="pe-view-coord" style="display:none">
+          <div id="pe-coord-content"></div>
         </div>
 
       </div>
@@ -1930,6 +1940,7 @@ textarea { resize: vertical; min-height: 72px; }
               <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Rôle</label>
               <select id="admin-new-role"
                 style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
+                <option value="coordinateur">🗓 Coordinateur EJE</option>
                 <option value="Directrice">🌸 Directrice</option>
                 <option value="Auxiliaire">🌿 Auxiliaire</option>
                 <option value="stagiaire">🎓 Stagiaire</option>
@@ -5008,7 +5019,7 @@ function renderDashboard() {
   const today = new Date();
   const dateStr = today.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 
-  if (role === 'admin' || role === 'directrice') {
+  if (role === 'admin' || role === 'directrice' || role === 'coordinateur') {
     if (dirEl) { dirEl.style.display = 'block'; renderDashboardDirectrice(dateStr); }
   } else if (role === 'auxiliaire') {
     if (auxEl) { auxEl.style.display = 'block'; renderDashboardAuxiliaire(dateStr); }
@@ -5313,19 +5324,20 @@ let currentUserRole = 'stagiaire';
 let currentUserDbId = null;
 
 const ROLE_PAGES = {
-  admin:      ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles'],
-  directrice: ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles'],
-  auxiliaire: ['dashboard','inventaire','entretien','univers','planning','familles'],
-  stagiaire:  ['dashboard'],
+  admin:         ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles'],
+  coordinateur:  ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles'],
+  directrice:    ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles'],
+  auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles'],
+  stagiaire:     ['dashboard'],
 };
 
 const ROLE_LABELS = {
-  admin: '👑 Admin', directrice: '🌸 Directrice',
-  auxiliaire: '🌿 Auxiliaire', stagiaire: '🎓 Stagiaire',
+  admin: '👑 Admin', coordinateur: '🗓 Coordinateur',
+  directrice: '🌸 Directrice', auxiliaire: '🌿 Auxiliaire', stagiaire: '🎓 Stagiaire',
 };
 
 async function fetchUserRole(email) {
-  const VALID_ROLES = ['admin','directrice','auxiliaire','stagiaire'];
+  const VALID_ROLES = ['admin','directrice','auxiliaire','stagiaire','coordinateur'];
   try {
     const rows = await sbGet('utilisateurs', `email=eq.${encodeURIComponent(email)}&actif=eq.true&select=id,role`);
     if (Array.isArray(rows) && rows.length > 0) {
@@ -5647,7 +5659,7 @@ function showHub() {
     const el = document.getElementById('hub-v-' + r);
     if (el) el.style.display = 'none';
   });
-  const roleView = (role === 'admin' || role === 'stagiaire') ? 'admin'
+  const roleView = (role === 'admin' || role === 'stagiaire' || role === 'coordinateur') ? 'admin'
                   : role === 'directrice' ? 'directrice' : 'auxiliaire';
   const vEl = document.getElementById('hub-v-' + roleView);
   if (vEl) vEl.style.display = 'block';
@@ -9396,7 +9408,13 @@ function showPlanningEquipePage() {
   if (peSel && typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all') {
     if ([...peSel.options].some(o => o.value === currentCreche)) peSel.value = currentCreche;
   }
-  switchPlanningTab(pePlanningTab || 'gantt');
+  // Afficher onglet Coordinateur si rôle coordinateur ou admin
+  const role = (typeof currentUserRole !== 'undefined' ? currentUserRole : '').toLowerCase();
+  const coordTab = document.getElementById('pe-tab-coord');
+  if (coordTab) coordTab.style.display = ['admin','coordinateur'].includes(role) ? '' : 'none';
+  // Si coordinateur, aller directement sur l'onglet coordinateur
+  const defaultTab = role === 'coordinateur' ? 'coord' : (pePlanningTab || 'gantt');
+  switchPlanningTab(defaultTab);
 }
 
 // ── PLANNING ÉQUIPE (Horaire × Jours) ─────────────────────────────
@@ -9405,7 +9423,7 @@ let peGanttDay = -1; // -1 = jour courant ou lundi
 
 function switchPlanningTab(tab) {
   pePlanningTab = tab;
-  const tabs = ['gantt','hebdo','gantt2'];
+  const tabs = ['gantt','hebdo','gantt2','coord'];
   tabs.forEach(t => {
     const btn  = document.getElementById('pe-tab-' + t);
     const view = document.getElementById('pe-view-' + t);
@@ -9417,12 +9435,14 @@ function switchPlanningTab(tab) {
   if (tab === 'gantt')  renderPlanningEquipe();
   else if (tab === 'hebdo')  renderPlanningHebdo();
   else if (tab === 'gantt2') renderPlanningGantt();
+  else if (tab === 'coord')  renderPlanningCoord();
 }
 
 function renderActiveTab() {
   if (pePlanningTab === 'gantt')  renderPlanningEquipe();
   else if (pePlanningTab === 'hebdo')  renderPlanningHebdo();
   else if (pePlanningTab === 'gantt2') renderPlanningGantt();
+  else if (pePlanningTab === 'coord')  renderPlanningCoord();
 }
 
 // ── PLANNING ÉQUIPE (Horaire × Jours) ───────────────────────────────
@@ -14470,6 +14490,332 @@ document.addEventListener('DOMContentLoaded', () => {
 // );
 // ALTER TABLE veille_alertes ENABLE ROW LEVEL SECURITY;
 // CREATE POLICY "allow_all" ON veille_alertes FOR ALL USING (true) WITH CHECK (true);
+
+
+// ══════════════════════════════════════════════════
+// VUE PLANNING COORDINATEUR (onglet dans page-planning)
+// ══════════════════════════════════════════════════
+
+const COORD_CRECHES_DATA = [
+  { nom: 'Brunet',    color: '#F59E0B', bg: '#FEF3C7' },
+  { nom: 'Cuers',     color: '#10B981', bg: '#DCFCE7' },
+  { nom: 'Ollioules', color: '#EF4444', bg: '#FEE2E2' },
+  { nom: 'St Jean',   color: '#8B5CF6', bg: '#EDE9FE' },
+  { nom: 'Picot 1',   color: '#0EA5E9', bg: '#E0F2FE' },
+  { nom: 'Picot 2',   color: '#F43F5E', bg: '#FFE4E6' },
+];
+
+const COORD_ROTATION_DATA = [
+  { sem: 1, label: 'Semaine 1', jours: [
+    { jour: 'Lundi',    creche: 'Brunet',    shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mardi',    creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mercredi', creche: 'Ollioules', shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Jeudi',    creche: 'St Jean',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Vendredi', creche: 'Picot 1',   shift: 'M',  debut: '07:30', fin: '15:30' },
+  ]},
+  { sem: 2, label: 'Semaine 2', jours: [
+    { jour: 'Lundi',    creche: 'Picot 2',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mardi',    creche: 'Brunet',    shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Mercredi', creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Jeudi',    creche: 'Ollioules', shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Vendredi', creche: 'St Jean',   shift: 'AM', debut: '11:00', fin: '19:00' },
+  ]},
+  { sem: 3, label: 'Semaine 3', jours: [
+    { jour: 'Lundi',    creche: 'Picot 1',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Mardi',    creche: 'Picot 2',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mercredi', creche: 'Brunet',    shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Jeudi',    creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Vendredi', creche: 'Ollioures', shift: 'M',  debut: '07:30', fin: '15:30' },
+  ]},
+  { sem: 4, label: 'Semaine 4', jours: [
+    { jour: 'Lundi',    creche: 'St Jean',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mardi',    creche: 'Picot 1',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mercredi', creche: 'Picot 2',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Jeudi',    creche: 'Brunet',    shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Vendredi', creche: 'Cuers',     shift: 'AM', debut: '11:00', fin: '19:00' },
+  ]},
+];
+
+const COORD_SEMAINE_DATA = [
+  { tranche: '07:30–09:00', prio: 'terrain',  label: 'Présence terrain',            desc: 'Accueil familles, observation équipe, pointage enfants', icon: '👶' },
+  { tranche: '09:00–10:30', prio: 'terrain',  label: 'Réunion / APP / Supervision', desc: 'Analyse pratiques, cas particuliers, soutien équipe', icon: '🤝' },
+  { tranche: '10:30–11:30', prio: 'familles', label: 'Entretiens familles',          desc: 'Contrats, situations complexes, PAI, adaptation', icon: '👨‍👩‍👧' },
+  { tranche: '11:30–13:00', prio: 'terrain',  label: 'Repas & transmissions',        desc: 'Présence repas, transmissions équipe', icon: '🍽' },
+  { tranche: '13:00–14:30', prio: 'admin',    label: 'Administratif',                desc: 'Stocks, commandes, fichiers CAF, dossiers enfants', icon: '💻' },
+  { tranche: '14:30–16:00', prio: 'rh',       label: 'RH & Plannings',               desc: 'Plannings équipe, absences, recrutement, entretiens', icon: '📋' },
+  { tranche: '16:00–17:30', prio: 'familles', label: 'Sorties & Familles',           desc: 'Présence sorties, échanges parents, incidents du jour', icon: '🚪' },
+  { tranche: '17:30–19:00', prio: 'admin',    label: 'Bilan & transmissions',        desc: 'Synthèse journée, mails, préparation lendemain', icon: '📝' },
+];
+
+const COORD_MISSIONS_DATA = [
+  { mission: 'Coordination pédagogique', p1: 35, p2: 30, p3: 25, icon: '🎯', bg: '#EDE9FE', color: '#6D28D9', desc: 'Projets éducatifs, APP, formation équipe' },
+  { mission: 'Gestion familles',          p1: 20, p2: 20, p3: 18, icon: '👨‍👩‍👧', bg: '#E0F2FE', color: '#0284C7', desc: 'Contrats, entretiens, situations complexes' },
+  { mission: 'Présence terrain',          p1: 25, p2: 20, p3: 15, icon: '👶', bg: '#DCFCE7', color: '#15803D', desc: 'Observation, soutien équipe, accueil familles' },
+  { mission: 'Administratif',             p1: 10, p2: 15, p3: 20, icon: '💻', bg: '#FEF3C7', color: '#B45309', desc: 'Suivi CAF, dossiers, stocks, commandes' },
+  { mission: 'RH & Management',           p1: 5,  p2: 10, p3: 15, icon: '📋', bg: '#FEE2E2', color: '#DC2626', desc: 'Plannings, entretiens, recrutement' },
+  { mission: 'Coordination réseau',       p1: 5,  p2: 5,  p3: 7,  icon: '🌐', bg: '#F5F3FF', color: '#7C3AED', desc: 'Réunions réseau, échanges coordinateurs' },
+];
+
+const COORD_SUIVI_LS = 'orevy_coord_suivi_v2';
+let _coordTab = 'rotation';
+
+function coordGetSuiviData() {
+  try { return JSON.parse(localStorage.getItem(COORD_SUIVI_LS) || '{}'); } catch { return {}; }
+}
+function coordSetSuiviData(d) { localStorage.setItem(COORD_SUIVI_LS, JSON.stringify(d)); }
+
+function renderPlanningCoord() {
+  const el = document.getElementById('pe-coord-content');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div style="padding:0 0 8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--ink)">🗓 Planning Coordinateur EJE</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:2px">Réseau Koalakids · 6 structures · 35h/semaine</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="coord-suivi-periode"
+            style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--surface2)">
+            ${_coordGetPeriodeOptions()}
+          </select>
+        </div>
+      </div>
+
+      <!-- Sous-onglets -->
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:18px;flex-wrap:wrap">
+        ${['rotation','semaine','missions','suivi'].map((t, i) => {
+          const labels = ['🔄 Rotation', '📅 Semaine type', '🎯 Missions', '📊 Suivi mensuel'];
+          const active = _coordTab === t;
+          return `<button onclick="_coordSwitchTab('${t}')"
+            style="padding:9px 16px;border:none;background:none;font-family:inherit;font-size:13px;
+              font-weight:${active?'700':'600'};color:${active?'var(--accent)':'var(--ink3)'};
+              border-bottom:2px solid ${active?'var(--accent)':'transparent'};margin-bottom:-2px;cursor:pointer;white-space:nowrap">
+            ${labels[i]}
+          </button>`;
+        }).join('')}
+      </div>
+
+      <!-- Contenu du sous-onglet -->
+      <div id="coord-subtab-content"></div>
+    </div>`;
+
+  _coordRenderSubtab(_coordTab);
+}
+
+function _coordGetPeriodeOptions() {
+  const now = new Date();
+  const months = [];
+  for (let i = -1; i <= 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    const lbl = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    months.push(`<option value="${val}">${lbl.charAt(0).toUpperCase() + lbl.slice(1)}</option>`);
+  }
+  return months.join('');
+}
+
+function _coordSwitchTab(tab) {
+  _coordTab = tab;
+  // Mettre à jour les styles des boutons
+  renderPlanningCoord();
+}
+
+function _coordRenderSubtab(tab) {
+  const el = document.getElementById('coord-subtab-content');
+  if (!el) return;
+  if (tab === 'rotation')  el.innerHTML = _coordHtmlRotation();
+  else if (tab === 'semaine')   el.innerHTML = _coordHtmlSemaine();
+  else if (tab === 'missions')  el.innerHTML = _coordHtmlMissions();
+  else if (tab === 'suivi')     el.innerHTML = _coordHtmlSuivi();
+}
+
+function _coordHtmlRotation() {
+  const rows = COORD_ROTATION_DATA.map(sem => {
+    const cells = sem.jours.map(j => {
+      const c = COORD_CRECHES_DATA.find(x => x.nom === j.creche) || { color:'#888', bg:'#f5f5f5' };
+      const sBg    = j.shift === 'M' ? '#DBEAFE' : '#FEF3C7';
+      const sColor = j.shift === 'M' ? '#1D4ED8' : '#B45309';
+      return `<td style="padding:10px 12px;border-bottom:1px solid var(--border)">
+        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:10px;font-size:12px;font-weight:700;background:${c.bg};color:${c.color}">● ${j.creche}</span>
+        <div style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:700;background:${sBg};color:${sColor};margin-top:5px">${j.shift} ${j.debut}–${j.fin}</div>
+      </td>`;
+    }).join('');
+    return `<tr><td style="padding:10px 14px;font-weight:700;color:var(--ink);border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg)">${sem.label}</td>${cells}</tr>`;
+  }).join('');
+
+  return `<div style="font-size:12px;color:var(--ink3);margin-bottom:12px">
+    Rotation sur 4 semaines · <strong>M</strong> = Matin 07:30–15:30 · <strong>AM</strong> = Après-midi 11:00–19:00
+  </div>
+  <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface2);box-shadow:var(--shadow)">
+    <table style="width:100%;border-collapse:collapse;min-width:680px">
+      <thead>
+        <tr style="background:var(--bg)">
+          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:100px">Semaine</th>
+          ${['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(d => `<th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);border-bottom:1px solid var(--border)">${d}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:7px;flex-wrap:wrap">
+    ${COORD_CRECHES_DATA.map(c => `<span style="background:${c.bg};color:${c.color};padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600">● ${c.nom}</span>`).join('')}
+  </div>`;
+}
+
+function _coordHtmlSemaine() {
+  const prioCfg = {
+    terrain:  { bg:'#DCFCE7', color:'#15803D', label:'Terrain' },
+    familles: { bg:'#E0F2FE', color:'#0284C7', label:'Familles' },
+    rh:       { bg:'#EDE9FE', color:'#6D28D9', label:'RH' },
+    admin:    { bg:'#FEF3C7', color:'#B45309', label:'Admin' },
+  };
+  const rows = COORD_SEMAINE_DATA.map(s => {
+    const p = prioCfg[s.prio];
+    return `<tr>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);font-weight:700;white-space:nowrap;color:var(--ink)">${s.tranche}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border)">${s.icon} <strong>${s.label}</strong></td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink2)">${s.desc}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border)"><span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600;background:${p.bg};color:${p.color}">${p.label}</span></td>
+    </tr>`;
+  }).join('');
+
+  return `<div style="font-size:12px;color:var(--ink3);margin-bottom:12px">Journée type sur une structure · 35h/sem sur 5 jours</div>
+  <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface2);box-shadow:var(--shadow)">
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--bg)">
+          <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:120px">Créneau</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Mission</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Description</th>
+          <th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border)">Priorité</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function _coordHtmlMissions() {
+  const rows = COORD_MISSIONS_DATA.map(m => `
+    <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)">
+      <div style="width:36px;height:36px;border-radius:8px;background:${m.bg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${m.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px">${m.mission}</div>
+        <div style="font-size:11px;color:var(--ink3)">${m.desc}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+        <div style="text-align:center;min-width:44px">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:${m.color}">${m.p1}%</div>
+          <div style="font-size:9px;color:var(--ink3)">1–2 struct.</div>
+        </div>
+        <div style="text-align:center;min-width:44px">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:${m.color}">${m.p2}%</div>
+          <div style="font-size:9px;color:var(--ink3)">3–4 struct.</div>
+        </div>
+        <div style="text-align:center;min-width:44px">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:${m.color}">${m.p3}%</div>
+          <div style="font-size:9px;color:var(--ink3)">5–6 struct.</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  return `<div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 16px;font-size:12px;flex:1;min-width:120px;text-align:center">
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">Structures actuel</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent)">6</div>
+    </div>
+    <div style="background:var(--amber-lt);border:1.5px solid #FDE68A;border-radius:10px;padding:10px 16px;font-size:12px;flex:2;min-width:200px">
+      <div style="font-size:11px;font-weight:700;color:#B45309;margin-bottom:3px">⚠ Décret 2025-304 — sept. 2026</div>
+      <div style="font-size:12px;color:#B45309;line-height:1.5">Direction : 0,5 ETP min. par structure. Max 2 structures par coordinateur.</div>
+    </div>
+  </div>
+  <div style="border:1px solid var(--border);border-radius:10px;padding:0 16px;background:var(--surface2);box-shadow:var(--shadow)">${rows}</div>`;
+}
+
+function _coordHtmlSuivi() {
+  const periodeEl = document.getElementById('coord-suivi-periode');
+  const periode = periodeEl ? periodeEl.value : new Date().toISOString().slice(0,7);
+  const stored = coordGetSuiviData()[periode] || {};
+
+  const metrics = [
+    { id: 'visites',    label: 'Visites terrain',         unit: 'j' },
+    { id: 'entretiens', label: 'Entretiens familles',      unit: 'nb' },
+    { id: 'formations', label: 'APP / Formations animées', unit: 'nb' },
+    { id: 'dossiers',   label: 'Dossiers traités',         unit: 'nb' },
+    { id: 'incidents',  label: 'Incidents / signalements', unit: 'nb' },
+    { id: 'heures',     label: 'Heures totales',           unit: 'h' },
+  ];
+
+  const headerTH = COORD_CRECHES_DATA.map(c =>
+    `<th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${c.color};border-bottom:1px solid var(--border);border-left:1px solid var(--border)">${c.nom}</th>`
+  ).join('');
+
+  const bodyRows = metrics.map(m => {
+    let total = 0;
+    const cells = COORD_CRECHES_DATA.map(c => {
+      const v = parseInt(stored[m.id + '_' + c.nom]) || 0;
+      total += v;
+      return `<td style="padding:7px 8px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);text-align:center">
+        <input type="number" min="0" value="${stored[m.id+'_'+c.nom]||''}"
+          data-mk="${m.id}" data-mc="${c.nom}"
+          style="width:56px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;text-align:center;background:var(--bg);color:var(--ink);outline:none"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+          oninput="_coordSuiviUpdate('${periode}')">
+      </td>`;
+    }).join('');
+    return `<tr>
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);font-weight:600;color:var(--ink);white-space:nowrap">
+        ${m.label} <span style="font-size:10px;color:var(--ink3)">(${m.unit})</span>
+      </td>
+      ${cells}
+      <td style="padding:9px 12px;border-bottom:1px solid var(--border);border-left:2px solid var(--accent);text-align:center;font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:var(--accent)" id="coord-sv-total-${m.id}">
+        ${total > 0 ? total : '—'}
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:12px;color:var(--ink3)">Saisissez vos données par structure pour la période sélectionnée</div>
+    <button onclick="_coordSuiviSave()" class="btn btn-primary btn-sm">💾 Sauvegarder</button>
+  </div>
+  <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface2);box-shadow:var(--shadow)">
+    <table style="width:100%;border-collapse:collapse;min-width:640px">
+      <thead>
+        <tr style="background:var(--bg)">
+          <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:180px">Indicateur</th>
+          ${headerTH}
+          <th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);border-bottom:1px solid var(--border);border-left:2px solid var(--accent)">Total</th>
+        </tr>
+      </thead>
+      <tbody>${bodyRows}</tbody>
+    </table>
+  </div>`;
+}
+
+function _coordSuiviUpdate(periode) {
+  const stored = coordGetSuiviData();
+  if (!stored[periode]) stored[periode] = {};
+  document.querySelectorAll('[data-mk][data-mc]').forEach(inp => {
+    stored[periode][inp.dataset.mk + '_' + inp.dataset.mc] = inp.value;
+  });
+  // Mise à jour totaux
+  const metrics = ['visites','entretiens','formations','dossiers','incidents','heures'];
+  metrics.forEach(m => {
+    let total = 0;
+    COORD_CRECHES_DATA.forEach(c => { total += parseInt(stored[periode][m+'_'+c.nom]||0)||0; });
+    const el = document.getElementById('coord-sv-total-' + m);
+    if (el) el.textContent = total > 0 ? total : '—';
+  });
+  coordSetSuiviData(stored);
+}
+
+function _coordSuiviSave() {
+  const periodeEl = document.getElementById('coord-suivi-periode');
+  if (periodeEl) _coordSuiviUpdate(periodeEl.value);
+  showNotif('✅ Suivi coordinateur sauvegardé');
+}
 
 </script>
 
