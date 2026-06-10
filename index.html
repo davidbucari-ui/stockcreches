@@ -14505,34 +14505,36 @@ const COORD_CRECHES_DATA = [
   { nom: 'Picot 2',   color: '#F43F5E', bg: '#FFE4E6' },
 ];
 
+// Rotation : chaque jour a 2 demi-journées indépendantes (matin + après-midi)
+// creche : nom de la structure OU 'Admin' (travail bureau) OU '' (libre/pause)
 const COORD_ROTATION_DATA = [
   { sem: 1, label: 'Semaine 1', jours: [
-    { jour: 'Lundi',    creche: 'Brunet',    shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Mardi',    creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Mercredi', creche: 'Ollioules', shift: 'AM', debut: '11:00', fin: '19:00' },
-    { jour: 'Jeudi',    creche: 'St Jean',   shift: 'AM', debut: '11:00', fin: '19:00' },
-    { jour: 'Vendredi', creche: 'Picot 1',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Lundi',    matin: { creche: 'Brunet',    debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '17:00', note: 'Dossiers CAF' } },
+    { jour: 'Mardi',    matin: { creche: 'Cuers',     debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Cuers',     debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Mercredi', matin: { creche: 'Admin',     debut: '08:00', fin: '12:00', note: 'RH / plannings' }, aprem: { creche: 'Ollioules', debut: '13:30', fin: '19:00', note: '' } },
+    { jour: 'Jeudi',    matin: { creche: 'St Jean',   debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'St Jean',   debut: '14:00', fin: '19:00', note: '' } },
+    { jour: 'Vendredi', matin: { creche: 'Picot 1',   debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '16:30', note: 'Bilans semaine' } },
   ]},
   { sem: 2, label: 'Semaine 2', jours: [
-    { jour: 'Lundi',    creche: 'Picot 2',   shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Mardi',    creche: 'Brunet',    shift: 'AM', debut: '11:00', fin: '19:00' },
-    { jour: 'Mercredi', creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Jeudi',    creche: 'Ollioules', shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Vendredi', creche: 'St Jean',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Lundi',    matin: { creche: 'Picot 2',   debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '17:00', note: 'Commandes / stocks' } },
+    { jour: 'Mardi',    matin: { creche: 'Admin',     debut: '08:00', fin: '11:00', note: 'Entretiens pro' }, aprem: { creche: 'Brunet',    debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Mercredi', matin: { creche: 'Cuers',     debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Cuers',     debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Jeudi',    matin: { creche: 'Ollioules', debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Admin',     debut: '13:30', fin: '17:00', note: 'Réunion réseau' } },
+    { jour: 'Vendredi', matin: { creche: 'Admin',     debut: '08:00', fin: '11:30', note: 'APP équipe' }, aprem: { creche: 'St Jean',   debut: '13:00', fin: '19:00', note: '' } },
   ]},
   { sem: 3, label: 'Semaine 3', jours: [
-    { jour: 'Lundi',    creche: 'Picot 1',   shift: 'AM', debut: '11:00', fin: '19:00' },
-    { jour: 'Mardi',    creche: 'Picot 2',   shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Mercredi', creche: 'Brunet',    shift: 'AM', debut: '11:00', fin: '19:00' },
-    { jour: 'Jeudi',    creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Vendredi', creche: 'Ollioures', shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Lundi',    matin: { creche: 'Picot 1',   debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Picot 1',   debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Mardi',    matin: { creche: 'Admin',     debut: '08:00', fin: '11:30', note: 'Familles' }, aprem: { creche: 'Picot 2',   debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Mercredi', matin: { creche: 'Brunet',    debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Admin',     debut: '13:30', fin: '17:00', note: 'Formation' } },
+    { jour: 'Jeudi',    matin: { creche: 'Cuers',     debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Cuers',     debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Vendredi', matin: { creche: 'Ollioules', debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Admin',     debut: '13:30', fin: '16:30', note: 'Bilans semaine' } },
   ]},
   { sem: 4, label: 'Semaine 4', jours: [
-    { jour: 'Lundi',    creche: 'St Jean',   shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Mardi',    creche: 'Picot 1',   shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Mercredi', creche: 'Picot 2',   shift: 'AM', debut: '11:00', fin: '19:00' },
-    { jour: 'Jeudi',    creche: 'Brunet',    shift: 'M',  debut: '07:30', fin: '15:30' },
-    { jour: 'Vendredi', creche: 'Cuers',     shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Lundi',    matin: { creche: 'St Jean',   debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '17:00', note: 'Dossiers PMI' } },
+    { jour: 'Mardi',    matin: { creche: 'Admin',     debut: '08:00', fin: '11:30', note: 'RH' }, aprem: { creche: 'Picot 1',   debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Mercredi', matin: { creche: 'Picot 2',   debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Picot 2',   debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Jeudi',    matin: { creche: 'Brunet',    debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '16:30', note: 'Commandes' } },
+    { jour: 'Vendredi', matin: { creche: 'Admin',     debut: '08:00', fin: '11:00', note: 'Bilan mensuel' }, aprem: { creche: 'Cuers',     debut: '13:00', fin: '19:00', note: '' } },
   ]},
 ];
 
@@ -14631,37 +14633,204 @@ function _coordRenderSubtab(tab) {
   else if (tab === 'suivi')     el.innerHTML = _coordHtmlSuivi();
 }
 
+// ── Helpers rotation ──────────────────────────────────────────────
+function _coordGetRotation() {
+  try { const s = localStorage.getItem('orevy_coord_rotation_v2'); if (s) return JSON.parse(s); } catch(e) {}
+  return JSON.parse(JSON.stringify(COORD_ROTATION_DATA));
+}
+function _coordSaveRotation(data) { localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(data)); }
+
+function _coordCellStyle(creche) {
+  if (!creche || creche === '' || creche === 'Libre') return { bg:'var(--bg)', color:'var(--ink3)', border:'var(--border)' };
+  if (creche === 'Admin') return { bg:'#F5F3FF', color:'#6D28D9', border:'#C4B5FD' };
+  if (creche === 'Formation') return { bg:'#FEF3C7', color:'#B45309', border:'#FCD34D' };
+  if (creche === 'Absent') return { bg:'#FEE2E2', color:'#DC2626', border:'#FECACA' };
+  const c = COORD_CRECHES_DATA.find(x => x.nom === creche);
+  return c ? { bg: c.bg, color: c.color, border: c.color + '66' } : { bg:'var(--bg)', color:'var(--ink3)', border:'var(--border)' };
+}
+
 function _coordHtmlRotation() {
-  const rows = COORD_ROTATION_DATA.map(sem => {
-    const cells = sem.jours.map(j => {
-      const c = COORD_CRECHES_DATA.find(x => x.nom === j.creche) || { color:'#888', bg:'#f5f5f5' };
-      const sBg    = j.shift === 'M' ? '#DBEAFE' : '#FEF3C7';
-      const sColor = j.shift === 'M' ? '#1D4ED8' : '#B45309';
-      return `<td style="padding:10px 12px;border-bottom:1px solid var(--border)">
-        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:10px;font-size:12px;font-weight:700;background:${c.bg};color:${c.color}">● ${j.creche}</span>
-        <div style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:700;background:${sBg};color:${sColor};margin-top:5px">${j.shift} ${j.debut}–${j.fin}</div>
+  const rotation = _coordGetRotation();
+  const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+
+  const rows = rotation.map((sem, si) => {
+    // Ligne Matin
+    const matinCells = sem.jours.map((j, ji) => {
+      const dm = j.matin || {};
+      const st = _coordCellStyle(dm.creche);
+      const isEmpty = !dm.creche || dm.creche === '';
+      return `<td style="padding:6px 10px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);cursor:pointer;transition:background .12s;vertical-align:middle"
+        onmouseover="this.style.background='${st.bg}44'" onmouseout="this.style.background=''"
+        onclick="_coordEditDemi(${si},${ji},'matin')">
+        ${isEmpty
+          ? `<div style="color:var(--ink3);font-size:11px;opacity:.5;text-align:center">+ ajouter</div>`
+          : `<div style="display:flex;flex-direction:column;gap:3px">
+              <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:7px;font-size:11px;font-weight:700;background:${st.bg};color:${st.color};border:1px solid ${st.border}">${dm.creche === 'Admin' ? '🏠' : dm.creche === 'Formation' ? '📚' : dm.creche === 'Absent' ? '🚫' : '●'} ${dm.creche}</span>
+              <span style="font-size:10px;color:var(--ink3);font-weight:600">${dm.debut||''} – ${dm.fin||''}</span>
+              ${dm.note ? `<span style="font-size:10px;color:var(--ink3);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${dm.note}</span>` : ''}
+            </div>`
+        }
       </td>`;
     }).join('');
-    return `<tr><td style="padding:10px 14px;font-weight:700;color:var(--ink);border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg)">${sem.label}</td>${cells}</tr>`;
+
+    // Ligne Après-midi
+    const apremCells = sem.jours.map((j, ji) => {
+      const da = j.aprem || {};
+      const st = _coordCellStyle(da.creche);
+      const isEmpty = !da.creche || da.creche === '';
+      return `<td style="padding:6px 10px;border-bottom:2px solid var(--border);border-left:1px solid var(--border);cursor:pointer;transition:background .12s;vertical-align:middle"
+        onmouseover="this.style.background='${st.bg}44'" onmouseout="this.style.background=''"
+        onclick="_coordEditDemi(${si},${ji},'aprem')">
+        ${isEmpty
+          ? `<div style="color:var(--ink3);font-size:11px;opacity:.5;text-align:center">+ ajouter</div>`
+          : `<div style="display:flex;flex-direction:column;gap:3px">
+              <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:7px;font-size:11px;font-weight:700;background:${st.bg};color:${st.color};border:1px solid ${st.border}">${da.creche === 'Admin' ? '🏠' : da.creche === 'Formation' ? '📚' : da.creche === 'Absent' ? '🚫' : '●'} ${da.creche}</span>
+              <span style="font-size:10px;color:var(--ink3);font-weight:600">${da.debut||''} – ${da.fin||''}</span>
+              ${da.note ? `<span style="font-size:10px;color:var(--ink3);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${da.note}</span>` : ''}
+            </div>`
+        }
+      </td>`;
+    }).join('');
+
+    // Label semaine sur 2 lignes (rowspan 2)
+    return `<tr>
+      <td rowspan="2" style="padding:10px 12px;font-weight:800;color:var(--ink);border-bottom:2px solid var(--border);background:var(--bg);white-space:nowrap;vertical-align:middle;font-family:'Syne',sans-serif;font-size:12px">
+        ${sem.label}
+      </td>
+      <td style="padding:4px 8px;border-bottom:1px solid var(--border);background:var(--bg);font-size:10px;font-weight:700;color:#1D4ED8;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;border-left:3px solid #BFDBFE">☀ Matin</td>
+      ${matinCells}
+    </tr>
+    <tr>
+      <td style="padding:4px 8px;border-bottom:2px solid var(--border);background:var(--bg);font-size:10px;font-weight:700;color:#B45309;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;border-left:3px solid #FCD34D">🌅 Après-midi</td>
+      ${apremCells}
+    </tr>`;
   }).join('');
 
-  return `<div style="font-size:12px;color:var(--ink3);margin-bottom:12px">
-    Rotation sur 4 semaines · <strong>M</strong> = Matin 07:30–15:30 · <strong>AM</strong> = Après-midi 11:00–19:00
+  return `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:12px;color:var(--ink3)">Rotation 4 semaines · 2 lignes par jour (Matin / Après-midi) · Cliquez pour modifier</div>
+    <button onclick="_coordResetRotation()" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--ink3)">↺ Réinitialiser</button>
   </div>
   <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface2);box-shadow:var(--shadow)">
-    <table style="width:100%;border-collapse:collapse;min-width:680px">
+    <table style="width:100%;border-collapse:collapse;min-width:780px">
       <thead>
         <tr style="background:var(--bg)">
-          <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:100px">Semaine</th>
-          ${['Lundi','Mardi','Mercredi','Jeudi','Vendredi'].map(d => `<th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);border-bottom:1px solid var(--border)">${d}</th>`).join('')}
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:80px"></th>
+          <th style="padding:10px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:70px">Plage</th>
+          ${JOURS.map(d => `<th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);min-width:130px">${d}</th>`).join('')}
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
   </div>
-  <div style="margin-top:12px;display:flex;gap:7px;flex-wrap:wrap">
-    ${COORD_CRECHES_DATA.map(c => `<span style="background:${c.bg};color:${c.color};padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600">● ${c.nom}</span>`).join('')}
+  <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    ${COORD_CRECHES_DATA.map(c => `<span style="background:${c.bg};color:${c.color};padding:2px 9px;border-radius:8px;font-size:11px;font-weight:600">● ${c.nom}</span>`).join('')}
+    <span style="background:#F5F3FF;color:#6D28D9;padding:2px 9px;border-radius:8px;font-size:11px;font-weight:600">🏠 Admin</span>
+    <span style="background:#FEF3C7;color:#B45309;padding:2px 9px;border-radius:8px;font-size:11px;font-weight:600">📚 Formation</span>
+    <span style="background:#FEE2E2;color:#DC2626;padding:2px 9px;border-radius:8px;font-size:11px;font-weight:600">🚫 Absent</span>
+  </div>
+
+  <!-- Modal édition demi-journée -->
+  <div id="coord-demi-overlay" style="display:none;position:fixed;inset:0;background:rgba(28,25,23,.5);z-index:9000;backdrop-filter:blur(3px)" onclick="if(event.target===this)_coordCloseDemiModal()">
+    <div id="coord-demi-box" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface2);border-radius:16px;width:100%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden">
+      <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700" id="coord-demi-title">Modifier le créneau</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px" id="coord-demi-sub"></div>
+        </div>
+        <button onclick="_coordCloseDemiModal()" style="background:var(--bg);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px">✕</button>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Structure / Lieu</label>
+          <select id="cd-creche" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:var(--surface2)" onchange="_coordDemiUpdateSlot()">
+            ${COORD_CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('')}
+            <option value="Admin">🏠 Administratif (bureau)</option>
+            <option value="Formation">📚 Formation / APP</option>
+            <option value="Absent">🚫 Absent / Congé</option>
+            <option value="">— Vide —</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Heure début</label>
+            <input type="time" id="cd-debut" step="900" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Heure fin</label>
+            <input type="time" id="cd-fin" step="900" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Note (optionnel)</label>
+          <input type="text" id="cd-note" placeholder="Ex: réunion CAF, visite PMI, adaptation…" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">
+        </div>
+      </div>
+      <div style="padding:12px 20px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="_coordCloseDemiModal()" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:none;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink2)">Annuler</button>
+        <button onclick="_coordSaveDemi()" style="padding:8px 18px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">💾 Enregistrer</button>
+      </div>
+    </div>
   </div>`;
+}
+
+let _coordDemiSemIdx = 0, _coordDemiJourIdx = 0, _coordDemiPart = 'matin';
+const _DEMI_SLOTS = {
+  matin: { label: 'Matin', defaultDebut: '07:30', defaultFin: '12:00' },
+  aprem: { label: 'Après-midi', defaultDebut: '13:00', defaultFin: '19:00' },
+};
+
+function _coordEditDemi(si, ji, part) {
+  _coordDemiSemIdx = si; _coordDemiJourIdx = ji; _coordDemiPart = part;
+  const rotation = _coordGetRotation();
+  const sem = rotation[si];
+  const jour = sem.jours[ji];
+  const d = jour[part] || {};
+  const slot = _DEMI_SLOTS[part];
+  document.getElementById('coord-demi-title').textContent = sem.label + ' · ' + jour.jour;
+  document.getElementById('coord-demi-sub').textContent = slot.label;
+  document.getElementById('cd-creche').value = d.creche || '';
+  document.getElementById('cd-debut').value  = d.debut  || slot.defaultDebut;
+  document.getElementById('cd-fin').value    = d.fin    || slot.defaultFin;
+  document.getElementById('cd-note').value   = d.note   || '';
+  const overlay = document.getElementById('coord-demi-overlay');
+  if (overlay) overlay.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function _coordDemiUpdateSlot() {
+  const creche = document.getElementById('cd-creche').value;
+  const slot = _DEMI_SLOTS[_coordDemiPart];
+  // Pré-remplir les horaires si vide selon contexte
+  const debutEl = document.getElementById('cd-debut');
+  const finEl   = document.getElementById('cd-fin');
+  if (!debutEl.value) debutEl.value = slot.defaultDebut;
+  if (!finEl.value)   finEl.value   = slot.defaultFin;
+}
+
+function _coordCloseDemiModal() {
+  const overlay = document.getElementById('coord-demi-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function _coordSaveDemi() {
+  const creche = document.getElementById('cd-creche').value;
+  const debut  = document.getElementById('cd-debut').value;
+  const fin    = document.getElementById('cd-fin').value;
+  const note   = document.getElementById('cd-note').value.trim();
+  const rotation = _coordGetRotation();
+  rotation[_coordDemiSemIdx].jours[_coordDemiJourIdx][_coordDemiPart] = { creche, debut, fin, note };
+  _coordSaveRotation(rotation);
+  _coordCloseDemiModal();
+  _coordRenderSubtab('rotation');
+  if (typeof showNotif === 'function') showNotif('✅ Créneau mis à jour');
+}
+
+function _coordResetRotation() {
+  if (!confirm('Remettre la rotation par défaut ? Vos modifications seront perdues.')) return;
+  localStorage.removeItem('orevy_coord_rotation_v2');
+  _coordRenderSubtab('rotation');
+  if (typeof showNotif === 'function') showNotif('↺ Rotation réinitialisée');
 }
 
 function _coordHtmlSemaine() {
