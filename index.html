@@ -2309,24 +2309,13 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
         <div class="form-group full">
           <label>Photo de l'article</label>
-          <div id="photo-upload-zone" class="photo-upload-zone" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <div id="photo-upload-zone" class="photo-upload-zone" onclick="document.getElementById('f-photo').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
             <input type="file" id="f-photo" accept="image/*" onchange="handlePhotoUpload(event)">
-            <input type="file" id="f-photo-camera" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" style="display:none">
             <div id="photo-placeholder">
               <div class="photo-upload-icon">📷</div>
               <div class="photo-upload-text">
-                <strong>Ajouter une photo</strong>
-                <span>Glissez-déposez ici · JPG, PNG, WEBP · Max 5 Mo</span>
-              </div>
-              <div style="display:flex;gap:10px;margin-top:14px;justify-content:center;flex-wrap:wrap">
-                <button type="button" onclick="document.getElementById('f-photo').click()"
-                  style="padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink2);display:flex;align-items:center;gap:6px">
-                  🗂 Choisir un fichier
-                </button>
-                <button type="button" onclick="document.getElementById('f-photo-camera').click()"
-                  style="padding:8px 16px;border:none;border-radius:8px;background:var(--accent);font-family:inherit;font-size:13px;cursor:pointer;color:#fff;font-weight:600;display:flex;align-items:center;gap:6px">
-                  📸 Prendre une photo
-                </button>
+                <strong>Cliquez pour choisir une photo</strong>
+                <span>ou glissez-déposez ici · JPG, PNG, WEBP · Max 5 Mo</span>
               </div>
             </div>
             <div id="photo-preview-container" style="display:none">
@@ -9318,8 +9307,19 @@ const PLG_DEFAULT_HORAIRES = [
   { name:'Horaire 5', debut:'11:00', fin:'19:00' },
 ];
 
-function getPlanningHoraires() {
+function _plgHoraireKey(creche) {
+  if (creche && creche !== 'all') {
+    return PLG_HORAIRES_KEY + '_' + creche.replace(/\s+/g,'_');
+  }
+  return PLG_HORAIRES_KEY;
+}
+
+function getPlanningHoraires(creche) {
   try {
+    if (creche && creche !== 'all') {
+      const s = localStorage.getItem(_plgHoraireKey(creche));
+      if (s) return JSON.parse(s);
+    }
     const s = localStorage.getItem(PLG_HORAIRES_KEY);
     return s ? JSON.parse(s) : PLG_DEFAULT_HORAIRES.map(h => ({...h}));
   } catch { return PLG_DEFAULT_HORAIRES.map(h => ({...h})); }
@@ -9465,8 +9465,8 @@ function renderPlanningEquipe() {
   const weekNum  = getISOWeekNumber(monday);
   const today    = new Date(); today.setHours(0,0,0,0);
   const DAY_NAMES = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-  const horaires  = getPlanningHoraires();
   const crecheId  = document.getElementById('pe-creche')?.value || '';
+  const horaires  = getPlanningHoraires(crecheId);
   const week      = peGetWeek(crecheId);
   const fmtD      = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
   const endFri    = new Date(monday); endFri.setDate(monday.getDate()+4);
@@ -9584,8 +9584,8 @@ function renderPlanningHebdo() {
   const today   = new Date(); today.setHours(0,0,0,0);
   const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
   const DAY_FULL  = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-  const horaires  = getPlanningHoraires();
   const crecheId  = document.getElementById('pe-creche')?.value || '';
+  const horaires  = getPlanningHoraires(crecheId);
 
   const lbl = document.getElementById('pe-week-label');
   const fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
@@ -9697,8 +9697,8 @@ function renderPlanningGantt() {
   const weekNum  = getISOWeekNumber(monday);
   const today    = new Date(); today.setHours(0,0,0,0);
   const DAY_NAMES = ['Lun','Mar','Mer','Jeu','Ven'];
-  const horaires  = getPlanningHoraires();
   const crecheId  = document.getElementById('pe-creche')?.value || '';
+  const horaires  = getPlanningHoraires(crecheId);
 
   const lbl = document.getElementById('pe-week-label');
   const fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
@@ -9924,7 +9924,7 @@ function openModalPE(horaireIdx, jour, id) {
 
   const crecheId = document.getElementById('pe-creche')?.value || '';
   const week     = peGetWeek(crecheId);
-  const horaires = getPlanningHoraires();
+  const horaires = getPlanningHoraires(crecheId);
 
   document.getElementById('modal-pe-title').textContent = id ? '✏️ Modifier le créneau' : '➕ Ajouter une pro';
   document.getElementById('modal-pe-delete').style.display = id ? 'inline-flex' : 'none';
@@ -10182,37 +10182,55 @@ function exportPlanningPDF() {
   w.document.close();
 }
 
-// Stub pour compatibilité Paramètres
 function renderPlanningParamHoraires() {
   const el = document.getElementById('planning-horaires-config');
   if (!el) return;
-  const horaires = getPlanningHoraires();
-  el.innerHTML = horaires.map((h, i) => {
+  const prevCreche = (document.getElementById('param-horaire-creche-sel') || {}).value || '';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="font-size:12px;font-weight:700;color:var(--ink2);white-space:nowrap">&#127968; Crèche :</div>
+      <select id="param-horaire-creche-sel"
+        style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);flex:1;min-width:160px"
+        onchange="_renderHoraireRows()">
+        ${(CRECHES_DATA || []).map(c =>
+          '<option value="' + c.nom + '"' + (c.nom === prevCreche ? ' selected' : '') + '>' + c.nom + '</option>'
+        ).join('')}
+      </select>
+    </div>
+    <div id="param-horaire-rows"></div>
+  `;
+  _renderHoraireRows();
+}
+
+function _renderHoraireRows() {
+  const rowsEl = document.getElementById('param-horaire-rows');
+  if (!rowsEl) return;
+  const sel = document.getElementById('param-horaire-creche-sel');
+  const creche = sel ? sel.value : null;
+  const horaires = getPlanningHoraires(creche);
+  rowsEl.innerHTML = horaires.map((h, i) => {
     const c = PE_COLORS[i] || PE_COLORS[0];
-    return `<div style="display:grid;grid-template-columns:1fr 130px 130px;gap:10px;align-items:center;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:700;color:${c.text};background:${c.bg};padding:7px 12px;border-radius:8px;border:1px solid ${c.border}">${h.name}</div>
-      <div>
-        <label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Début</label>
-        <input type="time" value="${h.debut}" step="900"
-          style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"
-          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
-          onchange="savePlanningHoraireParam(${i},'debut',this.value)">
-      </div>
-      <div>
-        <label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Fin</label>
-        <input type="time" value="${h.fin}" step="900"
-          style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"
-          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
-          onchange="savePlanningHoraireParam(${i},'fin',this.value)">
-      </div>
-    </div>`;
+    return '<div style="display:grid;grid-template-columns:1fr 130px 130px;gap:10px;align-items:center;margin-bottom:10px">'
+      + '<div style="font-size:13px;font-weight:700;color:' + c.text + ';background:' + c.bg + ';padding:7px 12px;border-radius:8px;border:1px solid ' + c.border + '">' + h.name + '</div>'
+      + '<div><label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Début</label>'
+      + '<input type="time" value="' + h.debut + '" step="900"'
+      + ' style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"'
+      + ' onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"'
+      + ' onchange="savePlanningHoraireParam(' + i + ','debut',this.value)"></div>'
+      + '<div><label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Fin</label>'
+      + '<input type="time" value="' + h.fin + '" step="900"'
+      + ' style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"'
+      + ' onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"'
+      + ' onchange="savePlanningHoraireParam(' + i + ','fin',this.value)"></div>'
+      + '</div>';
   }).join('');
 }
 
 function savePlanningHoraireParam(idx, field, val) {
-  const horaires = getPlanningHoraires();
+  const creche = document.getElementById('param-horaire-creche-sel') ? document.getElementById('param-horaire-creche-sel').value : null;
+  const horaires = getPlanningHoraires(creche);
   horaires[idx][field] = val;
-  localStorage.setItem(PLG_HORAIRES_KEY, JSON.stringify(horaires));
+  localStorage.setItem(_plgHoraireKey(creche), JSON.stringify(horaires));
 }
 
 // ── MODULE POINTAGE ───────────────────────────────────────────────
