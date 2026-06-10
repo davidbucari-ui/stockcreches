@@ -14622,6 +14622,14 @@ function renderPlanningCoord() {
   const el = document.getElementById('pe-coord-content');
   if (!el) return;
 
+  // Mettre à jour le label de semaine dans le header commun
+  const _monday = peGetMonday();
+  const _weekNum = getISOWeekNumber(_monday);
+  const _endFri = new Date(_monday); _endFri.setDate(_monday.getDate()+4);
+  const _fmtD = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
+  const _lbl = document.getElementById('pe-week-label');
+  if (_lbl) _lbl.textContent = `S${_weekNum} — ${_fmtD(_monday)} au ${_fmtD(_endFri)} ${_endFri.getFullYear()}`;
+
   el.innerHTML = `
     <div style="padding:0 0 8px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
@@ -14723,7 +14731,9 @@ function _coordCellStyle(creche) {
 
 // Calcule le numéro de semaine réel de la semaine courante
 function _coordGetCurrentWeekNum() {
-  return getISOWeekNumber(new Date());
+  // Tient compte de peWeekOffset pour que les flèches ← → naviguent dans le planning coordinateur
+  const d = peGetMonday(); // peGetMonday() intègre déjà peWeekOffset
+  return getISOWeekNumber(d);
 }
 
 // Calcule le numéro de semaine dans le cycle 1–4 à partir de la semaine ISO courante
@@ -14739,10 +14749,9 @@ function _coordHtmlRotation() {
   const nowWeek   = _coordGetCurrentWeekNum();
   const cycleIdx  = _coordCycleIndex(); // quelle sem du cycle = semaine en cours
 
-  // Calculer le lundi de la semaine ISO n à partir de la sem en cours
+  // Calculer le lundi de la semaine ISO n à partir de la sem en cours (avec offset)
   function mondayOfISOWeek(wn) {
-    const now = new Date();
-    const curWn = getISOWeekNumber(now);
+    const curWn = _coordGetCurrentWeekNum(); // tient compte de peWeekOffset
     const diff  = wn - curWn;
     const mon   = peGetMonday();
     mon.setDate(mon.getDate() + diff * 7);
