@@ -10219,24 +10219,25 @@ function _renderHoraireRows() {
   const sel = document.getElementById('param-horaire-creche-sel');
   const creche = sel ? sel.value : null;
   const horaires = getPlanningHoraires(creche);
+  const aFocus = "this.style.borderColor='var(--accent)'";
+  const aBlur  = "this.style.borderColor='var(--border)'";
   rowsEl.innerHTML = horaires.map((h, i) => {
-    const c = PE_COLORS[i] || PE_COLORS[0];
-    return '<div style="display:grid;grid-template-columns:1fr 130px 130px;gap:10px;align-items:center;margin-bottom:10px">'
-      + '<div style="font-size:13px;font-weight:700;color:' + c.text + ';background:' + c.bg + ';padding:7px 12px;border-radius:8px;border:1px solid ' + c.border + '">' + h.name + '</div>'
-      + '<div><label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Début</label>'
-      + '<input type="time" value="' + h.debut + '" step="900"'
-      + ' style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"'
-      + ' onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"'
-      + ' onchange="savePlanningHoraireParam(' + i + ','debut',this.value)"></div>'
-      + '<div><label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Fin</label>'
-      + '<input type="time" value="' + h.fin + '" step="900"'
-      + ' style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"'
-      + ' onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"'
-      + ' onchange="savePlanningHoraireParam(' + i + ','fin',this.value)"></div>'
-      + '</div>';
+    const col = PE_COLORS[i] || PE_COLORS[0];
+    const ocD = "savePlanningHoraireParam(" + i + ",'debut',this.value)";
+    const ocF = "savePlanningHoraireParam(" + i + ",'fin',this.value)";
+    return [
+      '<div style="display:grid;grid-template-columns:1fr 130px 130px;gap:10px;align-items:center;margin-bottom:10px">',
+      '<div style="font-size:13px;font-weight:700;color:' + col.text + ';background:' + col.bg + ';padding:7px 12px;border-radius:8px;border:1px solid ' + col.border + '">' + h.name + '</div>',
+      '<div><label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Début</label>',
+      '<input type="time" value="' + h.debut + '" step="900" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"',
+      ' onfocus="' + aFocus + '" onblur="' + aBlur + '" onchange="' + ocD + '"></div>',
+      '<div><label style="font-size:10px;font-weight:600;color:var(--ink3);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">Fin</label>',
+      '<input type="time" value="' + h.fin + '" step="900" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none"',
+      ' onfocus="' + aFocus + '" onblur="' + aBlur + '" onchange="' + ocF + '"></div>',
+      '</div>'
+    ].join('');
   }).join('');
 }
-
 function savePlanningHoraireParam(idx, field, val) {
   const creche = document.getElementById('param-horaire-creche-sel') ? document.getElementById('param-horaire-creche-sel').value : null;
   const horaires = getPlanningHoraires(creche);
