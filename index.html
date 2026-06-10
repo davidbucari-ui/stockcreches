@@ -14714,7 +14714,7 @@ function _coordHtmlRotation() {
     const deltaWeeks = si - cycleIdx;
     const isoWeekNum = ((nowWeek - 1 + deltaWeeks + 52) % 52) + 1; // rester dans 1-52
 
-    const rowLabel = `S${isoWeekNum} <span style="font-size:10px;font-weight:500;color:var(--ink3)">${sem.label}</span>${isCurrentCycle ? ' <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700;vertical-align:middle">EN COURS</span>' : ''}`;
+    const rowLabel = `S${isoWeekNum}${isCurrentCycle ? ' <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700;vertical-align:middle">EN COURS</span>' : ''}`;
 
     // Helper cellule
     const makeCell = (d, si2, ji, part) => {
@@ -14843,7 +14843,7 @@ function _coordEditDemi(si, ji, part) {
   const cycleIdx = _coordCycleIndex();
   const delta    = si - cycleIdx;
   const isoWn    = ((nowWeek - 1 + delta + 52) % 52) + 1;
-  document.getElementById('coord-demi-title').textContent = 'S' + isoWn + ' · ' + sem.label + ' · ' + jour.jour;
+  document.getElementById('coord-demi-title').textContent = 'S' + isoWn + ' · ' + jour.jour;
   document.getElementById('coord-demi-sub').textContent   = slot.label;
   // Reconstruire le select avec les crèches actuelles
   const cdCreche = document.getElementById('cd-creche');
