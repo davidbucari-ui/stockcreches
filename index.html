@@ -14496,7 +14496,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // VUE PLANNING COORDINATEUR (onglet dans page-planning)
 // ══════════════════════════════════════════════════
 
-const COORD_CRECHES_DATA = [
+// COORD_CRECHES_DATA est maintenant dynamique — lit CRECHES_DATA (sidebar)
+// Fallback si CRECHES_DATA pas encore chargé
+const COORD_CRECHES_FALLBACK = [
   { nom: 'Brunet',    color: '#F59E0B', bg: '#FEF3C7' },
   { nom: 'Cuers',     color: '#10B981', bg: '#DCFCE7' },
   { nom: 'Ollioules', color: '#EF4444', bg: '#FEE2E2' },
@@ -14504,37 +14506,46 @@ const COORD_CRECHES_DATA = [
   { nom: 'Picot 1',   color: '#0EA5E9', bg: '#E0F2FE' },
   { nom: 'Picot 2',   color: '#F43F5E', bg: '#FFE4E6' },
 ];
+function _coordGetCreches() {
+  // Utilise la liste réelle des structures de l'application (CRECHES_DATA)
+  if (typeof CRECHES_DATA !== 'undefined' && Array.isArray(CRECHES_DATA) && CRECHES_DATA.length > 0) {
+    return CRECHES_DATA.map(c => ({
+      nom:   c.nom,
+      color: c.color || '#888',
+      bg:    c.color ? c.color + '22' : '#f5f5f5',
+    }));
+  }
+  return COORD_CRECHES_FALLBACK;
+}
 
-// Rotation : chaque jour a 2 demi-journées indépendantes (matin + après-midi)
-// creche : nom de la structure OU 'Admin' (travail bureau) OU '' (libre/pause)
 const COORD_ROTATION_DATA = [
   { sem: 1, label: 'Semaine 1', jours: [
-    { jour: 'Lundi',    matin: { creche: 'Brunet',    debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '17:00', note: 'Dossiers CAF' } },
-    { jour: 'Mardi',    matin: { creche: 'Cuers',     debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Cuers',     debut: '13:00', fin: '19:00', note: '' } },
-    { jour: 'Mercredi', matin: { creche: 'Admin',     debut: '08:00', fin: '12:00', note: 'RH / plannings' }, aprem: { creche: 'Ollioules', debut: '13:30', fin: '19:00', note: '' } },
-    { jour: 'Jeudi',    matin: { creche: 'St Jean',   debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'St Jean',   debut: '14:00', fin: '19:00', note: '' } },
-    { jour: 'Vendredi', matin: { creche: 'Picot 1',   debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '16:30', note: 'Bilans semaine' } },
+    { jour: 'Lundi',    creche: 'Brunet',    shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mardi',    creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mercredi', creche: 'Ollioules', shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Jeudi',    creche: 'St Jean',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Vendredi', creche: 'Picot 1',   shift: 'M',  debut: '07:30', fin: '15:30' },
   ]},
   { sem: 2, label: 'Semaine 2', jours: [
-    { jour: 'Lundi',    matin: { creche: 'Picot 2',   debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '17:00', note: 'Commandes / stocks' } },
-    { jour: 'Mardi',    matin: { creche: 'Admin',     debut: '08:00', fin: '11:00', note: 'Entretiens pro' }, aprem: { creche: 'Brunet',    debut: '13:00', fin: '19:00', note: '' } },
-    { jour: 'Mercredi', matin: { creche: 'Cuers',     debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Cuers',     debut: '13:00', fin: '19:00', note: '' } },
-    { jour: 'Jeudi',    matin: { creche: 'Ollioules', debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Admin',     debut: '13:30', fin: '17:00', note: 'Réunion réseau' } },
-    { jour: 'Vendredi', matin: { creche: 'Admin',     debut: '08:00', fin: '11:30', note: 'APP équipe' }, aprem: { creche: 'St Jean',   debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Lundi',    creche: 'Picot 2',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mardi',    creche: 'Brunet',    shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Mercredi', creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Jeudi',    creche: 'Ollioules', shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Vendredi', creche: 'St Jean',   shift: 'AM', debut: '11:00', fin: '19:00' },
   ]},
   { sem: 3, label: 'Semaine 3', jours: [
-    { jour: 'Lundi',    matin: { creche: 'Picot 1',   debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Picot 1',   debut: '13:00', fin: '19:00', note: '' } },
-    { jour: 'Mardi',    matin: { creche: 'Admin',     debut: '08:00', fin: '11:30', note: 'Familles' }, aprem: { creche: 'Picot 2',   debut: '13:00', fin: '19:00', note: '' } },
-    { jour: 'Mercredi', matin: { creche: 'Brunet',    debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Admin',     debut: '13:30', fin: '17:00', note: 'Formation' } },
-    { jour: 'Jeudi',    matin: { creche: 'Cuers',     debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Cuers',     debut: '13:00', fin: '19:00', note: '' } },
-    { jour: 'Vendredi', matin: { creche: 'Ollioules', debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Admin',     debut: '13:30', fin: '16:30', note: 'Bilans semaine' } },
+    { jour: 'Lundi',    creche: 'Picot 1',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Mardi',    creche: 'Picot 2',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mercredi', creche: 'Brunet',    shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Jeudi',    creche: 'Cuers',     shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Vendredi', creche: 'Ollioures', shift: 'M',  debut: '07:30', fin: '15:30' },
   ]},
   { sem: 4, label: 'Semaine 4', jours: [
-    { jour: 'Lundi',    matin: { creche: 'St Jean',   debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '17:00', note: 'Dossiers PMI' } },
-    { jour: 'Mardi',    matin: { creche: 'Admin',     debut: '08:00', fin: '11:30', note: 'RH' }, aprem: { creche: 'Picot 1',   debut: '13:00', fin: '19:00', note: '' } },
-    { jour: 'Mercredi', matin: { creche: 'Picot 2',   debut: '07:30', fin: '12:00', note: '' }, aprem: { creche: 'Picot 2',   debut: '13:00', fin: '19:00', note: '' } },
-    { jour: 'Jeudi',    matin: { creche: 'Brunet',    debut: '07:30', fin: '11:30', note: '' }, aprem: { creche: 'Admin',     debut: '13:00', fin: '16:30', note: 'Commandes' } },
-    { jour: 'Vendredi', matin: { creche: 'Admin',     debut: '08:00', fin: '11:00', note: 'Bilan mensuel' }, aprem: { creche: 'Cuers',     debut: '13:00', fin: '19:00', note: '' } },
+    { jour: 'Lundi',    creche: 'St Jean',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mardi',    creche: 'Picot 1',   shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Mercredi', creche: 'Picot 2',   shift: 'AM', debut: '11:00', fin: '19:00' },
+    { jour: 'Jeudi',    creche: 'Brunet',    shift: 'M',  debut: '07:30', fin: '15:30' },
+    { jour: 'Vendredi', creche: 'Cuers',     shift: 'AM', debut: '11:00', fin: '19:00' },
   ]},
 ];
 
@@ -14633,117 +14644,158 @@ function _coordRenderSubtab(tab) {
   else if (tab === 'suivi')     el.innerHTML = _coordHtmlSuivi();
 }
 
-// ── Helpers rotation ──────────────────────────────────────────────
+// ── Helpers rotation ─────────────────────────────────────────────
 function _coordGetRotation() {
   try { const s = localStorage.getItem('orevy_coord_rotation_v2'); if (s) return JSON.parse(s); } catch(e) {}
-  return JSON.parse(JSON.stringify(COORD_ROTATION_DATA));
+  // Générer la structure par défaut dynamiquement à partir des crèches réelles
+  const creches = _coordGetCreches();
+  const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+  const makeJour = (jour, matinCreche, apremCreche) => ({
+    jour,
+    matin: { creche: matinCreche, debut: '07:30', fin: '12:00', note: '' },
+    aprem: { creche: apremCreche, debut: '13:00', fin: '19:00', note: '' },
+  });
+  // Répartition cyclique des crèches sur 4 semaines
+  const n = creches.length;
+  return [1,2,3,4].map((sem, si) => ({
+    sem, label: 'Semaine ' + sem,
+    jours: JOURS.map((jour, ji) => {
+      const idxM = (si * 5 + ji)     % n;
+      const idxA = (si * 5 + ji + 1) % n;
+      // 1 jour/semaine = admin bureau
+      if (ji === 2) return makeJour(jour, 'Admin', creches[idxA].nom);
+      return makeJour(jour, creches[idxM].nom, ji % 3 === 0 ? 'Admin' : creches[idxA].nom);
+    }),
+  }));
 }
 function _coordSaveRotation(data) { localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(data)); }
 
 function _coordCellStyle(creche) {
-  if (!creche || creche === '' || creche === 'Libre') return { bg:'var(--bg)', color:'var(--ink3)', border:'var(--border)' };
-  if (creche === 'Admin') return { bg:'#F5F3FF', color:'#6D28D9', border:'#C4B5FD' };
+  if (!creche || creche === '') return { bg:'var(--bg)', color:'var(--ink3)', border:'var(--border)' };
+  if (creche === 'Admin')     return { bg:'#F5F3FF', color:'#6D28D9', border:'#C4B5FD' };
   if (creche === 'Formation') return { bg:'#FEF3C7', color:'#B45309', border:'#FCD34D' };
-  if (creche === 'Absent') return { bg:'#FEE2E2', color:'#DC2626', border:'#FECACA' };
-  const c = COORD_CRECHES_DATA.find(x => x.nom === creche);
+  if (creche === 'Absent')    return { bg:'#FEE2E2', color:'#DC2626', border:'#FECACA' };
+  const creches = _coordGetCreches();
+  const c = creches.find(x => x.nom === creche);
   return c ? { bg: c.bg, color: c.color, border: c.color + '66' } : { bg:'var(--bg)', color:'var(--ink3)', border:'var(--border)' };
 }
 
+// Calcule le numéro de semaine réel de la semaine courante
+function _coordGetCurrentWeekNum() {
+  return getISOWeekNumber(new Date());
+}
+
+// Calcule le numéro de semaine dans le cycle 1–4 à partir de la semaine ISO courante
+function _coordCycleIndex() {
+  const wn = _coordGetCurrentWeekNum();
+  return ((wn - 1) % 4); // 0,1,2,3
+}
+
 function _coordHtmlRotation() {
-  const rotation = _coordGetRotation();
-  const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+  const rotation  = _coordGetRotation();
+  const creches   = _coordGetCreches();
+  const JOURS     = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+  const nowWeek   = _coordGetCurrentWeekNum();
+  const cycleIdx  = _coordCycleIndex(); // quelle sem du cycle = semaine en cours
+
+  // Calculer le lundi de la semaine ISO n à partir de la sem en cours
+  function mondayOfISOWeek(wn) {
+    const now = new Date();
+    const curWn = getISOWeekNumber(now);
+    const diff  = wn - curWn;
+    const mon   = peGetMonday();
+    mon.setDate(mon.getDate() + diff * 7);
+    return mon;
+  }
 
   const rows = rotation.map((sem, si) => {
-    // Ligne Matin
-    const matinCells = sem.jours.map((j, ji) => {
-      const dm = j.matin || {};
-      const st = _coordCellStyle(dm.creche);
-      const isEmpty = !dm.creche || dm.creche === '';
-      return `<td style="padding:6px 10px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);cursor:pointer;transition:background .12s;vertical-align:middle"
-        onmouseover="this.style.background='${st.bg}44'" onmouseout="this.style.background=''"
-        onclick="_coordEditDemi(${si},${ji},'matin')">
-        ${isEmpty
-          ? `<div style="color:var(--ink3);font-size:11px;opacity:.5;text-align:center">+ ajouter</div>`
-          : `<div style="display:flex;flex-direction:column;gap:3px">
-              <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:7px;font-size:11px;font-weight:700;background:${st.bg};color:${st.color};border:1px solid ${st.border}">${dm.creche === 'Admin' ? '🏠' : dm.creche === 'Formation' ? '📚' : dm.creche === 'Absent' ? '🚫' : '●'} ${dm.creche}</span>
-              <span style="font-size:10px;color:var(--ink3);font-weight:600">${dm.debut||''} – ${dm.fin||''}</span>
-              ${dm.note ? `<span style="font-size:10px;color:var(--ink3);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${dm.note}</span>` : ''}
-            </div>`
-        }
-      </td>`;
-    }).join('');
+    const isCurrentCycle = si === cycleIdx;
+    // Numéro de semaine ISO réel : la sem du cycle si correspond à semaine en cours ± delta
+    const deltaWeeks = si - cycleIdx;
+    const isoWeekNum = ((nowWeek - 1 + deltaWeeks + 52) % 52) + 1; // rester dans 1-52
 
-    // Ligne Après-midi
-    const apremCells = sem.jours.map((j, ji) => {
-      const da = j.aprem || {};
-      const st = _coordCellStyle(da.creche);
-      const isEmpty = !da.creche || da.creche === '';
-      return `<td style="padding:6px 10px;border-bottom:2px solid var(--border);border-left:1px solid var(--border);cursor:pointer;transition:background .12s;vertical-align:middle"
-        onmouseover="this.style.background='${st.bg}44'" onmouseout="this.style.background=''"
-        onclick="_coordEditDemi(${si},${ji},'aprem')">
-        ${isEmpty
-          ? `<div style="color:var(--ink3);font-size:11px;opacity:.5;text-align:center">+ ajouter</div>`
-          : `<div style="display:flex;flex-direction:column;gap:3px">
-              <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:7px;font-size:11px;font-weight:700;background:${st.bg};color:${st.color};border:1px solid ${st.border}">${da.creche === 'Admin' ? '🏠' : da.creche === 'Formation' ? '📚' : da.creche === 'Absent' ? '🚫' : '●'} ${da.creche}</span>
-              <span style="font-size:10px;color:var(--ink3);font-weight:600">${da.debut||''} – ${da.fin||''}</span>
-              ${da.note ? `<span style="font-size:10px;color:var(--ink3);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${da.note}</span>` : ''}
-            </div>`
-        }
-      </td>`;
-    }).join('');
+    const rowLabel = `S${isoWeekNum} <span style="font-size:10px;font-weight:500;color:var(--ink3)">${sem.label}</span>${isCurrentCycle ? ' <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700;vertical-align:middle">EN COURS</span>' : ''}`;
 
-    // Label semaine sur 2 lignes (rowspan 2)
-    return `<tr>
-      <td rowspan="2" style="padding:10px 12px;font-weight:800;color:var(--ink);border-bottom:2px solid var(--border);background:var(--bg);white-space:nowrap;vertical-align:middle;font-family:'Syne',sans-serif;font-size:12px">
-        ${sem.label}
+    // Helper cellule
+    const makeCell = (d, si2, ji, part) => {
+      const st = _coordCellStyle(d.creche);
+      const isEmpty = !d.creche || d.creche === '';
+      const icon = d.creche === 'Admin' ? '🏠' : d.creche === 'Formation' ? '📚' : d.creche === 'Absent' ? '🚫' : '●';
+      return `<td style="padding:6px 9px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);cursor:pointer;transition:background .12s;vertical-align:middle;${isCurrentCycle ? 'background:'+st.bg+'18':''};"
+        onmouseover="this.style.background='${st.bg}55'" onmouseout="this.style.background='${isCurrentCycle ? st.bg+'18':''}'"
+        onclick="_coordEditDemi(${si2},${ji},'${part}')">
+        ${isEmpty
+          ? `<div style="color:var(--ink3);font-size:11px;opacity:.45;text-align:center;padding:6px 0">+ ajouter</div>`
+          : `<div style="display:flex;flex-direction:column;gap:2px">
+               <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;background:${st.bg};color:${st.color};border:1px solid ${st.border};white-space:nowrap">${icon} ${d.creche}</span>
+               <span style="font-size:10px;color:var(--ink3);font-weight:600;padding-left:2px">${d.debut} – ${d.fin}</span>
+               ${d.note ? `<span style="font-size:10px;color:var(--ink3);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;padding-left:2px">${d.note}</span>` : ''}
+             </div>`}
+      </td>`;
+    };
+
+    const matinCells = sem.jours.map((j, ji) => makeCell(j.matin || {}, si, ji, 'matin')).join('');
+    const apremCells = sem.jours.map((j, ji) => makeCell(j.aprem || {}, si, ji, 'aprem')).join('');
+
+    return `<tr style="${isCurrentCycle ? 'background:var(--accent-lt)' : ''}">
+      <td rowspan="2" style="padding:10px 11px;font-weight:800;border-bottom:2px solid var(--border);background:${isCurrentCycle ? 'var(--accent-lt)' : 'var(--bg)'};white-space:nowrap;vertical-align:middle;font-family:'Syne',sans-serif;font-size:12px;border-right:1px solid var(--border);line-height:1.5">
+        ${rowLabel}
       </td>
-      <td style="padding:4px 8px;border-bottom:1px solid var(--border);background:var(--bg);font-size:10px;font-weight:700;color:#1D4ED8;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;border-left:3px solid #BFDBFE">☀ Matin</td>
+      <td style="padding:3px 8px;border-bottom:1px solid var(--border);background:${isCurrentCycle ? '#DBEAFE88' : 'var(--bg)'};font-size:10px;font-weight:700;color:#1D4ED8;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;border-left:2px solid #BFDBFE">☀ Matin</td>
       ${matinCells}
     </tr>
     <tr>
-      <td style="padding:4px 8px;border-bottom:2px solid var(--border);background:var(--bg);font-size:10px;font-weight:700;color:#B45309;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;border-left:3px solid #FCD34D">🌅 Après-midi</td>
+      <td style="padding:3px 8px;border-bottom:2px solid var(--border);background:${isCurrentCycle ? '#FEF3C788' : 'var(--bg)'};font-size:10px;font-weight:700;color:#B45309;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;border-left:2px solid #FCD34D">🌅 Après-midi</td>
       ${apremCells}
     </tr>`;
   }).join('');
 
+  // Légende créneaux en bas
+  const legendeCreches = creches.map(c => `<span style="background:${c.bg};color:${c.color};padding:2px 8px;border-radius:7px;font-size:11px;font-weight:600">● ${c.nom}</span>`).join('');
+
+  // Select dynamique pour le modal
+  const optCreches = creches.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+
   return `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-    <div style="font-size:12px;color:var(--ink3)">Rotation 4 semaines · 2 lignes par jour (Matin / Après-midi) · Cliquez pour modifier</div>
+    <div style="font-size:12px;color:var(--ink3)">
+      Rotation 4 semaines · Semaine en cours : <strong style="color:var(--accent)">S${nowWeek}</strong> (cycle : Semaine ${cycleIdx + 1}) · Cliquez pour modifier
+    </div>
     <button onclick="_coordResetRotation()" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--ink3)">↺ Réinitialiser</button>
   </div>
   <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface2);box-shadow:var(--shadow)">
-    <table style="width:100%;border-collapse:collapse;min-width:780px">
+    <table style="width:100%;border-collapse:collapse;min-width:760px">
       <thead>
         <tr style="background:var(--bg)">
-          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:80px"></th>
-          <th style="padding:10px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:70px">Plage</th>
-          ${JOURS.map(d => `<th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);min-width:130px">${d}</th>`).join('')}
+          <th style="padding:10px 11px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:90px">Semaine</th>
+          <th style="padding:10px 9px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);min-width:68px;border-left:2px solid var(--border)">Plage</th>
+          ${JOURS.map(d => `<th style="padding:10px 9px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);min-width:120px">${d}</th>`).join('')}
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
   </div>
-  <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-    ${COORD_CRECHES_DATA.map(c => `<span style="background:${c.bg};color:${c.color};padding:2px 9px;border-radius:8px;font-size:11px;font-weight:600">● ${c.nom}</span>`).join('')}
-    <span style="background:#F5F3FF;color:#6D28D9;padding:2px 9px;border-radius:8px;font-size:11px;font-weight:600">🏠 Admin</span>
-    <span style="background:#FEF3C7;color:#B45309;padding:2px 9px;border-radius:8px;font-size:11px;font-weight:600">📚 Formation</span>
-    <span style="background:#FEE2E2;color:#DC2626;padding:2px 9px;border-radius:8px;font-size:11px;font-weight:600">🚫 Absent</span>
+  <div style="margin-top:10px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+    ${legendeCreches}
+    <span style="background:#F5F3FF;color:#6D28D9;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:600">🏠 Admin</span>
+    <span style="background:#FEF3C7;color:#B45309;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:600">📚 Formation</span>
+    <span style="background:#FEE2E2;color:#DC2626;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:600">🚫 Absent</span>
   </div>
 
   <!-- Modal édition demi-journée -->
   <div id="coord-demi-overlay" style="display:none;position:fixed;inset:0;background:rgba(28,25,23,.5);z-index:9000;backdrop-filter:blur(3px)" onclick="if(event.target===this)_coordCloseDemiModal()">
-    <div id="coord-demi-box" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface2);border-radius:16px;width:100%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface2);border-radius:16px;width:100%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden">
       <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
         <div>
-          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700" id="coord-demi-title">Modifier le créneau</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:2px" id="coord-demi-sub"></div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700" id="coord-demi-title">Modifier</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px" id="coord-demi-sub"></div>
         </div>
-        <button onclick="_coordCloseDemiModal()" style="background:var(--bg);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px">✕</button>
+        <button onclick="_coordCloseDemiModal()" style="background:var(--bg);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
       </div>
       <div style="padding:18px 20px">
         <div style="margin-bottom:12px">
           <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Structure / Lieu</label>
-          <select id="cd-creche" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:var(--surface2)" onchange="_coordDemiUpdateSlot()">
-            ${COORD_CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('')}
+          <select id="cd-creche" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:var(--surface2)">
+            ${optCreches}
             <option value="Admin">🏠 Administratif (bureau)</option>
             <option value="Formation">📚 Formation / APP</option>
             <option value="Absent">🚫 Absent / Congé</option>
@@ -14762,7 +14814,7 @@ function _coordHtmlRotation() {
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Note (optionnel)</label>
-          <input type="text" id="cd-note" placeholder="Ex: réunion CAF, visite PMI, adaptation…" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">
+          <input type="text" id="cd-note" placeholder="Ex: réunion CAF, visite PMI…" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">
         </div>
       </div>
       <div style="padding:12px 20px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
@@ -14786,25 +14838,30 @@ function _coordEditDemi(si, ji, part) {
   const jour = sem.jours[ji];
   const d = jour[part] || {};
   const slot = _DEMI_SLOTS[part];
-  document.getElementById('coord-demi-title').textContent = sem.label + ' · ' + jour.jour;
-  document.getElementById('coord-demi-sub').textContent = slot.label;
-  document.getElementById('cd-creche').value = d.creche || '';
-  document.getElementById('cd-debut').value  = d.debut  || slot.defaultDebut;
-  document.getElementById('cd-fin').value    = d.fin    || slot.defaultFin;
-  document.getElementById('cd-note').value   = d.note   || '';
+  // Numéro de semaine réel
+  const nowWeek  = _coordGetCurrentWeekNum();
+  const cycleIdx = _coordCycleIndex();
+  const delta    = si - cycleIdx;
+  const isoWn    = ((nowWeek - 1 + delta + 52) % 52) + 1;
+  document.getElementById('coord-demi-title').textContent = 'S' + isoWn + ' · ' + sem.label + ' · ' + jour.jour;
+  document.getElementById('coord-demi-sub').textContent   = slot.label;
+  // Reconstruire le select avec les crèches actuelles
+  const cdCreche = document.getElementById('cd-creche');
+  if (cdCreche) {
+    const creches = _coordGetCreches();
+    cdCreche.innerHTML = creches.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('') +
+      '<option value="Admin">🏠 Administratif (bureau)</option>' +
+      '<option value="Formation">📚 Formation / APP</option>' +
+      '<option value="Absent">🚫 Absent / Congé</option>' +
+      '<option value="">— Vide —</option>';
+    cdCreche.value = d.creche || '';
+  }
+  document.getElementById('cd-debut').value = d.debut || slot.defaultDebut;
+  document.getElementById('cd-fin').value   = d.fin   || slot.defaultFin;
+  document.getElementById('cd-note').value  = d.note  || '';
   const overlay = document.getElementById('coord-demi-overlay');
   if (overlay) overlay.style.display = 'block';
   document.body.style.overflow = 'hidden';
-}
-
-function _coordDemiUpdateSlot() {
-  const creche = document.getElementById('cd-creche').value;
-  const slot = _DEMI_SLOTS[_coordDemiPart];
-  // Pré-remplir les horaires si vide selon contexte
-  const debutEl = document.getElementById('cd-debut');
-  const finEl   = document.getElementById('cd-fin');
-  if (!debutEl.value) debutEl.value = slot.defaultDebut;
-  if (!finEl.value)   finEl.value   = slot.defaultFin;
 }
 
 function _coordCloseDemiModal() {
@@ -14819,6 +14876,9 @@ function _coordSaveDemi() {
   const fin    = document.getElementById('cd-fin').value;
   const note   = document.getElementById('cd-note').value.trim();
   const rotation = _coordGetRotation();
+  if (!rotation[_coordDemiSemIdx].jours[_coordDemiJourIdx][_coordDemiPart]) {
+    rotation[_coordDemiSemIdx].jours[_coordDemiJourIdx][_coordDemiPart] = {};
+  }
   rotation[_coordDemiSemIdx].jours[_coordDemiJourIdx][_coordDemiPart] = { creche, debut, fin, note };
   _coordSaveRotation(rotation);
   _coordCloseDemiModal();
@@ -14827,7 +14887,7 @@ function _coordSaveDemi() {
 }
 
 function _coordResetRotation() {
-  if (!confirm('Remettre la rotation par défaut ? Vos modifications seront perdues.')) return;
+  if (!confirm('Remettre la rotation par défaut ?')) return;
   localStorage.removeItem('orevy_coord_rotation_v2');
   _coordRenderSubtab('rotation');
   if (typeof showNotif === 'function') showNotif('↺ Rotation réinitialisée');
@@ -14917,13 +14977,14 @@ function _coordHtmlSuivi() {
     { id: 'heures',     label: 'Heures totales',           unit: 'h' },
   ];
 
-  const headerTH = COORD_CRECHES_DATA.map(c =>
+  const _cc = _coordGetCreches();
+  const headerTH = _cc.map(c =>
     `<th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${c.color};border-bottom:1px solid var(--border);border-left:1px solid var(--border)">${c.nom}</th>`
   ).join('');
 
   const bodyRows = metrics.map(m => {
     let total = 0;
-    const cells = COORD_CRECHES_DATA.map(c => {
+    const cells = _cc.map(c => {
       const v = parseInt(stored[m.id + '_' + c.nom]) || 0;
       total += v;
       return `<td style="padding:7px 8px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);text-align:center">
@@ -14973,7 +15034,7 @@ function _coordSuiviUpdate(periode) {
   const metrics = ['visites','entretiens','formations','dossiers','incidents','heures'];
   metrics.forEach(m => {
     let total = 0;
-    COORD_CRECHES_DATA.forEach(c => { total += parseInt(stored[periode][m+'_'+c.nom]||0)||0; });
+    _cc.forEach(c => { total += parseInt(stored[periode][m+'_'+c.nom]||0)||0; });
     const el = document.getElementById('coord-sv-total-' + m);
     if (el) el.textContent = total > 0 ? total : '—';
   });
