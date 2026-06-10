@@ -2309,13 +2309,24 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
         <div class="form-group full">
           <label>Photo de l'article</label>
-          <div id="photo-upload-zone" class="photo-upload-zone" onclick="document.getElementById('f-photo').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <div id="photo-upload-zone" class="photo-upload-zone" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
             <input type="file" id="f-photo" accept="image/*" onchange="handlePhotoUpload(event)">
+            <input type="file" id="f-photo-camera" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" style="display:none">
             <div id="photo-placeholder">
               <div class="photo-upload-icon">📷</div>
               <div class="photo-upload-text">
-                <strong>Cliquez pour choisir une photo</strong>
-                <span>ou glissez-déposez ici · JPG, PNG, WEBP · Max 5 Mo</span>
+                <strong>Ajouter une photo</strong>
+                <span>Glissez-déposez ici · JPG, PNG, WEBP · Max 5 Mo</span>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:14px;justify-content:center;flex-wrap:wrap">
+                <button type="button" onclick="document.getElementById('f-photo').click()"
+                  style="padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink2);display:flex;align-items:center;gap:6px">
+                  🗂 Choisir un fichier
+                </button>
+                <button type="button" onclick="document.getElementById('f-photo-camera').click()"
+                  style="padding:8px 16px;border:none;border-radius:8px;background:var(--accent);font-family:inherit;font-size:13px;cursor:pointer;color:#fff;font-weight:600;display:flex;align-items:center;gap:6px">
+                  📸 Prendre une photo
+                </button>
               </div>
             </div>
             <div id="photo-preview-container" style="display:none">
