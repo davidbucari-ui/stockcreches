@@ -8850,7 +8850,7 @@ async function createAdminUser() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'create', email, password,
-        userData: { email, role, creche_id: creche || null, actif: true }
+        userData: { email, role, creche_id: creche || 'all', actif: true }
       })
     });
     const data = await res.json();
