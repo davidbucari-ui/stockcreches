@@ -5,8 +5,8 @@
 // ============================================================
 
 // ── CONFIG SUPABASE (réutilise les constantes de index.html) ─
-const F_URL = 'https://drxqjeilbunpfqyecpdg.supabase.co';
-const F_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyeHFqZWlsYnVucGZxeWVjcGRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODQ2MzgsImV4cCI6MjA5NTQ2MDYzOH0.vTQZwnbrmL6zaUxYb3qzMMWp3Jhs-fWeSJiBdmn_6m8';
+const F_URL = 'https://yyqppsvihdgmohnuocqr.supabase.co';
+const F_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMjAxODYsImV4cCI6MjA5NjY5NjE4Nn0.mzejn3GMcVF4grWp9BbpW9p2p_7zK8F9yefO4MRr8qg';
 
 function fHeaders() {
   const h = { 'apikey': F_KEY, 'Authorization': 'Bearer ' + F_KEY, 'Content-Type': 'application/json' };
