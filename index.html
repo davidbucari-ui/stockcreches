@@ -9773,6 +9773,11 @@ function renderPlanningIK() {
   }
   if (!window._ikMois) window._ikMois = moisOptions[0].val;
 
+  // Pré-calculer la liste salariés
+  let _ikSalaries = [];
+  try { _ikSalaries = JSON.parse(localStorage.getItem('orevy_salaries')||'[]').filter(s=>s.statut!=='archivé'); } catch(e) {}
+  const salOptionsHtml = _ikSalaries.map(s=>`<option value="${(s.prenom||'')+' '+(s.nom||'')}">${(s.prenom||'')} ${(s.nom||'')}</option>`).join('');
+
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start">
 
@@ -9787,7 +9792,7 @@ function renderPlanningIK() {
           <select id="ik-sal-sel"
             style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font-family:inherit;font-size:13px;color:var(--ink);max-width:160px">
             <option value="">-- Salarié --</option>
-            ${(()=>{ let s=[]; try{s=JSON.parse(localStorage.getItem('orevy_salaries')||'[]').filter(x=>x.statut!=='archivé');}catch(e){} return s.map(x=>`<option value="${(x.prenom||'')+' '+(x.nom||'')}">${(x.prenom||'')} ${(x.nom||'')}</option>`).join(''); })()}
+            ${salOptionsHtml}
           </select>
           <button onclick="ikLoadFromPlanning()"
             style="padding:8px 14px;background:var(--accent-lt);color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
