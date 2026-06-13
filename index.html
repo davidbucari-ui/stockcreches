@@ -9577,14 +9577,39 @@ function ikLoad(yearMonth) {
 function ikLoadFromPlanning(yearMonth) {
   const month = yearMonth || (document.getElementById('ik-month-sel')||{}).value;
   if (!month) { alert('Sélectionnez un mois.'); return; }
-  const salSel = (document.getElementById('ik-sal-sel')||{}).value||'';
+  const salSel = ((document.getElementById('ik-sal-sel')||{}).value||'').trim();
   if (!salSel) { alert('Sélectionnez un salarié avant de générer depuis le planning.'); return; }
-  ikRows = ikReadPlanning(month).filter(r => r.salarie === salSel);
+
+  // Lire TOUTES les lignes sans filtre salarié pour debug
+  const allRows = ikReadPlanning(month);
+
+  // Debug : montrer les noms trouvés dans le planning
+  const nomsPlanning = [...new Set(allRows.map(r=>r.salarie))];
+  console.log('[IK] Salarié sélectionné:', salSel);
+  console.log('[IK] Noms trouvés dans le planning:', nomsPlanning);
+  console.log('[IK] Total lignes avant filtre:', allRows.length);
+
+  // Filtre insensible à la casse et aux espaces
+  ikRows = allRows.filter(r => {
+    const rNorm = (r.salarie||'').trim().toLowerCase();
+    const sNorm = salSel.toLowerCase();
+    return rNorm === sNorm || rNorm.includes(sNorm) || sNorm.includes(rNorm);
+  });
+
+  // Si toujours 0, prendre toutes les lignes (planning sans nom salarié explicite)
+  if (ikRows.length === 0 && allRows.length > 0) {
+    // Le planning coordinateur EJE n'a pas de cr.pro — on prend toutes les lignes de la crèche
+    ikRows = allRows.map(r => ({ ...r, salarie: salSel }));
+    console.log('[IK] Fallback: assignation au salarié sélectionné');
+  }
+
   ikSaveRows(month);
   ikRenderTable();
   const count = ikRows.filter(r=>!r.ignored).length;
   const info = document.getElementById('ik-load-info');
-  if (info) info.textContent = `${count} trajet(s) chargé(s) pour ${salSel}`;
+  if (info) info.textContent = count > 0
+    ? `${count} trajet(s) chargé(s) pour ${salSel}`
+    : `Aucun trajet trouvé pour ${salSel} en ${month} — vérifiez la console (F12)`;
 }
 
 function ikSaveRows(yearMonth) {
