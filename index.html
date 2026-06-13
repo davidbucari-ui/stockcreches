@@ -9599,14 +9599,10 @@ function ikLoad(yearMonth) {
   if (!month) return;
   const salSel = ((document.getElementById('ik-sal-sel')||{}).value||'').trim();
   if (!salSel) { ikRows = []; ikRenderTable(); return; }
-  const saved = JSON.parse(localStorage.getItem(`${IK_ROWS_KEY}_${month}`)||'null');
+  const salKey = salSel.replace(/\s+/g,'_');
+  const saved = JSON.parse(localStorage.getItem(`${IK_ROWS_KEY}_${month}_${salKey}`)||'null');
   if (saved) {
-    // Filtrer uniquement les données du salarié sélectionné
-    ikRows = saved.filter(r => {
-      const rn = (r.salarie||'').trim().toLowerCase();
-      const sn = salSel.toLowerCase();
-      return rn === sn || rn.includes(sn) || sn.includes(rn);
-    });
+    ikRows = saved;
     ikRenderTable();
   } else {
     ikLoadFromPlanning(month);
@@ -9653,7 +9649,8 @@ function ikLoadFromPlanning(yearMonth) {
 
 function ikSaveRows(yearMonth) {
   const month = yearMonth || (document.getElementById('ik-month-sel')||{}).value;
-  if (month) localStorage.setItem(`${IK_ROWS_KEY}_${month}`, JSON.stringify(ikRows));
+  const sal = ((document.getElementById('ik-sal-sel')||{}).value||'').trim().replace(/\s+/g,'_');
+  if (month && sal) localStorage.setItem(`${IK_ROWS_KEY}_${month}_${sal}`, JSON.stringify(ikRows));
 }
 
 function ikRenderTable() {
