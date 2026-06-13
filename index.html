@@ -9773,10 +9773,11 @@ function renderPlanningIK() {
   }
   if (!window._ikMois) window._ikMois = moisOptions[0].val;
 
-  // Pré-calculer la liste salariés
+  // Pré-calculer la liste salariés — appel loadSalaries() pour s'assurer que SALARIES est à jour
+  if (typeof loadSalaries === 'function') loadSalaries();
   let _ikSalaries = [];
-  try { _ikSalaries = JSON.parse(localStorage.getItem('orevy_salaries')||'[]').filter(s=>s.statut!=='archivé'); } catch(e) {}
-  const salOptionsHtml = _ikSalaries.map(s=>`<option value="${(s.prenom||'')+' '+(s.nom||'')}">${(s.prenom||'')} ${(s.nom||'')}</option>`).join('');
+  try { _ikSalaries = (window.SALARIES && SALARIES.length ? SALARIES : JSON.parse(localStorage.getItem('orevy_salaries')||'[]')).filter(s=>s.statut!=='archivé'); } catch(e) {}
+  const salOptionsHtml = _ikSalaries.map(s=>`<option value="${((s.prenom||'')+' '+(s.nom||'')).trim()}">${(s.prenom||'')} ${(s.nom||'')}</option>`).join('');
 
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start">
