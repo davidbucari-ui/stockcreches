@@ -9512,39 +9512,38 @@ function ikReadPlanning(yearMonth) {
   const cfg = ikGetConfig();
   const depart = cfg.depart;
   const rows = [];
-  const peData = JSON.parse(localStorage.getItem('planning_equipe')||'{}');
+  const peData = JSON.parse(localStorage.getItem('orevy_planning_equipe')||'{}');
 
-  // Parcourir toutes les clés du planning
+  // Parcourir toutes les clés du planning (format YYYY-WNN-creche)
   Object.entries(peData).forEach(([key, week]) => {
-    // key format: YYYY-WNN-creche
     const m = key.match(/^(\d{4})-W(\d{2})-(.+)$/);
     if (!m) return;
     const creche = m[3];
-    if (!creche || creche === depart) return; // pas de trajet si même crèche que départ
+    if (!creche) return;
+
+    const isoYear = parseInt(m[1]), isoWeek = parseInt(m[2]);
+    // Calculer le lundi de cette semaine ISO
+    const jan4 = new Date(isoYear, 0, 4);
+    const lundi = new Date(jan4.getFullYear(), jan4.getMonth(), jan4.getDate() - ((jan4.getDay()+6)%7) + (isoWeek-1)*7);
 
     (week.creneaux||[]).forEach(cr => {
       if (!cr.pro) return;
-      // Calculer la date réelle
-      const isoYear = parseInt(m[1]), isoWeek = parseInt(m[2]);
-      const jan4 = new Date(isoYear, 0, 4);
-      const lundi = new Date(jan4);
-      lundi.setDate(jan4.getDate() - ((jan4.getDay()+6)%7) + (isoWeek-1)*7);
-      const dateTrajet = new Date(lundi);
-      dateTrajet.setDate(lundi.getDate() + (cr.jour||0));
+      const jourIdx = cr.jour || 0; // 0=lundi, 4=vendredi
+      const dateTrajet = new Date(lundi.getFullYear(), lundi.getMonth(), lundi.getDate() + jourIdx);
 
       // Filtrer sur le mois demandé
       if (dateTrajet.getMonth()+1 !== month || dateTrajet.getFullYear() !== year) return;
 
       const dateStr = `${dateTrajet.getFullYear()}-${String(dateTrajet.getMonth()+1).padStart(2,'0')}-${String(dateTrajet.getDate()).padStart(2,'0')}`;
-      const trajet = depart ? `${depart} → ${creche}` : creche;
+      const trajetLabel = depart ? `${depart} → ${creche}` : `→ ${creche}`;
 
       rows.push({
-        id: `${key}_${cr.id||cr.pro}_${cr.jour}`,
+        id: `${key}_${cr.pro}_${jourIdx}`,
         date: dateStr,
         salarie: cr.pro,
-        trajet,
+        trajet: trajetLabel,
         creche,
-        nbr: 2, // aller-retour par défaut
+        nbr: 2,
         ignored: false
       });
     });
@@ -9559,7 +9558,7 @@ function ikReadPlanning(yearMonth) {
     return true;
   });
 
-  dedup.sort((a,b) => a.date.localeCompare(b.date) || a.salarie.localeCompare(b.salarie));
+  dedup.sort((a,b) => a.date.localeCompare(b.date) || (a.salarie||'').localeCompare(b.salarie||''));
   return dedup;
 }
 
@@ -9598,12 +9597,11 @@ function ikRenderTable() {
   if (!tbody) return;
   const cfg = ikGetConfig();
   const bareme = parseFloat((document.getElementById('ik-bareme')||{}).value) || cfg.bareme;
-  const dist = {};
+  // Lire distances depuis les inputs si présents, sinon depuis config sauvegardée
+  const dist = Object.assign({}, cfg.dist);
   document.querySelectorAll('.ik-dist-inp').forEach(inp => {
-    dist[inp.dataset.creche] = parseFloat(inp.value)||0;
+    if (inp.dataset.creche) dist[inp.dataset.creche] = parseFloat(inp.value)||0;
   });
-  // Fallback sur config sauvegardée
-  if (!Object.keys(dist).length) Object.assign(dist, cfg.dist);
 
   if (!ikRows.length) {
     tbody.innerHTML = `<tr><td colspan="7" style="padding:28px;text-align:center;color:var(--ink3)">Aucun trajet — cliquez sur "⟳ Depuis le planning" ou "+ Ajouter"</td></tr>`;
