@@ -9477,7 +9477,8 @@ let ikRows = [];
 function ikGetConfig() {
   try {
     const s = JSON.parse(localStorage.getItem(IK_CFG_KEY)||'{}');
-    const creches = (window.CRECHES_DATA||[]).map(c=>c.nom);
+    const _saved = localStorage.getItem('koala_creches');
+    const creches = _saved ? JSON.parse(_saved).map(c=>c.nom) : (window.CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
     const dist = {};
     creches.forEach(c => dist[c] = s.dist&&s.dist[c]!==undefined ? s.dist[c] : 0);
     return { depart: s.depart||'', dist, bareme: s.bareme||0.248 };
@@ -9752,15 +9753,16 @@ function ikGenerate() {
 function renderPlanningIK() {
   const el = document.getElementById('pe-ik-content');
   if (!el) return;
-  // Forcer le rechargement de CRECHES_DATA depuis localStorage si vide
-  if (!window.CRECHES_DATA || !window.CRECHES_DATA.length) {
-    try {
-      const saved = localStorage.getItem('koala_creches');
-      if (saved) window.CRECHES_DATA = JSON.parse(saved);
-    } catch(e) {}
+  // Lire les crèches depuis localStorage ou fallback CRECHES_DEFAUT
+  let _ikCreches = [];
+  try {
+    const _saved = localStorage.getItem('koala_creches');
+    _ikCreches = _saved ? JSON.parse(_saved).map(c=>c.nom) : (CRECHES_DEFAUT||[]).map(c=>c.nom);
+  } catch(e) {
+    _ikCreches = (window.CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
   }
   const cfg = ikGetConfig();
-  const creches = (window.CRECHES_DATA||[]).map(c=>c.nom);
+  const creches = _ikCreches.length ? _ikCreches : (window.CRECHES_DATA||[]).map(c=>c.nom);
   const now = new Date();
   const moisOptions = [];
   for (let i=0;i<12;i++) {
