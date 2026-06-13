@@ -1795,6 +1795,10 @@ textarea { resize: vertical; min-height: 72px; }
             data-coord-tab>
             🗓 Coordinateur
           </button>
+          <button id="pe-tab-ik" onclick="switchPlanningTab('ik')"
+            style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
+            🚗 Frais IK
+          </button>
         </div>
 
         <!-- Vue Gantt -->
@@ -1834,6 +1838,13 @@ textarea { resize: vertical; min-height: 72px; }
         <!-- Vue Coordinateur EJE -->
         <div id="pe-view-coord" style="display:none">
           <div id="pe-coord-content"></div>
+        </div>
+
+        <!-- ── VUE IK ── -->
+        <div id="pe-view-ik" style="display:none">
+          <div id="pe-ik-content">
+            <!-- Rendu par renderPlanningIK() -->
+          </div>
         </div>
 
       </div>
@@ -9437,7 +9448,7 @@ let peGanttDay = -1; // -1 = jour courant ou lundi
 
 function switchPlanningTab(tab) {
   pePlanningTab = tab;
-  const tabs = ['gantt','hebdo','gantt2','coord'];
+  const tabs = ['gantt','hebdo','gantt2','coord','ik'];
   tabs.forEach(t => {
     const btn  = document.getElementById('pe-tab-' + t);
     const view = document.getElementById('pe-view-' + t);
@@ -9450,6 +9461,7 @@ function switchPlanningTab(tab) {
   else if (tab === 'hebdo')  renderPlanningHebdo();
   else if (tab === 'gantt2') renderPlanningGantt();
   else if (tab === 'coord')  renderPlanningCoord();
+  else if (tab === 'ik')     renderPlanningIK();
 }
 
 function renderActiveTab() {
@@ -9457,6 +9469,276 @@ function renderActiveTab() {
   else if (pePlanningTab === 'hebdo')  renderPlanningHebdo();
   else if (pePlanningTab === 'gantt2') renderPlanningGantt();
   else if (pePlanningTab === 'coord')  renderPlanningCoord();
+  else if (pePlanningTab === 'ik')     renderPlanningIK();
+}
+
+
+// ── PLANNING IK — Indemnités Kilométriques ───────────────────────────────
+const IK_KEY = 'orevy_ik_trajets_v1';
+const IK_BAREME = 0.231; // €/km barème fiscal 2025 (véhicule 5CV et moins — adapté aux auxiliaires)
+
+function getIKData() {
+  try { return JSON.parse(localStorage.getItem(IK_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveIKData(data) {
+  localStorage.setItem(IK_KEY, JSON.stringify(data));
+}
+
+function renderPlanningIK() {
+  const el = document.getElementById('pe-ik-content');
+  if (!el) return;
+
+  const salaries = (window.rhData || []).filter(s => s.statut !== 'archivé');
+  const data = getIKData();
+  const now = new Date();
+  const moisOptions = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    moisOptions.push({ val: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, label: d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}) });
+  }
+  const selMois = window._ikMoisSel || moisOptions[0].val;
+  window._ikMoisSel = selMois;
+
+  const trajets = (data[selMois] || []);
+  const totalKm = trajets.reduce((s,t) => s + (parseFloat(t.km)||0), 0);
+  const totalEur = totalKm * IK_BAREME;
+
+  // Regrouper par salarié
+  const parSal = {};
+  trajets.forEach(t => {
+    if (!parSal[t.salarie]) parSal[t.salarie] = [];
+    parSal[t.salarie].push(t);
+  });
+
+  el.innerHTML = `
+    <div style="padding:0 4px">
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
+          <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Total km ce mois</div>
+          <div style="font-size:24px;font-weight:700;color:var(--ink)">${totalKm.toFixed(1)} km</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
+          <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Montant à rembourser</div>
+          <div style="font-size:24px;font-weight:700;color:var(--green)">${totalEur.toFixed(2)} €</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
+          <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Barème appliqué</div>
+          <div style="font-size:24px;font-weight:700;color:var(--ink)">${IK_BAREME.toFixed(3)} €/km</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">Barème fiscal 2025</div>
+        </div>
+      </div>
+
+      <!-- Sélecteur mois + bouton ajouter -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <select onchange="window._ikMoisSel=this.value;renderPlanningIK()"
+          style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font-family:inherit;font-size:13px;color:var(--ink)">
+          ${moisOptions.map(m => `<option value="${m.val}" ${m.val===selMois?'selected':''}>${m.label}</option>`).join('')}
+        </select>
+        <button onclick="openIKModal()"
+          style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+          + Ajouter un trajet
+        </button>
+        <button onclick="exportIKPDF()"
+          style="padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)">
+          🖨 Export PDF
+        </button>
+      </div>
+
+      <!-- Tableau des trajets -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:var(--bg)">
+              <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Date</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Salarié</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Motif / Trajet</th>
+              <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Km</th>
+              <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Montant</th>
+              <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)"></th>
+            </tr>
+          </thead>
+          <tbody id="ik-tbody">
+            ${trajets.length === 0 ? `<tr><td colspan="6" style="padding:32px;text-align:center;color:var(--ink3)">Aucun trajet ce mois — cliquez sur "+ Ajouter un trajet"</td></tr>` :
+              trajets.map((t,i) => `
+                <tr style="border-bottom:1px solid var(--border)">
+                  <td style="padding:10px 14px;color:var(--ink)">${t.date}</td>
+                  <td style="padding:10px 14px;color:var(--ink);font-weight:500">${t.salarie}</td>
+                  <td style="padding:10px 14px;color:var(--ink2)">${t.motif}</td>
+                  <td style="padding:10px 14px;text-align:right;color:var(--ink);font-weight:600">${parseFloat(t.km).toFixed(1)}</td>
+                  <td style="padding:10px 14px;text-align:right;color:var(--green);font-weight:600">${(parseFloat(t.km)*IK_BAREME).toFixed(2)} €</td>
+                  <td style="padding:10px 14px;text-align:center">
+                    <button onclick="deleteIKTrajet('${selMois}',${i})"
+                      style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:2px 6px">🗑</button>
+                  </td>
+                </tr>`).join('')}
+          </tbody>
+          ${trajets.length > 0 ? `
+          <tfoot>
+            <tr style="background:var(--bg)">
+              <td colspan="3" style="padding:10px 14px;font-weight:700;color:var(--ink)">Total</td>
+              <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--ink)">${totalKm.toFixed(1)} km</td>
+              <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--green)">${totalEur.toFixed(2)} €</td>
+              <td></td>
+            </tr>
+          </tfoot>` : ''}
+        </table>
+      </div>
+
+      <!-- Récap par salarié -->
+      ${Object.keys(parSal).length > 0 ? `
+      <div style="margin-top:20px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Récapitulatif par salarié</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+          ${Object.entries(parSal).map(([nom, ts]) => {
+            const km = ts.reduce((s,t)=>s+(parseFloat(t.km)||0),0);
+            return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px">
+              <div style="font-weight:600;color:var(--ink);margin-bottom:4px">${nom}</div>
+              <div style="font-size:13px;color:var(--ink3)">${ts.length} trajet${ts.length>1?'s':''} · ${km.toFixed(1)} km</div>
+              <div style="font-size:15px;font-weight:700;color:var(--green);margin-top:4px">${(km*IK_BAREME).toFixed(2)} €</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+    </div>
+
+    <!-- Modal ajout trajet -->
+    <div id="ik-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;align-items:center;justify-content:center">
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:28px;width:420px;max-width:94vw;box-shadow:var(--shadow-lg)">
+        <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:20px">Ajouter un trajet IK</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Salarié</label>
+            <select id="ik-sal" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)">
+              <option value="">-- Choisir --</option>
+              ${salaries.map(s => `<option value="${s.prenom||''} ${s.nom||''}">${s.prenom||''} ${s.nom||''}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Date</label>
+            <input type="date" id="ik-date" value="${new Date().toISOString().slice(0,10)}"
+              style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Motif / Trajet</label>
+            <input type="text" id="ik-motif" placeholder="Ex: Formation Brunet → Ollioules"
+              style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Distance (km)</label>
+            <input type="number" id="ik-km" placeholder="0" min="0" step="0.5"
+              style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)">
+          </div>
+          <div id="ik-preview" style="background:var(--green-lt);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--green);font-weight:600;display:none">
+            Montant estimé : <span id="ik-preview-val"></span>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+          <button onclick="closeIKModal()"
+            style="padding:9px 20px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink)">
+            Annuler
+          </button>
+          <button onclick="saveIKTrajet()"
+            style="padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Preview en temps réel
+  const kmInput = document.getElementById('ik-km');
+  if (kmInput) {
+    kmInput.addEventListener('input', function() {
+      const km = parseFloat(this.value) || 0;
+      const prev = document.getElementById('ik-preview');
+      const prevVal = document.getElementById('ik-preview-val');
+      if (km > 0) {
+        prev.style.display = '';
+        prevVal.textContent = (km * IK_BAREME).toFixed(2) + ' €';
+      } else {
+        prev.style.display = 'none';
+      }
+    });
+  }
+}
+
+function openIKModal() {
+  const m = document.getElementById('ik-modal');
+  if (m) m.style.display = 'flex';
+}
+function closeIKModal() {
+  const m = document.getElementById('ik-modal');
+  if (m) m.style.display = 'none';
+}
+
+function saveIKTrajet() {
+  const sal   = document.getElementById('ik-sal').value.trim();
+  const date  = document.getElementById('ik-date').value;
+  const motif = document.getElementById('ik-motif').value.trim();
+  const km    = parseFloat(document.getElementById('ik-km').value);
+  if (!sal || !date || !motif || !km || km <= 0) {
+    alert('Merci de remplir tous les champs.');
+    return;
+  }
+  const mois = date.slice(0,7);
+  const data = getIKData();
+  if (!data[mois]) data[mois] = [];
+  data[mois].push({ sal, salarie: sal, date, motif, km });
+  saveIKData(data);
+  window._ikMoisSel = mois;
+  closeIKModal();
+  renderPlanningIK();
+}
+
+function deleteIKTrajet(mois, idx) {
+  if (!confirm('Supprimer ce trajet ?')) return;
+  const data = getIKData();
+  if (data[mois]) {
+    data[mois].splice(idx, 1);
+    saveIKData(data);
+    renderPlanningIK();
+  }
+}
+
+function exportIKPDF() {
+  const mois = window._ikMoisSel || '';
+  const data = getIKData();
+  const trajets = (data[mois] || []);
+  if (!trajets.length) { alert('Aucun trajet à exporter.'); return; }
+
+  const totalKm  = trajets.reduce((s,t)=>s+(parseFloat(t.km)||0),0);
+  const totalEur = totalKm * IK_BAREME;
+  const moisLabel = new Date(mois+'-01').toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>IK ${moisLabel}</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:32px;color:#1C1917;font-size:13px}
+    h1{font-size:20px;margin-bottom:4px}
+    .sub{color:#57534E;margin-bottom:24px;font-size:13px}
+    table{width:100%;border-collapse:collapse;margin-bottom:24px}
+    th{background:#F0EDE8;padding:8px 12px;text-align:left;font-weight:600;border:1px solid #E7E5E0}
+    td{padding:8px 12px;border:1px solid #E7E5E0}
+    .total{font-weight:700;background:#F0EDE8}
+    .green{color:#16A34A;font-weight:700}
+    .footer{margin-top:40px;font-size:11px;color:#A8A29E}
+  </style></head><body>
+  <h1>Indemnités kilométriques — ${moisLabel}</h1>
+  <div class="sub">Barème fiscal 2025 : ${IK_BAREME} €/km</div>
+  <table>
+    <thead><tr><th>Date</th><th>Salarié</th><th>Motif / Trajet</th><th style="text-align:right">Km</th><th style="text-align:right">Montant</th></tr></thead>
+    <tbody>
+      ${trajets.map(t=>`<tr><td>${t.date}</td><td>${t.salarie}</td><td>${t.motif}</td><td style="text-align:right">${parseFloat(t.km).toFixed(1)}</td><td style="text-align:right" class="green">${(parseFloat(t.km)*IK_BAREME).toFixed(2)} €</td></tr>`).join('')}
+      <tr class="total"><td colspan="3">Total</td><td style="text-align:right">${totalKm.toFixed(1)} km</td><td style="text-align:right" class="green">${totalEur.toFixed(2)} €</td></tr>
+    </tbody>
+  </table>
+  <div class="footer">Document généré par Orevy Structures · ${new Date().toLocaleDateString('fr-FR')}</div>
+  </body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 500);
 }
 
 // ── PLANNING ÉQUIPE (Horaire × Jours) ───────────────────────────────
