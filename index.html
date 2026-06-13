@@ -9470,399 +9470,387 @@ function renderActiveTab() {
 
 
 // ── IK — Indemnités Kilométriques ───────────────────────────────────────
-const IK_KEY      = 'orevy_ik_v1';
-const IK_DIST_KEY = 'orevy_ik_distances_v1';
-const IK_BAREME   = 0.231; // €/km barème fiscal 2025
+const IK_CFG_KEY  = 'orevy_ik_config_v1';
+const IK_ROWS_KEY = 'orevy_ik_rows_v1';
+let ikRows = [];
 
-function getIKData()  { try { return JSON.parse(localStorage.getItem(IK_KEY)||'{}'); }      catch(e) { return {}; } }
-function saveIKData(d){ localStorage.setItem(IK_KEY, JSON.stringify(d)); }
-function getIKDist()  { try { return JSON.parse(localStorage.getItem(IK_DIST_KEY)||'{}'); } catch(e) { return {}; } }
-function saveIKDist(d){ localStorage.setItem(IK_DIST_KEY, JSON.stringify(d)); }
+function ikGetConfig() {
+  try {
+    const s = JSON.parse(localStorage.getItem(IK_CFG_KEY)||'{}');
+    const creches = (window.CRECHES_DATA||[]).map(c=>c.nom);
+    const dist = {};
+    creches.forEach(c => dist[c] = s.dist&&s.dist[c]!==undefined ? s.dist[c] : 0);
+    return { depart: s.depart||'', dist, bareme: s.bareme||0.248 };
+  } catch(e) { return { depart:'', dist:{}, bareme:0.248 }; }
+}
 
-function ikDistKey(a,b) { return [a,b].sort().join('|||'); }
+function ikSaveConfig() {
+  const depart = (document.getElementById('ik-depart-pt')||{}).value||'';
+  const bareme = parseFloat((document.getElementById('ik-bareme')||{}).value)||0.248;
+  const dist = {};
+  document.querySelectorAll('.ik-dist-inp').forEach(inp => {
+    dist[inp.dataset.creche] = parseFloat(inp.value)||0;
+  });
+  localStorage.setItem(IK_CFG_KEY, JSON.stringify({depart, dist, bareme}));
+  ikRenderTable();
+  alert('Configuration sauvegardée !');
+}
 
-// ── Génération auto IK depuis le planning ─────────────────────────────────
-function genererIKdepuisPlanning() {
-  const dist = getIKDist();
-  const data = getIKData();
+function ikDetectCreche(lieu) {
+  if (!lieu) return null;
+  const l = lieu.trim().toLowerCase();
+  const creches = (window.CRECHES_DATA||[]).map(c=>c.nom);
+  for (const c of creches) { if (l === c.toLowerCase()) return c; }
+  for (const c of creches) { if (l.includes(c.toLowerCase())) return c; }
+  return null;
+}
+
+// Lit le planning Orevy pour un mois donné et génère les lignes IK
+function ikReadPlanning(yearMonth) {
+  const [year, month] = yearMonth.split('-').map(Number);
+  const cfg = ikGetConfig();
+  const depart = cfg.depart;
+  const rows = [];
   const peData = JSON.parse(localStorage.getItem('planning_equipe')||'{}');
-  const horaires = JSON.parse(localStorage.getItem('planning_horaires_config')||'[]');
 
-  // Parcourir toutes les clés du planning (format YYYY-WNN-creche)
-  const weekKeys = Object.keys(peData);
-  const weekPattern = /^(\d{4}-W\d{2})-(.+)$/;
-
-  // Regrouper par semaine
-  const parSemaine = {};
-  weekKeys.forEach(k => {
-    const m = k.match(weekPattern);
+  // Parcourir toutes les clés du planning
+  Object.entries(peData).forEach(([key, week]) => {
+    // key format: YYYY-WNN-creche
+    const m = key.match(/^(\d{4})-W(\d{2})-(.+)$/);
     if (!m) return;
-    const semaine = m[1];
-    const creche  = m[2];
-    if (!parSemaine[semaine]) parSemaine[semaine] = {};
-    parSemaine[semaine][creche] = peData[k];
-  });
+    const creche = m[3];
+    if (!creche || creche === depart) return; // pas de trajet si même crèche que départ
 
-  let nbGeneres = 0;
+    (week.creneaux||[]).forEach(cr => {
+      if (!cr.pro) return;
+      // Calculer la date réelle
+      const isoYear = parseInt(m[1]), isoWeek = parseInt(m[2]);
+      const jan4 = new Date(isoYear, 0, 4);
+      const lundi = new Date(jan4);
+      lundi.setDate(jan4.getDate() - ((jan4.getDay()+6)%7) + (isoWeek-1)*7);
+      const dateTrajet = new Date(lundi);
+      dateTrajet.setDate(lundi.getDate() + (cr.jour||0));
 
-  Object.entries(parSemaine).forEach(([semaine, crechesData]) => {
-    const creches = Object.keys(crechesData);
-    if (creches.length < 2) return;
+      // Filtrer sur le mois demandé
+      if (dateTrajet.getMonth()+1 !== month || dateTrajet.getFullYear() !== year) return;
 
-    // Pour chaque salarié, trouver les jours où il est sur plusieurs crèches
-    const proParJour = {}; // pro -> jour -> [creches]
-    creches.forEach(creche => {
-      const week = crechesData[creche];
-      (week.creneaux||[]).forEach(cr => {
-        if (!cr.pro) return;
-        if (!proParJour[cr.pro]) proParJour[cr.pro] = {};
-        if (!proParJour[cr.pro][cr.jour]) proParJour[cr.pro][cr.jour] = [];
-        if (!proParJour[cr.pro][cr.jour].includes(creche))
-          proParJour[cr.pro][cr.jour].push(creche);
-      });
-    });
+      const dateStr = `${dateTrajet.getFullYear()}-${String(dateTrajet.getMonth()+1).padStart(2,'0')}-${String(dateTrajet.getDate()).padStart(2,'0')}`;
+      const trajet = depart ? `${depart} → ${creche}` : creche;
 
-    // Calculer la date de début de semaine (lundi)
-    const [annee, ww] = semaine.split('-W');
-    const jan4 = new Date(parseInt(annee), 0, 4);
-    const lundi = new Date(jan4);
-    lundi.setDate(jan4.getDate() - ((jan4.getDay()+6)%7) + (parseInt(ww)-1)*7);
-
-    Object.entries(proParJour).forEach(([pro, joursData]) => {
-      Object.entries(joursData).forEach(([jour, creches]) => {
-        if (creches.length < 2) return;
-        // Trajet entre chaque paire de crèches ce jour-là
-        for (let i=0; i<creches.length-1; i++) {
-          const cA = creches[i], cB = creches[i+1];
-          const km = dist[ikDistKey(cA,cB)];
-          if (!km) return; // distance non configurée
-
-          const dateTrajet = new Date(lundi);
-          dateTrajet.setDate(lundi.getDate() + parseInt(jour));
-          const dateStr = dateTrajet.toISOString().slice(0,10);
-          const mois = dateStr.slice(0,7);
-
-          if (!data[mois]) data[mois] = [];
-
-          // Éviter les doublons
-          const existe = data[mois].some(t =>
-            t.salarie===pro && t.date===dateStr && t.depart===cA && t.arrivee===cB && t.auto
-          );
-          if (!existe) {
-            data[mois].push({ salarie:pro, date:dateStr, depart:cA, arrivee:cB,
-              motif:`${cA} → ${cB}`, km:parseFloat(km), auto:true });
-            nbGeneres++;
-          }
-        }
+      rows.push({
+        id: `${key}_${cr.id||cr.pro}_${cr.jour}`,
+        date: dateStr,
+        salarie: cr.pro,
+        trajet,
+        creche,
+        nbr: 2, // aller-retour par défaut
+        ignored: false
       });
     });
   });
 
-  saveIKData(data);
-  return nbGeneres;
+  // Dédoublonner par salarié+date+crèche
+  const seen = new Set();
+  const dedup = rows.filter(r => {
+    const k = `${r.salarie}|${r.date}|${r.creche}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  dedup.sort((a,b) => a.date.localeCompare(b.date) || a.salarie.localeCompare(b.salarie));
+  return dedup;
+}
+
+function ikLoad(yearMonth) {
+  const month = yearMonth || (document.getElementById('ik-month-sel')||{}).value;
+  if (!month) return;
+  const saved = JSON.parse(localStorage.getItem(`${IK_ROWS_KEY}_${month}`)||'null');
+  if (saved) {
+    ikRows = saved;
+    ikRenderTable();
+  } else {
+    ikLoadFromPlanning(month);
+  }
+}
+
+function ikLoadFromPlanning(yearMonth) {
+  const month = yearMonth || (document.getElementById('ik-month-sel')||{}).value;
+  if (!month) { alert('Sélectionnez un mois.'); return; }
+  ikRows = ikReadPlanning(month);
+  ikSaveRows(month);
+  ikRenderTable();
+  const count = ikRows.filter(r=>!r.ignored).length;
+  const info = document.getElementById('ik-load-info');
+  if (info) info.textContent = `${count} trajet(s) chargé(s) depuis le planning`;
+}
+
+function ikSaveRows(yearMonth) {
+  const month = yearMonth || (document.getElementById('ik-month-sel')||{}).value;
+  if (month) localStorage.setItem(`${IK_ROWS_KEY}_${month}`, JSON.stringify(ikRows));
+}
+
+function ikRenderTable() {
+  const tbody = document.getElementById('ik-tbody');
+  if (!tbody) return;
+  const cfg = ikGetConfig();
+  const bareme = parseFloat((document.getElementById('ik-bareme')||{}).value) || cfg.bareme;
+  const dist = {};
+  document.querySelectorAll('.ik-dist-inp').forEach(inp => {
+    dist[inp.dataset.creche] = parseFloat(inp.value)||0;
+  });
+  // Fallback sur config sauvegardée
+  if (!Object.keys(dist).length) Object.assign(dist, cfg.dist);
+
+  if (!ikRows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="padding:28px;text-align:center;color:var(--ink3)">Aucun trajet — cliquez sur "⟳ Depuis le planning" ou "+ Ajouter"</td></tr>`;
+    ikUpdateTotals(dist, bareme);
+    return;
+  }
+
+  tbody.innerHTML = ikRows.map((row, idx) => {
+    const km = row.ignored ? 0 : (dist[row.creche]||0);
+    const tKm = row.nbr * km;
+    const mont = tKm * bareme;
+    const inpStyle = `width:100%;padding:4px 6px;border:1px solid transparent;border-radius:6px;font-size:12px;font-family:inherit;background:transparent;color:var(--ink)`;
+
+    if (row.ignored) return `<tr style="opacity:0.4">
+      <td style="padding:7px 10px"><input value="${row.date}" onchange="ikUpdateRow(${idx},'date',this.value)" style="${inpStyle}"></td>
+      <td style="padding:7px 10px;font-size:12px;color:var(--ink3)">${row.salarie||''}</td>
+      <td colspan="4" style="padding:7px 10px;font-size:12px;color:var(--ink3);font-style:italic;text-align:center">— lieu non reconnu, ignoré —</td>
+      <td style="padding:7px 10px;text-align:center"><button onclick="ikDeleteRow(${idx})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px">✕</button></td>
+    </tr>`;
+
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 10px"><input value="${row.date}" onchange="ikUpdateRow(${idx},'date',this.value)" style="${inpStyle}"></td>
+      <td style="padding:7px 10px;font-size:12px;color:var(--ink2)">${row.salarie||''}</td>
+      <td style="padding:7px 10px"><input value="${row.trajet}" onchange="ikUpdateRow(${idx},'trajet',this.value)" style="${inpStyle}"></td>
+      <td style="padding:7px 10px;text-align:center"><input type="number" value="${row.nbr}" min="1" onchange="ikUpdateRow(${idx},'nbr',this.value)" style="${inpStyle};width:50px;text-align:center"></td>
+      <td style="padding:7px 10px;text-align:center;font-weight:600;color:var(--ink)">${km}</td>
+      <td style="padding:7px 10px;text-align:right;font-weight:700;color:var(--green)">${mont.toFixed(2)} €</td>
+      <td style="padding:7px 10px;text-align:center"><button onclick="ikDeleteRow(${idx})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  ikUpdateTotals(dist, bareme);
+}
+
+function ikUpdateRow(idx, field, value) {
+  if (field === 'nbr') ikRows[idx][field] = parseInt(value)||1;
+  else ikRows[idx][field] = value;
+  if (field === 'trajet') {
+    const creche = ikDetectCreche(value);
+    ikRows[idx].creche = creche;
+    ikRows[idx].ignored = !creche;
+  }
+  ikSaveRows();
+  ikRenderTable();
+}
+
+function ikDeleteRow(idx) { ikRows.splice(idx,1); ikSaveRows(); ikRenderTable(); }
+
+function ikAddRow() {
+  const month = (document.getElementById('ik-month-sel')||{}).value;
+  const cfg = ikGetConfig();
+  ikRows.push({ id: Date.now().toString(), date: month?month+'-01':new Date().toISOString().slice(0,10),
+    salarie:'', trajet: cfg.depart ? cfg.depart+' → ' : '', creche:null, nbr:2, ignored:false });
+  ikSaveRows(); ikRenderTable();
+}
+
+function ikUpdateTotals(dist, bareme) {
+  let tKm=0, tEur=0;
+  ikRows.filter(r=>!r.ignored).forEach(r => {
+    const km = dist ? (dist[r.creche]||0) : 0;
+    tKm += r.nbr*km; tEur += r.nbr*km*bareme;
+  });
+  const el = document.getElementById('ik-tot-km');
+  const el2 = document.getElementById('ik-tot-eur');
+  if (el) el.textContent = tKm;
+  if (el2) el2.textContent = tEur.toFixed(2).replace('.',',');
+}
+
+function ikGenerate() {
+  const month = (document.getElementById('ik-month-sel')||{}).value;
+  if (!month) { alert('Sélectionnez un mois.'); return; }
+  const active = ikRows.filter(r=>!r.ignored);
+  if (!active.length) { alert('Aucun trajet à exporter.'); return; }
+  const cfg = ikGetConfig();
+  const bareme = parseFloat((document.getElementById('ik-bareme')||{}).value)||cfg.bareme;
+  const dist = {};
+  document.querySelectorAll('.ik-dist-inp').forEach(inp=>{ dist[inp.dataset.creche]=parseFloat(inp.value)||0; });
+
+  const [year, monthNum] = month.split('-').map(Number);
+  const monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const monthName = monthNames[monthNum-1];
+  const firstDay = `${year}-${String(monthNum).padStart(2,'0')}-01`;
+  const lastDay = new Date(year, monthNum, 0).toISOString().slice(0,10);
+
+  function fmtDate(d) { if(!d)return''; const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+
+  let tKm=0, tEur=0;
+  const dataRows = active.map(r => {
+    const km = dist[r.creche]||cfg.dist[r.creche]||0;
+    const tk = r.nbr*km, m = tk*bareme;
+    tKm+=tk; tEur+=m;
+    return { date:r.date, salarie:r.salarie, trajet:r.trajet, nbr:r.nbr, km, tk, m };
+  });
+
+  const rowsXml = dataRows.map(r=>`<Row ss:Height="15.95">
+    <Cell ss:StyleID="sDate"><Data ss:Type="String">${fmtDate(r.date)}</Data></Cell>
+    <Cell ss:StyleID="sText"><Data ss:Type="String">${r.salarie}</Data></Cell>
+    <Cell ss:StyleID="sText"><Data ss:Type="String">${r.trajet}</Data></Cell>
+    <Cell ss:StyleID="sNum"><Data ss:Type="Number">${r.nbr}</Data></Cell>
+    <Cell ss:StyleID="sNum"><Data ss:Type="Number">${r.km}</Data></Cell>
+    <Cell ss:StyleID="sNum"><Data ss:Type="Number">${r.tk}</Data></Cell>
+    <Cell ss:StyleID="sMoney"><Data ss:Type="Number">${r.m.toFixed(3)}</Data></Cell>
+  </Row>`).join('');
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Styles>
+  <Style ss:ID="sTitle"><Font ss:Bold="1" ss:Size="13"/><Alignment ss:Horizontal="Center"/></Style>
+  <Style ss:ID="sColHeader"><Font ss:Bold="1"/><Interior ss:Color="#F0EDE8" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  <Style ss:ID="sDate"><NumberFormat ss:Format="DD/MM/YYYY"/></Style>
+  <Style ss:ID="sText"></Style>
+  <Style ss:ID="sNum"><Alignment ss:Horizontal="Center"/></Style>
+  <Style ss:ID="sMoney"><NumberFormat ss:Format="#,##0.00 €"/><Font ss:Bold="1" ss:Color="#16A34A"/></Style>
+  <Style ss:ID="sTotalRow"><Font ss:Bold="1"/><Interior ss:Color="#F0EDE8" ss:Pattern="Solid"/></Style>
+</Styles>
+<Worksheet ss:Name="Frais IK ${monthName}">
+<Table ss:DefaultColumnWidth="80">
+  <Column ss:Width="85"/><Column ss:Width="120"/><Column ss:Width="130"/><Column ss:Width="70"/><Column ss:Width="80"/><Column ss:Width="80"/><Column ss:Width="100"/>
+  <Row ss:Height="20"><Cell ss:MergeAcross="6" ss:StyleID="sTitle"><Data ss:Type="String">Frais kilométriques — ${monthName.charAt(0).toUpperCase()+monthName.slice(1)} ${year}</Data></Cell></Row>
+  <Row><Cell ss:StyleID="sText"><Data ss:Type="String">Barème : ${bareme} €/km</Data></Cell><Cell/><Cell/><Cell/><Cell/><Cell/><Cell ss:StyleID="sMoney"><Data ss:Type="Number">${tEur.toFixed(3)}</Data></Cell></Row>
+  <Row/>
+  <Row>
+    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Date</Data></Cell>
+    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Salarié</Data></Cell>
+    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Trajet</Data></Cell>
+    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Nb trajets</Data></Cell>
+    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">km/trajet</Data></Cell>
+    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Total km</Data></Cell>
+    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Montant</Data></Cell>
+  </Row>
+  ${rowsXml}
+  <Row ss:StyleID="sTotalRow">
+    <Cell ss:MergeAcross="4" ss:StyleID="sTotalRow"><Data ss:Type="String">TOTAL</Data></Cell>
+    <Cell ss:StyleID="sTotalRow"><Data ss:Type="Number">${tKm}</Data></Cell>
+    <Cell ss:StyleID="sMoney"><Data ss:Type="Number">${tEur.toFixed(3)}</Data></Cell>
+  </Row>
+</Table>
+</Worksheet>
+</Workbook>`;
+
+  const blob = new Blob([xml], {type:'application/vnd.ms-excel'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `IK_${month}.xls`; a.click();
+  URL.revokeObjectURL(url);
 }
 
 function renderPlanningIK() {
   const el = document.getElementById('pe-ik-content');
   if (!el) return;
-
-  let salaries = [];
-  try { salaries = JSON.parse(localStorage.getItem('orevy_salaries')||'[]'); } catch(e) {}
-  salaries = salaries.filter(s=>s.statut!=='archivé');
-
-  const dist    = getIKDist();
-  const data    = getIKData();
+  const cfg = ikGetConfig();
   const creches = (window.CRECHES_DATA||[]).map(c=>c.nom);
-  const now     = new Date();
-
+  const now = new Date();
   const moisOptions = [];
   for (let i=0;i<12;i++) {
     const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
-    moisOptions.push({ val:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
-      label:d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}) });
+    moisOptions.push({ val:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, label:d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}) });
   }
   if (!window._ikMois) window._ikMois = moisOptions[0].val;
-  const selMois = window._ikMois;
-  const trajets = data[selMois]||[];
-  const totalKm  = trajets.reduce((s,t)=>s+(parseFloat(t.km)||0),0);
-  const totalEur = totalKm*IK_BAREME;
-  const parSal   = {};
-  trajets.forEach(t=>{ if(!parSal[t.salarie]) parSal[t.salarie]=[]; parSal[t.salarie].push(t); });
-
-  // Vérifier si des distances manquent
-  let distManquantes = 0;
-  for (let i=0;i<creches.length;i++) for (let j=i+1;j<creches.length;j++)
-    if (!dist[ikDistKey(creches[i],creches[j])]) distManquantes++;
 
   el.innerHTML = `
-    <div style="padding:0 4px">
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start">
 
-      ${distManquantes>0 ? `
-      <div style="background:var(--amber-lt);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--amber);display:flex;align-items:center;gap:10px">
-        <span>⚠️</span>
-        <span>${distManquantes} distance${distManquantes>1?'s':''} entre crèches non configurée${distManquantes>1?'s':''}.</span>
-        <button onclick="openIKDistModal()" style="margin-left:auto;padding:5px 12px;background:var(--amber);color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer">Configurer</button>
-      </div>` : ''}
-
-      <!-- KPIs -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
-          <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Total km</div>
-          <div style="font-size:24px;font-weight:700;color:var(--ink)">${totalKm.toFixed(1)} km</div>
+      <!-- COLONNE PRINCIPALE -->
+      <div>
+        <!-- Sélecteur mois + actions -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <select id="ik-month-sel" onchange="window._ikMois=this.value;ikLoad(this.value)"
+            style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font-family:inherit;font-size:13px;color:var(--ink)">
+            ${moisOptions.map(m=>`<option value="${m.val}" ${m.val===window._ikMois?'selected':''}>${m.label}</option>`).join('')}
+          </select>
+          <button onclick="ikLoadFromPlanning()"
+            style="padding:8px 14px;background:var(--accent-lt);color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+            ⟳ Depuis le planning
+          </button>
+          <button onclick="ikAddRow()"
+            style="padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink)">
+            + Ajouter
+          </button>
+          <button onclick="ikGenerate()"
+            style="padding:8px 14px;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+            ⬇ Excel
+          </button>
+          <span id="ik-load-info" style="font-size:12px;color:var(--ink3)"></span>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
-          <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Montant à rembourser</div>
-          <div style="font-size:24px;font-weight:700;color:var(--green)">${totalEur.toFixed(2)} €</div>
+
+        <!-- Barre total -->
+        <div style="background:var(--accent);color:#fff;border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:12px;opacity:0.85">Total du mois · <span id="ik-tot-km">0</span> km</div>
+          <div style="font-size:22px;font-weight:800"><span id="ik-tot-eur">0,00</span> €</div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
-          <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Barème fiscal 2025</div>
-          <div style="font-size:24px;font-weight:700;color:var(--ink)">${IK_BAREME.toFixed(3)} €/km</div>
-        </div>
-      </div>
 
-      <!-- Actions -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-        <select onchange="window._ikMois=this.value;renderPlanningIK()"
-          style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font-family:inherit;font-size:13px;color:var(--ink)">
-          ${moisOptions.map(m=>`<option value="${m.val}" ${m.val===selMois?'selected':''}>${m.label}</option>`).join('')}
-        </select>
-        <button onclick="ikGenererAuto()" title="Générer les trajets depuis le planning"
-          style="padding:8px 14px;background:var(--accent-lt);color:var(--accent);border:1px solid var(--accent);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
-          ⚡ Générer depuis le planning
-        </button>
-        <button onclick="openIKModal()"
-          style="padding:8px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
-          + Ajouter manuellement
-        </button>
-        <button onclick="openIKDistModal()"
-          style="padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink2)">
-          🗺 Distances entre crèches
-        </button>
-        <button onclick="exportIKPDF()"
-          style="padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink)">
-          🖨 PDF
-        </button>
-      </div>
-
-      <!-- Tableau -->
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:var(--bg)">
-            <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Date</th>
-            <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Salarié</th>
-            <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Trajet</th>
-            <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Km</th>
-            <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Montant</th>
-            <th style="padding:10px 14px;border-bottom:1px solid var(--border)"></th>
-          </tr></thead>
-          <tbody>
-            ${trajets.length===0
-              ? `<tr><td colspan="6" style="padding:32px;text-align:center;color:var(--ink3)">Aucun trajet ce mois.<br><span style="font-size:12px">Cliquez sur "⚡ Générer depuis le planning" ou "+ Ajouter manuellement"</span></td></tr>`
-              : trajets.map((t,i)=>`
-                <tr style="border-bottom:1px solid var(--border);${t.auto?'background:var(--accent-lt)':''}" title="${t.auto?'Généré automatiquement depuis le planning':'Saisi manuellement'}">
-                  <td style="padding:10px 14px;color:var(--ink)">${t.date}${t.auto?'<span style="font-size:10px;color:var(--accent);margin-left:6px;background:var(--accent-lt);padding:1px 5px;border-radius:4px">auto</span>':''}</td>
-                  <td style="padding:10px 14px;color:var(--ink);font-weight:500">${t.salarie}</td>
-                  <td style="padding:10px 14px;color:var(--ink2)">${t.motif}</td>
-                  <td style="padding:10px 14px;text-align:right;font-weight:600;color:var(--ink)">${parseFloat(t.km).toFixed(1)}</td>
-                  <td style="padding:10px 14px;text-align:right;font-weight:600;color:var(--green)">${(parseFloat(t.km)*IK_BAREME).toFixed(2)} €</td>
-                  <td style="padding:10px 14px;text-align:center">
-                    <button onclick="deleteIKTrajet('${selMois}',${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:15px" title="Supprimer">🗑</button>
-                  </td>
-                </tr>`).join('')}
-          </tbody>
-          ${trajets.length>0?`<tfoot><tr style="background:var(--bg)">
-            <td colspan="3" style="padding:10px 14px;font-weight:700;color:var(--ink)">Total</td>
-            <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--ink)">${totalKm.toFixed(1)} km</td>
-            <td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--green)">${totalEur.toFixed(2)} €</td>
-            <td></td>
-          </tr></tfoot>`:''}
-        </table>
-      </div>
-
-      <!-- Récap par salarié -->
-      ${Object.keys(parSal).length>0?`
-      <div style="margin-top:20px">
-        <div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Récap par salarié</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-          ${Object.entries(parSal).map(([nom,ts])=>{
-            const km=ts.reduce((s,t)=>s+(parseFloat(t.km)||0),0);
-            return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px">
-              <div style="font-weight:600;color:var(--ink);margin-bottom:4px">${nom}</div>
-              <div style="font-size:12px;color:var(--ink3)">${ts.length} trajet${ts.length>1?'s':''} · ${km.toFixed(1)} km</div>
-              <div style="font-size:15px;font-weight:700;color:var(--green);margin-top:4px">${(km*IK_BAREME).toFixed(2)} €</div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`:''}
-    </div>
-
-    <!-- Modal distances entre crèches -->
-    <div id="ik-dist-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;align-items:center;justify-content:center">
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:28px;width:520px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)">
-        <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px">Distances entre crèches</div>
-        <div style="font-size:12px;color:var(--ink3);margin-bottom:20px">Saisissez la distance aller en km entre chaque paire de crèches. Utilisée pour le calcul automatique des IK.</div>
-        <div id="ik-dist-grid" style="display:flex;flex-direction:column;gap:10px"></div>
-        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
-          <button onclick="closeIKDistModal()" style="padding:9px 20px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink)">Fermer</button>
-          <button onclick="saveIKDistances()" style="padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">Enregistrer</button>
+        <!-- Tableau -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:var(--bg)">
+              <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border);white-space:nowrap">Date</th>
+              <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Salarié</th>
+              <th style="padding:9px 10px;text-align:left;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Trajet</th>
+              <th style="padding:9px 10px;text-align:center;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Nb</th>
+              <th style="padding:9px 10px;text-align:center;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">km</th>
+              <th style="padding:9px 10px;text-align:right;font-weight:600;color:var(--ink2);border-bottom:1px solid var(--border)">Montant</th>
+              <th style="padding:9px 10px;border-bottom:1px solid var(--border);width:32px"></th>
+            </tr></thead>
+            <tbody id="ik-tbody"></tbody>
+          </table>
         </div>
       </div>
-    </div>
 
-    <!-- Modal ajout manuel -->
-    <div id="ik-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;align-items:center;justify-content:center">
-      <div style="background:var(--surface2);border-radius:var(--radius);padding:28px;width:440px;max-width:96vw;box-shadow:var(--shadow-lg)">
-        <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:20px">Ajouter un trajet IK</div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div><label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Salarié</label>
-            <select id="ik-sal" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)">
-              <option value="">-- Choisir --</option>
-              ${salaries.map(s=>`<option value="${(s.prenom||'')+' '+(s.nom||'')}">${(s.prenom||'')} ${(s.nom||'')}</option>`).join('')}
-            </select></div>
-          <div><label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Date</label>
-            <input type="date" id="ik-date" value="${new Date().toISOString().slice(0,10)}"
-              style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)"></div>
-          <div><label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Crèche de départ</label>
-            <select id="ik-depart" onchange="ikUpdateKmAuto()"
-              style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)">
-              <option value="">-- Choisir --</option>
-              ${creches.map(c=>`<option value="${c}">${c}</option>`).join('')}
-            </select></div>
-          <div><label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Crèche d'arrivée</label>
-            <select id="ik-arrivee" onchange="ikUpdateKmAuto()"
-              style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)">
-              <option value="">-- Choisir --</option>
-              ${creches.map(c=>`<option value="${c}">${c}</option>`).join('')}
-            </select></div>
-          <div><label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Motif (optionnel)</label>
-            <input type="text" id="ik-motif" placeholder="Ex: remplacement, réunion…"
-              style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)"></div>
-          <div><label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Distance (km)</label>
-            <input type="number" id="ik-km" placeholder="0" min="0" step="0.5"
-              oninput="const p=document.getElementById('ik-prev');const pv=document.getElementById('ik-prev-val');if(this.value>0){p.style.display='';pv.textContent=(this.value*${IK_BAREME}).toFixed(2)+' €';}else{p.style.display='none';}"
-              style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)"></div>
-          <div id="ik-prev" style="display:none;background:var(--green-lt);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--green);font-weight:600">
-            Montant estimé : <span id="ik-prev-val"></span>
+      <!-- COLONNE CONFIG -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">⚙ Configuration IK</div>
+
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Point de départ</label>
+          <input type="text" id="ik-depart-pt" value="${cfg.depart}"
+            placeholder="Ex: Cuers, domicile…"
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)">
+        </div>
+
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Barème €/km</label>
+          <input type="number" id="ik-bareme" value="${cfg.bareme}" step="0.001" min="0"
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface2)"
+            onchange="ikRenderTable()">
+        </div>
+
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:8px">Distances (km aller)</label>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            ${creches.map(c=>`
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="flex:1;font-size:12px;color:var(--ink)">${c}</span>
+              <input type="number" class="ik-dist-inp" data-creche="${c}" value="${cfg.dist[c]||0}" min="0" step="1"
+                onchange="ikRenderTable()"
+                style="width:65px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:12px;text-align:center;color:var(--ink);background:var(--surface2)">
+              <span style="font-size:11px;color:var(--ink3)">km</span>
+            </div>`).join('')}
           </div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
-          <button onclick="closeIKModal()" style="padding:9px 20px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink)">Annuler</button>
-          <button onclick="saveIKTrajet()" style="padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">Enregistrer</button>
-        </div>
+
+        <button onclick="ikSaveConfig()"
+          style="width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+          Sauvegarder
+        </button>
       </div>
     </div>`;
-}
 
-function ikUpdateKmAuto() {
-  const dep = (document.getElementById('ik-depart')||{}).value;
-  const arr = (document.getElementById('ik-arrivee')||{}).value;
-  if (!dep || !arr || dep===arr) return;
-  const dist = getIKDist();
-  const km   = dist[ikDistKey(dep,arr)];
-  if (km) {
-    const inp = document.getElementById('ik-km');
-    if (inp) { inp.value = km;
-      const p = document.getElementById('ik-prev');
-      const pv = document.getElementById('ik-prev-val');
-      if (p) p.style.display = '';
-      if (pv) pv.textContent = (km * IK_BAREME).toFixed(2) + ' €';
-    }
-  }
-}
-
-function openIKDistModal() {
-  const creches = (window.CRECHES_DATA||[]).map(c=>c.nom);
-  const dist = getIKDist();
-  const grid = document.getElementById('ik-dist-grid');
-  if (!grid) return;
-  let html = '';
-  for (let i=0;i<creches.length;i++) {
-    for (let j=i+1;j<creches.length;j++) {
-      const key = ikDistKey(creches[i],creches[j]);
-      const val = dist[key]||'';
-      html += `<div style="display:flex;align-items:center;gap:10px">
-        <div style="flex:1;font-size:13px;color:var(--ink);font-weight:500">${creches[i]} → ${creches[j]}</div>
-        <input type="number" data-key="${key}" value="${val}" min="0" step="0.5" placeholder="km"
-          style="width:90px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--ink);text-align:right">
-        <span style="font-size:12px;color:var(--ink3)">km</span>
-      </div>`;
-    }
-  }
-  grid.innerHTML = html;
-  document.getElementById('ik-dist-modal').style.display = 'flex';
-}
-function closeIKDistModal() { document.getElementById('ik-dist-modal').style.display = 'none'; }
-
-function saveIKDistances() {
-  const dist = {};
-  document.querySelectorAll('#ik-dist-grid input[data-key]').forEach(inp => {
-    const val = parseFloat(inp.value);
-    if (val > 0) dist[inp.dataset.key] = val;
-  });
-  saveIKDist(dist);
-  closeIKDistModal();
-  renderPlanningIK();
-}
-
-function ikGenererAuto() {
-  const nb = genererIKdepuisPlanning();
-  if (nb === 0) {
-    alert('Aucun nouveau trajet détecté.\nVérifiez que les distances entre crèches sont configurées et que le planning contient des salariés sur plusieurs structures.');
-  } else {
-    alert(`${nb} trajet${nb>1?'s':''} IK généré${nb>1?'s':''} depuis le planning.`);
-  }
-  renderPlanningIK();
-}
-
-function openIKModal() { const m=document.getElementById('ik-modal'); if(m) m.style.display='flex'; }
-function closeIKModal() { const m=document.getElementById('ik-modal'); if(m) m.style.display='none'; }
-
-function saveIKTrajet() {
-  const sal   = (document.getElementById('ik-sal')||{}).value.trim();
-  const date  = (document.getElementById('ik-date')||{}).value;
-  const dep   = (document.getElementById('ik-depart')||{}).value;
-  const arr   = (document.getElementById('ik-arrivee')||{}).value;
-  const motif = (document.getElementById('ik-motif')||{}).value.trim();
-  const km    = parseFloat((document.getElementById('ik-km')||{}).value);
-  if (!sal||!date||!km||km<=0) { alert('Salarié, date et distance sont obligatoires.'); return; }
-  const mois = date.slice(0,7);
-  const data = getIKData();
-  if (!data[mois]) data[mois] = [];
-  const trajetMotif = dep && arr ? `${dep} → ${arr}${motif?' ('+motif+')':''}` : (motif||'Trajet manuel');
-  data[mois].push({ salarie:sal, date, depart:dep, arrivee:arr, motif:trajetMotif, km, auto:false });
-  saveIKData(data);
-  window._ikMois = mois;
-  closeIKModal();
-  renderPlanningIK();
-}
-
-function deleteIKTrajet(mois,idx) {
-  if (!confirm('Supprimer ce trajet ?')) return;
-  const data = getIKData();
-  if (data[mois]) { data[mois].splice(idx,1); saveIKData(data); renderPlanningIK(); }
-}
-
-function exportIKPDF() {
-  const mois    = window._ikMois||'';
-  const trajets = getIKData()[mois]||[];
-  if (!trajets.length) { alert('Aucun trajet à exporter.'); return; }
-  const totalKm  = trajets.reduce((s,t)=>s+(parseFloat(t.km)||0),0);
-  const totalEur = totalKm*IK_BAREME;
-  const moisLabel = new Date(mois+'-01').toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
-  const win = window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>IK ${moisLabel}</title>
-  <style>body{font-family:Arial,sans-serif;padding:32px;color:#1C1917;font-size:13px}h1{font-size:20px;margin-bottom:4px}.sub{color:#57534E;margin-bottom:24px}table{width:100%;border-collapse:collapse;margin-bottom:24px}th{background:#F0EDE8;padding:8px 12px;text-align:left;font-weight:600;border:1px solid #E7E5E0}td{padding:8px 12px;border:1px solid #E7E5E0}.total td{font-weight:700;background:#F0EDE8}.green{color:#16A34A;font-weight:700}.auto{font-size:10px;color:#2563EB;margin-left:6px}.footer{margin-top:40px;font-size:11px;color:#A8A29E}</style>
-  </head><body>
-  <h1>Indemnités kilométriques — ${moisLabel}</h1>
-  <div class="sub">Barème fiscal 2025 : ${IK_BAREME} €/km</div>
-  <table><thead><tr><th>Date</th><th>Salarié</th><th>Trajet</th><th style="text-align:right">Km</th><th style="text-align:right">Montant</th></tr></thead>
-  <tbody>${trajets.map(t=>`<tr><td>${t.date}${t.auto?'<span class="auto">auto</span>':''}</td><td>${t.salarie}</td><td>${t.motif}</td><td style="text-align:right">${parseFloat(t.km).toFixed(1)}</td><td class="green" style="text-align:right">${(parseFloat(t.km)*IK_BAREME).toFixed(2)} €</td></tr>`).join('')}
-  <tr class="total"><td colspan="3">Total</td><td style="text-align:right">${totalKm.toFixed(1)} km</td><td class="green" style="text-align:right">${totalEur.toFixed(2)} €</td></tr>
-  </tbody></table>
-  <div class="footer">Orevy Structures · ${new Date().toLocaleDateString('fr-FR')}</div>
-  </body></html>`);
-  win.document.close();
-  setTimeout(()=>win.print(),500);
+  ikLoad(window._ikMois);
 }
 
 
