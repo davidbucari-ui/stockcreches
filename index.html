@@ -9479,7 +9479,9 @@ function saveIKData(d) { localStorage.setItem(IK_KEY, JSON.stringify(d)); }
 function renderPlanningIK() {
   const el = document.getElementById('pe-ik-content');
   if (!el) return;
-  const salaries = (window.rhData||[]).filter(s=>s.statut!=='archivé');
+  let salaries = [];
+  try { salaries = JSON.parse(localStorage.getItem('orevy_salaries')||'[]'); } catch(e) {}
+  salaries = salaries.filter(s=>s.statut!=='archivé');
   const data = getIKData();
   const now = new Date();
   const moisOptions = [];
@@ -12327,12 +12329,13 @@ function showImportResult(type, html) {
         <div class="form-group">
           <label>Fonction</label>
           <select id="sal-fonction">
-            <option>Directrice</option>
-            <option>Éducatrice de jeunes enfants</option>
+            <option>Directeur / Directrice</option>
+            <option>Coordinateur / Coordinatrice EJE</option>
+            <option>Éducateur / Éducatrice de jeunes enfants</option>
             <option>Auxiliaire de puériculture</option>
-            <option>CAP Petite Enfance</option>
-            <option>Agent d'entretien</option>
-            <option>Cuisinier</option>
+            <option>CAP Accompagnant Éducatif Petite Enfance</option>
+            <option>Agent / Agente d'entretien</option>
+            <option>Cuisinier / Cuisinière</option>
             <option>Stagiaire</option>
             <option>Autre</option>
           </select>
