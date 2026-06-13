@@ -9597,9 +9597,16 @@ function ikReadPlanning(yearMonth) {
 function ikLoad(yearMonth) {
   const month = yearMonth || (document.getElementById('ik-month-sel')||{}).value;
   if (!month) return;
+  const salSel = ((document.getElementById('ik-sal-sel')||{}).value||'').trim();
+  if (!salSel) { ikRows = []; ikRenderTable(); return; }
   const saved = JSON.parse(localStorage.getItem(`${IK_ROWS_KEY}_${month}`)||'null');
   if (saved) {
-    ikRows = saved;
+    // Filtrer uniquement les données du salarié sélectionné
+    ikRows = saved.filter(r => {
+      const rn = (r.salarie||'').trim().toLowerCase();
+      const sn = salSel.toLowerCase();
+      return rn === sn || rn.includes(sn) || sn.includes(rn);
+    });
     ikRenderTable();
   } else {
     ikLoadFromPlanning(month);
@@ -9967,7 +9974,14 @@ function renderPlanningIK() {
       </div>
     </div>`;
 
-  ikLoad(window._ikMois);
+  // Ne charger les données que si un salarié est déjà sélectionné
+  const salSel = ((document.getElementById('ik-sal-sel')||{}).value||'').trim();
+  if (salSel) {
+    ikLoad(window._ikMois);
+  } else {
+    ikRows = [];
+    ikRenderTable();
+  }
 }
 
 
