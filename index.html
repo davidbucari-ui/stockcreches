@@ -9736,189 +9736,116 @@ function ikGenerate() {
   const bareme = parseFloat((document.getElementById('ik-bareme')||{}).value)||cfg.bareme;
   const dist = Object.assign({}, cfg.dist);
   document.querySelectorAll('.ik-dist-inp').forEach(inp=>{ if(inp.dataset.creche) dist[inp.dataset.creche]=parseFloat(inp.value)||0; });
-
+  const salarie = ((document.getElementById('ik-sal-sel')||{}).value||'Salarié').trim();
   const [year, monthNum] = month.split('-').map(Number);
-  const monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  const monthName = monthNames[monthNum-1];
-
-  function fmtDate(d) {
-    if (!d) return '';
-    const dt = new Date(d + 'T12:00:00');
-    return dt.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'});
-  }
-  function excelDate(d) {
-    // Convertir date en numéro série Excel (jours depuis 1900-01-01)
-    const dt = new Date(d + 'T12:00:00');
-    const epoch = new Date(1899, 11, 30);
-    return Math.round((dt - epoch) / 86400000);
-  }
-
-  const salarie = (document.getElementById('ik-sal-sel')||{}).value || 'Salarié';
+  const mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const monthName = mnames[monthNum-1];
+  function fmtD(d) { if(!d)return''; const dt=new Date(d+'T12:00:00'); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
   const firstDay = `${year}-${String(monthNum).padStart(2,'0')}-01`;
-  const lastDay = new Date(year, monthNum, 0).toISOString().slice(0,10);
-
+  const ld = new Date(year, monthNum, 0);
+  const lastDay = `${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
   let totalEur = 0;
-  const dataRows = active.map(r => {
-    const km = dist[r.creche] !== undefined ? dist[r.creche] : 0;
-    const tk = r.nbr * km;
-    const m  = tk * bareme;
-    totalEur += m;
-    return { date:r.date, trajet:r.trajet, nbr:r.nbr, km, tk, m };
+  const rows = active.map(r => {
+    const km = dist[r.creche]!==undefined ? dist[r.creche] : 0;
+    const nbKm = r.nbr*km, mont = Math.round(nbKm*bareme*100)/100;
+    totalEur += mont; return {date:r.date,trajet:r.trajet,nbr:r.nbr,km,nbKm,mont};
   });
+  totalEur = Math.round(totalEur*100)/100;
 
-  const n = dataRows.length;
-  // Ligne de début des données = 10, fin = 9+n
-  const dataStart = 10, dataEnd = 9 + n;
-  const visaRow = dataEnd + 2;
+  const S = {
+    titre: `<Style ss:ID="S_T"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="14" ss:Name="Arial" ss:Color="#FFFFFF"/><Interior ss:Color="#006400" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="3"/></Borders></Style>`,
+    hy:  `<Style ss:ID="S_HY"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="8" ss:Name="Arial"/><Interior ss:Color="#FFFF99" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
+    hy10:`<Style ss:ID="S_HY10"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="10" ss:Name="Arial"/><Interior ss:Color="#FFFF99" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
+    hy12:`<Style ss:ID="S_HY12"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="12" ss:Name="Arial"/><Interior ss:Color="#FFFF99" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders><NumberFormat ss:Format="0.000"/></Style>`,
+    bl:  `<Style ss:ID="S_BL"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="14" ss:Name="Arial"/><Interior ss:Color="#CCFFFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="2"/></Borders><NumberFormat ss:Format="#,##0.00"/></Style>`,
+    bll: `<Style ss:ID="S_BLL"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="14" ss:Name="Arial"/><Interior ss:Color="#CCFFFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="2"/></Borders></Style>`,
+    gl:  `<Style ss:ID="S_GL"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:Bold="1" ss:Size="8" ss:Name="Arial"/><Interior ss:Color="#CCFFCC" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
+    sec: `<Style ss:ID="S_SEC"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="10" ss:Name="Arial" ss:Color="#FF0000"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
+    dat: `<Style ss:ID="S_DAT"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Size="8" ss:Name="Arial"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
+    datl:`<Style ss:ID="S_DATL"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Font ss:Size="8" ss:Name="Arial"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
+    mnt: `<Style ss:ID="S_MNT"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="8" ss:Name="Arial" ss:Color="#FF0000"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders><NumberFormat ss:Format="#,##0.00"/></Style>`,
+    tot: `<Style ss:ID="S_TOT"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="9" ss:Name="Arial"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="2"/></Borders></Style>`,
+    totm:`<Style ss:ID="S_TOTM"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="9" ss:Name="Arial" ss:Color="#FF0000"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="2"/></Borders><NumberFormat ss:Format="#,##0.00"/></Style>`,
+    vs:  `<Style ss:ID="S_VS"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="8" ss:Name="Arial"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
+    vsb: `<Style ss:ID="S_VSB"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="9" ss:Name="Arial"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
+  };
 
-  // Styles XML SpreadsheetML
-  const stylesXml = `
-  <Style ss:ID="sTitle"><Font ss:Bold="0" ss:Size="16" ss:Name="Arial"/><Alignment ss:Horizontal="CenterAcrossSelection" ss:Vertical="Center"/></Style>
-  <Style ss:ID="sHdr"><Font ss:Bold="1" ss:Size="8" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/></Style>
-  <Style ss:ID="sHdr10"><Font ss:Bold="1" ss:Size="10" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
-  <Style ss:ID="sHdr12"><Font ss:Bold="1" ss:Size="12" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
-  <Style ss:ID="sHdr14"><Font ss:Bold="1" ss:Size="14" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
-  <Style ss:ID="sDate"><Font ss:Size="7" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="DD/MM/YYYY"/></Style>
-  <Style ss:ID="sData7"><Font ss:Size="7" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
-  <Style ss:ID="sFormBold"><Font ss:Bold="1" ss:Size="7" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="#,##0.00"/></Style>
-  <Style ss:ID="sMoney12"><Font ss:Bold="1" ss:Size="12" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="#,##0.00"/></Style>
-  <Style ss:ID="sSection"><Font ss:Bold="1" ss:Size="10" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
-  <Style ss:ID="sVisa"><Font ss:Bold="1" ss:Size="9" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>`;
-
-  const dataRowsXml = dataRows.map((r,i) => {
-    const row = dataStart + i;
-    return `<Row ss:Height="15.95">
-      <Cell ss:StyleID="sDate"><Data ss:Type="DateTime">${r.date}T00:00:00.000</Data></Cell>
-      <Cell ss:StyleID="sData7"><Data ss:Type="String">${r.trajet}</Data></Cell>
-      <Cell ss:StyleID="sData7"><Data ss:Type="Number">${r.nbr}</Data></Cell>
-      <Cell ss:StyleID="sData7"><Data ss:Type="Number">${r.km}</Data></Cell>
-      <Cell ss:StyleID="sData7" ss:Formula="=RC[-2]*RC[-1]"><Data ss:Type="Number">${r.tk}</Data></Cell>
+  const dataXml = rows.map(r=>`
+    <Row ss:Height="16">
+      <Cell ss:StyleID="S_DAT"><Data ss:Type="String">${fmtD(r.date)}</Data></Cell>
+      <Cell ss:StyleID="S_DATL"><Data ss:Type="String">${r.trajet}</Data></Cell>
+      <Cell ss:StyleID="S_DAT"><Data ss:Type="Number">${r.nbr}</Data></Cell>
+      <Cell ss:StyleID="S_DAT"><Data ss:Type="Number">${r.km}</Data></Cell>
+      <Cell ss:StyleID="S_DAT"><Data ss:Type="Number">${r.nbKm}</Data></Cell>
       <Cell/>
-      <Cell ss:StyleID="sFormBold" ss:Formula="=IF(RC[-2]=&quot;&quot;,0,RC[-2]*R4C2)"><Data ss:Type="Number">${r.m.toFixed(3)}</Data></Cell>
-      <Cell/><Cell/><Cell/><Cell/><Cell/><Cell/>
-      <Cell ss:StyleID="sFormBold" ss:Formula="=RC[-7]+RC[-6]+RC[-5]+RC[-4]+RC[-3]+RC[-2]-RC[-1]"><Data ss:Type="Number">${r.m.toFixed(3)}</Data></Cell>
-    </Row>`;
-  }).join('');
+      <Cell ss:StyleID="S_MNT"><Data ss:Type="Number">${r.mont}</Data></Cell>
+    </Row>`).join('');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
-  xmlns:x="urn:schemas-microsoft-com:office:excel">
-<Styles>${stylesXml}</Styles>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<Styles>${Object.values(S).join('')}</Styles>
 <Worksheet ss:Name="FDEPvi">
+<x:WorksheetOptions><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>9</x:SplitHorizontal><x:TopRowBottomPane>9</x:TopRowBottomPane><x:ActivePane>2</x:ActivePane></x:WorksheetOptions>
 <Table>
-  <Column ss:Width="65"/>
-  <Column ss:Width="80"/>
-  <Column ss:Width="80"/>
-  <Column ss:Width="64"/>
-  <Column ss:Width="65"/>
-  <Column ss:Width="30"/>
-  <Column ss:Width="100"/>
-  <Column ss:Width="72"/>
-  <Column ss:Width="67"/>
-  <Column ss:Width="68"/>
-  <Column ss:Width="65"/>
-  <Column ss:Width="66"/>
-  <Column ss:Width="61"/>
-  <Column ss:Width="75"/>
-
-  <!-- Ligne 1 : Titre -->
-  <Row ss:Height="21">
+  <Column ss:Width="90"/><Column ss:Width="150"/><Column ss:Width="75"/><Column ss:Width="75"/><Column ss:Width="75"/><Column ss:Width="30"/><Column ss:Width="105"/>
+  <Row ss:Height="22"><Cell ss:StyleID="S_T" ss:MergeAcross="6"><Data ss:Type="String">C3F      Frais de déplacements            C3F</Data></Cell></Row>
+  <Row ss:Height="6"/>
+  <Row ss:Height="25">
+    <Cell ss:StyleID="S_HY"><Data ss:Type="String">N°</Data></Cell>
+    <Cell ss:StyleID="S_HY10" ss:MergeAcross="2"><Data ss:Type="String">${salarie}</Data></Cell>
+    <Cell ss:StyleID="S_HY10" ss:MergeAcross="1"><Data ss:Type="String">Période</Data></Cell>
     <Cell/>
-    <Cell ss:StyleID="sTitle" ss:MergeAcross="12"><Data ss:Type="String">C3F      Frais de déplacements            C3F</Data></Cell>
+    <Cell ss:StyleID="S_BLL"><Data ss:Type="String">TOTAL</Data></Cell>
   </Row>
-
-  <!-- Ligne 2 : vide -->
-  <Row ss:Height="16.5"/>
-
-  <!-- Ligne 3 : N° / Salarié / Période / TOTAL -->
-  <Row ss:Height="24.95">
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">N°</Data></Cell>
-    <Cell ss:StyleID="sHdr12"><Data ss:Type="String">xxx</Data></Cell>
-    <Cell/><Cell/>
-    <Cell ss:StyleID="sHdr10" ss:MergeAcross="3"><Data ss:Type="String">${salarie}</Data></Cell>
-    <Cell ss:StyleID="sHdr" ss:MergeAcross="3"><Data ss:Type="String">Période</Data></Cell>
-    <Cell/><Cell/>
-    <Cell ss:StyleID="sHdr14" ss:MergeAcross="1"><Data ss:Type="String">TOTAL</Data></Cell>
+  <Row ss:Height="25">
+    <Cell ss:StyleID="S_HY"><Data ss:Type="String">Barème KM</Data></Cell>
+    <Cell ss:StyleID="S_HY12"><Data ss:Type="Number">${bareme}</Data></Cell>
+    <Cell ss:StyleID="S_HY"><Data ss:Type="String">du</Data></Cell>
+    <Cell ss:StyleID="S_HY"><Data ss:Type="String">${fmtD(firstDay)}</Data></Cell>
+    <Cell ss:StyleID="S_HY"><Data ss:Type="String">au</Data></Cell>
+    <Cell ss:StyleID="S_HY"><Data ss:Type="String">${fmtD(lastDay)}</Data></Cell>
+    <Cell ss:StyleID="S_BL"><Data ss:Type="Number">${totalEur}</Data></Cell>
   </Row>
-
-  <!-- Ligne 4 : Barème / dates / total montant -->
-  <Row ss:Height="24.95">
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">Barème KM</Data></Cell>
-    <Cell ss:StyleID="sHdr12"><Data ss:Type="Number">${bareme}</Data></Cell>
-    <Cell/><Cell/><Cell/><Cell/><Cell/><Cell/>
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">du</Data></Cell>
-    <Cell ss:StyleID="sDate"><Data ss:Type="DateTime">${firstDay}T00:00:00.000</Data></Cell>
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">au</Data></Cell>
-    <Cell ss:StyleID="sDate"><Data ss:Type="DateTime">${lastDay}T00:00:00.000</Data></Cell>
-    <Cell ss:StyleID="sMoney12" ss:MergeAcross="1"><Data ss:Type="Number">${totalEur.toFixed(3)}</Data></Cell>
+  <Row ss:Height="6"/>
+  <Row ss:Height="14"><Cell/><Cell/><Cell/><Cell/><Cell/><Cell/><Cell ss:StyleID="S_MNT"><Data ss:Type="Number">${totalEur}</Data></Cell></Row>
+  <Row ss:Height="5"/>
+  <Row ss:Height="20">
+    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Date</Data></Cell>
+    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Trajet</Data></Cell>
+    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Nb trajets</Data></Cell>
+    <Cell ss:StyleID="S_GL"><Data ss:Type="String">km/trajet</Data></Cell>
+    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Nb KM</Data></Cell>
+    <Cell/>
+    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Montant</Data></Cell>
   </Row>
-
-  <!-- Ligne 5 : vide -->
-  <Row ss:Height="24.95"/>
-
-  <!-- Ligne 6 : sous-totaux -->
+  <Row ss:Height="22"><Cell ss:StyleID="S_SEC" ss:MergeAcross="6"><Data ss:Type="String"> FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D'UN DOSSIER</Data></Cell></Row>
+  ${dataXml}
+  <Row ss:Height="16"><Cell ss:StyleID="S_TOT" ss:MergeAcross="5"><Data ss:Type="String">TOTAL</Data></Cell><Cell ss:StyleID="S_TOTM"><Data ss:Type="Number">${totalEur}</Data></Cell></Row>
+  <Row ss:Height="10"/>
   <Row ss:Height="18">
-    <Cell/><Cell/><Cell/><Cell/><Cell/><Cell/>
-    <Cell ss:StyleID="sFormBold" ss:Formula="=SUM(R${dataStart}C7:R${dataEnd}C7)"><Data ss:Type="Number">${totalEur.toFixed(3)}</Data></Cell>
-    <Cell/><Cell/><Cell/><Cell/><Cell/><Cell/>
-    <Cell ss:StyleID="sFormBold" ss:Formula="=SUM(R${dataStart}C14:R${dataEnd}C14)"><Data ss:Type="Number">${totalEur.toFixed(3)}</Data></Cell>
-  </Row>
-
-  <!-- Ligne 7 : vide -->
-  <Row ss:Height="13.5"/>
-
-  <!-- Ligne 8 : en-têtes colonnes -->
-  <Row ss:Height="19.5">
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">Date</Data></Cell>
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">trajet</Data></Cell>
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">nbr trajet</Data></Cell>
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">km/trajet</Data></Cell>
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">Nb KM</Data></Cell>
-    <Cell/>
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">Valorisation KM</Data></Cell>
-    <Cell/><Cell/><Cell/><Cell/><Cell/>
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">TVA</Data></Cell>
-    <Cell ss:StyleID="sHdr"><Data ss:Type="String">TOTAL HT</Data></Cell>
-  </Row>
-
-  <!-- Ligne 9 : section header -->
-  <Row ss:Height="24.95">
-    <Cell ss:StyleID="sSection" ss:MergeAcross="13"><Data ss:Type="String"> FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D'UN DOSSIER</Data></Cell>
-  </Row>
-
-  <!-- Données -->
-  ${dataRowsXml}
-
-  <!-- Visa -->
-  <Row ss:Height="4"/>
-  <Row ss:Height="27">
-    <Cell ss:StyleID="sVisa" ss:MergeAcross="0"><Data ss:Type="String">VISA ENTREPRISE</Data></Cell>
+    <Cell ss:StyleID="S_VS" ss:MergeAcross="1"><Data ss:Type="String">VISA ENTREPRISE</Data></Cell>
+    <Cell/><Cell ss:StyleID="S_VS" ss:MergeAcross="1"><Data ss:Type="String">MOIS DE PAIE</Data></Cell>
     <Cell/><Cell/>
-    <Cell/>
-    <Cell ss:StyleID="sVisa"><Data ss:Type="String">MOIS DE PAIE</Data></Cell>
-    <Cell/><Cell/><Cell/>
-    <Cell ss:StyleID="sVisa"><Data ss:Type="String">VISA SALARIE</Data></Cell>
+    <Cell ss:StyleID="S_VS" ss:MergeAcross="1"><Data ss:Type="String">VISA SALARIE</Data></Cell>
   </Row>
-  <Row ss:Height="27"/>
-  <Row ss:Height="27">
-    <Cell/><Cell/><Cell/><Cell/>
-    <Cell ss:StyleID="sHdr12"><Data ss:Type="String">${monthName.charAt(0).toUpperCase()+monthName.slice(1)}</Data></Cell>
+  <Row ss:Height="18">
+    <Cell ss:StyleID="S_VSB" ss:MergeAcross="1"/>
+    <Cell/><Cell ss:StyleID="S_VSB" ss:MergeAcross="1"><Data ss:Type="String">${monthName}</Data></Cell>
+    <Cell/><Cell/>
+    <Cell ss:StyleID="S_VSB" ss:MergeAcross="1"/>
   </Row>
-  <Row ss:Height="27"/>
 </Table>
 </Worksheet>
 </Workbook>`;
 
-  const blob = new Blob([xml], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const blob = new Blob(['\uFEFF'+xml], {type:'application/vnd.ms-excel;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = `JUSTIF_IK_${month}.xls`;
-  a.click();
+  a.href=url; a.download=`JUSTIF_IK_${month}.xls`; a.click();
   URL.revokeObjectURL(url);
 }
+
 
 function renderPlanningIK() {
   const el = document.getElementById('pe-ik-content');
