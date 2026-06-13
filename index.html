@@ -9512,53 +9512,85 @@ function ikReadPlanning(yearMonth) {
   const cfg = ikGetConfig();
   const depart = cfg.depart;
   const rows = [];
-  const peData = JSON.parse(localStorage.getItem('orevy_planning_equipe')||'{}');
 
-  // Parcourir toutes les clés du planning (format YYYY-WNN-creche)
+  // ── SOURCE 1 : Planning équipe (orevy_planning_equipe) ──────────────
+  const peData = JSON.parse(localStorage.getItem('orevy_planning_equipe')||'{}');
   Object.entries(peData).forEach(([key, week]) => {
     const m = key.match(/^(\d{4})-W(\d{2})-(.+)$/);
     if (!m) return;
     const creche = m[3];
     if (!creche) return;
-
     const isoYear = parseInt(m[1]), isoWeek = parseInt(m[2]);
-    // Calculer le lundi de cette semaine ISO
     const jan4 = new Date(isoYear, 0, 4);
     const lundi = new Date(jan4.getFullYear(), jan4.getMonth(), jan4.getDate() - ((jan4.getDay()+6)%7) + (isoWeek-1)*7);
-
     (week.creneaux||[]).forEach(cr => {
       if (!cr.pro) return;
-      const jourIdx = cr.jour || 0; // 0=lundi, 4=vendredi
-      const dateTrajet = new Date(lundi.getFullYear(), lundi.getMonth(), lundi.getDate() + jourIdx);
-
-      // Filtrer sur le mois demandé
+      const dateTrajet = new Date(lundi.getFullYear(), lundi.getMonth(), lundi.getDate() + (cr.jour||0));
       if (dateTrajet.getMonth()+1 !== month || dateTrajet.getFullYear() !== year) return;
-
-      const dateStr = `${dateTrajet.getFullYear()}-${String(dateTrajet.getMonth()+1).padStart(2,'0')}-${String(dateTrajet.getDate()).padStart(2,'0')}`;
-      const trajetLabel = depart ? `${depart} → ${creche}` : `→ ${creche}`;
-
-      rows.push({
-        id: `${key}_${cr.pro}_${jourIdx}`,
-        date: dateStr,
-        salarie: cr.pro,
-        trajet: trajetLabel,
-        creche,
-        nbr: 2,
-        ignored: false
-      });
+      const dateStr = dateTrajet.toISOString().slice(0,10);
+      rows.push({ id:`pe_${key}_${cr.pro}_${cr.jour}`, date:dateStr, salarie:cr.pro,
+        trajet: depart ? `${depart} → ${creche}` : `→ ${creche}`, creche, nbr:2, ignored:false });
     });
   });
 
-  // Dédoublonner par salarié+date+crèche
-  const seen = new Set();
-  const dedup = rows.filter(r => {
-    const k = `${r.salarie}|${r.date}|${r.creche}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  // ── SOURCE 2 : Planning coordinateur (orevy_coord_rotation_v2) ──────
+  // La rotation est un cycle de 4 semaines types appliqué sur tout le mois
+  try {
+    const rotation = JSON.parse(localStorage.getItem('orevy_coord_rotation_v2')||'null');
+    if (rotation && Array.isArray(rotation)) {
+      // Parcourir toutes les semaines du mois
+      const firstDay = new Date(year, month-1, 1);
+      const lastDay  = new Date(year, month, 0);
+      // Trouver le premier lundi du mois (ou avant)
+      let cursor = new Date(firstDay);
+      cursor.setDate(cursor.getDate() - ((cursor.getDay()+6)%7)); // recule au lundi
 
-  dedup.sort((a,b) => a.date.localeCompare(b.date) || (a.salarie||'').localeCompare(b.salarie||''));
+      while (cursor <= lastDay) {
+        // Numéro ISO de la semaine
+        const isoWk = getISOWeekNumber(cursor);
+        const cycleIdx = ((isoWk - 1) % 4 + 4) % 4; // 0,1,2,3
+        const semType = rotation[cycleIdx];
+        if (semType && semType.jours) {
+          semType.jours.forEach((jour, jourIdx) => {
+            // Matin et aprem peuvent avoir des crèches différentes
+            ['matin','aprem'].forEach(moment => {
+              const slot = jour[moment];
+              if (!slot || !slot.creche) return;
+              const creche = slot.creche;
+              // Ignorer Admin, Formation, Absent, vide, et crèche = point de départ
+              if (['Admin','Formation','Absent',''].includes(creche)) return;
+              if (depart && creche === depart) return;
+
+              const dateTrajet = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + jourIdx);
+              if (dateTrajet.getMonth()+1 !== month || dateTrajet.getFullYear() !== year) return;
+              const dateStr = `${dateTrajet.getFullYear()}-${String(dateTrajet.getMonth()+1).padStart(2,'0')}-${String(dateTrajet.getDate()).padStart(2,'0')}`;
+
+              rows.push({
+                id: `coord_${dateStr}_${creche}_${moment}`,
+                date: dateStr,
+                salarie: '', // sera remplacé par le salarié sélectionné
+                trajet: depart ? `${depart} → ${creche}` : `→ ${creche}`,
+                creche,
+                nbr: 1, // 1 trajet par demi-journée
+                ignored: false
+              });
+            });
+          });
+        }
+        cursor.setDate(cursor.getDate() + 7); // semaine suivante
+      }
+    }
+  } catch(e) { console.warn('[IK] Erreur lecture planning coordinateur:', e); }
+
+  // Dédoublonner par date+crèche+moment (garder nbr cumulé si aller+retour même crèche)
+  const byKey = {};
+  rows.forEach(r => {
+    const k = `${r.salarie}|${r.date}|${r.creche}`;
+    if (byKey[k]) byKey[k].nbr += r.nbr;
+    else byKey[k] = { ...r };
+  });
+  const dedup = Object.values(byKey);
+  dedup.sort((a,b) => a.date.localeCompare(b.date));
   return dedup;
 }
 
