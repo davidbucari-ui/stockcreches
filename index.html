@@ -9734,76 +9734,189 @@ function ikGenerate() {
   if (!active.length) { alert('Aucun trajet à exporter.'); return; }
   const cfg = ikGetConfig();
   const bareme = parseFloat((document.getElementById('ik-bareme')||{}).value)||cfg.bareme;
-  const dist = {};
-  document.querySelectorAll('.ik-dist-inp').forEach(inp=>{ dist[inp.dataset.creche]=parseFloat(inp.value)||0; });
+  const dist = Object.assign({}, cfg.dist);
+  document.querySelectorAll('.ik-dist-inp').forEach(inp=>{ if(inp.dataset.creche) dist[inp.dataset.creche]=parseFloat(inp.value)||0; });
 
   const [year, monthNum] = month.split('-').map(Number);
   const monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   const monthName = monthNames[monthNum-1];
+
+  function fmtDate(d) {
+    if (!d) return '';
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'});
+  }
+  function excelDate(d) {
+    // Convertir date en numéro série Excel (jours depuis 1900-01-01)
+    const dt = new Date(d + 'T12:00:00');
+    const epoch = new Date(1899, 11, 30);
+    return Math.round((dt - epoch) / 86400000);
+  }
+
+  const salarie = (document.getElementById('ik-sal-sel')||{}).value || 'Salarié';
   const firstDay = `${year}-${String(monthNum).padStart(2,'0')}-01`;
   const lastDay = new Date(year, monthNum, 0).toISOString().slice(0,10);
 
-  function fmtDate(d) { if(!d)return''; const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
-
-  let tKm=0, tEur=0;
+  let totalEur = 0;
   const dataRows = active.map(r => {
-    const km = dist[r.creche]||cfg.dist[r.creche]||0;
-    const tk = r.nbr*km, m = tk*bareme;
-    tKm+=tk; tEur+=m;
-    return { date:r.date, salarie:r.salarie, trajet:r.trajet, nbr:r.nbr, km, tk, m };
+    const km = dist[r.creche] !== undefined ? dist[r.creche] : 0;
+    const tk = r.nbr * km;
+    const m  = tk * bareme;
+    totalEur += m;
+    return { date:r.date, trajet:r.trajet, nbr:r.nbr, km, tk, m };
   });
 
-  const rowsXml = dataRows.map(r=>`<Row ss:Height="15.95">
-    <Cell ss:StyleID="sDate"><Data ss:Type="String">${fmtDate(r.date)}</Data></Cell>
-    <Cell ss:StyleID="sText"><Data ss:Type="String">${r.salarie}</Data></Cell>
-    <Cell ss:StyleID="sText"><Data ss:Type="String">${r.trajet}</Data></Cell>
-    <Cell ss:StyleID="sNum"><Data ss:Type="Number">${r.nbr}</Data></Cell>
-    <Cell ss:StyleID="sNum"><Data ss:Type="Number">${r.km}</Data></Cell>
-    <Cell ss:StyleID="sNum"><Data ss:Type="Number">${r.tk}</Data></Cell>
-    <Cell ss:StyleID="sMoney"><Data ss:Type="Number">${r.m.toFixed(3)}</Data></Cell>
-  </Row>`).join('');
+  const n = dataRows.length;
+  // Ligne de début des données = 10, fin = 9+n
+  const dataStart = 10, dataEnd = 9 + n;
+  const visaRow = dataEnd + 2;
+
+  // Styles XML SpreadsheetML
+  const stylesXml = `
+  <Style ss:ID="sTitle"><Font ss:Bold="0" ss:Size="16" ss:Name="Arial"/><Alignment ss:Horizontal="CenterAcrossSelection" ss:Vertical="Center"/></Style>
+  <Style ss:ID="sHdr"><Font ss:Bold="1" ss:Size="8" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/></Style>
+  <Style ss:ID="sHdr10"><Font ss:Bold="1" ss:Size="10" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+  <Style ss:ID="sHdr12"><Font ss:Bold="1" ss:Size="12" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+  <Style ss:ID="sHdr14"><Font ss:Bold="1" ss:Size="14" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+  <Style ss:ID="sDate"><Font ss:Size="7" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="DD/MM/YYYY"/></Style>
+  <Style ss:ID="sData7"><Font ss:Size="7" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+  <Style ss:ID="sFormBold"><Font ss:Bold="1" ss:Size="7" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="#,##0.00"/></Style>
+  <Style ss:ID="sMoney12"><Font ss:Bold="1" ss:Size="12" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><NumberFormat ss:Format="#,##0.00"/></Style>
+  <Style ss:ID="sSection"><Font ss:Bold="1" ss:Size="10" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+  <Style ss:ID="sVisa"><Font ss:Bold="1" ss:Size="9" ss:Name="Arial"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>`;
+
+  const dataRowsXml = dataRows.map((r,i) => {
+    const row = dataStart + i;
+    return `<Row ss:Height="15.95">
+      <Cell ss:StyleID="sDate"><Data ss:Type="DateTime">${r.date}T00:00:00.000</Data></Cell>
+      <Cell ss:StyleID="sData7"><Data ss:Type="String">${r.trajet}</Data></Cell>
+      <Cell ss:StyleID="sData7"><Data ss:Type="Number">${r.nbr}</Data></Cell>
+      <Cell ss:StyleID="sData7"><Data ss:Type="Number">${r.km}</Data></Cell>
+      <Cell ss:StyleID="sData7" ss:Formula="=RC[-2]*RC[-1]"><Data ss:Type="Number">${r.tk}</Data></Cell>
+      <Cell/>
+      <Cell ss:StyleID="sFormBold" ss:Formula="=IF(RC[-2]=&quot;&quot;,0,RC[-2]*R4C2)"><Data ss:Type="Number">${r.m.toFixed(3)}</Data></Cell>
+      <Cell/><Cell/><Cell/><Cell/><Cell/><Cell/>
+      <Cell ss:StyleID="sFormBold" ss:Formula="=RC[-7]+RC[-6]+RC[-5]+RC[-4]+RC[-3]+RC[-2]-RC[-1]"><Data ss:Type="Number">${r.m.toFixed(3)}</Data></Cell>
+    </Row>`;
+  }).join('');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-<Styles>
-  <Style ss:ID="sTitle"><Font ss:Bold="1" ss:Size="13"/><Alignment ss:Horizontal="Center"/></Style>
-  <Style ss:ID="sColHeader"><Font ss:Bold="1"/><Interior ss:Color="#F0EDE8" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
-  <Style ss:ID="sDate"><NumberFormat ss:Format="DD/MM/YYYY"/></Style>
-  <Style ss:ID="sText"></Style>
-  <Style ss:ID="sNum"><Alignment ss:Horizontal="Center"/></Style>
-  <Style ss:ID="sMoney"><NumberFormat ss:Format="#,##0.00 €"/><Font ss:Bold="1" ss:Color="#16A34A"/></Style>
-  <Style ss:ID="sTotalRow"><Font ss:Bold="1"/><Interior ss:Color="#F0EDE8" ss:Pattern="Solid"/></Style>
-</Styles>
-<Worksheet ss:Name="Frais IK ${monthName}">
-<Table ss:DefaultColumnWidth="80">
-  <Column ss:Width="85"/><Column ss:Width="120"/><Column ss:Width="130"/><Column ss:Width="70"/><Column ss:Width="80"/><Column ss:Width="80"/><Column ss:Width="100"/>
-  <Row ss:Height="20"><Cell ss:MergeAcross="6" ss:StyleID="sTitle"><Data ss:Type="String">Frais kilométriques — ${monthName.charAt(0).toUpperCase()+monthName.slice(1)} ${year}</Data></Cell></Row>
-  <Row><Cell ss:StyleID="sText"><Data ss:Type="String">Barème : ${bareme} €/km</Data></Cell><Cell/><Cell/><Cell/><Cell/><Cell/><Cell ss:StyleID="sMoney"><Data ss:Type="Number">${tEur.toFixed(3)}</Data></Cell></Row>
-  <Row/>
-  <Row>
-    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Date</Data></Cell>
-    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Salarié</Data></Cell>
-    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Trajet</Data></Cell>
-    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Nb trajets</Data></Cell>
-    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">km/trajet</Data></Cell>
-    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Total km</Data></Cell>
-    <Cell ss:StyleID="sColHeader"><Data ss:Type="String">Montant</Data></Cell>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:x="urn:schemas-microsoft-com:office:excel">
+<Styles>${stylesXml}</Styles>
+<Worksheet ss:Name="FDEPvi">
+<Table>
+  <Column ss:Width="65"/>
+  <Column ss:Width="80"/>
+  <Column ss:Width="80"/>
+  <Column ss:Width="64"/>
+  <Column ss:Width="65"/>
+  <Column ss:Width="30"/>
+  <Column ss:Width="100"/>
+  <Column ss:Width="72"/>
+  <Column ss:Width="67"/>
+  <Column ss:Width="68"/>
+  <Column ss:Width="65"/>
+  <Column ss:Width="66"/>
+  <Column ss:Width="61"/>
+  <Column ss:Width="75"/>
+
+  <!-- Ligne 1 : Titre -->
+  <Row ss:Height="21">
+    <Cell/>
+    <Cell ss:StyleID="sTitle" ss:MergeAcross="12"><Data ss:Type="String">C3F      Frais de déplacements            C3F</Data></Cell>
   </Row>
-  ${rowsXml}
-  <Row ss:StyleID="sTotalRow">
-    <Cell ss:MergeAcross="4" ss:StyleID="sTotalRow"><Data ss:Type="String">TOTAL</Data></Cell>
-    <Cell ss:StyleID="sTotalRow"><Data ss:Type="Number">${tKm}</Data></Cell>
-    <Cell ss:StyleID="sMoney"><Data ss:Type="Number">${tEur.toFixed(3)}</Data></Cell>
+
+  <!-- Ligne 2 : vide -->
+  <Row ss:Height="16.5"/>
+
+  <!-- Ligne 3 : N° / Salarié / Période / TOTAL -->
+  <Row ss:Height="24.95">
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">N°</Data></Cell>
+    <Cell ss:StyleID="sHdr12"><Data ss:Type="String">xxx</Data></Cell>
+    <Cell/><Cell/>
+    <Cell ss:StyleID="sHdr10" ss:MergeAcross="3"><Data ss:Type="String">${salarie}</Data></Cell>
+    <Cell ss:StyleID="sHdr" ss:MergeAcross="3"><Data ss:Type="String">Période</Data></Cell>
+    <Cell/><Cell/>
+    <Cell ss:StyleID="sHdr14" ss:MergeAcross="1"><Data ss:Type="String">TOTAL</Data></Cell>
   </Row>
+
+  <!-- Ligne 4 : Barème / dates / total montant -->
+  <Row ss:Height="24.95">
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">Barème KM</Data></Cell>
+    <Cell ss:StyleID="sHdr12"><Data ss:Type="Number">${bareme}</Data></Cell>
+    <Cell/><Cell/><Cell/><Cell/><Cell/><Cell/>
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">du</Data></Cell>
+    <Cell ss:StyleID="sDate"><Data ss:Type="DateTime">${firstDay}T00:00:00.000</Data></Cell>
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">au</Data></Cell>
+    <Cell ss:StyleID="sDate"><Data ss:Type="DateTime">${lastDay}T00:00:00.000</Data></Cell>
+    <Cell ss:StyleID="sMoney12" ss:MergeAcross="1"><Data ss:Type="Number">${totalEur.toFixed(3)}</Data></Cell>
+  </Row>
+
+  <!-- Ligne 5 : vide -->
+  <Row ss:Height="24.95"/>
+
+  <!-- Ligne 6 : sous-totaux -->
+  <Row ss:Height="18">
+    <Cell/><Cell/><Cell/><Cell/><Cell/><Cell/>
+    <Cell ss:StyleID="sFormBold" ss:Formula="=SUM(R${dataStart}C7:R${dataEnd}C7)"><Data ss:Type="Number">${totalEur.toFixed(3)}</Data></Cell>
+    <Cell/><Cell/><Cell/><Cell/><Cell/><Cell/>
+    <Cell ss:StyleID="sFormBold" ss:Formula="=SUM(R${dataStart}C14:R${dataEnd}C14)"><Data ss:Type="Number">${totalEur.toFixed(3)}</Data></Cell>
+  </Row>
+
+  <!-- Ligne 7 : vide -->
+  <Row ss:Height="13.5"/>
+
+  <!-- Ligne 8 : en-têtes colonnes -->
+  <Row ss:Height="19.5">
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">Date</Data></Cell>
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">trajet</Data></Cell>
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">nbr trajet</Data></Cell>
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">km/trajet</Data></Cell>
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">Nb KM</Data></Cell>
+    <Cell/>
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">Valorisation KM</Data></Cell>
+    <Cell/><Cell/><Cell/><Cell/><Cell/>
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">TVA</Data></Cell>
+    <Cell ss:StyleID="sHdr"><Data ss:Type="String">TOTAL HT</Data></Cell>
+  </Row>
+
+  <!-- Ligne 9 : section header -->
+  <Row ss:Height="24.95">
+    <Cell ss:StyleID="sSection" ss:MergeAcross="13"><Data ss:Type="String"> FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D'UN DOSSIER</Data></Cell>
+  </Row>
+
+  <!-- Données -->
+  ${dataRowsXml}
+
+  <!-- Visa -->
+  <Row ss:Height="4"/>
+  <Row ss:Height="27">
+    <Cell ss:StyleID="sVisa" ss:MergeAcross="0"><Data ss:Type="String">VISA ENTREPRISE</Data></Cell>
+    <Cell/><Cell/>
+    <Cell/>
+    <Cell ss:StyleID="sVisa"><Data ss:Type="String">MOIS DE PAIE</Data></Cell>
+    <Cell/><Cell/><Cell/>
+    <Cell ss:StyleID="sVisa"><Data ss:Type="String">VISA SALARIE</Data></Cell>
+  </Row>
+  <Row ss:Height="27"/>
+  <Row ss:Height="27">
+    <Cell/><Cell/><Cell/><Cell/>
+    <Cell ss:StyleID="sHdr12"><Data ss:Type="String">${monthName.charAt(0).toUpperCase()+monthName.slice(1)}</Data></Cell>
+  </Row>
+  <Row ss:Height="27"/>
 </Table>
 </Worksheet>
 </Workbook>`;
 
-  const blob = new Blob([xml], {type:'application/vnd.ms-excel'});
+  const blob = new Blob([xml], {type:'application/vnd.ms-excel;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `IK_${month}.xls`; a.click();
+  a.href = url;
+  a.download = `JUSTIF_IK_${month}.xls`;
+  a.click();
   URL.revokeObjectURL(url);
 }
 
