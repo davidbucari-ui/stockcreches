@@ -9752,6 +9752,13 @@ function ikGenerate() {
 function renderPlanningIK() {
   const el = document.getElementById('pe-ik-content');
   if (!el) return;
+  // Forcer le rechargement de CRECHES_DATA depuis localStorage si vide
+  if (!window.CRECHES_DATA || !window.CRECHES_DATA.length) {
+    try {
+      const saved = localStorage.getItem('koala_creches');
+      if (saved) window.CRECHES_DATA = JSON.parse(saved);
+    } catch(e) {}
+  }
   const cfg = ikGetConfig();
   const creches = (window.CRECHES_DATA||[]).map(c=>c.nom);
   const now = new Date();
