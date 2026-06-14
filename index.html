@@ -2924,6 +2924,29 @@ try {
   const saved = localStorage.getItem('koala_creches');
   CRECHES_DATA = saved ? JSON.parse(saved) : CRECHES_DEFAUT;
 } catch { CRECHES_DATA = CRECHES_DEFAUT; }
+// Réparation : si la liste est vide ou invalide, revenir à la liste par défaut
+if (!Array.isArray(CRECHES_DATA) || CRECHES_DATA.length === 0) {
+  CRECHES_DATA = CRECHES_DEFAUT;
+  try { localStorage.setItem('koala_creches', JSON.stringify(CRECHES_DATA)); } catch {}
+}
+// Réparation : migrer les données enregistrées sous la clé erronée "Crèche"
+// (créée quand la liste des crèches était vide) vers la première vraie crèche
+try {
+  ['orevy_familles_', 'orevy_berceaux_'].forEach(prefix => {
+    const brokenKey = prefix + 'Crèche';
+    const broken = localStorage.getItem(brokenKey);
+    if (broken && CRECHES_DATA[0]) {
+      const targetKey = prefix + CRECHES_DATA[0].nom;
+      const existing = localStorage.getItem(targetKey);
+      const brokenArr = JSON.parse(broken || '[]');
+      const existingArr = existing ? JSON.parse(existing) : [];
+      if (Array.isArray(brokenArr) && brokenArr.length) {
+        localStorage.setItem(targetKey, JSON.stringify(existingArr.concat(brokenArr)));
+      }
+      localStorage.removeItem(brokenKey);
+    }
+  });
+} catch {}
 
 // Rétro-compat : migration anciens noms vers nouveaux
 const OLD_NAMES = { 'Brunet':'Crèche 1','Cuers':'Crèche 2','Ollioules':'Crèche 3','St Jean':'Crèche 4','Picot 1':'Crèche 5','Picot 2':'Crèche 6' };
@@ -4309,8 +4332,8 @@ function calcTauxEncadrement(enfants, option) {
 function getCrecheId() {
   const val = document.getElementById('fam-creche-sel')?.value;
   if (val && val !== '') return val;
-  if (window.CRECHES_DATA && CRECHES_DATA.length) return CRECHES_DATA[0].nom;
-  if (window.currentCreche && currentCreche !== 'all') return currentCreche;
+  if (CRECHES_DATA && CRECHES_DATA.length) return CRECHES_DATA[0].nom;
+  if (currentCreche && currentCreche !== 'all') return currentCreche;
   return 'default';
 }
 
@@ -4318,8 +4341,8 @@ function getCrecheId() {
 function renderFamilles() {
   // Remplir sélecteur crèches - utiliser CRECHES_DATA ou currentCreche
   const sel = document.getElementById('fam-creche-sel');
-  const crechesList = window.CRECHES_DATA && CRECHES_DATA.length ? CRECHES_DATA :
-    (window.currentCreche && currentCreche !== 'all' ? [{nom: currentCreche}] : [{nom: 'Crèche'}]);
+  const crechesList = CRECHES_DATA && CRECHES_DATA.length ? CRECHES_DATA :
+    (currentCreche && currentCreche !== 'all' ? [{nom: currentCreche}] : [{nom: 'Crèche'}]);
   if (sel) {
     const cur = sel.value;
     sel.innerHTML = crechesList.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
@@ -4603,7 +4626,7 @@ function openModalFamille(id) {
   // Remplir sélecteur crèche (obligatoire)
   const cSel = document.getElementById('fam-creche-modal');
   if (cSel) {
-    const list = (window.CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom: crecheId}];
+    const list = (CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom: crecheId}];
     cSel.innerHTML = list.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
     cSel.value = crecheId;
     cSel.disabled = !!id; // en édition, la crèche se change depuis l'onglet Accueil de la fiche
@@ -4767,7 +4790,7 @@ function deleteModalBerceau() {
 function renderDashboardFamillesTile() {
   const el = document.getElementById('dashboard-card-familles');
   if (!el) return;
-  const crecheId = window.currentCreche && window.currentCreche !== 'all' ? window.currentCreche : (window.CRECHES_DATA?.[0]?.nom || '');
+  const crecheId = currentCreche && currentCreche !== 'all' ? currentCreche : (CRECHES_DATA?.[0]?.nom || '');
   const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
   const nm = enfants.filter(e => e.type === 'NM').length;
   const m  = enfants.filter(e => e.type === 'M').length;
@@ -4912,7 +4935,7 @@ function openFicheEnfant(id) {
   const berceaux = getBerceaux(crecheId);
   const cEl = document.getElementById('fi-creche');
   if (cEl) {
-    const list = (window.CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom: crecheId}];
+    const list = (CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom: crecheId}];
     cEl.innerHTML = list.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
     cEl.value = crecheId;
   }
@@ -5165,7 +5188,7 @@ let transSaveTimers = {};
 function getTransCreche() {
   const sel = document.getElementById('trans-creche-sel');
   if (sel && sel.value) return sel.value;
-  if (window.CRECHES_DATA && CRECHES_DATA.length) return CRECHES_DATA[0].nom;
+  if (CRECHES_DATA && CRECHES_DATA.length) return CRECHES_DATA[0].nom;
   return 'default';
 }
 
@@ -5276,9 +5299,9 @@ async function renderTransmissions() {
   // Sélecteur crèche
   const sel = document.getElementById('trans-creche-sel');
   if (sel && !sel.options.length) {
-    const list = (window.CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom:'Crèche'}];
+    const list = (CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom:'Crèche'}];
     sel.innerHTML = list.map(c => `<option value="${transEsc(c.nom)}">${transEsc(c.nom)}</option>`).join('');
-    if (window.currentCreche && list.some(c => c.nom === currentCreche)) sel.value = currentCreche;
+    if (currentCreche && list.some(c => c.nom === currentCreche)) sel.value = currentCreche;
   }
   // Date
   const dateEl = document.getElementById('trans-date');
@@ -10942,7 +10965,7 @@ function ikGetConfig() {
   try {
     const s = JSON.parse(localStorage.getItem(IK_CFG_KEY)||'{}');
     const _saved = localStorage.getItem('koala_creches');
-    const creches = _saved ? JSON.parse(_saved).map(c=>c.nom) : (window.CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
+    const creches = _saved ? JSON.parse(_saved).map(c=>c.nom) : (CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
     const dist = {};
     creches.forEach(c => dist[c] = s.dist&&s.dist[c]!==undefined ? s.dist[c] : 0);
     return { depart: s.depart||'', dist, bareme: s.bareme||0.248 };
@@ -10964,7 +10987,7 @@ function ikSaveConfig() {
 function ikDetectCreche(lieu) {
   if (!lieu) return null;
   const l = lieu.trim().toLowerCase();
-  const creches = (window.CRECHES_DATA||[]).map(c=>c.nom);
+  const creches = (CRECHES_DATA||[]).map(c=>c.nom);
   for (const c of creches) { if (l === c.toLowerCase()) return c; }
   for (const c of creches) { if (l.includes(c.toLowerCase())) return c; }
   return null;
@@ -11324,10 +11347,10 @@ function renderPlanningIK() {
     const _saved = localStorage.getItem('koala_creches');
     _ikCreches = _saved ? JSON.parse(_saved).map(c=>c.nom) : (CRECHES_DEFAUT||[]).map(c=>c.nom);
   } catch(e) {
-    _ikCreches = (window.CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
+    _ikCreches = (CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
   }
   const cfg = ikGetConfig();
-  const creches = _ikCreches.length ? _ikCreches : (window.CRECHES_DATA||[]).map(c=>c.nom);
+  const creches = _ikCreches.length ? _ikCreches : (CRECHES_DATA||[]).map(c=>c.nom);
   const now = new Date();
   const moisOptions = [];
   for (let i=0;i<12;i++) {
