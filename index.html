@@ -646,6 +646,28 @@ textarea { resize: vertical; min-height: 72px; }
   border: 1.5px solid var(--border); border-radius: 10px;
   padding: 12px 14px; margin-bottom: 10px; position: relative;
 }
+
+/* ── TRANSMISSIONS ── */
+.trans-card { background: var(--surface2); border: 1.5px solid var(--border); border-radius: 14px; padding: 16px 20px; margin-bottom: 16px; }
+.trans-card-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+.trans-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:14px; }
+.trans-section { background:var(--bg); border-radius:10px; padding:12px 14px; }
+.trans-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--ink3); margin-bottom:8px; }
+.trans-btn { padding:6px 12px; border-radius:20px; border:1.5px solid var(--border); background:var(--surface2); font-size:12px; font-weight:600; color:var(--ink2); cursor:pointer; transition:all .15s; }
+.trans-btn:hover { border-color:var(--accent); color:var(--accent); }
+.trans-btn.active { background:var(--accent-lt); border-color:var(--accent); color:var(--accent); }
+.trans-count { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 4px; border-radius:9px; background:var(--accent); color:#fff; font-size:10px; font-weight:700; margin-left:4px; vertical-align:middle; }
+.trans-log { display:flex; flex-direction:column; gap:6px; margin-top:8px; max-height:170px; overflow-y:auto; }
+.trans-log-item { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:12px; }
+.trans-log-item .del { color:var(--red); cursor:pointer; flex-shrink:0; font-size:13px; }
+.trans-pai-alert { background:var(--red-lt); border:1.5px solid #FECACA; color:var(--red); border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:12px; font-weight:600; display:flex; gap:8px; align-items:flex-start; }
+.trans-select { width:100%; padding:7px 10px; border:1.5px solid var(--border); border-radius:8px; font-size:12px; background:var(--surface2); color:var(--ink); font-family:inherit; }
+.trans-select:focus { outline:none; border-color:var(--accent); }
+.trans-meal-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.trans-meal-row label { font-size:12px; color:var(--ink2); font-weight:600; flex-shrink:0; }
+.trans-menu-box { background:var(--accent-lt); border-radius:10px; padding:10px 14px; font-size:12px; color:var(--accent); margin-bottom:14px; }
+.trans-footer-btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:0; margin-left:auto; }
+@media (max-width: 600px) { .trans-footer-btns { margin-left:0; width:100%; } }
 @media (max-width: 600px) {
   .fi-row { grid-template-columns: 1fr; }
   .fi-row.triple { grid-template-columns: 1fr; }
@@ -950,6 +972,9 @@ textarea { resize: vertical; min-height: 72px; }
   </button>
   <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('familles', this)">
     <span class="nav-icon">👨‍👩‍👧</span> Familles
+  </button>
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('transmissions', this)">
+    <span class="nav-icon">📝</span> Transmissions
   </button>
   <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('planning', this)">
     <span class="nav-icon">📅</span> Planning
@@ -1754,6 +1779,28 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
 
 
+    <div id="page-transmissions" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+        <div class="fi-field" style="max-width:170px">
+          <label>Date</label>
+          <input type="date" id="trans-date" onchange="onTransDateChange(this.value)">
+        </div>
+        <div class="fi-field" style="max-width:220px">
+          <label>Structure</label>
+          <select id="trans-creche-sel" onchange="renderTransmissions()"></select>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="openMenuModal()">🍽 Menu du jour</button>
+          <button class="btn btn-secondary" onclick="openBilanModal(null)">📊 Bilan enfant</button>
+        </div>
+      </div>
+
+      <div id="trans-menu-banner"></div>
+
+      <div id="trans-list"></div>
+    </div>
+
+
     <div id="page-planning" style="display:none">
       <div class="planning-wrap" style="padding:12px 28px 20px">
 
@@ -2049,6 +2096,85 @@ textarea { resize: vertical; min-height: 72px; }
       <button class="btn btn-danger btn-sm" id="modal-famille-delete" style="display:none;margin-right:auto" onclick="deleteFamille()">Supprimer</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-famille')">Annuler</button>
       <button class="btn btn-primary" onclick="saveModalFamille()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-menu" onclick="closeModalClick(event,'modal-menu')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2>🍽 Menu du jour</h2>
+      <button class="modal-close" onclick="closeModal('modal-menu')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:14px" id="modal-menu-date-label"></div>
+      <div class="fi-row">
+        <div class="fi-field"><label>Entrée</label><input type="text" id="menu-entree" placeholder="Ex : Salade de tomates"></div>
+        <div class="fi-field"><label>Plat protéiné</label><input type="text" id="menu-plat" placeholder="Ex : Filet de poisson"></div>
+      </div>
+      <div class="fi-row">
+        <div class="fi-field"><label>Accompagnement</label><input type="text" id="menu-accompagnement" placeholder="Ex : Purée de carottes"></div>
+        <div class="fi-field"><label>Dessert</label><input type="text" id="menu-dessert" placeholder="Ex : Compote pomme"></div>
+      </div>
+      <div class="fi-row">
+        <div class="fi-field"><label>Repas mixé / petits (si différent)</label><input type="text" id="menu-mixe" placeholder="Ex : Purée complète mixée"></div>
+        <div class="fi-field"><label>Goûter</label><input type="text" id="menu-gouter" placeholder="Ex : Compote + biscuit"></div>
+      </div>
+      <div class="fi-row solo">
+        <div class="fi-field"><label>Origine du menu</label>
+          <select id="menu-source">
+            <option value="prestataire">Fourni par le prestataire</option>
+            <option value="parents">Apporté par les parents</option>
+            <option value="creche">Préparé par la crèche</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-menu')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveMenu()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-trans-fiche" onclick="closeModalClick(event,'modal-trans-fiche')">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h2 id="trans-fiche-title">📋 Fiche journalière</h2>
+      <button class="modal-close" onclick="closeModal('modal-trans-fiche')">✕</button>
+    </div>
+    <div class="modal-body" id="trans-fiche-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-trans-fiche')">Fermer</button>
+      <button class="btn btn-secondary" onclick="printTransFiche()">🖨 Imprimer</button>
+      <button class="btn btn-primary" id="trans-fiche-send-btn" onclick="envoyerFicheParent()">✉️ Envoyer au parent</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-trans-bilan" onclick="closeModalClick(event,'modal-trans-bilan')">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h2 id="trans-bilan-title">📊 Bilan de l'enfant</h2>
+      <button class="modal-close" onclick="closeModal('modal-trans-bilan')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fi-row">
+        <div class="fi-field"><label>Enfant</label>
+          <select id="bilan-enfant-sel" onchange="renderBilan()"></select>
+        </div>
+        <div class="fi-field"><label>Période</label>
+          <select id="bilan-periode-sel" onchange="renderBilan()">
+            <option value="mois">Mois en cours</option>
+            <option value="mois-1">Mois précédent</option>
+            <option value="annee">Année en cours</option>
+          </select>
+        </div>
+      </div>
+      <div id="trans-bilan-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-trans-bilan')">Fermer</button>
     </div>
   </div>
 </div>
@@ -4756,7 +4882,7 @@ function openFicheEnfant(id) {
   // Réinitialiser sur onglet identité
   // Afficher la page d'abord
   ['dashboard','inventaire','entretien','commandes','fournisseurs','historique',
-   'statistiques','univers','parametres','admin','rh','planning','salarie','familles'].forEach(p => {
+   'statistiques','univers','parametres','admin','rh','planning','salarie','familles','transmissions'].forEach(p => {
     const el = document.getElementById('page-'+p); if(el) el.style.display = 'none';
   });
   const fp = document.getElementById('page-fiche-enfant');
@@ -4891,6 +5017,974 @@ function deleteFicheEnfant() {
 
 // ══════════════════════════════════════════════════════════════════
 // FIN MODULE FICHE ENFANT
+// ══════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════
+// MODULE TRANSMISSIONS — Cahier de transmissions
+// ══════════════════════════════════════════════════════════════════
+
+// ── Référentiels ────────────────────────────────────────────────
+const REPAS_OPTIONS = [
+  { val:'bien',         label:'Bien mangé',     emoji:'✅' },
+  { val:'partiel',      label:'Partiellement',  emoji:'➗' },
+  { val:'refus',        label:'Refusé',         emoji:'❌' },
+  { val:'non_propose',  label:'Non proposé',    emoji:'—'  },
+];
+
+const CHANGE_TYPES = [
+  { val:'pipi',   label:'Pipi',     emoji:'💧' },
+  { val:'selle',  label:'Selle',    emoji:'💩' },
+  { val:'mixte',  label:'Mixte',    emoji:'💧💩' },
+  { val:'pot',    label:'Pot',      emoji:'🚽' },
+  { val:'sec',    label:'Sec / RAS',emoji:'✓'  },
+];
+
+const OBS_TYPES = [
+  { val:'observation', label:'Observation',              emoji:'📝' },
+  { val:'incident',     label:'Incident',                 emoji:'⚠️' },
+  { val:'important',    label:'Transmission importante',  emoji:'❗' },
+];
+
+// Repères de développement par tranche d'âge — synthèse à but indicatif,
+// adaptée de « Le développement de l'enfant au quotidien, de 0 à 6 ans »
+// (Francine Ferland, Éditions du CHU Sainte-Justine)
+const DEV_REPERES = {
+  '2.5-6': [
+    "Sensoriel : suit un visage ou un objet du regard, tourne la tête vers une voix familière, s'intéresse aux couleurs contrastées.",
+    "Motricité globale : tient de mieux en mieux sa tête, prend appui sur les avant-bras à plat ventre, commence à se retourner.",
+    "Motricité fine : porte ses mains et les objets à la bouche, attrape et secoue un hochet.",
+    "Langage : gazouille, exprime ses besoins par des sons différents selon la situation (faim, inconfort, plaisir).",
+    "Affectif et social : premier sourire social, manifeste plaisir, surprise ou inconfort par ses mimiques.",
+    "Éveil : montre un intérêt croissant pour son environnement, observe et écoute longuement.",
+  ],
+  '6-12': [
+    "Sensoriel : réagit quand on l'appelle, suit du regard un objet qui se déplace rapidement, perçoit les nuances de ton dans la voix.",
+    "Motricité globale : tient assis avec de moins en moins d'appui, se déplace à quatre pattes, commence à se mettre debout en s'appuyant.",
+    "Motricité fine : passe un objet d'une main à l'autre, attrape un petit objet entre le pouce et l'index, fait « bravo ».",
+    "Langage : babille (« bababa », « mamama »), comprend le mot « non », utilise des gestes pour communiquer (pointer, tendre les bras).",
+    "Cognitif : comprend les liens de cause à effet (biberon = nourriture), cherche un objet caché, apprécie le jeu du coucou.",
+    "Affectif et social : commence à s'attacher particulièrement à un adulte référent, peut montrer une certaine réserve face à une personne inconnue.",
+    "Autonomie : tient son biberon à deux mains, commence à manger de petits morceaux avec les doigts.",
+  ],
+  '12-18': [
+    "Motricité globale : fait ses premiers pas seul, pousse ou tire un jouet à roulettes, monte les escaliers à quatre pattes.",
+    "Motricité fine : construit une petite tour de 2 à 3 cubes, tourne plusieurs pages d'un livre à la fois, gribouille avec une craie.",
+    "Langage : dit ses premiers mots, comprend de courtes phrases familières (« viens manger »).",
+    "Cognitif : comprend la permanence de l'objet (une chose existe même si on ne la voit plus), amorce le jeu symbolique (« faire semblant »).",
+    "Affectif : a besoin de limites claires et rassurantes, développe sa confiance en lui.",
+    "Social : s'intéresse aux autres enfants, aime être à leurs côtés (jeu côte à côte).",
+    "Autonomie : participe à l'habillage en tendant bras et jambes, boit à la tasse à deux anses, mange à la cuillère avec de l'aide.",
+  ],
+  '18-24': [
+    "Motricité globale : court, descend les escaliers à quatre pattes à reculons, grimpe sur une chaise.",
+    "Motricité fine : construit une tour de 3 à 4 cubes, fait des traits sur le papier.",
+    "Langage : vocabulaire d'environ 50 mots vers 18 mois, répète des mots ou des bouts de phrases, comprend des consignes simples portant sur un objet.",
+    "Cognitif : se reconnaît dans le miroir et sur les photos, change la fonction des objets dans son jeu.",
+    "Affectif : peut se laisser distraire en cas de colère, tolère un peu mieux la séparation avec ses parents.",
+    "Social : apprend des comportements sociaux simples (dire bonjour, saluer de la main), peut montrer une préférence pour un copain ou une copine.",
+    "Autonomie : enlève certains vêtements (chapeau, pantalon descendu), boit au verre à deux mains avec supervision.",
+  ],
+  '24-30': [
+    "Motricité globale : court, grimpe, glisse, sautille sur place pieds joints, monte et descend l'escalier une marche à la fois.",
+    "Motricité fine : tourne les pages d'un livre une à une, construit une tour de 6 à 7 cubes, enfile de grosses perles.",
+    "Langage : phrases de 2 à 3 mots (« bébé tombé », « je veux pomme »), utilise « moi », « je », « toi », amorce les formes négatives (« je veux pas »).",
+    "Cognitif : reproduit une ligne ou un cercle par imitation, comprend « un » et « plusieurs », joue à faire semblant.",
+    "Affectif : période d'oppositions et de colères possibles, du mal à patienter pour obtenir ce qu'il veut.",
+    "Social : notion de « c'est à moi », tendance à être possessif, peut être maladroit dans ses gestes envers les autres (mordre, tirer les cheveux).",
+    "Autonomie : commence à signaler quand il est mouillé, peut rester sec une bonne partie de la journée, aide à se laver les mains.",
+  ],
+  '30-36': [
+    "Motricité globale : lance un ballon avec les deux mains et tout le corps, descend l'escalier seul en se tenant à la rampe.",
+    "Motricité fine : réussit un casse-tête de 4 pièces, ouvre des ciseaux à deux mains.",
+    "Langage : vocabulaire en forte expansion (environ 200 à 500 mots vers 3 ans), suit une histoire simple, comprend des consignes à plusieurs éléments.",
+    "Cognitif : peut dire son prénom complet et son âge, distingue « un » et « plusieurs », compte deux objets.",
+    "Affectif : peut exprimer fierté, gêne ou honte, certaines peurs apparaissent (noir, personnages).",
+    "Social : préfère parfois des partenaires de jeu de même sexe, se montre sensible à la peine d'un autre enfant.",
+    "Autonomie : boit proprement au verre et à la paille, commence à utiliser une fourchette, enlève seul chaussures, chaussettes et pyjama.",
+  ],
+};
+
+function getDevReperes(type) {
+  return DEV_REPERES[type] || DEV_REPERES['2.5-6'];
+}
+
+// 'nourrisson' = biberon + purée + dessert | 'grand' = entrée + plat + dessert (+ biberon facultatif)
+function repasProfile(type) {
+  return (type === '2.5-6' || type === '6-12') ? 'nourrisson' : 'grand';
+}
+
+// ── Utilitaires ──────────────────────────────────────────────────
+function transEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function nowHM() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// Différence en minutes entre deux heures "HH:MM" (même journée)
+function diffMinutes(start, end) {
+  if (!start || !end) return 0;
+  const [h1,m1] = start.split(':').map(Number);
+  const [h2,m2] = end.split(':').map(Number);
+  let diff = (h2*60+m2) - (h1*60+m1);
+  if (diff < 0) diff += 24*60;
+  return diff;
+}
+
+function formatDuree(min) {
+  if (!min) return '0 min';
+  const h = Math.floor(min/60), m = min%60;
+  if (h <= 0) return m + ' min';
+  return h + 'h' + (m ? String(m).padStart(2,'0') : '');
+}
+
+
+// ── État ─────────────────────────────────────────────────────────
+let transDate = '';
+let TRANS_RECORDS = {};   // enfant_id (string) -> record
+let TRANS_ENFANTS = [];   // enfants actifs pour la crèche/date courante
+let TRANS_MENU = null;    // { id, creche, date, entree, plat, accompagnement, dessert, mixe, gouter, source }
+let transSaveTimers = {};
+
+function getTransCreche() {
+  const sel = document.getElementById('trans-creche-sel');
+  if (sel && sel.value) return sel.value;
+  if (window.CRECHES_DATA && CRECHES_DATA.length) return CRECHES_DATA[0].nom;
+  return 'default';
+}
+
+// ── Modèle de données ───────────────────────────────────────────
+function blankRepas() {
+  return {
+    biberon: { pris:false, qte:'' },
+    puree:'', entree:'', plat:'', accompagnement:'', dessert:'', gouter:'',
+  };
+}
+
+function blankTransRecord(enfantId) {
+  return {
+    id: null,
+    creche: getTransCreche(),
+    enfant_id: String(enfantId),
+    date: transDate,
+    sommeil: [],
+    changes: [],
+    repas: blankRepas(),
+    observations: [],
+    envoye_parent: false,
+  };
+}
+
+function rowToTransRecord(row) {
+  const repas = Object.assign(blankRepas(), row.repas || {});
+  repas.biberon = Object.assign({ pris:false, qte:'' }, repas.biberon || {});
+  return {
+    id: row.id,
+    creche: row.creche,
+    enfant_id: String(row.enfant_id),
+    date: row.date,
+    sommeil: Array.isArray(row.sommeil) ? row.sommeil : [],
+    changes: Array.isArray(row.changes) ? row.changes : [],
+    repas: repas,
+    observations: Array.isArray(row.observations) ? row.observations : [],
+    envoye_parent: !!row.envoye_parent,
+  };
+}
+
+function transRecordToRow(rec) {
+  return {
+    creche: rec.creche,
+    enfant_id: rec.enfant_id,
+    date: rec.date,
+    sommeil: rec.sommeil,
+    changes: rec.changes,
+    repas: rec.repas,
+    observations: rec.observations,
+    envoye_parent: rec.envoye_parent,
+  };
+}
+
+function getTransRecord(enfantId) {
+  const key = String(enfantId);
+  if (!TRANS_RECORDS[key]) TRANS_RECORDS[key] = blankTransRecord(key);
+  return TRANS_RECORDS[key];
+}
+
+async function saveTransRecord(enfantId) {
+  const key = String(enfantId);
+  const rec = TRANS_RECORDS[key];
+  if (!rec) return;
+  const row = transRecordToRow(rec);
+  try {
+    if (rec.id) {
+      await sbUpdate('transmissions', rec.id, row);
+    } else {
+      const res = await sbInsert('transmissions', row);
+      if (Array.isArray(res) && res[0] && res[0].id) rec.id = res[0].id;
+    }
+  } catch (err) {
+    console.error('saveTransRecord', err);
+    showNotif('⚠ Erreur de sauvegarde transmission');
+  }
+}
+
+function scheduleSaveTrans(enfantId) {
+  const key = String(enfantId);
+  clearTimeout(transSaveTimers[key]);
+  transSaveTimers[key] = setTimeout(() => saveTransRecord(key), 900);
+}
+
+
+// ── Chargement & rendu principal ─────────────────────────────────
+async function loadTransData() {
+  const creche = getTransCreche();
+  TRANS_RECORDS = {};
+  TRANS_MENU = null;
+  try {
+    const rows = await sbGet('transmissions', `creche=eq.${encodeURIComponent(creche)}&date=eq.${transDate}`);
+    if (Array.isArray(rows)) {
+      rows.forEach(r => { TRANS_RECORDS[String(r.enfant_id)] = rowToTransRecord(r); });
+    }
+  } catch (err) {
+    console.error('loadTransData (transmissions)', err);
+  }
+  try {
+    const menus = await sbGet('menus', `creche=eq.${encodeURIComponent(creche)}&date=eq.${transDate}`);
+    if (Array.isArray(menus) && menus.length) TRANS_MENU = menus[0];
+  } catch (err) {
+    console.error('loadTransData (menus)', err);
+  }
+}
+
+async function renderTransmissions() {
+  // Sélecteur crèche
+  const sel = document.getElementById('trans-creche-sel');
+  if (sel && !sel.options.length) {
+    const list = (window.CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom:'Crèche'}];
+    sel.innerHTML = list.map(c => `<option value="${transEsc(c.nom)}">${transEsc(c.nom)}</option>`).join('');
+    if (window.currentCreche && list.some(c => c.nom === currentCreche)) sel.value = currentCreche;
+  }
+  // Date
+  const dateEl = document.getElementById('trans-date');
+  if (dateEl && !dateEl.value) dateEl.value = todayISO();
+  transDate = dateEl ? dateEl.value : todayISO();
+
+  const listEl = document.getElementById('trans-list');
+  if (listEl) listEl.innerHTML = `<div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div>`;
+
+  await loadTransData();
+  renderMenuBanner();
+  renderTransList();
+}
+
+function onTransDateChange(val) {
+  transDate = val;
+  renderTransmissions();
+}
+
+function renderTransList() {
+  const el = document.getElementById('trans-list');
+  if (!el) return;
+  const creche = getTransCreche();
+  let enfants = getFamilles(creche);
+  // Enfants présents à la crèche à la date sélectionnée
+  enfants = enfants.filter(e => {
+    const entreeOk = !e.entree || e.entree <= transDate;
+    const sortieOk = !e.sortie || e.sortie >= transDate;
+    return entreeOk && sortieOk;
+  });
+  TRANS_ENFANTS = enfants;
+
+  if (!enfants.length) {
+    el.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:40px;margin-bottom:12px">📝</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucun enfant présent ce jour</div>
+      <div style="font-size:13px">Vérifiez la structure et la date sélectionnées, ou complétez les fiches dans l'onglet Familles.</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = enfants.map(e => renderTransCard(e)).join('');
+}
+
+function rerenderTransCard(enfantId) {
+  const e = TRANS_ENFANTS.find(x => String(x.id) === String(enfantId));
+  if (!e) return;
+  const old = document.getElementById('trans-card-' + enfantId);
+  if (!old) return;
+  old.outerHTML = renderTransCard(e);
+}
+
+
+// ── Carte enfant ─────────────────────────────────────────────────
+function renderTransCard(e) {
+  const age = calcAgeEnfant(e.ddn);
+  const tranche = getTranche(e.type);
+  const trancheColor = getTrancheColor(e.type);
+  const initials = ((e.prenom||'')[0]||'') + ((e.nom||'')[0]||'');
+  const rec = getTransRecord(e.id);
+
+  const paiActif = e.pai === 'actif' || e.pai === 'en_cours';
+  const paiHtml = paiActif ? `
+    <div class="trans-pai-alert">
+      <span style="font-size:16px">⚠️</span>
+      <div>
+        <div>PAI ${e.pai === 'actif' ? 'actif' : 'en cours'} — vigilance requise</div>
+        ${e.allergies ? `<div style="font-weight:500;margin-top:2px">Allergies : ${transEsc(e.allergies)}</div>` : ''}
+        ${e.medecin ? `<div style="font-weight:500;margin-top:2px">Médecin référent : ${transEsc(e.medecin)}</div>` : ''}
+      </div>
+    </div>` : '';
+
+  return `
+  <div class="trans-card" id="trans-card-${e.id}">
+    <div class="trans-card-header">
+      <div style="width:40px;height:40px;border-radius:50%;background:${trancheColor.bg};color:${trancheColor.text};font-family:'Syne',sans-serif;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials.toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:15px;color:var(--ink)">${transEsc(e.prenom)} ${transEsc(e.nom)}</div>
+        <div style="font-size:12px;color:var(--ink3)">${age.label} · ${tranche.label}</div>
+      </div>
+      <div class="trans-footer-btns">
+        <button class="btn btn-secondary" onclick="openFicheJour('${e.id}')">📋 Fiche du jour</button>
+        <button class="btn btn-secondary" onclick="openBilanModal('${e.id}')">📊 Bilan</button>
+      </div>
+    </div>
+    ${paiHtml}
+    <div class="trans-grid">
+      ${renderSommeilSection(e, rec)}
+      ${renderChangesSection(e, rec)}
+      ${renderRepasSection(e, rec)}
+      ${renderObsSection(e, rec)}
+    </div>
+  </div>`;
+}
+
+// ── Sommeil ──────────────────────────────────────────────────────
+function renderSommeilSection(e, rec) {
+  const naps = rec.sommeil || [];
+  const totalMin = naps.reduce((s,n) => s + (n.fin ? diffMinutes(n.debut, n.fin) : 0), 0);
+  const enCours = naps.length && !naps[naps.length-1].fin;
+
+  const logHtml = naps.length ? `<div class="trans-log">
+    ${naps.map((n,i) => `
+      <div class="trans-log-item">
+        <span>🛏 ${n.debut} → ${n.fin || '…'}${n.fin ? ' (' + formatDuree(diffMinutes(n.debut,n.fin)) + ')' : ' (en cours)'}</span>
+        <span class="del" onclick="removeSommeil('${e.id}',${i})">✕</span>
+      </div>`).join('')}
+  </div>` : `<div style="font-size:12px;color:var(--ink3);margin-top:6px">Aucune sieste enregistrée.</div>`;
+
+  return `
+  <div class="trans-section">
+    <div class="trans-section-title">😴 Sommeil — total ${formatDuree(totalMin)}</div>
+    <button class="trans-btn ${enCours ? 'active' : ''}" onclick="toggleSommeil('${e.id}')">
+      ${enCours ? '⏹ Terminer la sieste' : '▶ Début de sieste'}
+    </button>
+    ${logHtml}
+  </div>`;
+}
+
+function toggleSommeil(enfantId) {
+  const rec = getTransRecord(enfantId);
+  const naps = rec.sommeil;
+  const last = naps[naps.length-1];
+  if (last && !last.fin) {
+    last.fin = nowHM();
+  } else {
+    naps.push({ debut: nowHM(), fin: null });
+  }
+  saveTransRecord(enfantId);
+  rerenderTransCard(enfantId);
+}
+
+function removeSommeil(enfantId, idx) {
+  const rec = getTransRecord(enfantId);
+  rec.sommeil.splice(idx, 1);
+  saveTransRecord(enfantId);
+  rerenderTransCard(enfantId);
+}
+
+// ── Changes ──────────────────────────────────────────────────────
+function renderChangesSection(e, rec) {
+  const changes = rec.changes || [];
+  const counts = {};
+  changes.forEach(c => { counts[c.type] = (counts[c.type]||0) + 1; });
+
+  const btnsHtml = CHANGE_TYPES.map(t => `
+    <button class="trans-btn" onclick="addChange('${e.id}','${t.val}')">
+      ${t.emoji} ${t.label}${counts[t.val] ? `<span class="trans-count">${counts[t.val]}</span>` : ''}
+    </button>`).join('');
+
+  const logHtml = changes.length ? `<div class="trans-log">
+    ${changes.map((c,i) => {
+      const ct = CHANGE_TYPES.find(t => t.val === c.type) || {emoji:'',label:c.type};
+      return `<div class="trans-log-item">
+        <span>${ct.emoji} ${c.heure} — ${ct.label}</span>
+        <span class="del" onclick="removeChange('${e.id}',${i})">✕</span>
+      </div>`;
+    }).join('')}
+  </div>` : `<div style="font-size:12px;color:var(--ink3);margin-top:6px">Aucun change enregistré.</div>`;
+
+  return `
+  <div class="trans-section">
+    <div class="trans-section-title">🧷 Changes — ${changes.length} aujourd'hui</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${btnsHtml}</div>
+    ${logHtml}
+  </div>`;
+}
+
+function addChange(enfantId, type) {
+  const rec = getTransRecord(enfantId);
+  rec.changes.push({ heure: nowHM(), type });
+  saveTransRecord(enfantId);
+  rerenderTransCard(enfantId);
+}
+
+function removeChange(enfantId, idx) {
+  const rec = getTransRecord(enfantId);
+  rec.changes.splice(idx, 1);
+  saveTransRecord(enfantId);
+  rerenderTransCard(enfantId);
+}
+
+
+// ── Repas ────────────────────────────────────────────────────────
+function repasOptionsHtml(selected) {
+  return REPAS_OPTIONS.map(o => `<option value="${o.val}" ${selected===o.val?'selected':''}>${o.emoji} ${o.label}</option>`).join('');
+}
+
+function repasSelectRow(enfantId, field, label, value) {
+  return `
+  <div class="trans-meal-row">
+    <label>${label}</label>
+    <select class="trans-select" style="max-width:160px" onchange="updateRepas('${enfantId}','${field}',this.value)">
+      <option value="">— Choisir —</option>
+      ${repasOptionsHtml(value)}
+    </select>
+  </div>`;
+}
+
+function renderRepasSection(e, rec) {
+  const repas = rec.repas;
+  const profile = repasProfile(e.type);
+  const biberon = repas.biberon || { pris:false, qte:'' };
+
+  const biberonHtml = `
+    <div class="trans-meal-row">
+      <label class="jour-toggle" style="cursor:pointer">
+        <input type="checkbox" ${biberon.pris ? 'checked' : ''} onchange="toggleBiberon('${e.id}', this.checked)" style="display:inline-block;width:auto;margin-right:4px">
+        🍼 Biberon pris
+      </label>
+      <input type="number" min="0" step="10" placeholder="ml" value="${transEsc(biberon.qte)}" ${biberon.pris ? '' : 'disabled'}
+        style="max-width:70px" class="trans-select"
+        oninput="updateBiberonQte('${e.id}', this.value)">
+    </div>`;
+
+  let mealsHtml = '';
+  if (profile === 'nourrisson') {
+    mealsHtml = `
+      ${repasSelectRow(e.id, 'puree', '🥣 Purée / repas', repas.puree)}
+      ${repasSelectRow(e.id, 'dessert', '🍮 Dessert', repas.dessert)}
+      ${repasSelectRow(e.id, 'gouter', '🍪 Goûter', repas.gouter)}`;
+  } else {
+    mealsHtml = `
+      ${repasSelectRow(e.id, 'entree', '🥗 Entrée', repas.entree)}
+      ${repasSelectRow(e.id, 'plat', '🍽 Plat + accompagnement', repas.plat)}
+      ${repasSelectRow(e.id, 'dessert', '🍮 Dessert', repas.dessert)}
+      ${repasSelectRow(e.id, 'gouter', '🍪 Goûter', repas.gouter)}`;
+  }
+
+  return `
+  <div class="trans-section">
+    <div class="trans-section-title">🍽 Repas & goûter</div>
+    ${biberonHtml}
+    ${mealsHtml}
+  </div>`;
+}
+
+function updateRepas(enfantId, field, value) {
+  const rec = getTransRecord(enfantId);
+  rec.repas[field] = value;
+  scheduleSaveTrans(enfantId);
+}
+
+function toggleBiberon(enfantId, checked) {
+  const rec = getTransRecord(enfantId);
+  rec.repas.biberon = rec.repas.biberon || { pris:false, qte:'' };
+  rec.repas.biberon.pris = !!checked;
+  saveTransRecord(enfantId);
+  rerenderTransCard(enfantId);
+}
+
+function updateBiberonQte(enfantId, value) {
+  const rec = getTransRecord(enfantId);
+  rec.repas.biberon = rec.repas.biberon || { pris:false, qte:'' };
+  rec.repas.biberon.qte = value;
+  scheduleSaveTrans(enfantId);
+}
+
+// ── Observations ─────────────────────────────────────────────────
+function renderObsSection(e, rec) {
+  const obs = rec.observations || [];
+  const typeOptionsHtml = OBS_TYPES.map(t => `<option value="${t.val}">${t.emoji} ${t.label}</option>`).join('');
+
+  const logHtml = obs.length ? `<div class="trans-log">
+    ${obs.map((o,i) => {
+      const ot = OBS_TYPES.find(t => t.val === o.type) || {emoji:'📝',label:o.type};
+      return `<div class="trans-log-item">
+        <span>${ot.emoji} <strong>${o.heure}</strong> — ${transEsc(o.texte)}</span>
+        <span class="del" onclick="removeObs('${e.id}',${i})">✕</span>
+      </div>`;
+    }).join('')}
+  </div>` : `<div style="font-size:12px;color:var(--ink3);margin-top:6px">Aucune observation.</div>`;
+
+  return `
+  <div class="trans-section" style="grid-column: 1 / -1">
+    <div class="trans-section-title">🗒 Observations & incidents</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <select class="trans-select" id="trans-obs-type-${e.id}" style="max-width:200px">${typeOptionsHtml}</select>
+    </div>
+    <textarea class="trans-select" id="trans-obs-text-${e.id}" rows="2" placeholder="Notez une observation, un événement, une transmission importante…" style="resize:vertical;margin-bottom:8px"></textarea>
+    <button class="trans-btn" onclick="addObservation('${e.id}')">➕ Ajouter</button>
+    ${logHtml}
+  </div>`;
+}
+
+function addObservation(enfantId) {
+  const textEl = document.getElementById('trans-obs-text-' + enfantId);
+  const typeEl = document.getElementById('trans-obs-type-' + enfantId);
+  const texte = textEl ? textEl.value.trim() : '';
+  if (!texte) return;
+  const rec = getTransRecord(enfantId);
+  rec.observations.unshift({
+    heure: nowHM(),
+    type: typeEl ? typeEl.value : 'observation',
+    texte,
+    auteur: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : '',
+  });
+  saveTransRecord(enfantId);
+  rerenderTransCard(enfantId);
+}
+
+function removeObs(enfantId, idx) {
+  const rec = getTransRecord(enfantId);
+  rec.observations.splice(idx, 1);
+  saveTransRecord(enfantId);
+  rerenderTransCard(enfantId);
+}
+
+
+// ── Menu du jour ─────────────────────────────────────────────────
+function renderMenuBanner() {
+  const el = document.getElementById('trans-menu-banner');
+  if (!el) return;
+  if (!TRANS_MENU || !(TRANS_MENU.entree || TRANS_MENU.plat || TRANS_MENU.puree || TRANS_MENU.mixe || TRANS_MENU.dessert || TRANS_MENU.gouter)) {
+    el.innerHTML = `<div class="trans-menu-box" style="background:var(--bg);color:var(--ink3)">
+      🍽 Aucun menu renseigné pour cette date — cliquez sur « Menu du jour » pour le compléter.
+    </div>`;
+    return;
+  }
+  const m = TRANS_MENU;
+  const sourceLabels = { prestataire:'Fourni par le prestataire', parents:'Apporté par les parents', creche:'Préparé par la crèche' };
+  const parts = [];
+  if (m.entree) parts.push(`Entrée : ${transEsc(m.entree)}`);
+  if (m.plat) parts.push(`Plat : ${transEsc(m.plat)}`);
+  if (m.accompagnement) parts.push(`Accompagnement : ${transEsc(m.accompagnement)}`);
+  if (m.dessert) parts.push(`Dessert : ${transEsc(m.dessert)}`);
+  if (m.mixe) parts.push(`Repas mixé : ${transEsc(m.mixe)}`);
+  if (m.gouter) parts.push(`Goûter : ${transEsc(m.gouter)}`);
+  el.innerHTML = `<div class="trans-menu-box">
+    <strong>🍽 Menu du jour</strong>${m.source ? ` <span style="opacity:.75">(${sourceLabels[m.source]||m.source})</span>` : ''}<br>
+    ${parts.join(' · ')}
+  </div>`;
+}
+
+function openMenuModal() {
+  const creche = getTransCreche();
+  const dateLabel = document.getElementById('modal-menu-date-label');
+  if (dateLabel) dateLabel.textContent = `${creche} — ${new Date(transDate).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}`;
+
+  const m = TRANS_MENU || {};
+  const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  setV('menu-entree', m.entree);
+  setV('menu-plat', m.plat);
+  setV('menu-accompagnement', m.accompagnement);
+  setV('menu-dessert', m.dessert);
+  setV('menu-mixe', m.mixe);
+  setV('menu-gouter', m.gouter);
+  const srcEl = document.getElementById('menu-source');
+  if (srcEl) srcEl.value = m.source || 'prestataire';
+
+  const mm = document.getElementById('modal-menu');
+  if (mm) { mm.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+
+async function saveMenu() {
+  const getV = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const row = {
+    creche: getTransCreche(),
+    date: transDate,
+    entree: getV('menu-entree'),
+    plat: getV('menu-plat'),
+    accompagnement: getV('menu-accompagnement'),
+    dessert: getV('menu-dessert'),
+    mixe: getV('menu-mixe'),
+    gouter: getV('menu-gouter'),
+    source: document.getElementById('menu-source')?.value || 'prestataire',
+  };
+  try {
+    if (TRANS_MENU && TRANS_MENU.id) {
+      await sbUpdate('menus', TRANS_MENU.id, row);
+      TRANS_MENU = Object.assign({}, TRANS_MENU, row);
+    } else {
+      const res = await sbInsert('menus', row);
+      TRANS_MENU = (Array.isArray(res) && res[0]) ? res[0] : row;
+    }
+    renderMenuBanner();
+    closeModal('modal-menu');
+    showNotif('✅ Menu enregistré');
+  } catch (err) {
+    console.error('saveMenu', err);
+    showNotif("⚠ Erreur lors de l'enregistrement du menu");
+  }
+}
+
+
+// ── Fiche journalière ────────────────────────────────────────────
+function repasLabelHtml(value) {
+  const o = REPAS_OPTIONS.find(r => r.val === value);
+  return o ? `${o.emoji} ${o.label}` : '<span style="color:var(--ink3)">Non renseigné</span>';
+}
+
+function buildFicheJourHtml(enfantId) {
+  const e = TRANS_ENFANTS.find(x => String(x.id) === String(enfantId));
+  if (!e) return '<div>Enfant introuvable.</div>';
+  const rec = getTransRecord(enfantId);
+  const age = calcAgeEnfant(e.ddn);
+  const tranche = getTranche(e.type);
+  const profile = repasProfile(e.type);
+  const dateLabel = new Date(transDate).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  const naps = rec.sommeil || [];
+  const totalMin = naps.reduce((s,n) => s + (n.fin ? diffMinutes(n.debut, n.fin) : 0), 0);
+  const sommeilHtml = naps.length
+    ? naps.map(n => `${n.debut} → ${n.fin || '…'}${n.fin ? ' (' + formatDuree(diffMinutes(n.debut,n.fin)) + ')' : ''}`).join('<br>')
+    : 'Aucune sieste enregistrée.';
+
+  const changes = rec.changes || [];
+  const counts = {};
+  changes.forEach(c => { counts[c.type] = (counts[c.type]||0) + 1; });
+  const changesHtml = CHANGE_TYPES.map(t => `${t.emoji} ${t.label} : ${counts[t.val]||0}`).join(' · ');
+
+  const repas = rec.repas;
+  let repasHtml = '';
+  if (profile === 'nourrisson') {
+    repasHtml = `
+      <div>🍼 Biberon : ${repas.biberon?.pris ? (repas.biberon.qte ? repas.biberon.qte + ' ml' : 'pris (quantité non précisée)') : 'non pris'}</div>
+      <div>🥣 Purée / repas : ${repasLabelHtml(repas.puree)}</div>
+      <div>🍮 Dessert : ${repasLabelHtml(repas.dessert)}</div>
+      <div>🍪 Goûter : ${repasLabelHtml(repas.gouter)}</div>`;
+  } else {
+    repasHtml = `
+      ${repas.biberon?.pris ? `<div>🍼 Biberon : ${repas.biberon.qte ? repas.biberon.qte + ' ml' : 'pris'}</div>` : ''}
+      <div>🥗 Entrée : ${repasLabelHtml(repas.entree)}</div>
+      <div>🍽 Plat + accompagnement : ${repasLabelHtml(repas.plat)}</div>
+      <div>🍮 Dessert : ${repasLabelHtml(repas.dessert)}</div>
+      <div>🍪 Goûter : ${repasLabelHtml(repas.gouter)}</div>`;
+  }
+
+  const obs = rec.observations || [];
+  const obsHtml = obs.length ? obs.map(o => {
+    const ot = OBS_TYPES.find(t => t.val === o.type) || {emoji:'📝',label:o.type};
+    return `<div style="margin-bottom:4px">${ot.emoji} <strong>${o.heure}</strong> — ${transEsc(o.texte)}</div>`;
+  }).join('') : '<div style="color:var(--ink3)">Aucune observation particulière.</div>';
+
+  let menuHtml = '';
+  if (TRANS_MENU && (TRANS_MENU.entree || TRANS_MENU.plat || TRANS_MENU.dessert || TRANS_MENU.mixe || TRANS_MENU.gouter)) {
+    const m = TRANS_MENU;
+    const parts = [];
+    if (m.entree) parts.push('Entrée : ' + transEsc(m.entree));
+    if (m.plat) parts.push('Plat : ' + transEsc(m.plat));
+    if (m.accompagnement) parts.push('Accompagnement : ' + transEsc(m.accompagnement));
+    if (m.dessert) parts.push('Dessert : ' + transEsc(m.dessert));
+    if (m.mixe) parts.push('Repas mixé : ' + transEsc(m.mixe));
+    if (m.gouter) parts.push('Goûter : ' + transEsc(m.gouter));
+    menuHtml = `<div class="trans-menu-box" style="margin-top:0">🍽 <strong>Menu du jour</strong><br>${parts.join(' · ')}</div>`;
+  }
+
+  const paiActif = e.pai === 'actif' || e.pai === 'en_cours';
+  const paiHtml = paiActif ? `<div class="trans-pai-alert">
+    <span style="font-size:16px">⚠️</span>
+    <div>
+      <div>PAI ${e.pai === 'actif' ? 'actif' : 'en cours'} — vigilance requise</div>
+      ${e.allergies ? `<div style="font-weight:500;margin-top:2px">Allergies : ${transEsc(e.allergies)}</div>` : ''}
+      ${e.medecin ? `<div style="font-weight:500;margin-top:2px">Médecin référent : ${transEsc(e.medecin)}</div>` : ''}
+    </div>
+  </div>` : '';
+
+  const reperes = getDevReperes(e.type);
+  const reperesHtml = `
+    <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-weight:700;margin-bottom:6px">📚 Repères de développement — ${tranche.label}</div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--ink2);line-height:1.6">
+        ${reperes.map(r => `<li>${transEsc(r)}</li>`).join('')}
+      </ul>
+      <div style="font-size:11px;color:var(--ink3);margin-top:6px">
+        Ces repères sont donnés à titre indicatif et ne constituent pas un diagnostic. Chaque enfant évolue à son rythme.
+      </div>
+    </div>`;
+
+  return `
+    <div style="font-size:13px;color:var(--ink2);line-height:1.7">
+      <div style="font-weight:700;font-size:15px;color:var(--ink);margin-bottom:2px">${transEsc(e.prenom)} ${transEsc(e.nom)} — ${age.label}</div>
+      <div style="color:var(--ink3);margin-bottom:12px">${getTransCreche()} · ${dateLabel}</div>
+      ${paiHtml}
+      ${menuHtml}
+      <div style="margin-top:12px"><strong>😴 Sommeil</strong> (total ${formatDuree(totalMin)})<br>${sommeilHtml}</div>
+      <div style="margin-top:12px"><strong>🧷 Changes</strong><br>${changesHtml}</div>
+      <div style="margin-top:12px"><strong>🍽 Repas & goûter</strong>${repasHtml}</div>
+      <div style="margin-top:12px"><strong>🗒 Observations</strong>${obsHtml}</div>
+      ${reperesHtml}
+    </div>`;
+}
+
+function openFicheJour(enfantId) {
+  const e = TRANS_ENFANTS.find(x => String(x.id) === String(enfantId));
+  const titleEl = document.getElementById('trans-fiche-title');
+  if (titleEl) titleEl.textContent = e ? `📋 Fiche du jour — ${e.prenom} ${e.nom}` : '📋 Fiche du jour';
+  const bodyEl = document.getElementById('trans-fiche-body');
+  if (bodyEl) bodyEl.innerHTML = buildFicheJourHtml(enfantId);
+  bodyEl?.setAttribute('data-enfant-id', String(enfantId));
+  const sendBtn = document.getElementById('trans-fiche-send-btn');
+  if (sendBtn) sendBtn.dataset.enfantId = String(enfantId);
+  const m = document.getElementById('modal-trans-fiche');
+  if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+
+function printTransFiche() {
+  const bodyEl = document.getElementById('trans-fiche-body');
+  const titleEl = document.getElementById('trans-fiche-title');
+  if (!bodyEl) return;
+  const w = window.open('', '_blank');
+  if (!w) { showNotif('⚠ Autorisez les fenêtres pop-up pour imprimer'); return; }
+  w.document.write(`
+    <html><head><title>${titleEl ? titleEl.textContent : 'Fiche du jour'}</title>
+    <style>body{font-family:Arial,sans-serif;padding:24px;color:#1a1a1a} .trans-pai-alert{background:#FFE4E6;border:1.5px solid #FECACA;color:#BE123C;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600} .trans-menu-box{background:#F0F4FF;border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:14px}</style>
+    </head><body>
+    <h2>${titleEl ? titleEl.textContent : 'Fiche du jour'}</h2>
+    ${bodyEl.innerHTML}
+    </body></html>`);
+  w.document.close();
+  setTimeout(() => { w.print(); }, 300);
+}
+
+function envoyerFicheParent() {
+  const sendBtn = document.getElementById('trans-fiche-send-btn');
+  const enfantId = sendBtn ? sendBtn.dataset.enfantId : null;
+  const e = TRANS_ENFANTS.find(x => String(x.id) === String(enfantId));
+  if (!e) { showNotif('⚠ Enfant introuvable'); return; }
+  const email = e.parent1?.email;
+  if (!email) { showNotif('⚠ Aucune adresse e-mail renseignée pour ce parent'); return; }
+
+  const age = calcAgeEnfant(e.ddn);
+  const rec = getTransRecord(enfantId);
+  const dateLabel = new Date(transDate).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  const naps = rec.sommeil || [];
+  const totalMin = naps.reduce((s,n) => s + (n.fin ? diffMinutes(n.debut, n.fin) : 0), 0);
+  const napLines = naps.map(n => `  - ${n.debut} -> ${n.fin || 'en cours'}`).join('\n');
+
+  const changes = rec.changes || [];
+  const counts = {};
+  changes.forEach(c => { counts[c.type] = (counts[c.type]||0) + 1; });
+  const changesLine = CHANGE_TYPES.map(t => `${t.label}: ${counts[t.val]||0}`).join(', ');
+
+  const profile = repasProfile(e.type);
+  const repas = rec.repas;
+  const repasLines = profile === 'nourrisson'
+    ? [
+        `Biberon: ${repas.biberon?.pris ? (repas.biberon.qte ? repas.biberon.qte + ' ml' : 'pris') : 'non pris'}`,
+        `Purée / repas: ${REPAS_OPTIONS.find(o=>o.val===repas.puree)?.label || 'non renseigné'}`,
+        `Dessert: ${REPAS_OPTIONS.find(o=>o.val===repas.dessert)?.label || 'non renseigné'}`,
+        `Goûter: ${REPAS_OPTIONS.find(o=>o.val===repas.gouter)?.label || 'non renseigné'}`,
+      ]
+    : [
+        repas.biberon?.pris ? `Biberon: ${repas.biberon.qte ? repas.biberon.qte + ' ml' : 'pris'}` : '',
+        `Entrée: ${REPAS_OPTIONS.find(o=>o.val===repas.entree)?.label || 'non renseigné'}`,
+        `Plat + accompagnement: ${REPAS_OPTIONS.find(o=>o.val===repas.plat)?.label || 'non renseigné'}`,
+        `Dessert: ${REPAS_OPTIONS.find(o=>o.val===repas.dessert)?.label || 'non renseigné'}`,
+        `Goûter: ${REPAS_OPTIONS.find(o=>o.val===repas.gouter)?.label || 'non renseigné'}`,
+      ].filter(Boolean);
+
+  const obs = rec.observations || [];
+  const obsLines = obs.length ? obs.map(o => `  - ${o.heure} : ${o.texte}`).join('\n') : '  Aucune observation particulière.';
+
+  const subject = `Transmission du jour - ${e.prenom} ${e.nom} (${dateLabel})`;
+  const body = [
+    `Bonjour,`,
+    ``,
+    `Voici un résumé de la journée de ${e.prenom} (${age.label}) du ${dateLabel} :`,
+    ``,
+    `SOMMEIL (total ${formatDuree(totalMin)})`,
+    napLines || '  Aucune sieste enregistrée.',
+    ``,
+    `CHANGES`,
+    `  ${changesLine}`,
+    ``,
+    `REPAS & GOÛTER`,
+    repasLines.map(l => '  ' + l).join('\n'),
+    ``,
+    `OBSERVATIONS`,
+    obsLines,
+    ``,
+    `Belle soirée,`,
+    `L'équipe de la crèche`,
+  ].join('\n');
+
+  const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+
+  rec.envoye_parent = true;
+  saveTransRecord(enfantId);
+  showNotif('✉️ Fiche prête à être envoyée au parent');
+}
+
+
+// ── Bilan mensuel / annuel ───────────────────────────────────────
+function getPeriodeRange(periode) {
+  const now = new Date();
+  let start, end;
+  if (periode === 'mois-1') {
+    start = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    end   = new Date(now.getFullYear(), now.getMonth(), 0);
+  } else if (periode === 'annee') {
+    start = new Date(now.getFullYear(), 0, 1);
+    end   = now;
+  } else {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end   = now;
+  }
+  const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  return { start: fmt(start), end: fmt(end) };
+}
+
+function openBilanModal(enfantId) {
+  const sel = document.getElementById('bilan-enfant-sel');
+  if (sel) {
+    sel.innerHTML = TRANS_ENFANTS.map(e => `<option value="${e.id}">${transEsc(e.prenom)} ${transEsc(e.nom)}</option>`).join('');
+    if (enfantId) sel.value = String(enfantId);
+  }
+  const m = document.getElementById('modal-trans-bilan');
+  if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  renderBilan();
+}
+
+async function renderBilan() {
+  const body = document.getElementById('trans-bilan-body');
+  if (!body) return;
+  const enfantId = document.getElementById('bilan-enfant-sel')?.value;
+  const periode = document.getElementById('bilan-periode-sel')?.value || 'mois';
+  const e = TRANS_ENFANTS.find(x => String(x.id) === String(enfantId));
+  if (!e) { body.innerHTML = '<div style="color:var(--ink3)">Aucun enfant sélectionné.</div>'; return; }
+
+  body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3)">Chargement…</div>';
+
+  const { start, end } = getPeriodeRange(periode);
+  const creche = getTransCreche();
+  let rows = [];
+  try {
+    rows = await sbGet('transmissions', `creche=eq.${encodeURIComponent(creche)}&enfant_id=eq.${encodeURIComponent(String(enfantId))}&date=gte.${start}&date=lte.${end}`);
+    if (!Array.isArray(rows)) rows = [];
+  } catch (err) {
+    console.error('renderBilan', err);
+    body.innerHTML = '<div style="color:var(--red)">⚠ Erreur lors du chargement des données.</div>';
+    return;
+  }
+
+  const records = rows.map(rowToTransRecord);
+  const nbJours = records.length;
+
+  // Sommeil moyen
+  let totalSommeil = 0, joursAvecSommeil = 0;
+  records.forEach(r => {
+    const naps = r.sommeil || [];
+    const min = naps.reduce((s,n) => s + (n.fin ? diffMinutes(n.debut,n.fin) : 0), 0);
+    if (min > 0) { totalSommeil += min; joursAvecSommeil++; }
+  });
+  const moyenneSommeil = joursAvecSommeil ? Math.round(totalSommeil / joursAvecSommeil) : 0;
+
+  // Changes totaux
+  const changeCounts = {};
+  CHANGE_TYPES.forEach(t => changeCounts[t.val] = 0);
+  records.forEach(r => (r.changes||[]).forEach(c => { if (changeCounts[c.type] !== undefined) changeCounts[c.type]++; }));
+
+  // Repas — % "bien mangé"
+  const profile = repasProfile(e.type);
+  const champs = profile === 'nourrisson' ? ['puree','dessert','gouter'] : ['entree','plat','dessert','gouter'];
+  let totalRepas = 0, totalBien = 0;
+  records.forEach(r => {
+    champs.forEach(c => {
+      const v = r.repas?.[c];
+      if (v) { totalRepas++; if (v === 'bien') totalBien++; }
+    });
+  });
+  const pctBien = totalRepas ? Math.round((totalBien/totalRepas)*100) : 0;
+
+  // Incidents et transmissions importantes
+  const incidents = [];
+  records.forEach(r => (r.observations||[]).forEach(o => {
+    if (o.type === 'incident' || o.type === 'important') {
+      incidents.push({ date: r.date, ...o });
+    }
+  }));
+  incidents.sort((a,b) => a.date < b.date ? 1 : -1);
+
+  const periodeLabels = { mois:'mois en cours', 'mois-1':'mois précédent', annee:'année en cours' };
+  const tranche = getTranche(e.type);
+  const reperes = getDevReperes(e.type);
+
+  const incidentsHtml = incidents.length ? `<div class="trans-log" style="max-height:220px">
+    ${incidents.map(o => {
+      const ot = OBS_TYPES.find(t => t.val === o.type) || {emoji:'📝',label:o.type};
+      return `<div class="trans-log-item"><span>${ot.emoji} <strong>${o.date} ${o.heure}</strong> — ${transEsc(o.texte)}</span></div>`;
+    }).join('')}
+  </div>` : '<div style="color:var(--ink3);font-size:12px">Aucun incident ni transmission importante sur cette période.</div>';
+
+  body.innerHTML = `
+    <div style="font-size:13px;color:var(--ink2);line-height:1.7">
+      <div style="font-weight:700;font-size:15px;color:var(--ink);margin-bottom:2px">${transEsc(e.prenom)} ${transEsc(e.nom)} — ${tranche.label}</div>
+      <div style="color:var(--ink3);margin-bottom:12px">Bilan du ${periodeLabels[periode]} · ${nbJours} jour(s) de transmission enregistré(s)</div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px">
+        <div class="trans-section"><div class="trans-section-title">Sommeil moyen / jour</div>${formatDuree(moyenneSommeil)}</div>
+        <div class="trans-section"><div class="trans-section-title">Repas « bien mangé »</div>${pctBien}%</div>
+        <div class="trans-section"><div class="trans-section-title">Changes totaux</div>${CHANGE_TYPES.map(t=>`${t.emoji} ${changeCounts[t.val]}`).join(' · ')}</div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-weight:700;margin-bottom:6px">⚠️ Incidents & transmissions importantes</div>
+        ${incidentsHtml}
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-weight:700;margin-bottom:6px">📚 Repères de développement — ${tranche.label}</div>
+        <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--ink2);line-height:1.6">
+          ${reperes.map(r => `<li>${transEsc(r)}</li>`).join('')}
+        </ul>
+        <div style="font-size:11px;color:var(--ink3);margin-top:6px">
+          Ces repères sont donnés à titre indicatif et ne constituent pas un diagnostic. Chaque enfant évolue à son rythme.
+        </div>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FIN MODULE TRANSMISSIONS
 // ══════════════════════════════════════════════════════════════════
 
 // ── PERSONNALISATION ─────────────────────────────────────────────
@@ -5356,10 +6450,10 @@ let currentUserRole = 'stagiaire';
 let currentUserDbId = null;
 
 const ROLE_PAGES = {
-  admin:         ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles'],
-  coordinateur:  ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles'],
-  directrice:    ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles'],
-  auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles'],
+  admin:         ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles','transmissions'],
+  coordinateur:  ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions'],
+  directrice:    ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions'],
+  auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles','transmissions'],
   stagiaire:     ['dashboard'],
 };
 
@@ -6999,13 +8093,13 @@ document.addEventListener('webkitfullscreenchange', _syncFullscreenBtn);
 
 function showPage(page, btn) {
   currentPage = page;
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant' };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -7022,6 +8116,7 @@ function showPage(page, btn) {
   if (page === 'rh')       { showRhPage(); }
   if (page === 'planning') { showPlanningEquipePage(); }
   if (page === 'salarie')  { showPage('planning', null); }
+  if (page === 'transmissions') { renderTransmissions(); }
 }
 
 function showTab(tab, btn) {
@@ -8222,7 +9317,8 @@ let SUPA_RH_HEADERS = {
 const RH_TABLES = new Set([
   'utilisateurs','recrutements','contrats','conges',
   'formations_rh','documents_rh','stagiaires','planning','pointages','pointages_enfants',
-  'enfants','berceaux','salaries','planning_semaines','parametres'
+  'enfants','berceaux','salaries','planning_semaines','parametres',
+  'transmissions','menus'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
