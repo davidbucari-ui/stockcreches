@@ -18226,131 +18226,289 @@ function pmiRenderBody() {
 // ── Export / impression ──
 function pmiPrint() {
   const m = PMI_DATA.meta || {};
-  let out = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Contrôle PMI - ${pmiEsc(m.nom_etablissement || PMI_CRECHE)}</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1A1208;padding:24px;max-width:900px;margin:0 auto}
-    h1{font-size:19px;margin-bottom:2px}
-    h2{font-size:13px;margin:16px 0 6px;border-bottom:1px solid #ccc;padding-bottom:3px;color:#1A1208}
-    table{width:100%;border-collapse:collapse;margin-bottom:4px}
-    td{padding:3px 6px;border-bottom:1px solid #eee;font-size:11px;vertical-align:top}
-    td.lab{width:72%}
-    td.val{font-weight:700;text-align:right;white-space:normal}
-    @media print { body{padding:6px} h2{page-break-after:avoid} }
-  </style></head><body>`;
-  out += `<h1>Compte rendu de visite de contrôle EAJE — PMI 2026</h1>
-  <div style="color:#888;margin-bottom:10px;font-size:11px">Document généré automatiquement par Orevy Structures à partir des données saisies — à compléter sur place.</div>`;
-
-  out += `<table>`;
-  const idf = (l,v) => { out += `<tr><td class="lab">${pmiEsc(l)}</td><td class="val">${pmiEsc(v) || '—'}</td></tr>`; };
-  idf('Établissement', (m.nom_etablissement||'') + (m.ville ? ' — ' + m.ville : ''));
-  idf('Catégorie EAJE', m.categorie || pmiCategorie(m.capacite));
-  idf('Capacité agréée / surnombre (+15%)', (m.capacite||'—') + ' / ' + (m.surnombre115||'—'));
-  idf('Type d’établissement', m.type_etablissement);
-  idf('Heures ouverture hebdo / capacité hebdo totale', (m.heures_ouverture_hebdo||'—') + ' h / ' + (Math.round((m.heures_ouverture_hebdo||0)*(m.capacite||0))||'—') + ' h');
-  idf('Taux d’occupation de la semaine', m.taux_occupation_semaine);
-  idf('Date du contrôle', m.date_controle);
-  idf('Contrôle effectué par', (m.effectue_par||'') + (m.qualif_effectue_par ? ' (' + m.qualif_effectue_par + ')' : ''));
-  idf('En présence de', (m.en_presence_de||'') + (m.qualif_presence ? ' (' + m.qualif_presence + ')' : ''));
-  out += `</table>`;
-
-  function printItems(title, items, obj) {
-    out += `<h2>${pmiEsc(title)}</h2><table>`;
-    (items||[]).forEach(it => {
-      const v = (obj||{})[it.k];
-      const lbl = (it.s ? '★ ' : '') + it.l;
-      const val = v === 'oui' ? 'OUI' : v === 'non' ? 'NON' : v === 'na' ? 'N/A' : '—';
-      out += `<tr><td class="lab">${pmiEsc(lbl)}</td><td class="val">${val}</td></tr>`;
-    });
-    out += `</table>`;
-  }
-  function printField(label, val) { out += `<tr><td class="lab">${pmiEsc(label)}</td><td class="val">${pmiEsc(val) || '—'}</td></tr>`; }
-
-  out += `<h2>Encadrement</h2><table>`;
   const enc = PMI_DATA.encadrement || {};
-  printField('Règle d’encadrement', enc.regle_encadrement === '1_6' ? '1 professionnel / 6 enfants (micro-crèche)' : enc.regle_encadrement === '1_5_8' ? '1/5 non-marcheurs — 1/8 marcheurs' : '');
-  printField('Nombre de professionnels présents le jour du contrôle', enc.nb_pros_jour);
-  printField('Effectif et qualifications adaptés', enc.effectif_qualif_adapte === 'oui' ? 'OUI' : enc.effectif_qualif_adapte === 'non' ? 'NON' : '—');
-  out += `</table><table><tr><td class="lab"><b>Fonction</b></td><td class="val"><b>Nb / ETP / Nom(s)</b></td></tr>`;
+  const cap = Number(m.capacite) || 0;
+  const surnombre = m.surnombre115 || Math.round(cap*1.15*10)/10;
+  const capHebdo = Math.round((m.heures_ouverture_hebdo||0) * cap);
+
+  // ── Petits composants reproduisant la mise en page du document officiel ──
+  const cb = (on) => `<span class="cb">${on ? '☑' : '☐'}</span>`;
+  const star = (s) => s ? '<span class="star">(*) </span>' : '';
+  const pBool = (label, val, s) => `<div class="item"><span class="arrow">➜</span> ${star(s)}${pmiEsc(label)} ${cb(val==='oui')} Oui ${cb(val==='non')} Non ${cb(val==='na')} N/A</div>`;
+  const pBoolGroup = (items, obj) => (items||[]).map(it => pBool(it.l, (obj||{})[it.k], it.s)).join('');
+  const pField = (label, val, s) => `<div class="field">${star(s)}<b>${pmiEsc(label)}</b> : <span class="dots">${pmiEsc(val)}</span></div>`;
+  const pBlock = (label, val, s) => `<div class="field">${star(s)}<b>${pmiEsc(label)}</b><div class="dotsbox">${pmiEsc(val)}</div></div>`;
+  const pChoice = (label, on) => `${cb(on)} ${pmiEsc(label)}`;
+  const pYesNo = (label, val, s) => `<div class="field">${star(s)}<b>${pmiEsc(label)}</b> : ${cb(val==='oui')} Oui ${cb(val==='non')} Non</div>`;
+
+  let pages = [];
+  const addPage = (title, content) => pages.push(`<div class="page">${title?`<div class="page-title">${pmiEsc(title)}</div>`:''}${content}</div>`);
+
+  // ── Page 1 : Identité, capacité, occupation ──
+  const catChoices = [
+    ['Micro-crèche (≤ 12 places)', cap>0 && cap<=12],
+    ['Petite crèche (13 à 24 places)', cap>=13 && cap<=24],
+    ['Crèche (25 à 39 places)', cap>=25 && cap<=39],
+    ['Grande crèche (40 à 59 places)', cap>=40 && cap<=59],
+    ['Très grande crèche (≥ 60 places)', cap>=60],
+  ];
+  const typeChoices = [['Collectif', m.type_etablissement==='collectif'], ['Parental', m.type_etablissement==='parental'], ['Familial', m.type_etablissement==='familial']];
+  addPage(null, `
+    <div class="title-box">Compte rendu de visite de contrôle EAJE</div>
+    <div class="subtle">Document généré par Orevy Structures à partir des données saisies — à compléter et vérifier sur place.</div>
+    ${pField('Nom de l’établissement', m.nom_etablissement)}
+    ${pField('Ville', m.ville)}
+    <br>
+    ${pField('N° de téléphone fixe', m.tel_fixe)}
+    ${pField('N° de téléphone mobile', m.tel_mobile)}
+    ${pField('Adresse mail', m.email)}
+    <br>
+    ${pField('Date et heure du contrôle', m.date_controle)}
+    ${pField('Effectuée par', m.effectue_par)}
+    ${pField('Qualification', m.qualif_effectue_par)}
+    ${pField('En présence de', m.en_presence_de)}
+    ${pField('Qualification', m.qualif_presence)}
+    <br>
+    <div class="field"><b>Capacité d’accueil</b> : <span class="dots">${pmiEsc(m.capacite)}</span> + 115% (accueil en surnombre autorisé) = <span class="dots">${pmiEsc(surnombre)}</span></div>
+    <div class="field"><b>Nombre d’ETP nécessaire</b> : <span class="dots">${pmiEsc(m.etp_necessaire)}</span> ETP dont <span class="dots">${pmiEsc(m.etp_diplomes)}</span> ETP de diplômés <span class="subtle">(voir tableau personnel encadrant)</span></div>
+    ${pYesNo('Modulation horaire', m.modulation_horaire)}
+    ${pField('Nombre d’heures d’ouverture hebdomadaire (amplitude × 5 jours)', m.heures_ouverture_hebdo)}
+    <div class="field"><b>Capacité hebdomadaire totale d’accueil</b> (capacité × heures d’ouverture) : <span class="dots">${capHebdo || ''}</span></div>
+    <div class="cols2" style="margin-top:10px">
+      <div>
+        <div class="section-title">Catégorie d’établissement :</div>
+        ${catChoices.map(([l,on]) => `<div class="item">${pChoice(l,on)}</div>`).join('')}
+      </div>
+      <div>
+        <div class="section-title">Type d’établissement :</div>
+        ${typeChoices.map(([l,on]) => `<div class="item">${pChoice(l,on)}</div>`).join('')}
+      </div>
+    </div>
+    <div class="footer-star">(*) = caractère réglementaire</div>
+  `);
+
+  // ── Page 2 : Effectif par section ──
+  const nbS = PMI_DATA.sections.length;
+  let p2 = `<div class="section-title">Effectif d’enfants / section :</div>`;
+  p2 += `<div class="item">${pChoice('Section unique', nbS===1)} &nbsp;&nbsp;&nbsp; ${pChoice('Plusieurs sections', nbS>1)} ${nbS>1?('('+nbS+')'):''}</div>`;
+  PMI_DATA.sections.forEach((sec,i) => {
+    const eff = sec.effectif || {};
+    p2 += `<div class="field" style="margin-top:8px"><b>Effectif compté le jour de la visite ${nbS>1?('dans la section « '+pmiEsc(sec.nom||('Section '+(i+1)))+' »'):'(section unique)'}</b> : <span class="dots">${pmiEsc(eff.total)}</span></div>`;
+    p2 += `<div class="item">Dont <span class="dots" style="min-width:60px">${pmiEsc(eff.marchent)}</span> qui marchent</div>`;
+    p2 += `<div class="item">Dont <span class="dots" style="min-width:60px">${pmiEsc(eff.ne_marchent)}</span> qui ne marchent pas</div>`;
+  });
+  p2 += `<div class="field" style="margin-top:10px">${star(1)}<b>Effectif maximum d’enfants reçus (surnombre)</b> : <span class="dots">${pmiEsc(surnombre)}</span> <span class="subtle">(à compter sur le cahier de présence journalier)</span></div>`;
+  p2 += pYesNo('Le taux d’occupation hebdomadaire est-il consigné dans un tableau de bord (justification du surnombre sur les 2 derniers mois) ?', m.tableau_bord_surnombre);
+  p2 += pField('Taux d’occupation de la dernière semaine', m.taux_occupation_semaine);
+  addPage('Effectifs', p2);
+
+  // ── Page 3 : Encadrement & personnel ──
+  let p3 = '';
+  p3 += `<div class="item">${pChoice('Règle 1 professionnel / 6 enfants (micro-crèche)', enc.regle_encadrement==='1_6')}</div>`;
+  p3 += `<div class="item">${pChoice('Règle 1/5 non-marcheurs — 1/8 marcheurs (crèche classique)', enc.regle_encadrement==='1_5_8')}</div>`;
+  p3 += pField('Nombre de professionnels présents le jour du contrôle', enc.nb_pros_jour);
+  p3 += pYesNo('Effectif et qualifications adaptés à l’agrément et à l’effectif accueilli', enc.effectif_qualif_adapte, 1);
+  p3 += `<div class="section-title">Personnel encadrant</div>`;
+  p3 += `<table class="ptable"><thead><tr><th>Fonction</th><th>Nb</th><th>ETP</th><th>Nom(s) Prénom(s)</th></tr></thead><tbody>`;
   Object.entries(PMI_CAT_LABELS).forEach(([k,l]) => {
     const p = (enc.personnel||{})[k] || {};
-    if (p.nb || p.nom) out += `<tr><td class="lab">${pmiEsc(l)}</td><td class="val">${p.nb||0} / ${p.etp||0} ETP — ${pmiEsc(p.nom)||'—'}</td></tr>`;
+    p3 += `<tr><td>${pmiEsc(l)}</td><td>${pmiEsc(p.nb)||''}</td><td>${pmiEsc(p.etp)||''}</td><td>${pmiEsc(p.nom)||''}</td></tr>`;
   });
-  out += `</table>`;
-  printItems('Honorabilité & continuité de direction', [
-    {k:'honorabilite_personnel',l:'Honorabilité du personnel vérifiée',s:1},
-    {k:'honorabilite_gestionnaire',l:'Honorabilité du gestionnaire vérifiée',s:1},
-    {k:'honorabilite_intervenants',l:'Honorabilité des intervenants extérieurs vérifiée',s:1},
-    {k:'honorabilite_parents',l:'Honorabilité des parents/bénévoles vérifiée',s:1},
-    {k:'renouvellement_3ans',l:'Renouvellement des vérifications tous les 3 ans',s:1},
-    {k:'continuite_acces_gestion',l:'Continuité — accès aux outils de gestion',s:1},
-    {k:'continuite_acces_protocoles',l:'Continuité — accès aux protocoles',s:1},
-  ], enc);
+  p3 += `</tbody></table>`;
+  p3 += `<div class="section-title">Entretien / restauration</div>`;
+  p3 += pField('Nombre de personnes affectées à l’entretien / restauration', enc.personnel_entretien_restauration);
+  p3 += pField('Personne responsable HACCP / PMS', enc.haccp_nom);
+  p3 += pYesNo('Personne HACCP identifiée sur le planning', enc.haccp_identifie_planning, 1);
+  p3 += pYesNo('Temps de ménage organisé hors présence des enfants', enc.temps_menage_hors_presence);
+  p3 += pYesNo('Temps dédié au réchauffage des repas identifié', enc.temps_rechauffage);
+  p3 += pYesNo('Temps dédié à la préparation des goûters identifié', enc.temps_gouters);
+  p3 += `<div class="section-title">Continuité de direction</div>`;
+  p3 += pField('Référent en cas d’absence de la direction', enc.continuite_nom);
+  p3 += pField('Qualification', enc.continuite_qualif);
+  p3 += `<div class="item">${pChoice('Accès aux documents de gestion', enc.continuite_acces_gestion==='oui')} ${cb(enc.continuite_acces_gestion==='non')} Non &nbsp;&nbsp;&nbsp; - ${pChoice('Accès aux protocoles', enc.continuite_acces_protocoles==='oui')} ${cb(enc.continuite_acces_protocoles==='non')} Non</div>`;
+  addPage('Encadrement & personnel', p3);
 
+  // ── Page 4 : Autres professionnels & honorabilité ──
+  const pPersonGroup = (title, prefix) => {
+    const g = pmiGet(prefix, {}) || {};
+    return `<div class="field">${star(1)}<b>${pmiEsc(title)}</b> : ${cb(g.present==='oui')} Oui ${cb(g.present==='non')} Non</div>
+      <div class="item">Nom Prénom : <span class="dots">${pmiEsc(g.nom)}</span></div>
+      <div class="item">Qualification : <span class="dots">${pmiEsc(g.qualif)}</span></div>
+      <div class="item">Nombre d’heures d’intervention : <span class="dots">${pmiEsc(g.heures)}</span></div>
+      <div class="item">Date de la dernière intervention : <span class="dots">${pmiEsc(g.derniere)}</span></div>
+      <div class="item">Date de la prochaine intervention : <span class="dots">${pmiEsc(g.prochaine)}</span></div>`;
+  };
+  let p4 = `<div class="section-title">Autres professionnels :</div>`;
+  p4 += pPersonGroup('RSAI (référent santé et accueil inclusif)', 'encadrement.rsai');
+  p4 += `<div style="height:8px"></div>`;
+  p4 += pPersonGroup('Professionnel pour les temps APP (analyse de la pratique)', 'encadrement.app');
+  p4 += `<div style="height:8px"></div>`;
+  p4 += pPersonGroup('Soutien du référent technique (en l’absence de qualification requise)', 'encadrement.soutien_rt');
+  p4 += `<div class="field" style="margin-top:8px"><b>Autres intervenants extérieurs</b></div>`;
+  p4 += pBlock('', enc.intervenants_exterieurs);
+  p4 += `<div class="section-title">${star(1)}Présence des attestations d’honorabilité pour :</div>`;
+  p4 += pYesNo('l’ensemble du personnel', enc.honorabilite_personnel);
+  p4 += pYesNo('le gestionnaire (sauf si gestionnaire public)', enc.honorabilite_gestionnaire);
+  p4 += pYesNo('les intervenants extérieurs', enc.honorabilite_intervenants);
+  p4 += pYesNo('les parents (EAJE parentaux)', enc.honorabilite_parents);
+  p4 += pYesNo('Renouvellement des attestations tous les 3 ans', enc.renouvellement_3ans);
+  addPage('Autres professionnels & honorabilité', p4);
+
+  // ── Pages Sections : salle de vie / activités / dortoir / sanitaires ──
   PMI_DATA.sections.forEach((sec,i) => {
-    out += `<h2>Section ${i+1} : ${pmiEsc(sec.nom || '')}</h2><table>`;
-    printField('Effectif présent / marcheurs / non-marcheurs', (sec.effectif&&sec.effectif.total||0) + ' / ' + (sec.effectif&&sec.effectif.marchent||0) + ' / ' + (sec.effectif&&sec.effectif.ne_marchent||0));
-    printField('Surface salle de vie', (sec.salle_vie_surface||'—') + ' m²');
-    printField('Surface dortoir', (sec.dortoir_surface||'—') + ' m² — ' + (sec.dortoir_nom||''));
-    printField('Surface sanitaires', (sec.sanitaires_surface||'—') + ' m²');
-    out += `</table>`;
-    printItems('Salle de vie', PMI_SALLE_VIE, sec.salle_vie);
-    printItems('Activités & projet', PMI_ACTIVITES, sec.activites);
-    printItems('Dortoir', PMI_DORTOIR, sec.dortoir);
-    printItems('Sanitaires / changes', PMI_SANITAIRES, sec.sanitaires);
+    const nomSec = sec.nom || ('Section ' + (i+1));
+    let pa = `<div class="field"><b>Surface de la salle de vie</b> : <span class="dots">${pmiEsc(sec.salle_vie_surface)}</span> m²</div>`;
+    pa += `<div class="section-title">Salle de vie</div>`;
+    pa += pBoolGroup(PMI_SALLE_VIE, sec.salle_vie);
+    pa += `<div class="section-title">Activités & projet pédagogique</div>`;
+    pa += pBoolGroup(PMI_ACTIVITES, sec.activites);
+    pa += pBlock('Observations / adaptations', (sec.activites||{}).commentaire);
+    addPage(`Section${nbS>1?(' '+(i+1)+' — '+nomSec):''} : salle de vie & activités`, pa);
+
+    let pb = `<div class="field"><b>Nom du dortoir</b> : <span class="dots">${pmiEsc(sec.dortoir_nom)}</span> &nbsp;&nbsp; <b>Surface</b> : <span class="dots">${pmiEsc(sec.dortoir_surface)}</span> m²</div>`;
+    pb += `<div class="section-title">Dortoir / espace de repos</div>`;
+    pb += pBoolGroup(PMI_DORTOIR, sec.dortoir);
+    pb += `<div class="field"><b>Surface sanitaires / espace de changes</b> : <span class="dots">${pmiEsc(sec.sanitaires_surface)}</span> m²</div>`;
+    pb += `<div class="section-title">Sanitaires / espace de changes</div>`;
+    pb += pBoolGroup(PMI_SANITAIRES, sec.sanitaires);
+    addPage(`Section${nbS>1?(' '+(i+1)+' — '+nomSec):''} : dortoir & sanitaires`, pb);
   });
 
-  printItems('Hygiène générale', PMI_HYGIENE, PMI_DATA.hygiene);
-  printItems('Restauration', PMI_RESTAURATION, PMI_DATA.restauration);
-  printItems('Cuisine', PMI_CUISINE, PMI_DATA.cuisine);
-  printItems('Biberonnerie', PMI_BIBERONNERIE, PMI_DATA.biberonnerie);
-  printItems('Santé & pharmacie', PMI_SANTE, PMI_DATA.sante);
-  printItems('Entrée / Hall', PMI_ENTREE, PMI_DATA.entree);
-  printItems('Affichages obligatoires', PMI_AFFICHAGES, PMI_DATA.affichages);
-  printItems('Bureau de direction', PMI_BUREAU, PMI_DATA.bureau);
-  printItems('Salle de repos du personnel', PMI_REPOS, PMI_DATA.repos);
-  printItems('Salle de réunion', PMI_REUNION, PMI_DATA.reunion);
-  printItems('Buanderie', PMI_BUANDERIE, PMI_DATA.buanderie);
-  printItems('Local de ménage', PMI_MENAGE, PMI_DATA.menage);
-  printItems('Sécurité', PMI_SECURITE, PMI_DATA.securite);
-  printItems('Espaces extérieurs', PMI_EXTERIEUR, PMI_DATA.exterieur);
+  // ── Hygiène ──
+  let ph = pBoolGroup(PMI_HYGIENE, PMI_DATA.hygiene);
+  ph += pField('Fréquence d’entretien de l’électroménager', (PMI_DATA.hygiene||{}).frequence_electromenager);
+  ph += pBlock('Formations RABC suivies par l’équipe (qui / quand)', (PMI_DATA.hygiene||{}).formations_rabc);
+  addPage('Hygiène générale', ph);
 
-  out += `<h2>Sécurité — dates & exercices</h2><table>`;
+  // ── Restauration / Cuisine / Biberonnerie ──
+  let pr = `<div class="section-title">Restauration</div>`;
+  pr += pBoolGroup(PMI_RESTAURATION, PMI_DATA.restauration);
+  pr += pField('Horaire de livraison des repas', (PMI_DATA.restauration||{}).horaire_livraison);
+  pr += `<div class="section-title">Cuisine</div>`;
+  pr += pField('Surface', (PMI_DATA.cuisine||{}).surface, 0) ;
+  pr += pBoolGroup(PMI_CUISINE, PMI_DATA.cuisine);
+  pr += `<div class="section-title">Biberonnerie</div>`;
+  pr += pField('Surface', (PMI_DATA.biberonnerie||{}).surface);
+  pr += pBoolGroup(PMI_BIBERONNERIE, PMI_DATA.biberonnerie);
+  addPage('Restauration, cuisine & biberonnerie', pr);
+
+  // ── Santé ──
+  let ps = pField('Emplacement de la pharmacie', (PMI_DATA.sante||{}).pharmacie_lieu);
+  ps += pBoolGroup(PMI_SANTE, PMI_DATA.sante);
+  addPage('Santé & pharmacie', ps);
+
+  // ── Entrée / Hall + Affichages ──
+  let pe = pField('Surface de l’entrée / hall', (PMI_DATA.entree||{}).surface);
+  pe += `<div class="section-title">Entrée / Hall</div>`;
+  pe += pBoolGroup(PMI_ENTREE, PMI_DATA.entree);
+  pe += `<div class="section-title">Affichages obligatoires</div>`;
+  pe += pBoolGroup(PMI_AFFICHAGES, PMI_DATA.affichages);
+  addPage('Entrée, hall & affichages obligatoires', pe);
+
+  // ── Bureau direction + Salle de repos ──
+  let pbu = `<div class="field"><b>Surface bureau de direction</b> : <span class="dots">${pmiEsc((PMI_DATA.bureau||{}).surface)}</span> m²</div>`;
+  pbu += `<div class="section-title">Bureau de direction</div>`;
+  pbu += pBoolGroup(PMI_BUREAU, PMI_DATA.bureau);
+  pbu += `<div class="field"><b>Surface salle de repos du personnel</b> : <span class="dots">${pmiEsc((PMI_DATA.repos||{}).surface)}</span> m²</div>`;
+  pbu += `<div class="section-title">Salle de repos du personnel</div>`;
+  pbu += pBoolGroup(PMI_REPOS, PMI_DATA.repos);
+  addPage('Bureau de direction & salle de repos', pbu);
+
+  // ── Salle de réunion + Buanderie + Local ménage ──
+  let pre = `<div class="field"><b>Surface salle de réunion</b> : <span class="dots">${pmiEsc((PMI_DATA.reunion||{}).surface)}</span> m²</div>`;
+  pre += `<div class="section-title">Salle de réunion (EAJE ≥ 39 places)</div>`;
+  pre += pBoolGroup(PMI_REUNION, PMI_DATA.reunion);
+  pre += `<div class="field"><b>Surface buanderie</b> : <span class="dots">${pmiEsc((PMI_DATA.buanderie||{}).surface)}</span> m²</div>`;
+  pre += `<div class="section-title">Buanderie</div>`;
+  pre += pBoolGroup(PMI_BUANDERIE, PMI_DATA.buanderie);
+  pre += `<div class="field"><b>Surface local de ménage</b> : <span class="dots">${pmiEsc((PMI_DATA.menage||{}).surface)}</span> m²</div>`;
+  pre += `<div class="section-title">Local de ménage</div>`;
+  pre += pBoolGroup(PMI_MENAGE, PMI_DATA.menage);
+  addPage('Salle de réunion, buanderie & local de ménage', pre);
+
+  // ── Sécurité ──
   const sec2 = PMI_DATA.securite || {};
-  printField('Exercice d’évacuation', (sec2.exercice_evacuation==='oui'?'OUI':sec2.exercice_evacuation==='non'?'NON':'—') + (sec2.date_evacuation ? ' — ' + sec2.date_evacuation : ''));
-  printField('Exercice de confinement', (sec2.exercice_confinement==='oui'?'OUI':sec2.exercice_confinement==='non'?'NON':'—') + (sec2.date_confinement ? ' — ' + sec2.date_confinement : ''));
-  printField('Installation électrique', sec2.date_electrique);
-  printField('Chaudière / installation gaz', sec2.date_chaudiere);
-  printField('Nettoyage climatisation', sec2.date_clim);
-  printField('Extincteurs', sec2.date_extincteurs);
-  printField('Alarme incendie', sec2.date_alarme);
-  printField('Éclairage de sécurité (BAES)', sec2.date_baes);
-  printField('Contrôle radon', sec2.date_radon);
-  printField('Contrôle qualité de l’air', sec2.date_air);
-  printField('RAAT amiante', sec2.raat_amiante);
-  printField('Conformité Wi-Fi (loi Abeille)', sec2.wifi_abeille);
-  printField('Organisation des sorties', sec2.sorties_organisees);
-  out += `</table>`;
+  let psec = pBoolGroup(PMI_SECURITE, sec2);
+  psec += `<div class="section-title">Exercices de sécurité</div>`;
+  psec += pYesNo('Exercice d’évacuation réalisé', sec2.exercice_evacuation, 1);
+  psec += pField('Date du dernier exercice d’évacuation', sec2.date_evacuation);
+  psec += pYesNo('Exercice de confinement réalisé', sec2.exercice_confinement, 1);
+  psec += pField('Date du dernier exercice de confinement', sec2.date_confinement);
+  psec += pBlock('Organisation des sorties (encadrement, ratio conseillé 1 pro / 2 enfants)', sec2.sorties_organisees);
+  psec += `<div class="section-title">Contrôles techniques (dates)</div>`;
+  psec += pField('Installation électrique', sec2.date_electrique);
+  psec += pField('Chaudière / installation gaz', sec2.date_chaudiere);
+  psec += pField('Nettoyage climatisation', sec2.date_clim);
+  psec += pField('Extincteurs', sec2.date_extincteurs);
+  psec += pField('Alarme incendie', sec2.date_alarme);
+  psec += pField('Éclairage de sécurité (BAES)', sec2.date_baes);
+  psec += pField('Contrôle radon', sec2.date_radon);
+  psec += pField('Contrôle qualité de l’air', sec2.date_air);
+  psec += pField('RAAT amiante (si bâtiment concerné)', sec2.raat_amiante);
+  psec += pField('Conformité Wi-Fi (loi Abeille)', sec2.wifi_abeille);
+  addPage('Sécurité', psec);
 
-  out += `<h2>Impression générale & conclusion</h2><table>`;
+  // ── Espaces extérieurs ──
+  const ext = PMI_DATA.exterieur || {};
+  const extTypeChoices = [['Jardin', ext.type==='jardin'], ['Cour', ext.type==='cour'], ['Terrasse', ext.type==='terrasse'], ['Aucun espace privatif', ext.type==='aucun']];
+  let pext = `<div class="section-title">Type d’espace extérieur</div>`;
+  pext += extTypeChoices.map(([l,on]) => `<div class="item">${pChoice(l,on)}</div>`).join('');
+  pext += `<div class="section-title">Espaces extérieurs</div>`;
+  pext += pBoolGroup(PMI_EXTERIEUR, ext);
+  pext += pField('Fréquence d’entretien / contrôle des jeux extérieurs', ext.frequence_entretien_jeux);
+  addPage('Espaces extérieurs', pext);
+
+  // ── Conclusion ──
   const conc = PMI_DATA.conclusion || {};
-  printField('Points forts', conc.points_forts);
-  printField('Points faibles / axes d’amélioration', conc.points_faibles);
-  printField('Conditions de travail', conc.conditions_travail);
-  printField('Qualité de la prise en charge', conc.qualite_prise_en_charge);
-  printField('Charte nationale d’accueil', conc.charte_accueil);
-  printField('Charte de soutien à la parentalité', conc.charte_parentalite);
-  printField('Plan de formation', conc.plan_formation);
-  printField('Autres observations', conc.autres);
-  printField('Visa PMI / responsable structure', (conc.visa_pmi_date||'—') + ' / ' + (conc.visa_responsable_date||'—'));
-  printField('Visa service PMI / transmission gestionnaire', (conc.visa_service_date||'—') + ' / ' + (conc.transmis_gestionnaire_date||'—'));
-  out += `</table>`;
+  let pc = pBlock('Points forts observés', conc.points_forts);
+  pc += pBlock('Points faibles / axes d’amélioration', conc.points_faibles);
+  pc += pBlock('Conditions de travail des professionnels', conc.conditions_travail);
+  pc += pBlock('Qualité de la prise en charge des enfants', conc.qualite_prise_en_charge);
+  pc += pBlock('Mise en œuvre de la charte nationale d’accueil du jeune enfant', conc.charte_accueil);
+  pc += pBlock('Mise en œuvre de la charte de soutien à la parentalité', conc.charte_parentalite);
+  pc += pBlock('Plan de formation de l’équipe', conc.plan_formation);
+  pc += pBlock('Autres observations', conc.autres);
+  pc += `<div class="section-title">Visas et transmission</div>`;
+  pc += pField('Date visa PMI', conc.visa_pmi_date);
+  pc += pField('Date visa responsable de la structure', conc.visa_responsable_date);
+  pc += pField('Date visa service PMI (validation)', conc.visa_service_date);
+  pc += pField('Date de transmission au gestionnaire', conc.transmis_gestionnaire_date);
+  addPage('Impression générale & conclusion', pc);
 
+  // ── Assemblage du document ──
+  let out = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Contrôle PMI - ${pmiEsc(m.nom_etablissement || PMI_CRECHE)}</title>
+  <style>
+    @page { size: A4; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body { font-family:'Times New Roman', Times, serif; font-size:12.5px; color:#000; background:#fff; margin:0; }
+    .page { border:1.4px solid #000; padding:16px 20px 34px; margin:10px auto; max-width:190mm; min-height:265mm; position:relative; page-break-after:always; }
+    .page:last-child { page-break-after:auto; }
+    .page-title { font-weight:bold; text-decoration:underline; font-size:14px; margin-bottom:10px; }
+    .title-box { border:1.4px solid #000; text-align:center; font-weight:bold; font-size:16px; padding:10px; margin:18px 30px 22px; }
+    .subtle { color:#888; font-size:10.5px; margin-bottom:12px; }
+    .section-title { font-weight:bold; text-decoration:underline; margin:12px 0 5px; font-size:13px; }
+    .item { margin:2px 0; line-height:1.5; }
+    .item .star, .field .star { color:#C00000; font-weight:bold; }
+    .arrow { margin-right:3px; }
+    .cb { display:inline-block; min-width:11px; height:11px; border:1px solid #000; text-align:center; line-height:10px; font-size:10px; margin:0 1px 0 7px; font-weight:bold; }
+    .field { margin:5px 0; }
+    .dots { border-bottom:1px dotted #555; display:inline-block; min-width:140px; padding:0 4px; }
+    .dotsbox { border:1px dotted #999; min-height:42px; padding:5px 7px; margin-top:2px; white-space:pre-wrap; }
+    .cols2 { display:flex; gap:30px; }
+    .cols2 > div { flex:1; }
+    table.ptable { width:100%; border-collapse:collapse; margin:6px 0; font-size:11.5px; }
+    table.ptable th, table.ptable td { border:1px solid #000; padding:4px 7px; text-align:left; }
+    .footer-star { color:#C00000; font-weight:bold; position:absolute; bottom:10px; left:20px; font-size:11.5px; }
+  </style></head><body>`;
+  out += pages.join('');
+  out += `<script>document.querySelectorAll('.page').forEach((p,i)=>{const n=document.createElement('div');n.style.position='absolute';n.style.bottom='10px';n.style.right='18px';n.style.fontSize='11px';n.textContent=(i+1);p.appendChild(n);});<\/script>`;
   out += `</body></html>`;
+
   const w = window.open('', '_blank');
   if (!w) { showNotif('⚠ Autorisez les pop-ups pour imprimer'); return; }
   w.document.write(out);
   w.document.close();
-  setTimeout(() => w.print(), 400);
+  setTimeout(() => w.print(), 500);
 }
 </script>
 
