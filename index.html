@@ -190,6 +190,47 @@ body {
   border-top: 1px solid rgba(255,255,255,0.08);
 }
 
+/* ── SIDEBAR TOGGLE / RÉTRACTION ── */
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-toggle-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
+
+@media (min-width: 901px) {
+  .app.sidebar-collapsed { grid-template-columns: 64px 1fr; }
+  .app.sidebar-collapsed .sidebar-logo h1,
+  .app.sidebar-collapsed .sidebar-logo > span,
+  .app.sidebar-collapsed #creche-name-display,
+  .app.sidebar-collapsed #creche-name-input,
+  .app.sidebar-collapsed .sidebar-company-logo,
+  .app.sidebar-collapsed .sidebar-section-title,
+  .app.sidebar-collapsed .sidebar-structure-block,
+  .app.sidebar-collapsed .sidebar-fullscreen-block,
+  .app.sidebar-collapsed .sidebar-creches {
+    display: none;
+  }
+  .app.sidebar-collapsed .sidebar-logo { padding: 12px 8px; border-bottom: none; }
+  .app.sidebar-collapsed .nav-item {
+    font-size: 0;
+    justify-content: center;
+    padding: 10px 0;
+    gap: 0;
+  }
+  .app.sidebar-collapsed .nav-item .nav-icon { font-size: 18px; }
+  .app.sidebar-collapsed .nav-item span:not(.nav-icon) { display: none; }
+}
+
 #creche-select-sidebar option {
   background: #1C1917;
   color: #fff;
@@ -350,6 +391,11 @@ body {
   display: grid;
   grid-template-columns: 240px 1fr;
   align-content: start;
+}
+@media (min-width: 901px) {
+  .app.sidebar-collapsed:fullscreen, .app.sidebar-collapsed:-webkit-full-screen {
+    grid-template-columns: 64px 1fr;
+  }
 }
 :fullscreen .main, :-webkit-full-screen .main { justify-content: flex-start; }
 
@@ -872,6 +918,7 @@ textarea { resize: vertical; min-height: 72px; }
   .nav-item .nav-icon { font-size: 14px; }
   .sidebar-creches { display: none; }
   .sidebar-bottom { display: none; }
+  .sidebar-toggle-btn { display: none; }
   .content { padding: 12px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   #page-dashboard > div { padding: 16px 12px; }
@@ -930,6 +977,9 @@ textarea { resize: vertical; min-height: 72px; }
 
 <!-- ── SIDEBAR ── -->
 <aside class="sidebar">
+  <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Réduire / déplier le menu">
+    <span id="sidebar-toggle-icon">◀</span>
+  </button>
   <div class="sidebar-logo">
     <!-- Zone logo entreprise -->
     <div class="sidebar-company-logo" id="logoZone" onclick="triggerLogoUpload()" title="Cliquez pour ajouter votre logo">
@@ -958,59 +1008,58 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 
   <div class="sidebar-section-title">Navigation</div>
-  <button class="nav-item active" data-roles="admin,directrice,auxiliaire,stagiaire,coordinateur" onclick="showPage('dashboard', this)">
+  <button class="nav-item active" data-roles="admin,directrice,auxiliaire,stagiaire,coordinateur" onclick="showPage('dashboard', this)" title="Tableau de bord">
     <span class="nav-icon">🏠</span> Tableau de bord
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('inventaire', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('inventaire', this)" title="Stocks pédagogiques">
     <span class="nav-icon">📦</span> Stocks pédagogiques
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('entretien', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('entretien', this)" title="Stocks entretien">
     <span class="nav-icon">🧹</span> Stocks entretien
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('univers', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('univers', this)" title="Univers ludiques">
     <span class="nav-icon">🌟</span> Univers ludiques
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('familles', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('familles', this)" title="Familles">
     <span class="nav-icon">👨‍👩‍👧</span> Familles
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('transmissions', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('transmissions', this)" title="Transmissions">
     <span class="nav-icon">📝</span> Transmissions
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('planning', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('planning', this)" title="Planning">
     <span class="nav-icon">📅</span> Planning
   </button>
-  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('rh', this)">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('rh', this)" title="Ressources humaines">
     <span class="nav-icon">👥</span> Ressources humaines
   </button>
-  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('fournisseurs', this)">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('fournisseurs', this)" title="Fournisseurs">
     <span class="nav-icon">🏭</span> Fournisseurs
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('commandes', this)">
+  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('commandes', this)" title="Commandes">
     <span class="nav-icon">🛒</span> Commandes
   </button>
-  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('statistiques', this)">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('statistiques', this)" title="Statistiques">
     <span class="nav-icon">📊</span> Statistiques
     <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
-  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="window.open('notice.html','_blank')">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="window.open('notice.html','_blank')" title="Notice d'utilisation">
     <span class="nav-icon">📖</span> Notice d'utilisation
   </button>
-  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('parametres', this)">
+  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('parametres', this)" title="Paramètres">
     <span class="nav-icon">⚙️</span> Paramètres
   </button>
-  <button class="nav-item" data-roles="admin" onclick="showPage('admin', this)">
+  <button class="nav-item" data-roles="admin" onclick="showPage('admin', this)" title="Administration">
     <span class="nav-icon">🔐</span> Administration
   </button>
 
-  <div style="padding:0 16px 16px">
-    <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:8px">Structure</div>
+  <div class="sidebar-structure-block" style="padding:0 16px 16px">
     <select id="creche-select-sidebar" onchange="filterCrecheFromSelect(this.value)"
       style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-family:'Instrument Sans',sans-serif;font-size:13px;outline:none;cursor:pointer">
       <option value="all">Toutes les crèches</option>
     </select>
   </div>
 
-  <div style="padding:0 16px 16px">
+  <div class="sidebar-fullscreen-block" style="padding:0 16px 16px">
     <button id="btn-fullscreen" onclick="toggleFullscreen()" title="Basculer en plein écran (Échap pour sortir)"
       style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.75);font-family:'Instrument Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s"
       onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
@@ -6859,7 +6908,29 @@ function renderChartCritical() {
 
 document.addEventListener('DOMContentLoaded', () => {
   updateAlertBadge();
+  initSidebarCollapse();
 });
+
+// ── SIDEBAR RÉTRACTABLE ─────────────────────────────────────────────
+function toggleSidebar() {
+  const app = document.querySelector('.app');
+  if (!app) return;
+  const collapsed = app.classList.toggle('sidebar-collapsed');
+  try { localStorage.setItem('orevy_sidebar_collapsed', collapsed ? '1' : '0'); } catch {}
+  const icon = document.getElementById('sidebar-toggle-icon');
+  if (icon) icon.textContent = collapsed ? '▶' : '◀';
+}
+
+function initSidebarCollapse() {
+  let collapsed = false;
+  try { collapsed = localStorage.getItem('orevy_sidebar_collapsed') === '1'; } catch {}
+  if (collapsed) {
+    const app = document.querySelector('.app');
+    if (app) app.classList.add('sidebar-collapsed');
+    const icon = document.getElementById('sidebar-toggle-icon');
+    if (icon) icon.textContent = '▶';
+  }
+}
 
 // ── AUTHENTIFICATION SUPABASE ─────────────────────────────────────
 let currentUser = null;
