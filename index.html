@@ -14042,6 +14042,7 @@ function showImportResult(type, html) {
       <button class="ds-filter-btn" onclick="dsFilter('sante',this)"><span class="ds-dot" style="background:#9B59B6"></span>Santé &amp; Hygiène<span class="ds-count" id="dsc-sante">0</span></button>
       <button class="ds-filter-btn" onclick="dsFilter('gestion',this)"><span class="ds-dot" style="background:#E74C3C"></span>Gestion &amp; Administratif<span class="ds-count" id="dsc-gestion">0</span></button>
       <button class="ds-filter-btn" onclick="dsFilter('decret2025',this)"><span class="ds-dot" style="background:#7C3AED"></span>🆕 Décret 2025-304<span class="ds-count" id="dsc-decret2025">0</span></button>
+      <button class="ds-filter-btn" onclick="dsFilter('controle_pmi',this)"><span class="ds-dot" style="background:#2563EB"></span>🩺 Contrôle PMI<span class="ds-count" id="dsc-controle_pmi">0</span></button>
     </div>
     <div class="ds-sidebar-section">
       <div class="ds-sidebar-title">Textes de référence</div>
@@ -14088,6 +14089,10 @@ function showImportResult(type, html) {
       <button class="ds-filter-btn" onclick="dsDocFilter('sante',this)">
         <span class="ds-dot" style="background:#9B59B6"></span>Documents santé
         <span class="ds-count" id="ddc-sante">0</span>
+      </button>
+      <button class="ds-filter-btn" onclick="dsDocFilter('controle_pmi',this)">
+        <span class="ds-dot" style="background:#2563EB"></span>Contrôle PMI
+        <span class="ds-count" id="ddc-controle_pmi">0</span>
       </button>
       <div id="ddc-extra-cats"></div>
       <button class="ds-filter-btn" id="ddc-add-cat-btn" onclick="dsDocAddCat()" style="color:#7C3AED;font-weight:600;border-top:1px dashed #E2D9CC">
@@ -16020,6 +16025,18 @@ const DS_DATA = [
       alert: "Le signalement n'est pas une accusation : c'est une obligation de protection. Un professionnel qui signale de bonne foi est protégé par la loi même si les faits s'avèrent non fondés. En revanche, ne pas signaler une situation connue engage la responsabilité pénale personnelle du professionnel et du gestionnaire.",
       sources: ["Art. L.226-3 CASF", "Art. L.226-4 CASF", "Art. 434-3 Code pénal", "Recommandations HAS bientraitance 2022", "Guide DGCS signalement 2019"]
     }
+  },
+  // ═══════════ CONTRÔLE PMI ═══════════
+  {
+    id: 36,
+    category: "controle_pmi",
+    tool: "pmi",
+    title: "Compte rendu de visite de contrôle EAJE (PMI 2026)",
+    ref: "Grille officielle de contrôle PMI — 2026",
+    summary: "Reproduction interactive de la grille de contrôle PMI : identité, capacité et taux d'occupation, effectifs et encadrement par section, locaux (vie, sommeil, sanitaires, cuisine…), restauration, santé, sécurité, espaces extérieurs et affichages obligatoires. Pré-remplie avec les données Orevy de la structure, à compléter avant une visite.",
+    source: "Service départemental de PMI",
+    date: "2026",
+    isNew: true
   }
 ];
 
@@ -16036,6 +16053,7 @@ const DS_DOC_CATS = {
   protocoles:    { label:'Protocoles',               color:'#5C7A5E', bg:'#EEF5EE', text:'#375239' },
   administratif: { label:'Documents administratifs', color:'#D4891A', bg:'#FEF5E5', text:'#8A5700' },
   sante:         { label:'Documents santé',          color:'#9B59B6', bg:'#F5EEF8', text:'#6C3483' },
+  controle_pmi:  { label:'Contrôle PMI',             color:'#2563EB', bg:'#EFF6FF', text:'#1D4ED8' },
 };
 
 // Catégories supplémentaires ajoutées par l'utilisateur
@@ -16060,6 +16078,7 @@ let DS_DOCS = JSON.parse(localStorage.getItem('orevy_docs') || 'null') || [
   { id:'p10', cat:'sante', name:'Protocole santé & éviction', desc:"Maladies infantiles, tableau d'éviction, gestion des PAI, administration médicaments.", tags:['Santé','PAI','Éviction'], statut:'en_vigueur' },
   { id:'p11', cat:'sante', name:"Plan d'accueil individualisé (PAI)", desc:"Modèle de PAI vierge. Allergies, pathologies chroniques, protocoles d'urgence spécifiques.", tags:['PAI','Handicap','Allergie'], statut:'en_vigueur' },
   { id:'p12', cat:'sante', name:'Registre des accidents / incidents', desc:"Modèle de registre obligatoire. Consignation des accidents, incidents et transmissions PMI.", tags:['Registre','PMI','Obligatoire'], statut:'en_vigueur' },
+  { id:'p13', cat:'controle_pmi', name:'Compte rendu de visite de contrôle EAJE (PMI 2026)', desc:"Grille officielle de contrôle PMI : identité de l'établissement, capacité d'accueil et taux d'occupation, effectifs et qualifications d'encadrement par section, RSAI, APP, attestations d'honorabilité, locaux (entrée, salles de vie, dortoirs, espaces de changes, cuisine/biberonnerie, bureau, buanderie), restauration, santé, sécurité (exercices, contrôles techniques), espaces extérieurs et affichages obligatoires. Sert de support d'auto-évaluation avant une visite PMI.", tags:['PMI','Contrôle','Inspection','Encadrement','Sécurité','Locaux','Affichages obligatoires'], statut:'en_vigueur' },
 ];
 let dsSearchQuery = '';
 
@@ -16174,7 +16193,7 @@ function dsDocRender(query) {
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${(d.tags||[]).map(t => `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${cat.bg};color:${cat.text};font-weight:500">${t}</span>`).join('')}</div>
           <div class="ds-card-footer">
             <span style="font-size:10px;padding:3px 8px;border-radius:10px;background:${st.bg};color:${st.color};font-weight:600">${st.label}</span>
-            <button class="ds-expand-btn" onclick="alert('Fichier à venir — ${d.name.replace(/'/g,"\'")}')">Consulter →</button>
+            <button class="ds-expand-btn" onclick="${d.id === 'p13' ? 'openPmiScreen()' : `alert('Fichier à venir — ${d.name.replace(/'/g,"\'")}')`}">${d.id === 'p13' ? '🩺 Lancer le contrôle →' : 'Consulter →'}</button>
           </div>
           ${adminBtns}
         </div></div>`;
@@ -16369,7 +16388,7 @@ function dsInit() {
 function dsUpdateCounts() {
   document.getElementById('dsc-all').textContent = DS_DATA.length;
   document.getElementById('ds-stat-regl').textContent = DS_DATA.length;
-  ['agrement','encadrement','financement','locaux','sante','gestion','decret2025'].forEach(cat => {
+  ['agrement','encadrement','financement','locaux','sante','gestion','decret2025','controle_pmi'].forEach(cat => {
     const el = document.getElementById('dsc-' + cat);
     if (el) el.textContent = DS_DATA.filter(d => d.category === cat || (d.tags && d.tags.includes(cat))).length;
   });
@@ -16383,7 +16402,8 @@ function dsFilter(f, btn) {
     all:'Toutes les fiches', agrement:'Agrément & Création',
     encadrement:'Encadrement & Personnel', financement:'Financement & Aides',
     locaux:'Locaux & Sécurité', sante:'Santé & Hygiène',
-    gestion:'Gestion & Administratif', decret2025:'🆕 Décret 2025-304'
+    gestion:'Gestion & Administratif', decret2025:'🆕 Décret 2025-304',
+    controle_pmi:'🩺 Contrôle PMI'
   };
   document.getElementById('ds-section-title').textContent = titles[f];
   dsRenderCards();
@@ -16428,7 +16448,8 @@ const DS_CAT = {
   locaux:      { label:'Locaux & Sécurité',        color:'#4A6275', bg:'#EBF0F4', text:'#2D4255' },
   sante:       { label:'Santé & Hygiène',          color:'#9B59B6', bg:'#F5EEF8', text:'#6C3483' },
   gestion:     { label:'Gestion & Administratif',  color:'#E74C3C', bg:'#FDEDEC', text:'#A93226' },
-  decret2025:  { label:'Décret 2025-304',          color:'#7C3AED', bg:'#F5F3FF', text:'#4C1D95' }
+  decret2025:  { label:'Décret 2025-304',          color:'#7C3AED', bg:'#F5F3FF', text:'#4C1D95' },
+  controle_pmi:{ label:'Contrôle PMI',             color:'#2563EB', bg:'#EFF6FF', text:'#1D4ED8' }
 };
 
 function dsRenderGridCard(d, i) {
@@ -16436,13 +16457,14 @@ function dsRenderGridCard(d, i) {
   const b25 = d.tags && d.tags.includes('decret2025') ? `<span class="ds-badge-2025">⚡ Décret 2025</span>` : '';
   const bcad = d.caduque ? `<span class="ds-badge-caduque">⚠ Modifié 2026</span>` : '';
   const bnew = d.isNew ? `<span class="ds-badge-new">✦ Nouveau</span>` : '';
+  const btnLabel = d.tool === 'pmi' ? '🩺 Lancer le contrôle →' : 'Voir détails →';
   return `<div class="ds-card" onclick="dsOpenModal(${d.id})" style="animation-delay:${i*0.04}s">
     <div class="ds-card-stripe" style="background:${d.isNew ? '#7C3AED' : cat.color}"></div>
     <div class="ds-card-body">
       <div class="ds-card-meta"><span class="ds-tag" style="background:${cat.bg};color:${cat.text}">${cat.label}</span><span class="ds-card-ref">#${String(d.id).padStart(2,'0')}</span></div>
       <h3>${d.title}${b25}${bcad}${bnew}</h3>
       <p>${d.summary}</p>
-      <div class="ds-card-footer"><span class="ds-card-source">📋 ${d.source}</span><button class="ds-expand-btn">Voir détails →</button></div>
+      <div class="ds-card-footer"><span class="ds-card-source">📋 ${d.source}</span><button class="ds-expand-btn">${btnLabel}</button></div>
     </div></div>`;
 }
 
@@ -16459,6 +16481,7 @@ function dsRenderListItem(d, i) {
 
 function dsOpenModal(id) {
   const d = DS_DATA.find(x => x.id === id);
+  if (d && d.tool === 'pmi') { openPmiScreen(); return; }
   const cat = DS_CAT[d.category];
   const b25 = d.tags && d.tags.includes('decret2025') ? `<span class="ds-badge-2025">⚡ Décret 2025</span>` : '';
   const bcad = d.caduque ? `<span class="ds-badge-caduque">⚠ Partiellement modifié au 1er sept. 2026</span>` : '';
@@ -17324,6 +17347,1013 @@ function _coordSuiviSave() {
 }
 
 </script>
+
+
+<!-- ═══════════════════ ÉCRAN CONTRÔLE PMI ═══════════════════ -->
+<div id="pmi-screen" style="display:none;position:fixed;inset:0;z-index:9995;overflow-y:auto;font-family:'DM Sans','Instrument Sans',sans-serif">
+<style>
+#pmi-screen {
+  --pcream:#FAF7F2; --pwarm:#FFF9F2; --pink:#1A1208; --pbrown:#6B4C2A;
+  --pborder:#E2D9CC; --pblue:#2563EB; --pblue-lt:#EFF6FF;
+  --pgreen:#16A34A; --pgreen-lt:#F0FDF4; --pred:#DC2626; --pred-lt:#FEF2F2;
+  --pgray:#9CA3AF; --pgray-lt:#F3F4F6;
+  background: var(--pcream); color: var(--pink);
+}
+#pmi-screen * { box-sizing: border-box; font-family: 'DM Sans', 'Instrument Sans', sans-serif; }
+.pmi-header { background: var(--pink); position: sticky; top:0; z-index:50; padding:14px 22px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; box-shadow:0 2px 20px rgba(0,0,0,0.3); }
+.pmi-back { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:7px 12px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+.pmi-back:hover { background:rgba(255,255,255,0.18); }
+.pmi-title { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:#fff; margin-right:8px; }
+.pmi-header select, .pmi-header input[type=date] {
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:8px; padding:7px 10px; font-size:13px;
+}
+.pmi-header select option { color:#111; }
+.pmi-actions { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+.pmi-btn { border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+.pmi-btn-prefill { background:var(--pblue); color:#fff; }
+.pmi-btn-save { background:var(--pgreen); color:#fff; }
+.pmi-btn-print { background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.2); }
+.pmi-body { max-width:1000px; margin:0 auto; padding:20px 18px 60px; }
+.pmi-banner { background:linear-gradient(135deg,#2563EB,#1D4ED8); color:#fff; padding:12px 18px; border-radius:12px; font-size:13px; margin-bottom:18px; line-height:1.6; }
+.pmi-acc { background:#fff; border:1px solid var(--pborder); border-radius:12px; margin-bottom:12px; overflow:hidden; box-shadow:0 2px 10px rgba(26,18,8,0.05); }
+.pmi-acc-head { display:flex; align-items:center; gap:10px; padding:14px 18px; cursor:pointer; font-family:'Playfair Display',serif; font-size:15px; font-weight:700; }
+.pmi-acc-head:hover { background:var(--pcream); }
+.pmi-badge { font-size:11px; background:var(--pblue-lt); color:var(--pblue); padding:2px 9px; border-radius:10px; font-weight:600; font-family:'DM Sans',sans-serif; }
+.pmi-acc-arrow { margin-left:auto; color:#bbb; font-size:13px; }
+.pmi-acc-body { padding:6px 18px 16px; border-top:1px solid var(--pborder); }
+.pmi-subtitle { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--pbrown); font-weight:700; margin:16px 0 6px; display:flex; align-items:center; gap:8px; }
+.pmi-subtitle::after { content:''; flex:1; height:1px; background:var(--pborder); }
+.pmi-item { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid #F3EFE8; font-size:13px; }
+.pmi-item:last-child { border-bottom:none; }
+.pmi-item-col { flex-direction:column; align-items:stretch; gap:5px; }
+.pmi-item-label { flex:1; line-height:1.4; }
+.pmi-star-mark { color:var(--pblue); }
+.pmi-tgs { display:flex; gap:5px; flex-shrink:0; }
+.pmi-tg { border:1px solid var(--pborder); background:#fff; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer; color:#999; font-family:inherit; }
+.pmi-tg-on.pmi-on { background:var(--pgreen-lt); color:var(--pgreen); border-color:var(--pgreen); }
+.pmi-tg-on.pmi-off { background:var(--pred-lt); color:var(--pred); border-color:var(--pred); }
+.pmi-tg-on.pmi-na { background:var(--pgray-lt); color:#666; border-color:#ccc; }
+.pmi-input { border:1px solid var(--pborder); border-radius:6px; padding:6px 9px; font-size:13px; font-family:inherit; width:100%; color:var(--pink); }
+.pmi-input-sm { max-width:160px; }
+.pmi-row { display:flex; gap:10px; flex-wrap:wrap; }
+.pmi-row > div { flex:1; min-width:140px; }
+.pmi-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 18px; }
+.pmi-table { width:100%; border-collapse:collapse; font-size:12.5px; margin:8px 0; }
+.pmi-table th { text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; color:#999; padding:6px 8px; border-bottom:1px solid var(--pborder); }
+.pmi-table td { padding:5px 8px; border-bottom:1px solid #F3EFE8; }
+.pmi-table input { border:1px solid var(--pborder); border-radius:5px; padding:4px 6px; font-size:12.5px; width:100%; font-family:inherit; }
+.pmi-info-box { background:var(--pblue-lt); border:1px solid #BFDBFE; border-radius:8px; padding:10px 12px; font-size:12px; color:#1D4ED8; margin:8px 0; line-height:1.5; }
+@media (max-width:760px) { .pmi-grid2 { grid-template-columns:1fr; } }
+</style>
+
+<div class="pmi-header">
+  <button class="pmi-back" onclick="closePmiScreen()">← Documents</button>
+  <div class="pmi-title">🩺 Contrôle PMI</div>
+  <select id="pmi-creche-sel" onchange="pmiOnCrecheChange()"></select>
+  <label style="color:#fff;font-size:12px;display:flex;align-items:center;gap:6px">Date du contrôle
+    <input type="date" id="pmi-date" onchange="pmiSet('meta.date_controle', this.value)">
+  </label>
+  <div class="pmi-actions">
+    <button class="pmi-btn pmi-btn-prefill" onclick="pmiPrefill()">⚡ Pré-remplir depuis Orevy</button>
+    <button class="pmi-btn pmi-btn-save" onclick="pmiSave()">💾 Enregistrer</button>
+    <button class="pmi-btn pmi-btn-print" onclick="pmiPrint()">🖨️ Imprimer / PDF</button>
+  </div>
+</div>
+
+<div class="pmi-body">
+  <div class="pmi-banner">
+    Reproduction interactive du <strong>compte rendu de visite de contrôle EAJE (PMI 2026)</strong>. Les champs marqués <span style="color:#FDE68A">★</span> correspondent aux items réglementaires (*) de la grille officielle. Utilisez « Pré-remplir » pour reprendre automatiquement les données déjà saisies dans Orevy (personnel, effectifs), puis complétez le reste avant la visite.
+  </div>
+  <div id="pmi-body-content"></div>
+</div>
+</div>
+<!-- ═══════════════════ FIN ÉCRAN CONTRÔLE PMI ═══════════════════ -->
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  CONTRÔLE PMI — Reproduction interactive du compte rendu de visite
+// ══════════════════════════════════════════════════════════════
+const I = (k,l,s) => ({ k, l, s: !!s });
+
+// ── Items "Salle de vie" (répétés par section) ──
+const PMI_SALLE_VIE = [
+  I('coin_petits','Coin délimité et sécurisé pour les plus petits'),
+  I('coin_repas','Coin repas/activité avec tables et chaises adaptées à l’âge',1),
+  I('chaises_5pts','Chaises avec harnais 5 points pour les plus petits'),
+  I('fauteuil_allaitement','Fauteuil d’allaitement',1),
+  I('fauteuil_biberons','Fauteuil pour la prise des biberons',1),
+  I('jeux_adaptes','Jeux et jouets adaptés et normés',1),
+  I('jeux_suffisants','Jeux et jouets en nombre suffisant',1),
+  I('rangements','Meubles de rangement sécurisés (0,5 m³/place, EAJE créés après 2022)',1),
+  I('temperature','Température ambiante entre 18 et 22°C',1),
+  I('climatisation','Présence d’une climatisation'),
+  I('entretien_filtres','Contrat d’entretien/nettoyage des filtres clim. (2x/an)'),
+  I('ventilation','Ventilation des locaux suffisante'),
+  I('aerations','Sécurisation des aérations naturelles',1),
+  I('protection_solaire','Protection solaire évitant la surchauffe',1),
+  I('luminosite','Luminosité garantie de 300 lux',1),
+  I('eclairage_doux','Éclairage de plafond non agressif (coin bébés)'),
+  I('variateurs','Éclairage artificiel équipé de variateurs'),
+  I('qualite_air','Contrôle qualité de l’air effectué',1),
+  I('anti_pince','Anti-pince-doigts (≥110 cm), 2 côtés de la porte',1),
+  I('poignees_130','Portes vers espaces interdits : poignées à 130 cm ou boutons moletés',1),
+  I('oculus','Portes d’accueil équipées d’oculus (grande hauteur ou double)',1),
+  I('prises_130','Prises électriques installées à ≥130 cm',1),
+  I('portillons_nf','Portillons NF',1),
+  I('asperites','Absence d’aspérités/saillies dangereuses sous 110 cm',1),
+  I('vitres_securisees','Surfaces vitrées sécurisées (verre feuilleté ou film)',1),
+  I('interphone','Liaison interphonique/téléphonique interne non accessible aux enfants',1),
+  I('telephone_ext','Téléphone avec accès extérieur direct',1),
+  I('affichage_urgence_section','Affichage des numéros d’urgence',1),
+];
+
+// ── Items "Activités / projet" (répétés par section) ──
+const PMI_ACTIVITES = [
+  I('activites_adaptees','Activités proposées adaptées'),
+  I('rythmes_adaptes','Rythmes proposés adaptés'),
+  I('projet_modifie','Le projet pédagogique a-t-il été modifié ?'),
+];
+
+// ── Items "Dortoir" (répétés par section) ──
+const PMI_DORTOIR = [
+  I('visibilite','Visibilité suffisante sur tous les couchages depuis l’espace de vie',1),
+  I('lits_adaptes','Lits adaptés en bon état (barreaux 7 cm maxi NF / bannettes) ou lits cocon au sol',1),
+  I('nb_adapte_surface','Nombre de lits adapté à la surface (7 m² + 1 m²/enfant suppl., EAJE ≥2022)',1),
+  I('lit_roulettes','Présence d’un lit à roulettes pour l’évacuation'),
+  I('drap_par_enfant','Drap housse/turbulette pour chaque enfant'),
+  I('plan_dortoir','Présence d’un plan du dortoir'),
+  I('circulation','Espace de circulation suffisant et accès facilité autour des lits'),
+  I('babyphone','Babyphone'),
+  I('obscurcissement','Salle pouvant être obscurcie'),
+  I('rideaux_ignifuges','Rideaux ignifugés (si présents)'),
+  I('agent_present_sieste','Agent présent en permanence si absence de visibilité totale sur les couchages',1),
+  I('feuille_tracabilite','Feuille de traçabilité de surveillance de la sieste avec émargement'),
+  I('tablettes_tracabilite','Tablettes de traçabilité de la surveillance de la sieste'),
+  I('fauteuil_ergonomique','Fauteuil ergonomique pour les professionnels',1),
+  I('fenetres','Présence de fenêtre(s)'),
+  I('securisation_fenetres','Sécurisation des fenêtres adaptée',1),
+  I('moustiquaires','Présence de moustiquaires'),
+  I('vmc','VMC si aucune aération naturelle',1),
+  I('temperature_19_21','Température ambiante entre 19 et 21°C',1),
+  I('clim_dortoir','Présence d’une climatisation'),
+  I('thermometre','Présence d’un thermomètre mural'),
+];
+
+// ── Items "Espaces de changes et toilettes" (répétés par section) ──
+const PMI_SANITAIRES = [
+  I('visibilite_intimite','Visibilité suffisante depuis l’espace de vie, intimité préservée',1),
+  I('fermeture_odeurs','Espace de changes bien fermé (odeurs / risque infectieux)'),
+  I('oculus_porte','Porte vers l’espace de vie équipée d’oculus',1),
+  I('escalier_escamotable','Escalier escamotable pour les plus grands',1),
+  I('point_eau_non_manuel','Point d’eau à commande non manuelle',1),
+  I('points_change_nombre','Nombre de points de change adapté (≈1/10 enfants)',1),
+  I('protocole_change','Protocole pour les changes établi'),
+  I('poubelles_adaptees','Poubelles adaptées (fermées, ouverture non manuelle)',1),
+  I('bac_linge_sale','Bac à linge sale fermé (ouverture non manuelle)'),
+  I('toilettes_nombre','Nombre de toilettes adapté (1 WC/10 enfants + 1 par tranche de 10)',1),
+  I('lavabos_nombre','Nombre de lavabos adapté (≥1 à hauteur d’enfant)',1),
+  I('temperature_eau','Température de l’eau adaptée',1),
+  I('cloisons_entre','Cloisons d’intimité entre les toilettes',1),
+  I('cloisons_devant','Cloisons d’intimité devant les toilettes',1),
+  I('papier_toilette','Papier toilette à disposition des enfants'),
+  I('essuie_mains','Essuie-mains à disposition des enfants'),
+  I('savon','Savon à disposition des enfants'),
+  I('produits_date_ouverture','Date d’ouverture notée sur les produits (enfants et entretien)'),
+  I('produits_hors_portee','Produits d’hygiène/entretien hors de portée des enfants'),
+  I('couches_placard','Paquets de couches dans un placard adapté'),
+  I('pai_affiche','PAI affiché'),
+  I('medicaments_pai','Médicaments liés au PAI identifiés'),
+  I('aeration_securisee','Aération naturelle sécurisée (sinon VMC)',1),
+];
+</script>
+
+<script>
+// ── Entrée / Hall ──
+const PMI_ENTREE = [
+  I('controle_acces','Entrée équipée d’un contrôle d’accès (digicode, visiophone…) avec réponse depuis les unités',1),
+  I('digicode_annuel','Si digicode : code modifié chaque année'),
+  I('deverrouillage','Dispositif permettant de contrôler/déverrouiller l’entrée',1),
+  I('agencement_adapte','Agencement et équipements adaptés'),
+  I('hall_barriere_porte','Hall d’accueil limité par une barrière ou une porte'),
+  I('oculus_hall','Hall équipé d’oculus',1),
+  I('anti_pince_hall','Anti-pince-doigts sur les 2 côtés',1),
+  I('plan_deshabillage','Plan de déshabillage, profondeur ≥85 cm',1),
+  I('remontees_20cm','Remontées latérales suffisantes (20 cm)'),
+  I('vestiaires','Vestiaires individuels ou casiers',1),
+  I('fauteuil_parents','Fauteuil pour les parents',1),
+  I('surchaussures','Surchaussures à disposition'),
+  I('panier_surchaussures','Panier surchaussures sales/propres'),
+  I('gel_hydro','Gel hydroalcoolique à disposition'),
+  I('espace_poussettes','Espace dédié aux poussettes (interne ou externe)',1),
+];
+
+// ── Affichages obligatoires ──
+const PMI_AFFICHAGES = [
+  I('plan_evac','Plan du bâtiment et consignes d’évacuation',1),
+  I('num_secours','Numéros des services de secours',1),
+  I('vigipirate','Consignes Vigipirate (attentat / canicule / épidémie)',1),
+  I('fumer','Interdiction de fumer (art. L.3512-8 CSP)',1),
+  I('vapoter','Interdiction de vapoter (art. L.3513-3 CSP)',1),
+  I('consignes_minist','Consignes ministérielles/préfectorales en vigueur (sanitaire, sécurité, canicule)',1),
+  I('projet_etab','Projet d’établissement affiché ou mis à disposition, en vigueur',1),
+  I('reglement_fonct','Règlement de fonctionnement affiché ou mis à disposition, en vigueur',1),
+  I('proto_urgence','Protocole 1 — mesures en situation d’urgence / recours SAMU',1),
+  I('proto_hygiene','Protocole 2 — hygiène renforcée en cas de maladie/épidémie',1),
+  I('proto_soins','Protocole 3 — modalités de délivrance des soins spécifiques',1),
+  I('proto_maltraitance','Protocole 4 — conduite à tenir en cas de suspicion de maltraitance',1),
+  I('proto_sorties','Protocole 5 — sécurité lors des sorties',1),
+  I('proto_surete','Protocole de mise en sûreté (attentat) transmis au maire et au préfet'),
+  I('aff_119','Affiche 119 — Allô Enfance en Danger'),
+  I('aff_3919','Affiche 3919 — violences intrafamiliales'),
+  I('soutien_parentalite','Numéros de soutien à la parentalité à proximité'),
+  I('prevention_veo','Information de prévention de la violence éducative ordinaire'),
+  I('calendrier_vaccinal','Calendrier vaccinal'),
+  I('menus_affiches','Affichage des menus proposés aux enfants'),
+  I('allergenes','Indication de la présence d’allergènes'),
+  I('charte_accueil','Charte nationale d’accueil du jeune enfant'),
+  I('arrete_creation','Arrêté de création ou modificatif affiché',1),
+];
+
+// ── Hygiène générale ──
+const PMI_HYGIENE = [
+  I('pms','Existence d’un PMS (Plan de Maîtrise Sanitaire)',1),
+  I('proto_locaux','Protocole d’entretien des locaux + traçabilité',1),
+  I('proto_jeux','Protocole d’entretien des jeux/jouets + traçabilité',1),
+  I('proto_linge','Protocole d’entretien du linge + traçabilité',1),
+  I('marche_avant','Marche en avant dans la buanderie (RABC, 7 principes)',1),
+  I('hygiene_adaptee','Hygiène générale adaptée'),
+  I('surveillance_ecs','Surveillance régulière de la température ECS (55-60°C, mitigeur 45°C max.)',1),
+  I('dates_ouverture_entretien','Dates d’ouverture notées sur les produits d’entretien'),
+  I('produits_normalises','Pas de produits d’entretien « faits maison » (produits normalisés/labellisés)'),
+  I('attestations_labellisation','Attestations de labellisation des produits utilisés'),
+  I('agents_formes','Agents formés à l’utilisation des produits'),
+  I('nettoyage_vapeur','Nettoyage à la vapeur'),
+  I('tenues_dediees','Tenue et chaussures dédiées, entretenues sur site'),
+];
+
+// ── Restauration ──
+const PMI_RESTAURATION = [
+  I('prepa_sur_place','Préparations élaborées sur place'),
+  I('repas_prestataire','Repas fournis par un prestataire (liaison chaude/froide)'),
+  I('controle_temp_repas','Contrôle et traçabilité des températures repas (>63°C chaud / <6°C froid)',1),
+  I('menus_adaptes','Menus proposés adaptés'),
+  I('repas_parents_chaine_froid','Si repas apportés par les parents : respect de la chaîne du froid',1),
+  I('organisation_marche_avant','Organisation cuisine respectant la marche en avant',1),
+  I('conditions_repas','Conditions de prise des repas adaptées'),
+  I('echantillons_gardes','Échantillons gardés (crèche ou prestataire), identifiés date/heure'),
+  I('releves_frigos','Relevés de température des réfrigérateurs 2x/jour + traçabilité'),
+  I('releves_temp_repas','Relevés des températures des repas + traçabilité'),
+];
+
+// ── Cuisine ──
+const PMI_CUISINE = [
+  I('visibilite_cuisine','Visibilité suffisante depuis l’espace de vie',1),
+  I('fermeture_cuisine','Cuisine bien fermée (risque infectieux)'),
+  I('oculus_cuisine','Porte vers l’espace de vie équipée d’oculus',1),
+  I('portillons_nf_cuisine','Portillons NF',1),
+  I('point_eau_cuisine','Point d’eau à commande non manuelle',1),
+  I('evier','Présence d’un évier'),
+  I('plan_travail','Présence d’un plan de travail'),
+  I('four_micro_ondes','Présence d’un four de réchauffage ou micro-ondes'),
+  I('frigo_enfants','Réfrigérateur pour les enfants'),
+  I('frigo_pro','Réfrigérateur pour les professionnels'),
+  I('tenue_prepa','Tenue dédiée pour la préparation des repas'),
+  I('circuit_propre_sale','Respect du circuit propre/sale',1),
+  I('frigo_pai','Réfrigérateur réservé aux PAI (recommandé, séparation physique)'),
+  I('proto_entretien_frigo','Protocole entretien réfrigérateurs/micro-ondes + traçabilité'),
+  I('proto_rechauffage','Protocole de réchauffage des repas affiché'),
+  I('proto_lavage_mains','Protocole de lavage des mains affiché'),
+  I('proto_entretien_cuisine','Protocole d’entretien de la cuisine affiché'),
+];
+
+// ── Biberonnerie ──
+const PMI_BIBERONNERIE = [
+  I('chauffe_biberon','Présence d’un chauffe-biberon'),
+  I('lait_poudre','Lait en poudre sans dosettes'),
+  I('egalim','Respect loi EGALIM (plastiques proscrits) — bagues/tétines autorisées',1),
+];
+
+// ── Santé ──
+const PMI_SANTE = [
+  I('pharmacie','Présence d’une pharmacie'),
+  I('pharmacie_fermee','Pharmacie fermée et hors de portée des enfants'),
+  I('contenu_adapte','Contenu de la pharmacie adapté aux protocoles',1),
+  I('peremptions','Péremptions vérifiées, respectées et tracées'),
+  I('certificat_medical','Certificat médical <2 mois (non contre-indication collectivité) demandé à l’admission',1),
+  I('copie_vaccinations','Copie des documents de vaccinations obligatoires demandée régulièrement'),
+  I('outil_vaccinations','Outil par enfant pour le suivi des vaccinations obligatoires'),
+  I('proto_soins_specifiques','Protocole pour les modalités de soins spécifiques/occasionnels/réguliers (PAI…)',1),
+  I('autorisation_titulaires_ap','Autorisation des titulaires de l’autorité parentale obtenue',1),
+  I('verifications_avant_soins','Vérifications réglementaires avant administration de soins (ordonnance, péremption, formation…)',1),
+  I('prescription_antipyretiques','Prescription médicale d’antipyrétiques par enfant',1),
+  I('pai_si_traitement','PAI existant si prise de traitement nécessaire',1),
+  I('prescription_presente','Prescription médicale présente',1),
+  I('protocoles_internes_adaptes','Protocoles de soins internes adaptés',1),
+  I('registre_actes','Registre dédié : inscription immédiate de chaque geste (enfant, date/heure, geste, professionnel, médicament, posologie, appel parents)',1),
+];
+
+// ── Bureau direction ──
+const PMI_BUREAU = [
+  I('ouverture_distance_porte','Ouverture à distance de la porte d’entrée',1),
+  I('ouverture_distance_portail','Ouverture à distance du portail'),
+  I('ligne_fixe','Ligne téléphonique fixe',1),
+  I('bureau_ordi','Présence d’un bureau et d’un ordinateur'),
+  I('chaises_rangement','Plusieurs chaises et rangements'),
+  I('fauteuil_allaitement_bureau','Fauteuil dédié à l’allaitement (surtout micro-crèche)'),
+  I('aeration_nat_bureau','Aération naturelle'),
+  I('securisation_aeration_bureau','Sécurisation de l’aération naturelle',1),
+  I('aeration_meca_bureau','Aération mécanique'),
+  I('visibilite_salle_vie','Visibilité sur la salle de vie'),
+  I('affichages_bureau','Affichages obligatoires présents (plan évacuation, secours, vigipirate/sûreté, fumer/vapoter, consignes sanitaires, sécurité incendie, DUERP, médecine du travail, protocoles, charte accueil, projet/règlement, infos syndicales/convention collective)',1),
+];
+
+// ── Salle de repos personnel ──
+const PMI_REPOS = [
+  I('table_chaises_repos','Table et chaises'),
+  I('casiers_perso','Casiers pour les affaires des professionnels'),
+  I('frigo_repos','Réfrigérateur'),
+  I('micro_ondes_repos','Micro-ondes'),
+  I('point_eau_repos','Point d’eau'),
+  I('aeration_meca_repos','Aération mécanique'),
+  I('aeration_nat_repos','Aération naturelle'),
+  I('securisation_aeration_repos','Sécurisation de l’aération naturelle',1),
+];
+
+// ── Salle de réunion (EAJE ≥39 places) ──
+const PMI_REUNION = [
+  I('presente_reunion','Salle de réunion supplémentaire présente (EAJE ≥39 places)',1),
+  I('table_chaises_reunion','Table et chaises'),
+  I('aeration_meca_reunion','Aération mécanique'),
+  I('aeration_nat_reunion','Aération naturelle'),
+  I('securisation_aeration_reunion','Sécurisation de l’aération naturelle',1),
+];
+
+// ── Buanderie ──
+const PMI_BUANDERIE = [
+  I('lave_linge','Lave-linge'),
+  I('seche_linge','Sèche-linge'),
+  I('plan_pliage','Plan pour le pliage'),
+  I('etageres_buanderie','Étagères'),
+  I('produits_lessive','Produits de lessive (pas « fait maison »)'),
+  I('aeration_nat_buanderie','Aération naturelle'),
+  I('securisation_aeration_buanderie','Sécurisation de l’aération naturelle',1),
+  I('aeration_meca_buanderie','Aération mécanique'),
+];
+
+// ── Local de ménage ──
+const PMI_MENAGE = [
+  I('espace_dedie_menage','Espace dédié (ou mutualisé avec la buanderie)'),
+  I('devidoir','Présence d’un dévidoir'),
+  I('chariot_menage','Présence du chariot de ménage'),
+  I('rangement_produits','Étagères/placard pour les produits d’entretien'),
+  I('produits_hors_portee_menage','Produits d’entretien hors de portée des enfants'),
+  I('aeration_nat_menage','Aération naturelle'),
+  I('securisation_aeration_menage','Sécurisation de l’aération naturelle',1),
+];
+
+// ── Sécurité ──
+const PMI_SECURITE = [
+  I('tel_2lignes','Téléphone sur place (2 lignes)',1),
+  I('affichage_urgence_secu','Affichage des numéros d’urgence',1),
+  I('issues_secours','Issues de secours dégagées',1),
+];
+
+// ── Espaces extérieurs ──
+const PMI_EXTERIEUR = [
+  I('espaces_adaptes','Espaces extérieurs adaptés et sécurisés',1),
+  I('sols_adaptes','Sols adaptés',1),
+  I('ombrage','Système d’ombrage',1),
+  I('protection_chutes','Protection contre les chutes d’objets',1),
+  I('arbres','Présence d’arbres'),
+  I('vegetaux_dangereux','Présence de végétaux dangereux'),
+  I('entretien_regulier','Entretien régulier'),
+  I('jeux_bon_etat','Jeux et équipements extérieurs adaptés et en bon état',1),
+  I('portail_ferme','Portail fermé',1),
+  I('clotures_150','Clôtures ≥1,50 m sans appuis horizontaux',1),
+  I('espacement_11cm','Espacement <11 cm (barreaux, sous clôtures…)',1),
+  I('barrieres_normes','Barrières conformes aux normes (si utilisées)',1),
+  I('fermetures_enfants','Portes/portillons à fermeture non manipulable par les enfants',1),
+  I('enrouleur_tuyaux','Enrouleur si tuyaux d’arrosage'),
+  I('acces_plein_air','Si pas d’extérieur privatif : modalités d’accès au plein air précisées dans le projet',1),
+  I('surface_motricite','Surface de motricité ≥15 m² présente dans l’EAJE',1),
+];
+</script>
+
+<script>
+// ── État ──
+let PMI_DATA = {};
+let PMI_CRECHE = '';
+let PMI_OPEN = new Set(['identite','encadrement']);
+
+function pmiEsc(v) {
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function pmiGet(path, def) {
+  const parts = path.split('.');
+  let obj = PMI_DATA;
+  for (const p of parts) { if (obj == null) return def; obj = obj[p]; }
+  return obj === undefined || obj === null ? def : obj;
+}
+function pmiSet(path, val) {
+  const parts = path.split('.');
+  let obj = PMI_DATA;
+  for (let i=0;i<parts.length-1;i++) {
+    const p = parts[i];
+    if (obj[p] === undefined || obj[p] === null) obj[p] = /^\d+$/.test(parts[i+1]) ? [] : {};
+    obj = obj[p];
+  }
+  obj[parts[parts.length-1]] = val;
+  try { localStorage.setItem('orevy_pmi_' + PMI_CRECHE, JSON.stringify(PMI_DATA)); } catch {}
+}
+function pmiToggle(path, val) {
+  const cur = pmiGet(path);
+  pmiSet(path, cur === val ? undefined : val);
+  pmiRenderBody();
+}
+function pmiToggleAcc(id) {
+  if (PMI_OPEN.has(id)) PMI_OPEN.delete(id); else PMI_OPEN.add(id);
+  pmiRenderBody();
+}
+function pmiNewSection(nom) {
+  return { nom: nom || '', effectif:{}, salle_vie:{}, activites:{}, dortoir:{}, sanitaires:{} };
+}
+function pmiLoad(creche) {
+  try { PMI_DATA = JSON.parse(localStorage.getItem('orevy_pmi_' + creche) || 'null') || {}; }
+  catch { PMI_DATA = {}; }
+  if (!PMI_DATA.meta) PMI_DATA.meta = {};
+  if (!PMI_DATA.sections || !PMI_DATA.sections.length) PMI_DATA.sections = [pmiNewSection('Section unique')];
+  ['encadrement','hygiene','restauration','cuisine','biberonnerie','sante','entree','affichages','bureau','repos','reunion','buanderie','menage','securite','exterieur','conclusion'].forEach(g => { if (!PMI_DATA[g]) PMI_DATA[g] = {}; });
+  if (!PMI_DATA.encadrement.personnel) PMI_DATA.encadrement.personnel = {};
+}
+function pmiCategorie(cap) {
+  cap = Number(cap) || 0;
+  if (cap <= 12) return 'Micro-crèche (≤ 12 places)';
+  if (cap <= 24) return 'Petite crèche (13 à 24 places)';
+  if (cap <= 39) return 'Crèche (25 à 39 places)';
+  if (cap <= 59) return 'Grande crèche (40 à 59 places)';
+  return 'Très grande crèche (≥ 60 places)';
+}
+
+// ── Composants de rendu ──
+function pmiBool(path, label, star) {
+  const v = pmiGet(path);
+  const mk = (val, txt, cls) => `<button class="pmi-tg${v===val?' pmi-tg-on '+cls:''}" onclick="pmiToggle('${path}','${val}')">${txt}</button>`;
+  return `<div class="pmi-item">
+    <div class="pmi-item-label">${star?'<span class="pmi-star-mark">★</span> ':''}${label}</div>
+    <div class="pmi-tgs">${mk('oui','Oui','pmi-on')}${mk('non','Non','pmi-off')}${mk('na','N/A','pmi-na')}</div>
+  </div>`;
+}
+function pmiBoolGroup(items, prefix) {
+  return items.map(it => pmiBool(prefix + '.' + it.k, it.l, it.s)).join('');
+}
+function pmiText(path, label, opts) {
+  opts = opts || {};
+  const v = pmiGet(path, '');
+  if (opts.type === 'textarea') {
+    return `<div class="pmi-item pmi-item-col"><div class="pmi-item-label">${label}</div><textarea class="pmi-input" rows="${opts.rows||2}" oninput="pmiSet('${path}', this.value)">${pmiEsc(v)}</textarea></div>`;
+  }
+  return `<div class="pmi-item"><div class="pmi-item-label">${label}</div><input class="pmi-input pmi-input-sm" type="${opts.type||'text'}" value="${pmiEsc(v)}" oninput="pmiSet('${path}', this.value)"></div>`;
+}
+function pmiSelect(path, label, options) {
+  const v = pmiGet(path, '');
+  return `<div class="pmi-item"><div class="pmi-item-label">${label}</div>
+    <select class="pmi-input pmi-input-sm" onchange="pmiSetSelect('${path}', this.value)">
+      ${options.map(o => `<option value="${o.v}"${o.v===v?' selected':''}>${o.l}</option>`).join('')}
+    </select></div>`;
+}
+function pmiSetSelect(path, val) { pmiSet(path, val); pmiRenderBody(); }
+function pmiAccordion(id, title, badge, body) {
+  const open = PMI_OPEN.has(id);
+  return `<div class="pmi-acc">
+    <div class="pmi-acc-head" onclick="pmiToggleAcc('${id}')">
+      <span>${title}</span>${badge?`<span class="pmi-badge">${badge}</span>`:''}<span class="pmi-acc-arrow">${open?'▾':'▸'}</span>
+    </div>
+    ${open ? `<div class="pmi-acc-body">${body}</div>` : ''}
+  </div>`;
+}
+function pmiSubtitle(t) { return `<div class="pmi-subtitle">${t}</div>`; }
+
+// ── Tableau personnel encadrant (auto depuis RH) ──
+const PMI_CAT_LABELS = {
+  directrice:'Directrice / Directeur', puericultrice:'Puéricultrice', infirmiere:'Infirmière',
+  eje:'Éducateur·rice de jeunes enfants', auxiliaire:'Auxiliaire de puériculture',
+  cap_pe:'CAP PE / art.1 arrêté 29/07/2022', autres:'Autres professionnels'
+};
+function pmiPersonTable() {
+  const rows = Object.entries(PMI_CAT_LABELS).map(([k,l]) => {
+    const nb = pmiGet('encadrement.personnel.'+k+'.nb','');
+    const etp = pmiGet('encadrement.personnel.'+k+'.etp','');
+    const nom = pmiGet('encadrement.personnel.'+k+'.nom','');
+    return `<tr>
+      <td>${l}</td>
+      <td style="width:60px"><input type="number" step="0.1" value="${pmiEsc(nb)}" oninput="pmiSet('encadrement.personnel.${k}.nb', this.value)"></td>
+      <td style="width:70px"><input type="number" step="0.1" value="${pmiEsc(etp)}" oninput="pmiSet('encadrement.personnel.${k}.etp', this.value)"></td>
+      <td><input type="text" value="${pmiEsc(nom)}" oninput="pmiSet('encadrement.personnel.${k}.nom', this.value)" placeholder="Nom(s) Prénom(s)"></td>
+    </tr>`;
+  }).join('');
+  return `<table class="pmi-table"><thead><tr><th>Fonction</th><th>Nb</th><th>ETP</th><th>Nom(s) Prénom(s)</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ── Pré-remplissage depuis les données Orevy ──
+function pmiPrefill() {
+  if (!PMI_CRECHE) { showNotif('⚠ Sélectionnez une crèche'); return; }
+  const creche = (CRECHES_DATA||[]).find(c => c.nom === PMI_CRECHE) || {};
+  pmiSet('meta.nom_etablissement', PMI_CRECHE);
+  const capacite = pmiGet('meta.capacite') || creche.capacite || 10;
+  pmiSet('meta.capacite', capacite);
+  pmiSet('meta.categorie', pmiCategorie(capacite));
+  if (!pmiGet('meta.type_etablissement')) pmiSet('meta.type_etablissement', 'collectif');
+  pmiSet('meta.surnombre115', Math.round(Number(capacite) * 1.15 * 10) / 10);
+  if (!pmiGet('meta.date_controle')) pmiSet('meta.date_controle', new Date().toISOString().slice(0,10));
+
+  // Personnel encadrant depuis RH
+  try { loadSalaries(); } catch {}
+  const list = (typeof SALARIES !== 'undefined' ? SALARIES : []).filter(s => s.creche === PMI_CRECHE && s.statut !== 'inactif');
+  const cats = {};
+  Object.keys(PMI_CAT_LABELS).concat(['entretien']).forEach(k => cats[k] = { nb:0, etp:0, nom:[] });
+  const FMAP = {
+    'Directeur / Directrice':'directrice',
+    'Coordinateur / Coordinatrice EJE':'autres',
+    'Éducateur / Éducatrice de jeunes enfants':'eje',
+    'Auxiliaire de puériculture':'auxiliaire',
+    'CAP Accompagnant Éducatif Petite Enfance':'cap_pe',
+    "Agent / Agente d'entretien":'entretien',
+    'Cuisinier / Cuisinière':'entretien',
+    'Stagiaire':'autres', 'Autre':'autres'
+  };
+  const ETP_MAP = { 'Temps plein':1, 'Temps partiel 80%':0.8, 'Temps partiel 50%':0.5 };
+  list.forEach(s => {
+    const cat = FMAP[s.fonction] || 'autres';
+    const etp = ETP_MAP[s.temps] != null ? ETP_MAP[s.temps] : 1;
+    cats[cat].nb++; cats[cat].etp += etp;
+    cats[cat].nom.push(((s.prenom||'')+' '+(s.nom||'')).trim());
+  });
+  Object.keys(PMI_CAT_LABELS).forEach(c => {
+    pmiSet('encadrement.personnel.'+c+'.nb', cats[c].nb);
+    pmiSet('encadrement.personnel.'+c+'.etp', Math.round(cats[c].etp*100)/100);
+    pmiSet('encadrement.personnel.'+c+'.nom', cats[c].nom.join(', '));
+  });
+  const totalEncadrants = Object.keys(PMI_CAT_LABELS).reduce((a,c) => a + cats[c].nb, 0);
+  pmiSet('encadrement.nb_pros_jour', totalEncadrants);
+  pmiSet('encadrement.personnel_entretien_restauration', cats.entretien.nb);
+  if (cats.entretien.nom.length && !pmiGet('encadrement.haccp_nom')) pmiSet('encadrement.haccp_nom', cats.entretien.nom[0]);
+  if (!pmiGet('encadrement.regle_encadrement')) {
+    pmiSet('encadrement.regle_encadrement', (typeof getStructureType === 'function' && getStructureType() === 'micro') ? '1_6' : '1_5_8');
+  }
+
+  // Effectifs enfants (depuis Familles)
+  const fams = (typeof getFamilles === 'function' ? getFamilles(PMI_CRECHE) : []) || [];
+  const dateC = pmiGet('meta.date_controle') || new Date().toISOString().slice(0,10);
+  const dC = new Date(dateC);
+  const present = fams.filter(e => {
+    if (e.sortie && new Date(e.sortie) < dC) return false;
+    if (e.entree && new Date(e.entree) > dC) return false;
+    return true;
+  });
+  let marchent = 0, neMarchent = 0;
+  present.forEach(e => {
+    if (!e.ddn) { neMarchent++; return; }
+    const ageMois = Math.floor((dC - new Date(e.ddn)) / (1000*60*60*24*30.44));
+    if (ageMois >= 12) marchent++; else neMarchent++;
+  });
+  if (PMI_DATA.sections.length === 1) {
+    pmiSet('sections.0.effectif.total', present.length);
+    pmiSet('sections.0.effectif.marchent', marchent);
+    pmiSet('sections.0.effectif.ne_marchent', neMarchent);
+    if (!PMI_DATA.sections[0].nom) pmiSet('sections.0.nom', 'Section unique');
+  }
+  showNotif('⚡ Données Orevy reprises (personnel, effectifs)');
+  pmiRenderBody();
+}
+
+// ── Ouverture / fermeture écran ──
+function openPmiScreen() {
+  document.getElementById('pmi-screen').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  const sel = document.getElementById('pmi-creche-sel');
+  sel.innerHTML = (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+  PMI_CRECHE = (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all' && (CRECHES_DATA||[]).some(c => c.nom === currentCreche))
+    ? currentCreche : ((CRECHES_DATA||[])[0] || {}).nom;
+  sel.value = PMI_CRECHE || '';
+  pmiLoad(PMI_CRECHE);
+  if (!pmiGet('meta.date_controle')) pmiSet('meta.date_controle', new Date().toISOString().slice(0,10));
+  document.getElementById('pmi-date').value = pmiGet('meta.date_controle');
+  pmiRenderBody();
+}
+function closePmiScreen() {
+  document.getElementById('pmi-screen').style.display = 'none';
+  document.body.style.overflow = '';
+}
+function pmiOnCrecheChange() {
+  PMI_CRECHE = document.getElementById('pmi-creche-sel').value;
+  pmiLoad(PMI_CRECHE);
+  if (!pmiGet('meta.date_controle')) pmiSet('meta.date_controle', new Date().toISOString().slice(0,10));
+  document.getElementById('pmi-date').value = pmiGet('meta.date_controle');
+  pmiRenderBody();
+}
+function pmiSave() {
+  try { localStorage.setItem('orevy_pmi_' + PMI_CRECHE, JSON.stringify(PMI_DATA)); } catch {}
+  const idx = (CRECHES_DATA||[]).findIndex(c => c.nom === PMI_CRECHE);
+  if (idx >= 0 && pmiGet('meta.capacite')) {
+    CRECHES_DATA[idx].capacite = Number(pmiGet('meta.capacite'));
+    try { if (typeof sauverCreches === 'function') sauverCreches(); } catch {}
+  }
+  showNotif('✅ Contrôle PMI enregistré');
+}
+</script>
+
+<script>
+function pmiPersonGroup(prefix, title) {
+  return `
+    ${pmiBool(prefix+'.present', title + ' assuré')}
+    <div class="pmi-row">
+      ${pmiText(prefix+'.nom','Nom')}
+      ${pmiText(prefix+'.qualif','Qualification')}
+      ${pmiText(prefix+'.heures','Temps d’intervention (h/mois)')}
+    </div>
+    <div class="pmi-row">
+      ${pmiText(prefix+'.derniere','Dernière intervention', {type:'date'})}
+      ${pmiText(prefix+'.prochaine','Prochaine intervention prévue', {type:'date'})}
+    </div>`;
+}
+
+function pmiSetNbSections(n) {
+  n = Math.max(1, Math.min(4, Number(n) || 1));
+  const cur = PMI_DATA.sections.length;
+  if (n > cur) { for (let i=cur;i<n;i++) PMI_DATA.sections.push(pmiNewSection('Section ' + (i+1))); }
+  else if (n < cur) { PMI_DATA.sections = PMI_DATA.sections.slice(0, n); }
+  pmiSet('encadrement.nb_sections', n);
+  pmiRenderBody();
+}
+
+function pmiRenderBody() {
+  const cap = pmiGet('meta.capacite', 0);
+  const heuresHebdo = pmiGet('meta.heures_ouverture_hebdo', 0);
+
+  // ── Identité ──
+  const idBody = `
+    <div class="pmi-row">
+      ${pmiText('meta.nom_etablissement','Nom de l’établissement')}
+      ${pmiText('meta.ville','Ville')}
+    </div>
+    <div class="pmi-row">
+      ${pmiText('meta.tel_fixe','Téléphone fixe')}
+      ${pmiText('meta.tel_mobile','Téléphone mobile')}
+      ${pmiText('meta.email','E-mail', {type:'email'})}
+    </div>
+    <div class="pmi-row">
+      ${pmiText('meta.effectue_par','Contrôle effectué par')}
+      ${pmiText('meta.qualif_effectue_par','Qualité / fonction')}
+    </div>
+    <div class="pmi-row">
+      ${pmiText('meta.en_presence_de','En présence de')}
+      ${pmiText('meta.qualif_presence','Qualité / fonction')}
+    </div>
+    ${pmiSubtitle('Capacité & occupation')}
+    <div class="pmi-row">
+      ${pmiText('meta.capacite','Capacité d’accueil agréée (places)', {type:'number'})}
+      <div class="pmi-item"><div class="pmi-item-label">Catégorie EAJE</div><div class="pmi-input" style="background:var(--pcream);border-color:transparent">${pmiEsc(pmiCategorie(cap))}</div></div>
+      <div class="pmi-item"><div class="pmi-item-label">Effectif en surnombre (+15%)</div><div class="pmi-input" style="background:var(--pcream);border-color:transparent">${Math.round(cap*1.15*10)/10}</div></div>
+    </div>
+    ${pmiSelect('meta.type_etablissement','Type d’établissement',[{v:'collectif',l:'Collectif (crèche / micro-crèche)'},{v:'familial',l:'Familial'},{v:'parental',l:'Parental'}])}
+    <div class="pmi-row">
+      ${pmiText('meta.heures_ouverture_hebdo','Heures d’ouverture hebdo (amplitude × 5 j)', {type:'number'})}
+      <div class="pmi-item"><div class="pmi-item-label">Capacité horaire hebdo. totale</div><div class="pmi-input" style="background:var(--pcream);border-color:transparent">${Math.round(heuresHebdo*cap)} h</div></div>
+    </div>
+    ${pmiBool('meta.modulation_horaire','Modulation horaire pratiquée')}
+    ${pmiText('meta.taux_occupation_semaine','Taux d’occupation de la semaine du contrôle')}
+    ${pmiBool('meta.tableau_bord_surnombre','Le taux d’occupation hebdo. est consigné dans un tableau de bord', true)}
+    <div class="pmi-row">
+      ${pmiText('meta.etp_necessaire','ETP nécessaires (encadrement)', {type:'number'})}
+      ${pmiText('meta.etp_diplomes','ETP « diplômés » requis (40 % / 50 %)', {type:'number'})}
+    </div>
+  `;
+
+  // ── Encadrement ──
+  const nbSections = PMI_DATA.sections.length;
+  const encBody = `
+    <div class="pmi-item"><div class="pmi-item-label">Nombre de sections / unités de vie</div>
+      <select class="pmi-input pmi-input-sm" onchange="pmiSetNbSections(this.value)">
+        ${[1,2,3,4].map(n=>`<option value="${n}"${nbSections===n?' selected':''}>${n}</option>`).join('')}
+      </select>
+    </div>
+    ${pmiSelect('encadrement.regle_encadrement','Règle d’encadrement appliquée',[{v:'1_6',l:'1 professionnel / 6 enfants (micro-crèche)'},{v:'1_5_8',l:'1/5 non-marcheurs — 1/8 marcheurs (crèche classique)'}])}
+    ${pmiText('encadrement.nb_pros_jour','Nombre de professionnels présents le jour du contrôle', {type:'number'})}
+    ${pmiBool('encadrement.effectif_qualif_adapte','Effectif et qualifications adaptés à l’agrément et à l’effectif accueilli', true)}
+    ${pmiSubtitle('Personnel encadrant (auto. depuis la fiche RH)')}
+    ${pmiPersonTable()}
+    ${pmiSubtitle('Entretien / restauration')}
+    ${pmiText('encadrement.personnel_entretien_restauration','Nombre de personnes affectées à l’entretien/restauration', {type:'number'})}
+    ${pmiText('encadrement.haccp_nom','Personne responsable HACCP / PMS')}
+    ${pmiBool('encadrement.haccp_identifie_planning','Personne HACCP identifiée sur le planning', true)}
+    ${pmiBool('encadrement.temps_menage_hors_presence','Temps de ménage organisé hors présence des enfants')}
+    ${pmiBool('encadrement.temps_rechauffage','Temps dédié au réchauffage des repas identifié')}
+    ${pmiBool('encadrement.temps_gouters','Temps dédié à la préparation des goûters identifié')}
+    ${pmiSubtitle('Continuité de direction')}
+    <div class="pmi-row">
+      ${pmiText('encadrement.continuite_nom','Référent en cas d’absence de la direction')}
+      ${pmiText('encadrement.continuite_qualif','Qualification')}
+    </div>
+    ${pmiBool('encadrement.continuite_acces_gestion','Accès aux outils de gestion (plannings, dossiers)', true)}
+    ${pmiBool('encadrement.continuite_acces_protocoles','Accès aux protocoles et documents obligatoires', true)}
+    ${pmiSubtitle('RSAI — référent santé et accueil inclusif')}
+    ${pmiPersonGroup('encadrement.rsai','RSAI')}
+    ${pmiSubtitle('Analyse de la pratique professionnelle (APP)')}
+    ${pmiPersonGroup('encadrement.app','APP')}
+    ${pmiSubtitle('Soutien du référent technique')}
+    ${pmiPersonGroup('encadrement.soutien_rt','Soutien RT')}
+    ${pmiText('encadrement.intervenants_exterieurs','Intervenants extérieurs réguliers (psychomotricien, musicien…)', {type:'textarea', rows:2})}
+    ${pmiSubtitle('Honorabilité')}
+    ${pmiBool('encadrement.honorabilite_personnel','Honorabilité du personnel vérifiée (FIJAISV/FIJAIS)', true)}
+    ${pmiBool('encadrement.honorabilite_gestionnaire','Honorabilité du gestionnaire vérifiée', true)}
+    ${pmiBool('encadrement.honorabilite_intervenants','Honorabilité des intervenants extérieurs vérifiée', true)}
+    ${pmiBool('encadrement.honorabilite_parents','Honorabilité des parents/bénévoles présents vérifiée', true)}
+    ${pmiBool('encadrement.renouvellement_3ans','Renouvellement des vérifications tous les 3 ans', true)}
+  `;
+
+  let html = '';
+  html += pmiAccordion('identite', '📋 Identité, capacité & occupation', null, idBody);
+  html += pmiAccordion('encadrement', '👥 Effectifs & encadrement', null, encBody);
+
+  // ── Sections (salle de vie, dortoir, sanitaires, activités) ──
+  PMI_DATA.sections.forEach((sec, i) => {
+    const p = 'sections.' + i;
+    const body = `
+      ${pmiText(p+'.nom','Nom de la section')}
+      ${pmiSubtitle('Effectif')}
+      <div class="pmi-row">
+        ${pmiText(p+'.effectif.total','Effectif total présent', {type:'number'})}
+        ${pmiText(p+'.effectif.marchent','dont marcheurs', {type:'number'})}
+        ${pmiText(p+'.effectif.ne_marchent','dont non-marcheurs', {type:'number'})}
+      </div>
+      ${pmiSubtitle('Salle de vie')}
+      ${pmiText(p+'.salle_vie_surface','Surface (m²)', {type:'number'})}
+      ${pmiBoolGroup(PMI_SALLE_VIE, p+'.salle_vie')}
+      ${pmiSubtitle('Activités & projet pédagogique')}
+      ${pmiBoolGroup(PMI_ACTIVITES, p+'.activites')}
+      ${pmiText(p+'.activites.commentaire','Observations / adaptations', {type:'textarea'})}
+      ${pmiSubtitle('Dortoir / espace de repos')}
+      <div class="pmi-row">
+        ${pmiText(p+'.dortoir_nom','Nom du dortoir')}
+        ${pmiText(p+'.dortoir_surface','Surface (m²)', {type:'number'})}
+      </div>
+      ${pmiBoolGroup(PMI_DORTOIR, p+'.dortoir')}
+      ${pmiSubtitle('Sanitaires / espace de changes')}
+      ${pmiText(p+'.sanitaires_surface','Surface (m²)', {type:'number'})}
+      ${pmiBoolGroup(PMI_SANITAIRES, p+'.sanitaires')}
+    `;
+    html += pmiAccordion('section'+i, `📍 ${pmiEsc(sec.nom || ('Section '+(i+1)))}`, `${(sec.effectif||{}).total||0} enf.`, body);
+  });
+
+  // ── Hygiène ──
+  const hygBody = `
+    ${pmiBoolGroup(PMI_HYGIENE, 'hygiene')}
+    ${pmiText('hygiene.frequence_electromenager','Fréquence d’entretien de l’électroménager')}
+    ${pmiText('hygiene.formations_rabc','Formations RABC suivies par l’équipe (qui / quand)', {type:'textarea'})}
+  `;
+  html += pmiAccordion('hygiene', '🧼 Hygiène générale', null, hygBody);
+
+  // ── Restauration / Cuisine / Biberonnerie ──
+  const restoBody = `
+    ${pmiSubtitle('Restauration')}
+    ${pmiBoolGroup(PMI_RESTAURATION, 'restauration')}
+    ${pmiText('restauration.horaire_livraison','Horaire de livraison des repas')}
+    ${pmiSubtitle('Cuisine')}
+    ${pmiText('cuisine.surface','Surface (m²)', {type:'number'})}
+    ${pmiBoolGroup(PMI_CUISINE, 'cuisine')}
+    ${pmiSubtitle('Biberonnerie')}
+    ${pmiText('biberonnerie.surface','Surface (m²)', {type:'number'})}
+    ${pmiBoolGroup(PMI_BIBERONNERIE, 'biberonnerie')}
+  `;
+  html += pmiAccordion('resto', '🍽️ Restauration, cuisine & biberonnerie', null, restoBody);
+
+  // ── Santé ──
+  const santeBody = `
+    ${pmiText('sante.pharmacie_lieu','Emplacement de la pharmacie')}
+    ${pmiBoolGroup(PMI_SANTE, 'sante')}
+  `;
+  html += pmiAccordion('sante', '🩹 Santé & pharmacie', null, santeBody);
+
+  // ── Locaux communs & affichages ──
+  const locauxBody = `
+    ${pmiSubtitle('Entrée / Hall')}
+    ${pmiText('entree.surface','Surface (m²)', {type:'number'})}
+    ${pmiBoolGroup(PMI_ENTREE, 'entree')}
+    ${pmiSubtitle('Affichages obligatoires')}
+    ${pmiBoolGroup(PMI_AFFICHAGES, 'affichages')}
+    ${pmiSubtitle('Bureau de direction')}
+    ${pmiText('bureau.surface','Surface (m²)', {type:'number'})}
+    ${pmiBoolGroup(PMI_BUREAU, 'bureau')}
+    ${pmiSubtitle('Salle de repos du personnel')}
+    ${pmiText('repos.surface','Surface (m²)', {type:'number'})}
+    ${pmiBoolGroup(PMI_REPOS, 'repos')}
+    ${pmiSubtitle('Salle de réunion (EAJE ≥ 39 places)')}
+    ${pmiText('reunion.surface','Surface (m²)', {type:'number'})}
+    ${pmiBoolGroup(PMI_REUNION, 'reunion')}
+    ${pmiSubtitle('Buanderie')}
+    ${pmiText('buanderie.surface','Surface (m²)', {type:'number'})}
+    ${pmiBoolGroup(PMI_BUANDERIE, 'buanderie')}
+    ${pmiSubtitle('Local de ménage')}
+    ${pmiText('menage.surface','Surface (m²)', {type:'number'})}
+    ${pmiBoolGroup(PMI_MENAGE, 'menage')}
+  `;
+  html += pmiAccordion('locaux', '🚪 Locaux communs & affichages', null, locauxBody);
+
+  // ── Sécurité ──
+  const secuBody = `
+    ${pmiBoolGroup(PMI_SECURITE, 'securite')}
+    ${pmiSubtitle('Exercices de sécurité')}
+    ${pmiBool('securite.exercice_evacuation','Exercice d’évacuation réalisé', true)}
+    ${pmiText('securite.date_evacuation','Date du dernier exercice d’évacuation', {type:'date'})}
+    ${pmiBool('securite.exercice_confinement','Exercice de confinement réalisé', true)}
+    ${pmiText('securite.date_confinement','Date du dernier exercice de confinement', {type:'date'})}
+    ${pmiText('securite.sorties_organisees','Organisation des sorties (encadrement, ratio conseillé 1 pro / 2 enfants)', {type:'textarea'})}
+    ${pmiSubtitle('Contrôles techniques (dates)')}
+    <div class="pmi-row">
+      ${pmiText('securite.date_electrique','Installation électrique', {type:'date'})}
+      ${pmiText('securite.date_chaudiere','Chaudière / installation gaz', {type:'date'})}
+    </div>
+    <div class="pmi-row">
+      ${pmiText('securite.date_clim','Nettoyage climatisation', {type:'date'})}
+      ${pmiText('securite.date_extincteurs','Extincteurs', {type:'date'})}
+    </div>
+    <div class="pmi-row">
+      ${pmiText('securite.date_alarme','Alarme incendie', {type:'date'})}
+      ${pmiText('securite.date_baes','Éclairage de sécurité (BAES)', {type:'date'})}
+    </div>
+    <div class="pmi-row">
+      ${pmiText('securite.date_radon','Contrôle radon', {type:'date'})}
+      ${pmiText('securite.date_air','Contrôle qualité de l’air', {type:'date'})}
+    </div>
+    ${pmiText('securite.raat_amiante','RAAT amiante (si bâtiment concerné)')}
+    ${pmiText('securite.wifi_abeille','Conformité Wi-Fi (loi Abeille — coupure hors utilisation)')}
+  `;
+  html += pmiAccordion('securite', '🚨 Sécurité', null, secuBody);
+
+  // ── Espaces extérieurs ──
+  const extBody = `
+    ${pmiSelect('exterieur.type','Type d’espace extérieur',[{v:'jardin',l:'Jardin'},{v:'cour',l:'Cour'},{v:'terrasse',l:'Terrasse'},{v:'aucun',l:'Aucun espace privatif'}])}
+    ${pmiBoolGroup(PMI_EXTERIEUR, 'exterieur')}
+    ${pmiText('exterieur.frequence_entretien_jeux','Fréquence d’entretien/contrôle des jeux extérieurs')}
+  `;
+  html += pmiAccordion('exterieur', '🌳 Espaces extérieurs', null, extBody);
+
+  // ── Conclusion ──
+  const concBody = `
+    ${pmiText('conclusion.points_forts','Points forts observés', {type:'textarea', rows:3})}
+    ${pmiText('conclusion.points_faibles','Points faibles / axes d’amélioration', {type:'textarea', rows:3})}
+    ${pmiText('conclusion.conditions_travail','Conditions de travail des professionnels', {type:'textarea', rows:2})}
+    ${pmiText('conclusion.qualite_prise_en_charge','Qualité de la prise en charge des enfants', {type:'textarea', rows:2})}
+    ${pmiText('conclusion.charte_accueil','Mise en œuvre de la charte nationale d’accueil du jeune enfant', {type:'textarea', rows:2})}
+    ${pmiText('conclusion.charte_parentalite','Mise en œuvre de la charte de soutien à la parentalité', {type:'textarea', rows:2})}
+    ${pmiText('conclusion.plan_formation','Plan de formation de l’équipe', {type:'textarea', rows:2})}
+    ${pmiText('conclusion.autres','Autres observations', {type:'textarea', rows:2})}
+    ${pmiSubtitle('Visas et transmission')}
+    <div class="pmi-row">
+      ${pmiText('conclusion.visa_pmi_date','Date visa PMI', {type:'date'})}
+      ${pmiText('conclusion.visa_responsable_date','Date visa responsable structure', {type:'date'})}
+    </div>
+    <div class="pmi-row">
+      ${pmiText('conclusion.visa_service_date','Date visa service PMI (validation)', {type:'date'})}
+      ${pmiText('conclusion.transmis_gestionnaire_date','Date de transmission au gestionnaire', {type:'date'})}
+    </div>
+  `;
+  html += pmiAccordion('conclusion', '📝 Impression générale & conclusion', null, concBody);
+
+  document.getElementById('pmi-body-content').innerHTML = html;
+}
+
+// ── Export / impression ──
+function pmiPrint() {
+  const m = PMI_DATA.meta || {};
+  let out = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Contrôle PMI - ${pmiEsc(m.nom_etablissement || PMI_CRECHE)}</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1A1208;padding:24px;max-width:900px;margin:0 auto}
+    h1{font-size:19px;margin-bottom:2px}
+    h2{font-size:13px;margin:16px 0 6px;border-bottom:1px solid #ccc;padding-bottom:3px;color:#1A1208}
+    table{width:100%;border-collapse:collapse;margin-bottom:4px}
+    td{padding:3px 6px;border-bottom:1px solid #eee;font-size:11px;vertical-align:top}
+    td.lab{width:72%}
+    td.val{font-weight:700;text-align:right;white-space:normal}
+    @media print { body{padding:6px} h2{page-break-after:avoid} }
+  </style></head><body>`;
+  out += `<h1>Compte rendu de visite de contrôle EAJE — PMI 2026</h1>
+  <div style="color:#888;margin-bottom:10px;font-size:11px">Document généré automatiquement par Orevy Structures à partir des données saisies — à compléter sur place.</div>`;
+
+  out += `<table>`;
+  const idf = (l,v) => { out += `<tr><td class="lab">${pmiEsc(l)}</td><td class="val">${pmiEsc(v) || '—'}</td></tr>`; };
+  idf('Établissement', (m.nom_etablissement||'') + (m.ville ? ' — ' + m.ville : ''));
+  idf('Catégorie EAJE', m.categorie || pmiCategorie(m.capacite));
+  idf('Capacité agréée / surnombre (+15%)', (m.capacite||'—') + ' / ' + (m.surnombre115||'—'));
+  idf('Type d’établissement', m.type_etablissement);
+  idf('Heures ouverture hebdo / capacité hebdo totale', (m.heures_ouverture_hebdo||'—') + ' h / ' + (Math.round((m.heures_ouverture_hebdo||0)*(m.capacite||0))||'—') + ' h');
+  idf('Taux d’occupation de la semaine', m.taux_occupation_semaine);
+  idf('Date du contrôle', m.date_controle);
+  idf('Contrôle effectué par', (m.effectue_par||'') + (m.qualif_effectue_par ? ' (' + m.qualif_effectue_par + ')' : ''));
+  idf('En présence de', (m.en_presence_de||'') + (m.qualif_presence ? ' (' + m.qualif_presence + ')' : ''));
+  out += `</table>`;
+
+  function printItems(title, items, obj) {
+    out += `<h2>${pmiEsc(title)}</h2><table>`;
+    (items||[]).forEach(it => {
+      const v = (obj||{})[it.k];
+      const lbl = (it.s ? '★ ' : '') + it.l;
+      const val = v === 'oui' ? 'OUI' : v === 'non' ? 'NON' : v === 'na' ? 'N/A' : '—';
+      out += `<tr><td class="lab">${pmiEsc(lbl)}</td><td class="val">${val}</td></tr>`;
+    });
+    out += `</table>`;
+  }
+  function printField(label, val) { out += `<tr><td class="lab">${pmiEsc(label)}</td><td class="val">${pmiEsc(val) || '—'}</td></tr>`; }
+
+  out += `<h2>Encadrement</h2><table>`;
+  const enc = PMI_DATA.encadrement || {};
+  printField('Règle d’encadrement', enc.regle_encadrement === '1_6' ? '1 professionnel / 6 enfants (micro-crèche)' : enc.regle_encadrement === '1_5_8' ? '1/5 non-marcheurs — 1/8 marcheurs' : '');
+  printField('Nombre de professionnels présents le jour du contrôle', enc.nb_pros_jour);
+  printField('Effectif et qualifications adaptés', enc.effectif_qualif_adapte === 'oui' ? 'OUI' : enc.effectif_qualif_adapte === 'non' ? 'NON' : '—');
+  out += `</table><table><tr><td class="lab"><b>Fonction</b></td><td class="val"><b>Nb / ETP / Nom(s)</b></td></tr>`;
+  Object.entries(PMI_CAT_LABELS).forEach(([k,l]) => {
+    const p = (enc.personnel||{})[k] || {};
+    if (p.nb || p.nom) out += `<tr><td class="lab">${pmiEsc(l)}</td><td class="val">${p.nb||0} / ${p.etp||0} ETP — ${pmiEsc(p.nom)||'—'}</td></tr>`;
+  });
+  out += `</table>`;
+  printItems('Honorabilité & continuité de direction', [
+    {k:'honorabilite_personnel',l:'Honorabilité du personnel vérifiée',s:1},
+    {k:'honorabilite_gestionnaire',l:'Honorabilité du gestionnaire vérifiée',s:1},
+    {k:'honorabilite_intervenants',l:'Honorabilité des intervenants extérieurs vérifiée',s:1},
+    {k:'honorabilite_parents',l:'Honorabilité des parents/bénévoles vérifiée',s:1},
+    {k:'renouvellement_3ans',l:'Renouvellement des vérifications tous les 3 ans',s:1},
+    {k:'continuite_acces_gestion',l:'Continuité — accès aux outils de gestion',s:1},
+    {k:'continuite_acces_protocoles',l:'Continuité — accès aux protocoles',s:1},
+  ], enc);
+
+  PMI_DATA.sections.forEach((sec,i) => {
+    out += `<h2>Section ${i+1} : ${pmiEsc(sec.nom || '')}</h2><table>`;
+    printField('Effectif présent / marcheurs / non-marcheurs', (sec.effectif&&sec.effectif.total||0) + ' / ' + (sec.effectif&&sec.effectif.marchent||0) + ' / ' + (sec.effectif&&sec.effectif.ne_marchent||0));
+    printField('Surface salle de vie', (sec.salle_vie_surface||'—') + ' m²');
+    printField('Surface dortoir', (sec.dortoir_surface||'—') + ' m² — ' + (sec.dortoir_nom||''));
+    printField('Surface sanitaires', (sec.sanitaires_surface||'—') + ' m²');
+    out += `</table>`;
+    printItems('Salle de vie', PMI_SALLE_VIE, sec.salle_vie);
+    printItems('Activités & projet', PMI_ACTIVITES, sec.activites);
+    printItems('Dortoir', PMI_DORTOIR, sec.dortoir);
+    printItems('Sanitaires / changes', PMI_SANITAIRES, sec.sanitaires);
+  });
+
+  printItems('Hygiène générale', PMI_HYGIENE, PMI_DATA.hygiene);
+  printItems('Restauration', PMI_RESTAURATION, PMI_DATA.restauration);
+  printItems('Cuisine', PMI_CUISINE, PMI_DATA.cuisine);
+  printItems('Biberonnerie', PMI_BIBERONNERIE, PMI_DATA.biberonnerie);
+  printItems('Santé & pharmacie', PMI_SANTE, PMI_DATA.sante);
+  printItems('Entrée / Hall', PMI_ENTREE, PMI_DATA.entree);
+  printItems('Affichages obligatoires', PMI_AFFICHAGES, PMI_DATA.affichages);
+  printItems('Bureau de direction', PMI_BUREAU, PMI_DATA.bureau);
+  printItems('Salle de repos du personnel', PMI_REPOS, PMI_DATA.repos);
+  printItems('Salle de réunion', PMI_REUNION, PMI_DATA.reunion);
+  printItems('Buanderie', PMI_BUANDERIE, PMI_DATA.buanderie);
+  printItems('Local de ménage', PMI_MENAGE, PMI_DATA.menage);
+  printItems('Sécurité', PMI_SECURITE, PMI_DATA.securite);
+  printItems('Espaces extérieurs', PMI_EXTERIEUR, PMI_DATA.exterieur);
+
+  out += `<h2>Sécurité — dates & exercices</h2><table>`;
+  const sec2 = PMI_DATA.securite || {};
+  printField('Exercice d’évacuation', (sec2.exercice_evacuation==='oui'?'OUI':sec2.exercice_evacuation==='non'?'NON':'—') + (sec2.date_evacuation ? ' — ' + sec2.date_evacuation : ''));
+  printField('Exercice de confinement', (sec2.exercice_confinement==='oui'?'OUI':sec2.exercice_confinement==='non'?'NON':'—') + (sec2.date_confinement ? ' — ' + sec2.date_confinement : ''));
+  printField('Installation électrique', sec2.date_electrique);
+  printField('Chaudière / installation gaz', sec2.date_chaudiere);
+  printField('Nettoyage climatisation', sec2.date_clim);
+  printField('Extincteurs', sec2.date_extincteurs);
+  printField('Alarme incendie', sec2.date_alarme);
+  printField('Éclairage de sécurité (BAES)', sec2.date_baes);
+  printField('Contrôle radon', sec2.date_radon);
+  printField('Contrôle qualité de l’air', sec2.date_air);
+  printField('RAAT amiante', sec2.raat_amiante);
+  printField('Conformité Wi-Fi (loi Abeille)', sec2.wifi_abeille);
+  printField('Organisation des sorties', sec2.sorties_organisees);
+  out += `</table>`;
+
+  out += `<h2>Impression générale & conclusion</h2><table>`;
+  const conc = PMI_DATA.conclusion || {};
+  printField('Points forts', conc.points_forts);
+  printField('Points faibles / axes d’amélioration', conc.points_faibles);
+  printField('Conditions de travail', conc.conditions_travail);
+  printField('Qualité de la prise en charge', conc.qualite_prise_en_charge);
+  printField('Charte nationale d’accueil', conc.charte_accueil);
+  printField('Charte de soutien à la parentalité', conc.charte_parentalite);
+  printField('Plan de formation', conc.plan_formation);
+  printField('Autres observations', conc.autres);
+  printField('Visa PMI / responsable structure', (conc.visa_pmi_date||'—') + ' / ' + (conc.visa_responsable_date||'—'));
+  printField('Visa service PMI / transmission gestionnaire', (conc.visa_service_date||'—') + ' / ' + (conc.transmis_gestionnaire_date||'—'));
+  out += `</table>`;
+
+  out += `</body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { showNotif('⚠ Autorisez les pop-ups pour imprimer'); return; }
+  w.document.write(out);
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+}
+</script>
+
 
 </body>
 </html>
