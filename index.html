@@ -4212,20 +4212,29 @@ function rowToEnfant(r) {
 }
 
 // Remplace l'ensemble des enfants d'une crèche dans Supabase (atomique côté local)
+// Déduplique un tableau d'objets par id (garde la dernière occurrence)
+function dedupeById(arr) {
+  const map = new Map();
+  (arr || []).forEach(item => { if (item && item.id != null) map.set(item.id, item); });
+  return Array.from(map.values());
+}
+
 async function pushFamillesCloud(data, crecheId) {
   if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
   const cid = crecheId || 'all';
+  const deduped = dedupeById(data);
   try {
     await sbDeleteWhere('enfants', `creche_id=eq.${encodeURIComponent(cid)}`);
-    if (data.length) await sbInsert('enfants', data.map(e => enfantToRow(e, cid)));
+    if (deduped.length) await sbInsert('enfants', deduped.map(e => enfantToRow(e, cid)));
   } catch(e) { console.error('[pushFamilles]', e.message); showNotif('⚠ Sync familles : ' + e.message); }
 }
 async function pushBerceauxCloud(data, crecheId) {
   if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
   const cid = crecheId || 'all';
+  const deduped = dedupeById(data);
   try {
     await sbDeleteWhere('berceaux', `creche_id=eq.${encodeURIComponent(cid)}`);
-    if (data.length) await sbInsert('berceaux', data.map(b => ({ id: b.id, creche_id: cid, data: b })));
+    if (deduped.length) await sbInsert('berceaux', deduped.map(b => ({ id: b.id, creche_id: cid, data: b })));
   } catch(e) { console.error('[pushBerceaux]', e.message); showNotif('⚠ Sync berceaux : ' + e.message); }
 }
 
