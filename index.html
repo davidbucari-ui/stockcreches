@@ -5075,16 +5075,22 @@ function saveFicheEnfant() {
     pai: getV('fi-pai'), notes_libres: getV('fi-notes-text'),
   };
 
-  saveFamilles(enfants, crecheId);
-
   // Transfert vers une autre crèche si la sélection a changé
   if (nouvelleCreche !== crecheId) {
     const enfant = enfants[idx];
     const restant = enfants.filter(x => x.id !== ficheEnfantId);
-    saveFamilles(restant, crecheId);
-    const cibleEnfants = getFamilles(nouvelleCreche);
-    cibleEnfants.push(enfant);
-    saveFamilles(cibleEnfants, nouvelleCreche);
+
+    // 1) Retirer l'enfant de l'ancienne crèche et attendre la fin de la
+    //    synchronisation cloud avant d'insérer ailleurs (évite un conflit
+    //    d'ID 409 si les deux opérations se chevauchent)
+    localStorage.setItem('orevy_familles_' + crecheId, JSON.stringify(restant));
+    pushFamillesCloud(restant, crecheId).then(() => {
+      // 2) Ajouter l'enfant dans la nouvelle crèche
+      const cibleEnfants = getFamilles(nouvelleCreche);
+      cibleEnfants.push(enfant);
+      saveFamilles(cibleEnfants, nouvelleCreche);
+    });
+
     ficheEnfantCrecheId = nouvelleCreche;
     const famSel = document.getElementById('fam-creche-sel');
     if (famSel) famSel.value = nouvelleCreche;
@@ -5092,6 +5098,7 @@ function saveFicheEnfant() {
     return;
   }
 
+  saveFamilles(enfants, crecheId);
   showNotif('✅ Fiche enregistrée');
 
   // Mettre à jour header
