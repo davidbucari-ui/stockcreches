@@ -1716,12 +1716,16 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="fiche-card">
             <div class="fiche-card-title">Contrat d'accueil</div>
             <div class="fi-row">
+              <div class="fi-field"><label>Crèche *</label><select id="fi-creche"></select></div>
               <div class="fi-field"><label>Berceau entreprise</label><select id="fi-berceau"></select></div>
-              <div class="fi-field"><label>Jours / semaine</label><input id="fi-jours" type="number" min="1" max="5"></div>
             </div>
             <div class="fi-row">
+              <div class="fi-field"><label>Jours / semaine</label><input id="fi-jours" type="number" min="1" max="5"></div>
               <div class="fi-field"><label>Heures / semaine</label><input id="fi-heures" type="number"></div>
+            </div>
+            <div class="fi-row">
               <div class="fi-field"><label>Heures / mois estimées</label><input id="fi-heures-mois" type="number"></div>
+              <div class="fi-field"></div>
             </div>
           </div>
           <div class="fiche-card">
@@ -1791,7 +1795,7 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-secondary" onclick="openMenuModal()">🍽 Menu du jour</button>
-          <button class="btn btn-secondary" onclick="openBilanModal(null)">📊 Bilan enfant</button>
+          <button class="btn btn-secondary" onclick="openDevReperesModal()">📚 Repères de développement</button>
         </div>
       </div>
 
@@ -2061,6 +2065,10 @@ textarea { resize: vertical; min-height: 72px; }
         <input type="text" id="fam-nom" placeholder="Nom">
       </div>
       <div class="form-group">
+        <label>Crèche *</label>
+        <select id="fam-creche-modal"></select>
+      </div>
+      <div class="form-group">
         <label>Date de naissance</label>
         <input type="date" id="fam-ddn">
       </div>
@@ -2175,6 +2183,28 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-trans-bilan')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-dev-reperes" onclick="closeModalClick(event,'modal-dev-reperes')">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h2>📚 Repères de développement</h2>
+      <button class="modal-close" onclick="closeModal('modal-dev-reperes')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fi-field" style="max-width:220px;margin-bottom:14px">
+        <label>Tranche d'âge</label>
+        <select id="dev-reperes-tranche-sel" onchange="renderDevReperesTable()"></select>
+      </div>
+      <div id="dev-reperes-body"></div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:10px">
+        Ces repères sont donnés à titre indicatif et ne constituent pas un diagnostic. Chaque enfant évolue à son rythme.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-dev-reperes')">Fermer</button>
     </div>
   </div>
 </div>
@@ -4570,6 +4600,15 @@ function openModalFamille(id) {
   const bSel = document.getElementById('fam-berceau');
   if (bSel) bSel.innerHTML = '<option value="">Aucun</option>' + (berceaux||[]).map(b => `<option value="${b.id}">${b.entreprise} (${b.places} places)</option>`).join('');
 
+  // Remplir sélecteur crèche (obligatoire)
+  const cSel = document.getElementById('fam-creche-modal');
+  if (cSel) {
+    const list = (window.CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom: crecheId}];
+    cSel.innerHTML = list.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+    cSel.value = crecheId;
+    cSel.disabled = !!id; // en édition, la crèche se change depuis l'onglet Accueil de la fiche
+  }
+
   const titleEl = document.getElementById('modal-famille-title');
   const delBtn  = document.getElementById('modal-famille-delete');
   if (titleEl) titleEl.textContent = id ? "Modifier l'enfant" : 'Ajouter un enfant';
@@ -4608,7 +4647,10 @@ function saveModalFamille() {
   const nom    = document.getElementById('fam-nom').value.trim();
   if (!prenom || !nom) { showNotif('⚠ Prénom et nom obligatoires'); return; }
 
-  const crecheId = getCrecheId();
+  const crecheChoisie = document.getElementById('fam-creche-modal')?.value || '';
+  if (!crecheChoisie) { showNotif('⚠ Veuillez sélectionner une crèche'); return; }
+
+  const crecheId = famEditingId ? getCrecheId() : crecheChoisie;
   const enfants  = getFamilles(crecheId);
   const enfant = {
     id:          famEditingId || 'fam_' + Date.now(),
@@ -4633,6 +4675,9 @@ function saveModalFamille() {
   saveFamilles(enfants, crecheId);
   closeModal('modal-famille');
   if (!famEditingId) {
+    // Si une autre crèche que celle affichée a été choisie, basculer le sélecteur
+    const famSel = document.getElementById('fam-creche-sel');
+    if (famSel && famSel.value !== crecheId) famSel.value = crecheId;
     // Nouveau : ouvrir directement la fiche complète
     showNotif('✅ Enfant créé — complétez la fiche');
     setTimeout(() => openFicheEnfant(enfant.id), 100);
@@ -4806,6 +4851,7 @@ function importerInscription(event) {
 // ══════════════════════════════════════════════════════════════════
 
 let ficheEnfantId = null;
+let ficheEnfantCrecheId = null;
 let ficheReferents = [];
 
 function openFicheEnfant(id) {
@@ -4864,6 +4910,13 @@ function openFicheEnfant(id) {
 
   // Onglet Accueil
   const berceaux = getBerceaux(crecheId);
+  const cEl = document.getElementById('fi-creche');
+  if (cEl) {
+    const list = (window.CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom: crecheId}];
+    cEl.innerHTML = list.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+    cEl.value = crecheId;
+  }
+  ficheEnfantCrecheId = crecheId;
   const bEl = document.getElementById('fi-berceau');
   if (bEl) {
     bEl.innerHTML = '<option value="">Aucun</option>' + berceaux.map(b => `<option value="${b.id}">${b.entreprise} (${b.places}p)</option>`).join('');
@@ -4967,6 +5020,9 @@ function saveFicheEnfant() {
   const joursCbs = document.querySelectorAll('#fi-jours-presence input');
   const joursPresence = Array.from(joursCbs).filter(cb=>cb.checked).map(cb=>parseInt(cb.value));
 
+  const nouvelleCreche = getV('fi-creche');
+  if (!nouvelleCreche) { showNotif('⚠ Veuillez sélectionner une crèche'); return; }
+
   enfants[idx] = {
     ...enfants[idx],
     prenom: getV('fi-prenom'), nom: getV('fi-nom'), ddn: getV('fi-ddn'),
@@ -4997,6 +5053,22 @@ function saveFicheEnfant() {
   };
 
   saveFamilles(enfants, crecheId);
+
+  // Transfert vers une autre crèche si la sélection a changé
+  if (nouvelleCreche !== crecheId) {
+    const enfant = enfants[idx];
+    const restant = enfants.filter(x => x.id !== ficheEnfantId);
+    saveFamilles(restant, crecheId);
+    const cibleEnfants = getFamilles(nouvelleCreche);
+    cibleEnfants.push(enfant);
+    saveFamilles(cibleEnfants, nouvelleCreche);
+    ficheEnfantCrecheId = nouvelleCreche;
+    const famSel = document.getElementById('fam-creche-sel');
+    if (famSel) famSel.value = nouvelleCreche;
+    showNotif(`✅ Fiche enregistrée — enfant transféré vers ${nouvelleCreche}`);
+    return;
+  }
+
   showNotif('✅ Fiche enregistrée');
 
   // Mettre à jour header
@@ -5514,27 +5586,38 @@ function renderObsSection(e, rec) {
 }
 
 function addObservation(enfantId) {
-  const textEl = document.getElementById('trans-obs-text-' + enfantId);
-  const typeEl = document.getElementById('trans-obs-type-' + enfantId);
-  const texte = textEl ? textEl.value.trim() : '';
-  if (!texte) return;
-  const rec = getTransRecord(enfantId);
-  rec.observations.unshift({
-    heure: nowHM(),
-    type: typeEl ? typeEl.value : 'observation',
-    texte,
-    auteur: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : '',
-  });
-  saveTransRecord(enfantId);
-  if (textEl) textEl.value = '';
-  refreshObsLog(enfantId);
+  try {
+    const textEl = document.getElementById('trans-obs-text-' + enfantId);
+    const typeEl = document.getElementById('trans-obs-type-' + enfantId);
+    const texte = textEl ? textEl.value.trim() : '';
+    if (!texte) return;
+    const rec = getTransRecord(enfantId);
+    if (!Array.isArray(rec.observations)) rec.observations = [];
+    rec.observations.unshift({
+      heure: nowHM(),
+      type: typeEl ? typeEl.value : 'observation',
+      texte,
+      auteur: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : '',
+    });
+    saveTransRecord(enfantId);
+    if (textEl) textEl.value = '';
+    refreshObsLog(enfantId);
+  } catch (err) {
+    console.error('addObservation', err);
+    showNotif('⚠ Erreur lors de l\u2019ajout de l\u2019observation');
+  }
 }
 
 function removeObs(enfantId, idx) {
-  const rec = getTransRecord(enfantId);
-  rec.observations.splice(idx, 1);
-  saveTransRecord(enfantId);
-  refreshObsLog(enfantId);
+  try {
+    const rec = getTransRecord(enfantId);
+    rec.observations.splice(idx, 1);
+    saveTransRecord(enfantId);
+    refreshObsLog(enfantId);
+  } catch (err) {
+    console.error('removeObs', err);
+    showNotif('⚠ Erreur lors de la suppression');
+  }
 }
 
 
@@ -6122,6 +6205,39 @@ function getGrilleItems(type) {
   const nextVal = getNextTrancheVal(type);
   const next = nextVal ? (DEV_GRILLE[nextVal] || []).map(it => ({ ...it, emergence: true })) : [];
   return current.concat(next);
+}
+
+// ── Tableau théorique des repères de développement (réf. générale) ──
+function openDevReperesModal() {
+  const sel = document.getElementById('dev-reperes-tranche-sel');
+  if (sel && !sel.options.length) {
+    sel.innerHTML = TRANCHES.map(t => `<option value="${t.val}">${t.label}</option>`).join('');
+  }
+  renderDevReperesTable();
+  const m = document.getElementById('modal-dev-reperes');
+  if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+
+function renderDevReperesTable() {
+  const body = document.getElementById('dev-reperes-body');
+  if (!body) return;
+  const type = document.getElementById('dev-reperes-tranche-sel')?.value || TRANCHES[0].val;
+  const items = DEV_GRILLE[type] || [];
+  const byDomaine = {};
+  items.forEach(it => { (byDomaine[it.domaine] = byDomaine[it.domaine] || []).push(it); });
+
+  body.innerHTML = Object.keys(DEV_GRILLE_DOMAINES)
+    .filter(d => byDomaine[d])
+    .map(d => {
+      const dom = DEV_GRILLE_DOMAINES[d];
+      return `
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:4px">${dom.emoji} ${dom.label}</div>
+          <ul style="margin:0;padding-left:18px;font-size:13px;color:var(--ink2);line-height:1.7">
+            ${byDomaine[d].map(it => `<li>${transEsc(it.texte)}</li>`).join('')}
+          </ul>
+        </div>`;
+    }).join('');
 }
 
 
