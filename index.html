@@ -4257,6 +4257,16 @@ async function loadFamillesCloud() {
     } else {
       const by = {}; enfRows.forEach(r => { (by[r.creche_id] = by[r.creche_id] || []).push(rowToEnfant(r)); });
       Object.entries(by).forEach(([cid, arr]) => localStorage.setItem('orevy_familles_' + cid, JSON.stringify(arr)));
+      // Nettoyage : fusionner les données orphelines de la pseudo-crèche "Crèche"
+      // (créée par un ancien bug) vers la première vraie crèche
+      if (by['Crèche'] && by['Crèche'].length && CRECHES_DATA[0]) {
+        const target = CRECHES_DATA[0].nom;
+        const merged = (by[target] || []).concat(by['Crèche']);
+        localStorage.setItem('orevy_familles_' + target, JSON.stringify(merged));
+        localStorage.removeItem('orevy_familles_Crèche');
+        await pushFamillesCloud(merged, target);
+        await sbDeleteWhere('enfants', `creche_id=eq.${encodeURIComponent('Crèche')}`).catch(() => {});
+      }
     }
     // Berceaux
     if (bercRows.length === 0) {
@@ -4264,6 +4274,14 @@ async function loadFamillesCloud() {
     } else {
       const by = {}; bercRows.forEach(r => { (by[r.creche_id] = by[r.creche_id] || []).push(Object.assign({ id: r.id }, r.data || {})); });
       Object.entries(by).forEach(([cid, arr]) => localStorage.setItem('orevy_berceaux_' + cid, JSON.stringify(arr)));
+      if (by['Crèche'] && by['Crèche'].length && CRECHES_DATA[0]) {
+        const target = CRECHES_DATA[0].nom;
+        const merged = (by[target] || []).concat(by['Crèche']);
+        localStorage.setItem('orevy_berceaux_' + target, JSON.stringify(merged));
+        localStorage.removeItem('orevy_berceaux_Crèche');
+        await pushBerceauxCloud(merged, target);
+        await sbDeleteWhere('berceaux', `creche_id=eq.${encodeURIComponent('Crèche')}`).catch(() => {});
+      }
     }
   } catch(e) { console.warn('[loadFamillesCloud]', e.message); }
 }
