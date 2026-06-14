@@ -2448,6 +2448,15 @@ textarea { resize: vertical; min-height: 72px; }
           <label>Conseils de mise en scène</label>
           <textarea id="u-conseils" rows="2" placeholder="Disposition, ambiance, musique d'ambiance..."></textarea>
         </div>
+        <div class="form-group full">
+          <label>🔄 Enrichissement de l'univers <span style="font-size:11px;color:var(--ink3);font-weight:400">(objets/supports à ajouter pour redonner vie à un univers délaissé par les enfants)</span></label>
+          <div id="u-enrichissement-picker" style="border:1px solid var(--border);border-radius:var(--radius-sm);max-height:220px;overflow-y:auto"></div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:6px">Cochez dans le stock pédagogique les articles complémentaires à proposer pour relancer l'intérêt des enfants</div>
+        </div>
+        <div class="form-group full">
+          <label>💫 Idées de relance</label>
+          <textarea id="u-enrichissement-notes" rows="2" placeholder="Ex : alterner les contenants, ajouter un miroir, varier les textures, proposer un nouvel élément sonore..."></textarea>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -9118,12 +9127,54 @@ function getSelectedArticleIds() {
     .map(a => a.id);
 }
 
+// ─── ENRICHISSEMENT DE L'UNIVERS ─────────────────────────────────────────
+// Objets/supports complémentaires (stock pédagogique de la crèche) à proposer
+// pour redonner vie à un univers délaissé par les enfants.
+
+const CAT_UNIVERS_PEDA = ['Sensoriel','Manipulation','Construction','Motricité','Imitation','Expression artistique'];
+
+function buildEnrichissementPicker(creche, selectedIds = []) {
+  const picker = document.getElementById('u-enrichissement-picker');
+  if (!picker) return;
+  const arts = ARTICLES.filter(a => a.creche === creche && CAT_UNIVERS_PEDA.includes(a.cat));
+  if (arts.length === 0) {
+    picker.innerHTML = '<div style="padding:12px;color:var(--ink3);font-size:13px">Aucun article pédagogique disponible pour cette crèche</div>';
+    return;
+  }
+  // Group by category
+  const byCat = {};
+  arts.forEach(a => {
+    if (!byCat[a.cat]) byCat[a.cat] = [];
+    byCat[a.cat].push(a);
+  });
+  picker.innerHTML = Object.entries(byCat).map(([cat, list]) => `
+    <div style="background:var(--bg);padding:6px 12px;font-size:11px;font-weight:700;letter-spacing:0.5px;color:var(--ink3);text-transform:uppercase;position:sticky;top:0">
+      ${CAT_ICONS[cat]||'📦'} ${cat}
+    </div>
+    ${list.map(a => {
+      const nom = a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').replace(/\s*\{.*?\}\s*/g,'').trim();
+      const checked = selectedIds.includes(a.id) ? 'checked' : '';
+      return `<div class="article-picker-row" onclick="document.getElementById('enrich-pick-${a.id}').click()">
+        <input type="checkbox" id="enrich-pick-${a.id}" ${checked} onclick="event.stopPropagation()">
+        <div class="article-picker-label">${nom}</div>
+        <span class="article-picker-cat">${a.stock} en stock</span>
+      </div>`;
+    }).join('')}
+  `).join('');
+}
+
+function getSelectedEnrichissementIds() {
+  return ARTICLES
+    .filter(a => document.getElementById(`enrich-pick-${a.id}`)?.checked)
+    .map(a => a.id);
+}
+
 function openModal_univers() {
   editingUniversId = null;
   _universPhotos = [];
   document.getElementById('modalUniversTitle').textContent = 'Créer un univers ludique';
   document.getElementById('btn-save-univers').textContent = '✨ Enregistrer l\'univers';
-  ['u-nom','u-age','u-duree','u-enfants','u-desc','u-conseils'].forEach(id => {
+  ['u-nom','u-age','u-duree','u-enfants','u-desc','u-conseils','u-enrichissement-notes'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const catSel = document.getElementById('u-cat');
@@ -9132,10 +9183,14 @@ function openModal_univers() {
   const crecheEl = document.getElementById('u-creche');
   if (crecheEl) {
     crecheEl.value = (currentCreche && currentCreche !== 'all') ? currentCreche : CRECHES[0];
-    crecheEl.onchange = () => buildArticlePicker(crecheEl.value, []);
+    crecheEl.onchange = () => {
+      buildArticlePicker(crecheEl.value, []);
+      buildEnrichissementPicker(crecheEl.value, []);
+    };
   }
   updateSouscatSelectors();
   buildArticlePicker((crecheEl?.value) || CRECHES[0], []);
+  buildEnrichissementPicker((crecheEl?.value) || CRECHES[0], []);
   resetUniversPhotoUI(null);
   document.getElementById('modal-univers').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -9153,6 +9208,8 @@ async function saveUnivers() {
     desc:     document.getElementById('u-desc').value.trim(),
     conseils: document.getElementById('u-conseils').value.trim(),
     articles: JSON.stringify(getSelectedArticleIds()),
+    enrichissement: JSON.stringify(getSelectedEnrichissementIds()),
+    enrichissement_notes: document.getElementById('u-enrichissement-notes')?.value.trim() || '',
     souscat:  parseInt(document.getElementById('u-souscat')?.value) || null,
     photo:    _universPhotos.length > 0 ? _universPhotos[0] : null,
     photos:   [..._universPhotos],
@@ -9201,7 +9258,10 @@ function editUnivers(id) {
   const crecheEl2 = document.getElementById('u-creche');
   if (crecheEl2) {
     crecheEl2.value = u.creche || CRECHES[0];
-    crecheEl2.onchange = () => buildArticlePicker(crecheEl2.value, []);
+    crecheEl2.onchange = () => {
+      buildArticlePicker(crecheEl2.value, []);
+      buildEnrichissementPicker(crecheEl2.value, []);
+    };
   }
   document.getElementById('u-cat').value     = u.cat;
   document.getElementById('u-age').value     = u.age || '';
@@ -9209,10 +9269,14 @@ function editUnivers(id) {
   document.getElementById('u-enfants').value = u.enfants || '';
   document.getElementById('u-desc').value    = u.desc || '';
   document.getElementById('u-conseils').value= u.conseils || '';
+  const enrichNotesEl = document.getElementById('u-enrichissement-notes');
+  if (enrichNotesEl) enrichNotesEl.value = u.enrichissement_notes || '';
   updateSouscatSelectors();
   const scEl = document.getElementById('u-souscat'); if(scEl) scEl.value = u.souscat || '';
   const selIds = typeof u.articles === 'string' ? JSON.parse(u.articles||'[]') : (u.articles||[]);
   buildArticlePicker(u.creche || CRECHES[0], selIds);
+  const enrichIds = typeof u.enrichissement === 'string' ? JSON.parse(u.enrichissement||'[]') : (u.enrichissement||[]);
+  buildEnrichissementPicker(u.creche || CRECHES[0], enrichIds);
   resetUniversPhotoUI(u.photo || null);
   document.getElementById('modal-univers').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -9319,10 +9383,31 @@ function showUniversDetail(id) {
 
     
     ${u.conseils ? `
-    <div style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1px solid #FDE68A;border-radius:12px;padding:16px">
+    <div style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border:1px solid #FDE68A;border-radius:12px;padding:16px;margin-bottom:16px">
       <div style="font-weight:700;font-size:13px;color:#92400E;margin-bottom:8px">💡 Mise en scène & Conseils</div>
       <div style="font-size:13px;line-height:1.7;color:#78350F">${u.conseils}</div>
     </div>` : ''}
+
+    
+    ${(() => {
+      const enrichIds = typeof u.enrichissement === 'string' ? JSON.parse(u.enrichissement||'[]') : (u.enrichissement||[]);
+      const enrichArts = enrichIds.map(aid => ARTICLES.find(a => a.id === aid)).filter(Boolean);
+      if (enrichArts.length === 0 && !u.enrichissement_notes) return '';
+      return `
+      <div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border:1px solid #A7F3D0;border-radius:12px;padding:16px">
+        <div style="font-weight:700;font-size:13px;color:#065F46;margin-bottom:8px">🔄 Enrichissement de l'univers</div>
+        <div style="font-size:12px;color:#065F46;margin-bottom:10px">Objets/supports à ajouter pour redonner vie à cet univers s'il est délaissé par les enfants.</div>
+        ${enrichArts.length > 0 ? `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:${u.enrichissement_notes ? '10px' : '0'}">
+          ${enrichArts.map(a => {
+            const n = a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').replace(/\s*\{.*?\}\s*/g,'').trim();
+            const stockOk = a.stock > 0;
+            return `<span style="background:#fff;border:1px solid #A7F3D0;border-radius:20px;padding:4px 10px;font-size:12px;color:${stockOk?'#065F46':'#DC2626'}">${CAT_ICONS[a.cat]||'📦'} ${n}${stockOk?'':' (rupture)'}</span>`;
+          }).join('')}
+        </div>` : ''}
+        ${u.enrichissement_notes ? `<div style="font-size:13px;line-height:1.7;color:#065F46">${u.enrichissement_notes}</div>` : ''}
+      </div>`;
+    })()}
   `;
   document.getElementById('detail-univers-footer').innerHTML = `
     <button class="btn btn-secondary" onclick="closeModal('modal-univers-detail')">Fermer</button>
@@ -9339,9 +9424,20 @@ function printUnivers(id) {
   const icon = CAT_UNIVERS_ICONS[u.cat] || '🌟';
   const artIds = typeof u.articles === 'string' ? JSON.parse(u.articles||'[]') : (u.articles||[]);
   const arts = artIds.map(aid => ARTICLES.find(a => a.id === aid)).filter(Boolean);
+  const enrichIds = typeof u.enrichissement === 'string' ? JSON.parse(u.enrichissement||'[]') : (u.enrichissement||[]);
+  const enrichArts = enrichIds.map(aid => ARTICLES.find(a => a.id === aid)).filter(Boolean);
   const nom = getCrecheName();
 
   const rowsHTML = arts.map(a => {
+    const n = a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').replace(/\s*\{.*?\}\s*/g,'').trim();
+    return `<tr>
+      <td style="padding:8px 10px;border-bottom:1px solid #E7E5E0">${n}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #E7E5E0;text-align:center">${a.cat}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #E7E5E0;text-align:center;font-weight:600;color:${a.stock>0?'#16A34A':'#DC2626'}">${a.stock > 0 ? a.stock + ' dispo' : 'Rupture'}</td>
+    </tr>`;
+  }).join('');
+
+  const enrichRowsHTML = enrichArts.map(a => {
     const n = a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').replace(/\s*\{.*?\}\s*/g,'').trim();
     return `<tr>
       <td style="padding:8px 10px;border-bottom:1px solid #E7E5E0">${n}</td>
@@ -9394,6 +9490,16 @@ function printUnivers(id) {
       <tbody>${rowsHTML}</tbody></table>
     </div>
     ${u.conseils ? `<div class="section"><h3>💡 Mise en scène</h3><div class="conseils-box">${u.conseils}</div></div>` : ''}
+    <div class="section">
+      <h3>🔄 Enrichissement de l'univers</h3>
+      <div style="font-size:12px;color:#666;margin-bottom:10px">Objets/supports à ajouter pour redonner vie à cet univers s'il est délaissé par les enfants.</div>
+      ${enrichArts.length > 0 ? `
+      <table><thead><tr>
+        <th>Article</th><th style="text-align:center;width:140px">Catégorie</th><th style="text-align:center;width:100px">Disponibilité</th>
+      </tr></thead>
+      <tbody>${enrichRowsHTML}</tbody></table>` : `<div style="font-size:12px;color:#999;font-style:italic">Aucun article complémentaire renseigné.</div>`}
+      ${u.enrichissement_notes ? `<div class="conseils-box" style="background:#ECFDF5;border-color:#A7F3D0;margin-top:10px">${u.enrichissement_notes}</div>` : ''}
+    </div>
     <div class="footer">Fiche générée le ${new Date().toLocaleDateString('fr-FR')} — ${u.creche}${u.ia_generated ? ' · ✨ Activité suggérée par Claude (IA)' : ''}</div>
     
 
@@ -10153,6 +10259,8 @@ async function saveUniversDB(u, isNew) {
       description: u.desc || u.description || null,
       conseils:    u.conseils || null,
       articles:    typeof u.articles === 'string' ? u.articles : JSON.stringify(u.articles||[]),
+      enrichissement: typeof u.enrichissement === 'string' ? u.enrichissement : JSON.stringify(u.enrichissement||[]),
+      enrichissement_notes: u.enrichissement_notes || null,
       photo:       u.photo || null,
     };
     console.log('[Supabase] Saving univers:', JSON.stringify(row).substring(0, 200));
@@ -13079,6 +13187,13 @@ async function genererSuggestionsIA() {
     return;
   }
 
+  // Stock pédagogique complet de la crèche (toutes catégories ludiques), pour l'enrichissement
+  const stockPeda = ARTICLES.filter(a =>
+    a.creche === creche &&
+    a.stock > 0 &&
+    CAT_UNIVERS_PEDA.includes(a.cat)
+  );
+
   btnGen.disabled = true;
   btnGen.textContent = '⏳ Génération en cours…';
   resultDiv.style.display = 'block';
@@ -13094,6 +13209,12 @@ async function genererSuggestionsIA() {
     return `- ${nom} (catégorie: ${a.cat}, stock: ${a.stock})`;
   }).join('\n');
 
+  // Préparer la liste complète du stock pédagogique (pour l'enrichissement)
+  const materielEnrichissement = stockPeda.map(a => {
+    const nom = a.nom.replace(/\s*\([\d.,]+[\s€]*\)\s*/g,'').replace(/\s*\{.*?\}\s*/g,'').trim();
+    return `- ${nom} (catégorie: ${a.cat}, stock: ${a.stock})`;
+  }).join('\n');
+
   // Store suggestions globally accessible
   window._iaSuggestions = [];
 
@@ -13103,12 +13224,18 @@ Voici le matériel disponible en stock à la crèche "${creche}"${cat ? ` (caté
 
 ${materiel}
 
+Voici l'ensemble du stock pédagogique de la crèche (toutes catégories), utilisable pour l'enrichissement :
+
+${materielEnrichissement}
+
 ${consignes ? `Consignes supplémentaires : ${consignes}` : ''}
 
 Génère 3 propositions d'activités ludiques et pédagogiques adaptées à des enfants de 0-3 ans.
 
+Pour chaque proposition, ajoute aussi un "enrichissement" : 2 à 4 objets/supports complémentaires (issus de l'ensemble du stock pédagogique fourni ci-dessus, idéalement différents des articles principaux) à ajouter plus tard pour redonner vie à cet univers s'il est délaissé par les enfants, ainsi que "enrichissement_notes" : un court conseil de mise en scène pour cette relance.
+
 Réponds UNIQUEMENT en JSON valide, sans texte avant ou après, avec ce format :
-{"suggestions":[{"titre":"emoji Titre","cat":"Sensoriel","description":"Objectifs et déroulement.","conseils":"Mise en scène.","articles":["nom article 1","nom article 2"]}]}`;
+{"suggestions":[{"titre":"emoji Titre","cat":"Sensoriel","description":"Objectifs et déroulement.","conseils":"Mise en scène.","articles":["nom article 1","nom article 2"],"enrichissement":["nom article 3","nom article 4"],"enrichissement_notes":"Conseil de relance."}]}`;
 
   try {
     const response = await fetch('https://claude-proxy.david-bucari.workers.dev', {
@@ -13138,6 +13265,7 @@ Réponds UNIQUEMENT en JSON valide, sans texte avant ou après, avec ce format :
         <div style="font-size:13px;color:var(--ink2);line-height:1.6;margin:8px 0">${s.description}</div>
         ${s.conseils ? `<div style="font-size:12px;background:#FEF9C3;border-radius:6px;padding:8px;color:#92400E;margin-bottom:8px">💡 ${s.conseils}</div>` : ''}
         <div style="font-size:12px;color:var(--ink3);margin-bottom:10px">📦 ${(s.articles||[]).join(', ')}</div>
+        ${(s.enrichissement && s.enrichissement.length > 0) ? `<div style="font-size:12px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:6px;padding:8px;color:#065F46;margin-bottom:10px"><strong>🔄 Enrichissement :</strong> ${s.enrichissement.join(', ')}${s.enrichissement_notes ? `<br>${s.enrichissement_notes}` : ''}</div>` : ''}
         <button class="btn btn-primary btn-sm" onclick="creerUniversDepuisIASuggestion(${i})" style="width:100%">+ Créer cet univers</button>
       </div>`).join('');
 
@@ -13188,17 +13316,31 @@ function creerUniversDepuisIASuggestion(index) {
     if (el('u-cat'))     el('u-cat').value      = s.cat || 'Sensoriel';
     if (el('u-desc'))    el('u-desc').value     = s.description || '';
     if (el('u-conseils'))el('u-conseils').value  = s.conseils || '';
+    if (el('u-enrichissement-notes')) el('u-enrichissement-notes').value = s.enrichissement_notes || '';
     if (el('u-creche'))  el('u-creche').value   = creche;
     buildArticlePicker(creche, []);
+    buildEnrichissementPicker(creche, []);
     setTimeout(() => {
+      const matchArticle = (a, noms) => {
+        const nom = a.nom.replace(/\s*\(.*?\)/g,'').replace(/\s*\{.*?\}/g,'').trim().toLowerCase();
+        return noms.some(n => nom.includes(n.substring(0,6)) || n.includes(nom.substring(0,6)));
+      };
       const noms = (s.articles || []).map(n => n.toLowerCase().trim());
       ARTICLES.filter(a => a.creche === creche).forEach(a => {
-        const nom = a.nom.replace(/\s*\(.*?\)/g,'').replace(/\s*\{.*?\}/g,'').trim().toLowerCase();
-        if (noms.some(n => nom.includes(n.substring(0,6)) || n.includes(nom.substring(0,6)))) {
+        if (matchArticle(a, noms)) {
           const cb = el('pick-' + a.id);
           if (cb) cb.checked = true;
         }
       });
+      const nomsEnrich = (s.enrichissement || []).map(n => n.toLowerCase().trim());
+      if (nomsEnrich.length > 0) {
+        ARTICLES.filter(a => a.creche === creche).forEach(a => {
+          if (matchArticle(a, nomsEnrich)) {
+            const cb = el('enrich-pick-' + a.id);
+            if (cb) cb.checked = true;
+          }
+        });
+      }
       showNotif('✅ Formulaire pré-rempli — cliquez ← Retour pour créer les autres univers');
     }, 300);
   }, 200);
