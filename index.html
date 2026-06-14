@@ -5045,69 +5045,6 @@ const OBS_TYPES = [
   { val:'important',    label:'Transmission importante',  emoji:'❗' },
 ];
 
-// Repères de développement par tranche d'âge — synthèse à but indicatif,
-// adaptée de « Le développement de l'enfant au quotidien, de 0 à 6 ans »
-// (Francine Ferland, Éditions du CHU Sainte-Justine)
-const DEV_REPERES = {
-  '2.5-6': [
-    "Sensoriel : suit un visage ou un objet du regard, tourne la tête vers une voix familière, s'intéresse aux couleurs contrastées.",
-    "Motricité globale : tient de mieux en mieux sa tête, prend appui sur les avant-bras à plat ventre, commence à se retourner.",
-    "Motricité fine : porte ses mains et les objets à la bouche, attrape et secoue un hochet.",
-    "Langage : gazouille, exprime ses besoins par des sons différents selon la situation (faim, inconfort, plaisir).",
-    "Affectif et social : premier sourire social, manifeste plaisir, surprise ou inconfort par ses mimiques.",
-    "Éveil : montre un intérêt croissant pour son environnement, observe et écoute longuement.",
-  ],
-  '6-12': [
-    "Sensoriel : réagit quand on l'appelle, suit du regard un objet qui se déplace rapidement, perçoit les nuances de ton dans la voix.",
-    "Motricité globale : tient assis avec de moins en moins d'appui, se déplace à quatre pattes, commence à se mettre debout en s'appuyant.",
-    "Motricité fine : passe un objet d'une main à l'autre, attrape un petit objet entre le pouce et l'index, fait « bravo ».",
-    "Langage : babille (« bababa », « mamama »), comprend le mot « non », utilise des gestes pour communiquer (pointer, tendre les bras).",
-    "Cognitif : comprend les liens de cause à effet (biberon = nourriture), cherche un objet caché, apprécie le jeu du coucou.",
-    "Affectif et social : commence à s'attacher particulièrement à un adulte référent, peut montrer une certaine réserve face à une personne inconnue.",
-    "Autonomie : tient son biberon à deux mains, commence à manger de petits morceaux avec les doigts.",
-  ],
-  '12-18': [
-    "Motricité globale : fait ses premiers pas seul, pousse ou tire un jouet à roulettes, monte les escaliers à quatre pattes.",
-    "Motricité fine : construit une petite tour de 2 à 3 cubes, tourne plusieurs pages d'un livre à la fois, gribouille avec une craie.",
-    "Langage : dit ses premiers mots, comprend de courtes phrases familières (« viens manger »).",
-    "Cognitif : comprend la permanence de l'objet (une chose existe même si on ne la voit plus), amorce le jeu symbolique (« faire semblant »).",
-    "Affectif : a besoin de limites claires et rassurantes, développe sa confiance en lui.",
-    "Social : s'intéresse aux autres enfants, aime être à leurs côtés (jeu côte à côte).",
-    "Autonomie : participe à l'habillage en tendant bras et jambes, boit à la tasse à deux anses, mange à la cuillère avec de l'aide.",
-  ],
-  '18-24': [
-    "Motricité globale : court, descend les escaliers à quatre pattes à reculons, grimpe sur une chaise.",
-    "Motricité fine : construit une tour de 3 à 4 cubes, fait des traits sur le papier.",
-    "Langage : vocabulaire d'environ 50 mots vers 18 mois, répète des mots ou des bouts de phrases, comprend des consignes simples portant sur un objet.",
-    "Cognitif : se reconnaît dans le miroir et sur les photos, change la fonction des objets dans son jeu.",
-    "Affectif : peut se laisser distraire en cas de colère, tolère un peu mieux la séparation avec ses parents.",
-    "Social : apprend des comportements sociaux simples (dire bonjour, saluer de la main), peut montrer une préférence pour un copain ou une copine.",
-    "Autonomie : enlève certains vêtements (chapeau, pantalon descendu), boit au verre à deux mains avec supervision.",
-  ],
-  '24-30': [
-    "Motricité globale : court, grimpe, glisse, sautille sur place pieds joints, monte et descend l'escalier une marche à la fois.",
-    "Motricité fine : tourne les pages d'un livre une à une, construit une tour de 6 à 7 cubes, enfile de grosses perles.",
-    "Langage : phrases de 2 à 3 mots (« bébé tombé », « je veux pomme »), utilise « moi », « je », « toi », amorce les formes négatives (« je veux pas »).",
-    "Cognitif : reproduit une ligne ou un cercle par imitation, comprend « un » et « plusieurs », joue à faire semblant.",
-    "Affectif : période d'oppositions et de colères possibles, du mal à patienter pour obtenir ce qu'il veut.",
-    "Social : notion de « c'est à moi », tendance à être possessif, peut être maladroit dans ses gestes envers les autres (mordre, tirer les cheveux).",
-    "Autonomie : commence à signaler quand il est mouillé, peut rester sec une bonne partie de la journée, aide à se laver les mains.",
-  ],
-  '30-36': [
-    "Motricité globale : lance un ballon avec les deux mains et tout le corps, descend l'escalier seul en se tenant à la rampe.",
-    "Motricité fine : réussit un casse-tête de 4 pièces, ouvre des ciseaux à deux mains.",
-    "Langage : vocabulaire en forte expansion (environ 200 à 500 mots vers 3 ans), suit une histoire simple, comprend des consignes à plusieurs éléments.",
-    "Cognitif : peut dire son prénom complet et son âge, distingue « un » et « plusieurs », compte deux objets.",
-    "Affectif : peut exprimer fierté, gêne ou honte, certaines peurs apparaissent (noir, personnages).",
-    "Social : préfère parfois des partenaires de jeu de même sexe, se montre sensible à la peine d'un autre enfant.",
-    "Autonomie : boit proprement au verre et à la paille, commence à utiliser une fourchette, enlève seul chaussures, chaussettes et pyjama.",
-  ],
-};
-
-function getDevReperes(type) {
-  return DEV_REPERES[type] || DEV_REPERES['2.5-6'];
-}
-
 // 'nourrisson' = biberon + purée + dessert | 'grand' = entrée + plat + dessert (+ biberon facultatif)
 function repasProfile(type) {
   return (type === '2.5-6' || type === '6-12') ? 'nourrisson' : 'grand';
@@ -5425,7 +5362,7 @@ function renderChangesSection(e, rec) {
     ${changes.map((c,i) => {
       const ct = CHANGE_TYPES.find(t => t.val === c.type) || {emoji:'',label:c.type};
       return `<div class="trans-log-item">
-        <span>${ct.emoji} ${c.heure} — ${ct.label}</span>
+        <span>${ct.emoji} ${ct.label}</span>
         <span class="del" onclick="removeChange('${e.id}',${i})">✕</span>
       </div>`;
     }).join('')}
@@ -5750,18 +5687,6 @@ function buildFicheJourHtml(enfantId) {
     </div>
   </div>` : '';
 
-  const reperes = getDevReperes(e.type);
-  const reperesHtml = `
-    <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:12px">
-      <div style="font-weight:700;margin-bottom:6px">📚 Repères de développement — ${tranche.label}</div>
-      <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--ink2);line-height:1.6">
-        ${reperes.map(r => `<li>${transEsc(r)}</li>`).join('')}
-      </ul>
-      <div style="font-size:11px;color:var(--ink3);margin-top:6px">
-        Ces repères sont donnés à titre indicatif et ne constituent pas un diagnostic. Chaque enfant évolue à son rythme.
-      </div>
-    </div>`;
-
   return `
     <div style="font-size:13px;color:var(--ink2);line-height:1.7">
       <div style="font-weight:700;font-size:15px;color:var(--ink);margin-bottom:2px">${transEsc(e.prenom)} ${transEsc(e.nom)} — ${age.label}</div>
@@ -5772,7 +5697,6 @@ function buildFicheJourHtml(enfantId) {
       <div style="margin-top:12px"><strong>🧷 Changes</strong><br>${changesHtml}</div>
       <div style="margin-top:12px"><strong>🍽 Repas & goûter</strong>${repasHtml}</div>
       <div style="margin-top:12px"><strong>🗒 Observations</strong>${obsHtml}</div>
-      ${reperesHtml}
     </div>`;
 }
 
@@ -5970,7 +5894,6 @@ async function renderBilan() {
 
   const periodeLabels = { mois:'mois en cours', 'mois-1':'mois précédent', annee:'année en cours' };
   const tranche = getTranche(e.type);
-  const reperes = getDevReperes(e.type);
 
   const incidentsHtml = incidents.length ? `<div class="trans-log" style="max-height:220px">
     ${incidents.map(o => {
@@ -5990,19 +5913,9 @@ async function renderBilan() {
         <div class="trans-section"><div class="trans-section-title">Changes totaux</div>${CHANGE_TYPES.map(t=>`${t.emoji} ${changeCounts[t.val]}`).join(' · ')}</div>
       </div>
 
-      <div style="margin-bottom:14px">
+      <div>
         <div style="font-weight:700;margin-bottom:6px">⚠️ Incidents & transmissions importantes</div>
         ${incidentsHtml}
-      </div>
-
-      <div style="border-top:1px solid var(--border);padding-top:12px">
-        <div style="font-weight:700;margin-bottom:6px">📚 Repères de développement — ${tranche.label}</div>
-        <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--ink2);line-height:1.6">
-          ${reperes.map(r => `<li>${transEsc(r)}</li>`).join('')}
-        </ul>
-        <div style="font-size:11px;color:var(--ink3);margin-top:6px">
-          Ces repères sont donnés à titre indicatif et ne constituent pas un diagnostic. Chaque enfant évolue à son rythme.
-        </div>
       </div>
     </div>`;
 }
