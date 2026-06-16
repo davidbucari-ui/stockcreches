@@ -1789,7 +1789,19 @@ textarea { resize: vertical; min-height: 72px; }
               <label class="jour-toggle"><input type="checkbox" value="4" onchange="syncJoursCount()"><span>Vendredi</span></label>
             </div>
           </div>
-        </div>
+          <div class="fiche-card">
+            <div class="fiche-card-title">Horaires & facturation</div>
+            <div id="fi-horaires-grid" style="margin-bottom:16px"></div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Tarif horaire (€/h)</label><input id="fi-tarif-heure" type="number" step="0.01" min="0" placeholder="0.00" oninput="calcHorairesTotaux()"></div>
+              <div class="fi-field"><label>Frais repas (€/jour)</label><input id="fi-frais-repas" type="number" step="0.01" min="0" placeholder="0.00" oninput="calcHorairesTotaux()"></div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Frais fixes (€/mois)</label><input id="fi-frais-fixes" type="number" step="0.01" min="0" placeholder="0.00" oninput="calcHorairesTotaux()"></div>
+              <div class="fi-field"><label>Frais divers / libellé</label><input id="fi-frais-divers-label" type="text" placeholder="Activités, fournitures…" oninput="calcHorairesTotaux()"><input id="fi-frais-divers" type="number" step="0.01" min="0" placeholder="0.00" style="margin-top:6px" oninput="calcHorairesTotaux()"></div>
+            </div>
+            <div id="fi-totaux-contrat"></div>
+          </div>
 
         <!-- NOTES -->
         <div id="fi-notes" style="display:none">
@@ -5075,6 +5087,16 @@ function openFicheEnfant(id) {
   const joursCbs = document.querySelectorAll('#fi-jours-presence input');
   joursCbs.forEach(cb => { cb.checked = (e.jours_presence||[]).includes(parseInt(cb.value)); });
   syncJoursCount(); // sync le compteur avec les cases cochées
+  renderHorairesGrid(e.horaires_detail || {});
+  // Tarifs
+  const setN = (id, v) => { const el=document.getElementById(id); if(el&&v) el.value=v; };
+  setN('fi-tarif-heure', e.tarif_heure);
+  setN('fi-frais-repas', e.frais_repas);
+  setN('fi-frais-fixes', e.frais_fixes);
+  setN('fi-frais-divers', e.frais_divers);
+  const divLabel = document.getElementById('fi-frais-divers-label');
+  if (divLabel && e.frais_divers_label) divLabel.value = e.frais_divers_label;
+  calcHorairesTotaux();
 
   // Onglet Notes
   setV('fi-allergies', e.allergies); setV('fi-medecin', e.medecin);
@@ -5337,6 +5359,130 @@ function syncJoursCount() {
   const cbs = document.querySelectorAll('#fi-jours-presence input:checked');
   const joursEl = document.getElementById('fi-jours');
   if (joursEl) joursEl.value = cbs.length;
+  renderHorairesGrid();
+}
+
+const JOURS_NOMS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+
+function renderHorairesGrid(horairesDetail) {
+  const grid = document.getElementById('fi-horaires-grid');
+  if (!grid) return;
+  const cbs = document.querySelectorAll('#fi-jours-presence input');
+  const selected = Array.from(cbs).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+
+  if (!selected.length) {
+    grid.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px 0">Aucun jour sélectionné ci-dessus.</div>';
+    return;
+  }
+
+  // Lire les valeurs existantes des inputs AVANT de re-render
+  const prev = {};
+  [0,1,2,3,4].forEach(j => {
+    const d = document.getElementById('fi-horaire-debut-'+j);
+    const f = document.getElementById('fi-horaire-fin-'+j);
+    if (d) prev[j] = { debut: d.value, fin: f ? f.value : '' };
+  });
+
+  const inpStyle = 'width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--ink);font-family:inherit';
+
+  const rows = selected.map(j => {
+    const hd = horairesDetail ? (horairesDetail[j] || {}) : {};
+    const debut = hd.debut || prev[j]?.debut || '08:00';
+    const fin   = hd.fin   || prev[j]?.fin   || '17:00';
+    return `<div style="display:grid;grid-template-columns:90px 1fr 1fr 72px;gap:10px;align-items:end;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;padding-bottom:4px">${JOURS_NOMS[j]}</div>
+      <div><label style="font-size:10.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Arrivée</label>
+        <input type="time" id="fi-horaire-debut-${j}" value="${debut}" oninput="calcHorairesTotaux()" style="${inpStyle}"></div>
+      <div><label style="font-size:10.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Départ</label>
+        <input type="time" id="fi-horaire-fin-${j}" value="${fin}" oninput="calcHorairesTotaux()" style="${inpStyle}"></div>
+      <div style="text-align:center">
+        <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:4px">Total</div>
+        <div id="fi-horaire-total-${j}" style="font-size:16px;font-weight:800;font-family:'Syne',sans-serif">—</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  grid.innerHTML =
+    `<div style="display:grid;grid-template-columns:90px 1fr 1fr 72px;gap:10px;padding-bottom:6px;border-bottom:2px solid var(--border)">
+      <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase">Jour</div>
+      <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase">Arrivée</div>
+      <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase">Départ</div>
+      <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:center">Total</div>
+    </div>${rows}`;
+
+  calcHorairesTotaux();
+}
+
+function calcHorairesTotaux() {
+  const cbs = document.querySelectorAll('#fi-jours-presence input');
+  const selected = Array.from(cbs).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+  let totalMinSemaine = 0;
+
+  selected.forEach(j => {
+    const debut = document.getElementById('fi-horaire-debut-'+j)?.value;
+    const fin   = document.getElementById('fi-horaire-fin-'+j)?.value;
+    const totalEl = document.getElementById('fi-horaire-total-'+j);
+    if (debut && fin) {
+      const [dh, dm] = debut.split(':').map(Number);
+      const [fh, fm] = fin.split(':').map(Number);
+      const mins = (fh*60+fm) - (dh*60+dm);
+      if (mins > 0) {
+        totalMinSemaine += mins;
+        const h = Math.floor(mins/60), m = mins%60;
+        if (totalEl) totalEl.textContent = h+'h'+(m ? String(m).padStart(2,'0') : '');
+      } else { if (totalEl) totalEl.textContent = '—'; }
+    }
+  });
+
+  const hSemaine = Math.round(totalMinSemaine/60*10)/10;
+  const hMois    = Math.round(hSemaine*52/12*10)/10;
+  const hAn      = Math.round(hSemaine*52*10)/10;
+
+  const hSemEl = document.getElementById('fi-heures');
+  const hMoisEl = document.getElementById('fi-heures-mois');
+  if (hSemEl && hSemaine) hSemEl.value = hSemaine;
+  if (hMoisEl && hMois)   hMoisEl.value = Math.round(hMois);
+
+  const tarif  = parseFloat(document.getElementById('fi-tarif-heure')?.value)  || 0;
+  const repas  = parseFloat(document.getElementById('fi-frais-repas')?.value)  || 0;
+  const fixes  = parseFloat(document.getElementById('fi-frais-fixes')?.value)  || 0;
+  const divers = parseFloat(document.getElementById('fi-frais-divers')?.value) || 0;
+  const diversLabel = document.getElementById('fi-frais-divers-label')?.value || 'Frais divers';
+
+  const coutHMois     = hMois * tarif;
+  const coutRepasMois = repas * selected.length * 52/12;
+  const coutMois      = coutHMois + coutRepasMois + fixes + divers;
+  const coutAn        = coutMois * 12;
+
+  const fmt = v => v ? v.toFixed(0)+' €' : '—';
+  const fmtH = v => v ? v+'h' : '—';
+
+  const totauxEl = document.getElementById('fi-totaux-contrat');
+  if (totauxEl) totauxEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px;background:var(--surface2);border-radius:10px;margin-top:4px">
+      <div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmtH(hSemaine)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">/ semaine</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmtH(hMois)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">/ mois</div>
+      </div>
+      <div style="text-align:center;${tarif?'':'opacity:.4'}">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmt(tarif?coutMois:0)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">coût / mois</div>
+      </div>
+      <div style="text-align:center;${tarif?'':'opacity:.4'}">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmt(tarif?coutAn:0)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">coût / an</div>
+      </div>
+    </div>
+    ${tarif ? `<div style="margin-top:10px;font-size:11.5px;color:var(--ink2);line-height:1.8">
+      <span style="margin-right:12px">⏱ ${hMois}h × ${tarif}€ = <b>${Math.round(coutHMois)}€</b></span>
+      ${repas ? `<span style="margin-right:12px">🍽 Repas : <b>${Math.round(coutRepasMois)}€/mois</b></span>` : ''}
+      ${fixes ? `<span style="margin-right:12px">📋 Fixes : <b>${fixes}€/mois</b></span>` : ''}
+      ${divers ? `<span>${diversLabel} : <b>${divers}€/mois</b></span>` : ''}
+    </div>` : ''}`;
 }
 
 function renderReferents() {
@@ -5416,6 +5562,20 @@ function saveFicheEnfant() {
     heures: parseInt(getV('fi-heures'))||40,
     heures_mois: parseInt(getV('fi-heures-mois'))||0,
     jours_presence: joursPresence,
+    horaires_detail: (() => {
+      const h = {};
+      [0,1,2,3,4].forEach(j => {
+        const d = document.getElementById('fi-horaire-debut-'+j);
+        const f = document.getElementById('fi-horaire-fin-'+j);
+        if (d && d.value) h[j] = { debut: d.value, fin: f ? f.value : '' };
+      });
+      return h;
+    })(),
+    tarif_heure: parseFloat(document.getElementById('fi-tarif-heure')?.value)||0,
+    frais_repas: parseFloat(document.getElementById('fi-frais-repas')?.value)||0,
+    frais_fixes: parseFloat(document.getElementById('fi-frais-fixes')?.value)||0,
+    frais_divers: parseFloat(document.getElementById('fi-frais-divers')?.value)||0,
+    frais_divers_label: document.getElementById('fi-frais-divers-label')?.value||'',
     allergies: getV('fi-allergies'), medecin: getV('fi-medecin'),
     pai: getV('fi-pai'), notes_libres: getV('fi-notes-text'),
   };
