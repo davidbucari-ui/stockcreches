@@ -9155,6 +9155,7 @@ document.addEventListener('fullscreenchange', _syncFullscreenBtn);
 document.addEventListener('webkitfullscreenchange', _syncFullscreenBtn);
 
 function showPage(page, btn) {
+  hideHub();
   currentPage = page;
   ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
@@ -11633,8 +11634,8 @@ function peGetMonday() {
 }
 
 function peGoWeek(dir) {
-  if (dir === 0) { peWeekOffset = 0; peGanttDay = -1; }
-  else { peWeekOffset += dir; peGanttDay = 0; }
+  if (dir === 0) { peWeekOffset = 0; peGanttDay = -1; peGanttDay2 = -1; }
+  else { peWeekOffset += dir; peGanttDay = -1; peGanttDay2 = -1; }
   renderActiveTab();
 }
 
