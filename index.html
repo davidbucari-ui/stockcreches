@@ -6958,11 +6958,12 @@ async function renderDashboardDirectrice(dateStr) {
 
     // Planning équipe de la semaine
     const cid = (currentCreche && currentCreche !== 'all') ? currentCreche : (CRECHES_DATA?.[0]?.nom || '');
+    const famCid = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
     let weekData = { creneaux: [] };
     try { weekData = peGetWeek(cid); } catch(e) {}
 
     // Enfants inscrits actifs
-    const enfantsActifs = getFamilles(cid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+    const enfantsActifs = getFamilles(famCid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
     const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
     const { prosMin } = calcTauxEncadrement(enfantsActifs, prefs.optionEncadrement || 'NM8M');
 
