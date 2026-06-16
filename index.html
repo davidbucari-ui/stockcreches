@@ -300,6 +300,7 @@ body {
 
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: #1D4ED8; }
+.btn-primary:disabled { background: var(--border); color: var(--ink3); cursor: not-allowed; pointer-events: none; }
 .btn-secondary { background: var(--surface2); color: var(--ink); border: 1px solid var(--border); }
 .btn-secondary:hover { background: var(--bg); }
 .btn-danger { background: var(--red-lt); color: var(--red); border: 1px solid #FECACA; }
@@ -1122,12 +1123,12 @@ textarea { resize: vertical; min-height: 72px; }
           <div id="dash-dir-creche" style="font-size:13px;color:var(--ink3);font-weight:600"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px" id="dash-dir-kpis"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
           <div id="dash-dir-equipe" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
-          <div id="dash-dir-taux" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
           <div id="dash-dir-alertes" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div id="dash-dir-taux" style="display:none"></div>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px">
           <div id="dash-dir-planning" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
           <div id="dash-dir-stats" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
         </div>
@@ -1668,6 +1669,7 @@ textarea { resize: vertical; min-height: 72px; }
           <button class="fiche-tab" data-tab="fi-planning"  onclick="switchFicheTab('fi-planning',this)"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Planning</button>
           <button class="fiche-tab" data-tab="fi-factures"  onclick="switchFicheTab('fi-factures',this)"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Factures</button>
           <button class="fiche-tab" data-tab="fi-docs"      onclick="switchFicheTab('fi-docs',this)"      style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Documents</button>
+          <button class="fiche-tab" data-tab="fi-sante"    onclick="switchFicheTab('fi-sante',this);loadVaccinsFiche()"    style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">💉 Santé</button>
         </div>
 
         <!-- IDENTITÉ -->
@@ -1688,15 +1690,15 @@ textarea { resize: vertical; min-height: 72px; }
                 </select>
               </div>
               <div class="fi-field"><label>Contrat CAF *</label>
-                <select id="fi-contrat-caf">
+                <select id="fi-contrat-caf" onchange="syncTauxCafToTarif()">
                   <option value="PSU">PSU — Prestation de Service Unique</option>
                   <option value="PAJE">PAJE — Prestation d'Accueil du Jeune Enfant</option>
                 </select>
               </div>
             </div>
             <div class="fi-row">
-              <div class="fi-field"><label>Date d'entrée</label><input id="fi-entree" type="date"></div>
-              <div class="fi-field"><label>Date de sortie prévue</label><input id="fi-sortie" type="date"></div>
+              <div class="fi-field"><label>Date d'entrée</label><input id="fi-entree" type="date" onchange="calcHorairesTotaux()"></div>
+              <div class="fi-field"><label>Date de sortie prévue</label><input id="fi-sortie" type="date" onchange="calcHorairesTotaux()"></div>
             </div>
           </div>
           <div class="fiche-card">
@@ -1710,7 +1712,7 @@ textarea { resize: vertical; min-height: 72px; }
               <div class="fi-field"><label>Quotient familial</label><input id="fi-qf" type="text" placeholder="Ex : 1240"></div>
             </div>
             <div class="fi-row solo">
-              <div class="fi-field"><label>Taux horaire CAF</label><input id="fi-taux-caf" type="text" placeholder="Ex : 0,42 €/h"></div>
+              <div class="fi-field"><label>Taux horaire CAF</label><input id="fi-taux-caf" type="text" placeholder="Ex : 0,42 €/h" oninput="syncTauxCafToTarif()"></div>
             </div>
           </div>
         </div>
@@ -1765,7 +1767,7 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="fiche-card">
             <div class="fiche-card-title">Contrat d'accueil</div>
             <div class="fi-row">
-              <div class="fi-field"><label>Crèche *</label><select id="fi-creche"></select></div>
+              <div class="fi-field"><label>Crèche *</label><select id="fi-creche" onchange="syncContratFromCreche()"></select></div>
               <div class="fi-field"><label>Berceau entreprise</label><select id="fi-berceau"></select></div>
             </div>
             <div class="fi-row">
@@ -1780,14 +1782,26 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="fiche-card">
             <div class="fiche-card-title">Jours de présence habituels</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0" id="fi-jours-presence">
-              <label class="jour-toggle"><input type="checkbox" value="0"><span>Lundi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="1"><span>Mardi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="2"><span>Mercredi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="3"><span>Jeudi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="4"><span>Vendredi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="0" onchange="syncJoursCount()"><span>Lundi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="1" onchange="syncJoursCount()"><span>Mardi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="2" onchange="syncJoursCount()"><span>Mercredi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="3" onchange="syncJoursCount()"><span>Jeudi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="4" onchange="syncJoursCount()"><span>Vendredi</span></label>
             </div>
           </div>
-        </div>
+          <div class="fiche-card">
+            <div class="fiche-card-title">Horaires & facturation</div>
+            <div id="fi-horaires-grid" style="margin-bottom:16px"></div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Tarif horaire (€/h)</label><input id="fi-tarif-heure" type="number" step="0.01" min="0" placeholder="0.00" oninput="calcHorairesTotaux()"></div>
+              <div class="fi-field"><label>Frais repas (€/jour)</label><input id="fi-frais-repas" type="number" step="0.01" min="0" placeholder="0.00" oninput="calcHorairesTotaux()"></div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Frais fixes (€/mois)</label><input id="fi-frais-fixes" type="number" step="0.01" min="0" placeholder="0.00" oninput="calcHorairesTotaux()"></div>
+              <div class="fi-field"><label>Frais divers / libellé</label><input id="fi-frais-divers-label" type="text" placeholder="Activités, fournitures…" oninput="calcHorairesTotaux()"><input id="fi-frais-divers" type="number" step="0.01" min="0" placeholder="0.00" style="margin-top:6px" oninput="calcHorairesTotaux()"></div>
+            </div>
+            <div id="fi-totaux-contrat"></div>
+          </div>
 
         <!-- NOTES -->
         <div id="fi-notes" style="display:none">
@@ -1818,6 +1832,18 @@ textarea { resize: vertical; min-height: 72px; }
           <div style="padding:48px;text-align:center;color:var(--ink3)">
             <div style="font-size:40px;margin-bottom:12px">🧾</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:6px">Factures et règlements</div>
+          </div>
+        </div>
+
+        <!-- SANTE / VACCINATIONS -->
+        <div id="fi-sante" style="display:none">
+          <div class="fiche-card">
+            <div class="fiche-card-title" style="display:flex;align-items:center;justify-content:space-between">
+              <span>Suivi vaccinations</span>
+              <span id="vacc-statut-badge" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--surface2);color:var(--ink3)">Chargement…</span>
+            </div>
+            <div id="vacc-alertes" style="margin-bottom:14px"></div>
+            <div id="vacc-groups"></div>
           </div>
         </div>
 
@@ -4218,6 +4244,16 @@ function renderHub() {
 
 // ── Storage helpers ───────────────────────────────────────────────
 function getFamilles(crecheId) {
+  if (crecheId === '__all__') {
+    const all = [];
+    (CRECHES_DATA || []).forEach(c => {
+      try {
+        const arr = JSON.parse(localStorage.getItem('orevy_familles_' + c.nom) || '[]');
+        arr.forEach(e => all.push(Object.assign({}, e, { _creche: c.nom })));
+      } catch {}
+    });
+    return dedupeById(all);
+  }
   const key = 'orevy_familles_' + (crecheId || 'all');
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
 }
@@ -4434,9 +4470,16 @@ function renderFamilles() {
     (currentCreche && currentCreche !== 'all' ? [{nom: currentCreche}] : [{nom: 'Crèche'}]);
   if (sel) {
     const cur = sel.value;
-    sel.innerHTML = crechesList.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
-    if (cur && crechesList.some(c => c.nom === cur)) sel.value = cur;
+    const totalAll = (CRECHES_DATA || []).reduce((s, c) => {
+      try { return s + JSON.parse(localStorage.getItem('orevy_familles_' + c.nom) || '[]').length; } catch { return s; }
+    }, 0);
+    sel.innerHTML = `<option value="__all__">🏘 Toutes les crèches (${totalAll})</option>` +
+      crechesList.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+    if (cur && (cur === '__all__' || crechesList.some(c => c.nom === cur))) sel.value = cur;
   }
+  // Désactiver l'ajout en mode toutes crèches
+  const addBtn = document.querySelector('#page-familles .btn-primary');
+  if (addBtn) addBtn.disabled = getCrecheId() === '__all__';
   renderFamillesKPI();
   renderFamillesList();
   renderFamillesBerceaux();
@@ -4527,7 +4570,11 @@ function renderFamillesList() {
       const sortieProche = sortieDate && (sortieDate - today) < 30*24*3600*1000 && sortieDate >= today;
       const sorti = sortieDate && sortieDate < today;
 
-      return `<div onclick="openFicheEnfant('${e.id}')"
+      const isAll = crecheId === '__all__';
+      const onclickFn = isAll
+        ? `(function(){var sel=document.getElementById('fam-creche-sel');if(sel)sel.value='${e._creche||''}';openFicheEnfant('${e.id}');})()`
+        : `openFicheEnfant('${e.id}')`;
+      return `<div onclick="${onclickFn}" 
         style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s;${sorti?'opacity:0.5':''}"
         onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'"
         onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
@@ -4545,6 +4592,7 @@ function renderFamillesList() {
           <span style="background:${cafColor.bg};color:${cafColor.text};padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">${e.contrat_caf||'—'}</span>
           ${e.berceau ? `<span style="background:#FFE4E6;color:#BE123C;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">🏢 ${e.berceau}</span>` : ''}
           ${e.jours ? `<span style="background:var(--bg);color:var(--ink3);padding:3px 9px;border-radius:10px;font-size:11px;font-weight:600">${e.jours}j/sem</span>` : ''}
+          ${(isAll && e._creche) ? `<span style="background:#E7EEE7;color:var(--accent);padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">📍 ${e._creche}</span>` : ''}
         </div>
         ${e.notes ? `<div style="margin-top:8px;font-size:11px;color:var(--ink3);background:var(--bg);border-radius:6px;padding:6px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.notes}</div>` : ''}
       </div>`;
@@ -4657,9 +4705,10 @@ function renderFamillesFinancement() {
     ${psu.length ? `
     <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
       <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#6D28D9">📋 Enfants PSU</div>
-      <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Crèche</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
       <tbody>${psu.map(e => `<tr>
         <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
+        <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
         <td><span style="background:${e.type==='NM'?'#DBEAFE':'#DCFCE7'};color:${e.type==='NM'?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${e.type==='NM'?'NM':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
         <td>${e.berceau?`<span style="background:#FFE4E6;color:#BE123C;padding:2px 6px;border-radius:6px;font-size:11px">${e.berceau}</span>`:'—'}</td>
@@ -4670,9 +4719,10 @@ function renderFamillesFinancement() {
     ${paje.length ? `
     <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px">
       <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#B45309">📋 Enfants PAJE</div>
-      <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Crèche</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
       <tbody>${paje.map(e => `<tr>
         <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
+        <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
         <td><span style="background:${e.type==='NM'?'#DBEAFE':'#DCFCE7'};color:${e.type==='NM'?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${e.type==='NM'?'NM':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
         <td>${e.berceau?`<span style="background:#FFE4E6;color:#BE123C;padding:2px 6px;border-radius:6px;font-size:11px">${e.berceau}</span>`:'—'}</td>
@@ -4925,6 +4975,7 @@ function importerInscription(event) {
         jours:       d.jours  || 5,
         heures:      d.heures || 40,
         jours_presence: d.jours_presence || [],
+        horaires_detail: d.horaires_detail || {},
         notes_libres: d.notes_libres || '',
         parent1: {
           prenom: p1.prenom || '', nom: p1.nom || '', lien: p1.lien || 'Mère',
@@ -5038,6 +5089,19 @@ function openFicheEnfant(id) {
   setV('fi-heures-mois', e.heures_mois || Math.round((e.heures||0)*52/12));
   const joursCbs = document.querySelectorAll('#fi-jours-presence input');
   joursCbs.forEach(cb => { cb.checked = (e.jours_presence||[]).includes(parseInt(cb.value)); });
+  syncJoursCount(); // sync le compteur avec les cases cochées
+  renderHorairesGrid(e.horaires_detail || {});
+  // Tarifs
+  const setN = (id, v) => { const el=document.getElementById(id); if(el&&v) el.value=v; };
+  setN('fi-tarif-heure', e.tarif_heure);
+  setN('fi-frais-repas', e.frais_repas);
+  setN('fi-frais-fixes', e.frais_fixes);
+  setN('fi-frais-divers', e.frais_divers);
+  const divLabel = document.getElementById('fi-frais-divers-label');
+  if (divLabel && e.frais_divers_label) divLabel.value = e.frais_divers_label;
+  calcHorairesTotaux();
+  syncTauxCafToTarif();
+  syncContratFromCreche();
 
   // Onglet Notes
   setV('fi-allergies', e.allergies); setV('fi-medecin', e.medecin);
@@ -5064,7 +5128,7 @@ function showFamillesFromFiche() {
 }
 
 function switchFicheTab(tabId, btn) {
-  ['fi-identite','fi-parents','fi-accueil','fi-notes','fi-planning','fi-factures','fi-docs'].forEach(id => {
+  ['fi-identite','fi-parents','fi-accueil','fi-notes','fi-planning','fi-factures','fi-docs','fi-sante'].forEach(id => {
     const p = document.getElementById(id);
     if (p) p.style.display = 'none';
   });
@@ -5080,6 +5144,415 @@ function switchFicheTab(tabId, btn) {
     activeBtn.style.color = 'var(--accent)';
     activeBtn.style.borderBottom = '2px solid var(--accent)';
     activeBtn.style.fontWeight = '700';
+  }
+}
+
+// ─── SUIVI VACCINATIONS ─────────────────────────────────────────────────────
+const VACC_CALENDAR = [
+  { id:'hexa',    nom:'Diphtérie - Tétanos - Coqueluche - Poliomyélite - Hib - Hépatite B', marques:'Infanrix Hexa / Hexyon / Vaxelis', obligatoire:true,
+    doses:[{label:'1ère dose',age:'2 mois',offset:61},{label:'2e dose',age:'4 mois',offset:123},{label:'Rappel',age:'11 mois',offset:335}] },
+  { id:'pneumo',  nom:'Pneumocoque', marques:'Prevenar 13 / Pneumovax', obligatoire:true,
+    doses:[{label:'1ère dose',age:'2 mois',offset:61},{label:'2e dose',age:'4 mois',offset:123},{label:'Rappel',age:'11 mois',offset:335}] },
+  { id:'menb',    nom:'Méningocoque B', marques:'Bexsero', obligatoire:false,
+    doses:[{label:'1ère dose',age:'3 mois',offset:91},{label:'2e dose',age:'5 mois',offset:152},{label:'Rappel',age:'12 mois',offset:365}] },
+  { id:'menacwy', nom:'Méningocoque ACWY', marques:'Nimenrix / Menquadfi', obligatoire:true,
+    doses:[{label:'1ère dose',age:'6 mois',offset:182},{label:'Rappel',age:'12 mois',offset:365}] },
+  { id:'ror',     nom:'Rougeole - Oreillons - Rubéole (ROR)', marques:'M-M-RVaxPro / Priorix', obligatoire:true,
+    doses:[{label:'1ère dose',age:'12 mois',offset:365},{label:'2e dose',age:'18 mois',offset:548}] }
+];
+let vaccOpenForm = null;
+let vaccRows = [];
+
+async function loadVaccinsFiche() {
+  const groupsEl = document.getElementById('vacc-groups');
+  const alertesEl = document.getElementById('vacc-alertes');
+  const badge = document.getElementById('vacc-statut-badge');
+  if (!groupsEl || !ficheEnfantId) return;
+
+  groupsEl.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:12px 0">Chargement…</div>';
+
+  // Récupérer la date de naissance
+  const crecheId = getCrecheId();
+  const enfants = getFamilles(crecheId);
+  const enfant = enfants.find(e => e.id === ficheEnfantId);
+  const ddn = enfant && enfant.ddn ? enfant.ddn : null;
+
+  // Charger les réalisations depuis Supabase
+  try {
+    const rows = await sbGet('vaccinations_enfant',
+      'select=*&enfant_id=eq.' + ficheEnfantId);
+    vaccRows = Array.isArray(rows) ? rows : [];
+  } catch(e) {
+    vaccRows = [];
+    console.warn('[Vaccins]', e.message);
+  }
+
+  if (!ddn) {
+    groupsEl.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:12px 0">⚠ Date de naissance non renseignée — impossible de calculer les échéances.</div>';
+    return;
+  }
+
+  renderVaccinsPanel(ddn);
+}
+
+function renderVaccinsPanel(ddn) {
+  const groupsEl = document.getElementById('vacc-groups');
+  const alertesEl = document.getElementById('vacc-alertes');
+  const badge = document.getElementById('vacc-statut-badge');
+  const dob = new Date(ddn + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  let totalDoses = 0, doneDoses = 0, lateDoses = 0, soonDoses = 0;
+  let html = '';
+
+  VACC_CALENDAR.forEach(group => {
+    const obligTag = group.obligatoire
+      ? `<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--success-bg,#E7EEE7);color:var(--accent);white-space:nowrap">Obligatoire</span>`
+      : `<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--surface2);color:var(--ink3);border:1px solid var(--border);white-space:nowrap">Recommandé</span>`;
+
+    let rowsHTML = '';
+    group.doses.forEach((dose, i) => {
+      const refId = group.id + '_' + i;
+      totalDoses++;
+      const dueDate = new Date(dob.getTime() + dose.offset * 86400000);
+      const saved = vaccRows.find(r => r.vaccin_ref_id === refId);
+      const isDone = saved && saved.date_realisee;
+      const diff = Math.round((dueDate - today) / 86400000);
+
+      let statut, statusLabel, statusStyle, dateLabel;
+      if (isDone) {
+        statut = 'done'; doneDoses++;
+        const dr = new Date(saved.date_realisee + 'T00:00:00');
+        dateLabel = 'Fait le ' + dr.toLocaleDateString('fr-FR');
+        statusLabel = '✓ Fait';
+        statusStyle = 'background:#E7EEE7;color:var(--accent)';
+      } else if (diff < 0) {
+        statut = 'late'; lateDoses++;
+        dateLabel = 'Éch. ' + dueDate.toLocaleDateString('fr-FR');
+        statusLabel = 'Retard ' + Math.abs(diff) + 'j';
+        statusStyle = 'background:#FBEAEA;color:#C0392B';
+      } else if (diff <= 30) {
+        statut = 'soon'; soonDoses++;
+        dateLabel = 'Éch. ' + dueDate.toLocaleDateString('fr-FR');
+        statusLabel = 'Dans ' + diff + 'j';
+        statusStyle = 'background:#FBEDE6;color:#C4623A';
+      } else {
+        statut = 'upcoming';
+        dateLabel = 'Éch. ' + dueDate.toLocaleDateString('fr-FR');
+        statusLabel = dueDate.toLocaleDateString('fr-FR');
+        statusStyle = 'background:var(--surface2);color:var(--ink3)';
+      }
+
+      const defaultDate = isDone ? saved.date_realisee : new Date().toISOString().split('T')[0];
+      const formHTML = (vaccOpenForm === ficheEnfantId + '_' + refId) ? `
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 14px;border-top:1px solid var(--border)">
+          <input type="date" id="vacc-input-${refId}" value="${defaultDate}"
+            style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--ink)">
+          <button onclick="saveVaccDose('${refId}','${ddn}')"
+            style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">Enregistrer</button>
+          ${isDone ? `<button onclick="undoVaccDose('${refId}','${ddn}')"
+            style="background:#FBEAEA;color:#C0392B;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">Annuler</button>` : ''}
+          <button onclick="vaccOpenForm=null;renderVaccinsPanel('${ddn}')"
+            style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">Fermer</button>
+        </div>` : '';
+
+      rowsHTML += `
+        <div onclick="vaccOpenForm=vaccOpenForm==='${ficheEnfantId}_${refId}'?null:'${ficheEnfantId}_${refId}';renderVaccinsPanel('${ddn}')"
+          style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);cursor:pointer">
+          <div style="font-size:12px;font-weight:600;color:var(--ink2);width:62px;flex-shrink:0">${dose.age}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600">${dose.label}</div>
+            <div style="font-size:11.5px;color:var(--ink3);margin-top:1px">${dateLabel}</div>
+          </div>
+          <div style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:99px;white-space:nowrap;flex-shrink:0;${statusStyle}">${statusLabel}</div>
+        </div>
+        ${formHTML}`;
+    });
+
+    html += `
+      <div style="margin-bottom:16px;padding-bottom:4px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:13.5px;font-weight:800;line-height:1.3">${group.nom}</div>
+            <div style="font-size:11.5px;color:var(--ink3);margin-top:2px">${group.marques}</div>
+          </div>
+          ${obligTag}
+        </div>
+        ${rowsHTML}
+      </div>`;
+  });
+
+  groupsEl.innerHTML = html;
+
+  // Badge statut global
+  if (badge) {
+    if (lateDoses > 0) {
+      badge.textContent = lateDoses + ' en retard';
+      badge.style.cssText = 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:#FBEAEA;color:#C0392B';
+    } else if (soonDoses > 0) {
+      badge.textContent = soonDoses + ' rappel' + (soonDoses>1?'s':'') + ' ce mois';
+      badge.style.cssText = 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:#FBEDE6;color:#C4623A';
+    } else {
+      badge.textContent = doneDoses + '/' + totalDoses + ' doses';
+      badge.style.cssText = 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:#E7EEE7;color:var(--accent)';
+    }
+  }
+
+  // Bandeau alertes
+  if (alertesEl) {
+    let alertHTML = '';
+    if (lateDoses > 0) alertHTML += `<div style="background:#FBEAEA;border:1px solid #F0C8C3;border-radius:10px;padding:11px 14px;margin-bottom:8px;font-size:12.5px"><b style="color:#C0392B">⚠ ${lateDoses} vaccin${lateDoses>1?'s':''} en retard</b> — contacter la famille</div>`;
+    if (soonDoses > 0) alertHTML += `<div style="background:#FBEDE6;border:1px solid #F2D6C5;border-radius:10px;padding:11px 14px;margin-bottom:8px;font-size:12.5px"><b style="color:#C4623A">🔔 ${soonDoses} rappel${soonDoses>1?'s':''} dans les 30 jours</b> — rappel à prévoir</div>`;
+    alertesEl.innerHTML = alertHTML;
+  }
+}
+
+async function saveVaccDose(refId, ddn) {
+  const val = document.getElementById('vacc-input-' + refId);
+  if (!val || !val.value) return;
+  const existing = vaccRows.find(r => r.vaccin_ref_id === refId);
+  try {
+    if (existing) {
+      await sbUpdate('vaccinations_enfant', existing.id, { date_realisee: val.value, statut: 'done', updated_at: new Date().toISOString() });
+      existing.date_realisee = val.value; existing.statut = 'done';
+    } else {
+      const crecheId = getCrecheId();
+      const enfants = getFamilles(crecheId);
+      const enfant = enfants.find(e => e.id === ficheEnfantId);
+      const dob = new Date(ddn + 'T00:00:00');
+      const refParts = refId.split('_');
+      const doseIdx = parseInt(refParts[refParts.length-1]);
+      const group = VACC_CALENDAR.find(g => refId.startsWith(g.id + '_'));
+      const dose = group ? group.doses[doseIdx] : null;
+      const datePrevue = dose ? new Date(dob.getTime() + dose.offset * 86400000).toISOString().split('T')[0] : null;
+      const newRow = await sbInsert('vaccinations_enfant', {
+        enfant_id: ficheEnfantId,
+        vaccin_ref_id: refId,
+        date_prevue: datePrevue,
+        date_realisee: val.value,
+        statut: 'done',
+        saisie_par: 'equipe'
+      });
+      if (Array.isArray(newRow) && newRow[0]) vaccRows.push(newRow[0]);
+      else vaccRows.push({ vaccin_ref_id: refId, date_realisee: val.value, statut: 'done' });
+    }
+    showNotif('✓ Vaccination enregistrée');
+  } catch(e) {
+    showNotif('Erreur : ' + e.message);
+    console.error('[Vaccins save]', e);
+  }
+  vaccOpenForm = null;
+  renderVaccinsPanel(ddn);
+}
+
+async function undoVaccDose(refId, ddn) {
+  const existing = vaccRows.find(r => r.vaccin_ref_id === refId);
+  if (!existing) return;
+  try {
+    await sbUpdate('vaccinations_enfant', existing.id, { date_realisee: null, statut: 'upcoming', updated_at: new Date().toISOString() });
+    existing.date_realisee = null; existing.statut = 'upcoming';
+    showNotif('Vaccination annulée');
+  } catch(e) {
+    showNotif('Erreur : ' + e.message);
+  }
+  vaccOpenForm = null;
+  renderVaccinsPanel(ddn);
+}
+// ─── FIN SUIVI VACCINATIONS ──────────────────────────────────────────────────
+
+function syncJoursCount() {
+  const cbs = document.querySelectorAll('#fi-jours-presence input:checked');
+  const joursEl = document.getElementById('fi-jours');
+  if (joursEl) joursEl.value = cbs.length;
+  renderHorairesGrid();
+}
+
+const JOURS_NOMS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+
+function renderHorairesGrid(horairesDetail) {
+  const grid = document.getElementById('fi-horaires-grid');
+  if (!grid) return;
+  const cbs = document.querySelectorAll('#fi-jours-presence input');
+  const selected = Array.from(cbs).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+
+  if (!selected.length) {
+    grid.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:8px 0">Aucun jour sélectionné ci-dessus.</div>';
+    return;
+  }
+
+  // Lire les valeurs existantes des inputs AVANT de re-render
+  const prev = {};
+  [0,1,2,3,4].forEach(j => {
+    const d = document.getElementById('fi-horaire-debut-'+j);
+    const f = document.getElementById('fi-horaire-fin-'+j);
+    if (d) prev[j] = { debut: d.value, fin: f ? f.value : '' };
+  });
+
+  const inpStyle = 'width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--ink);font-family:inherit';
+
+  const rows = selected.map(j => {
+    const hd = horairesDetail ? (horairesDetail[j] || {}) : {};
+    const debut = hd.debut || prev[j]?.debut || '08:00';
+    const fin   = hd.fin   || prev[j]?.fin   || '17:00';
+    return `<div style="display:grid;grid-template-columns:90px 1fr 1fr 72px;gap:10px;align-items:end;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;padding-bottom:4px">${JOURS_NOMS[j]}</div>
+      <div><label style="font-size:10.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Arrivée</label>
+        <input type="time" id="fi-horaire-debut-${j}" value="${debut}" oninput="calcHorairesTotaux()" style="${inpStyle}"></div>
+      <div><label style="font-size:10.5px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Départ</label>
+        <input type="time" id="fi-horaire-fin-${j}" value="${fin}" oninput="calcHorairesTotaux()" style="${inpStyle}"></div>
+      <div style="text-align:center">
+        <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:4px">Total</div>
+        <div id="fi-horaire-total-${j}" style="font-size:16px;font-weight:800;font-family:'Syne',sans-serif">—</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  grid.innerHTML =
+    `<div style="display:grid;grid-template-columns:90px 1fr 1fr 72px;gap:10px;padding-bottom:6px;border-bottom:2px solid var(--border)">
+      <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase">Jour</div>
+      <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase">Arrivée</div>
+      <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase">Départ</div>
+      <div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;text-align:center">Total</div>
+    </div>${rows}`;
+
+  calcHorairesTotaux();
+}
+
+function calcHorairesTotaux() {
+  const cbs = document.querySelectorAll('#fi-jours-presence input');
+  const selected = Array.from(cbs).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+  let totalMinSemaine = 0;
+
+  selected.forEach(j => {
+    const debut = document.getElementById('fi-horaire-debut-'+j)?.value;
+    const fin   = document.getElementById('fi-horaire-fin-'+j)?.value;
+    const totalEl = document.getElementById('fi-horaire-total-'+j);
+    if (debut && fin) {
+      const [dh, dm] = debut.split(':').map(Number);
+      const [fh, fm] = fin.split(':').map(Number);
+      const mins = (fh*60+fm) - (dh*60+dm);
+      if (mins > 0) {
+        totalMinSemaine += mins;
+        const h = Math.floor(mins/60), m = mins%60;
+        if (totalEl) totalEl.textContent = h+'h'+(m ? String(m).padStart(2,'0') : '');
+      } else { if (totalEl) totalEl.textContent = '—'; }
+    }
+  });
+
+  const hSemaine = Math.round(totalMinSemaine/60*10)/10;
+  const hMois    = Math.round(hSemaine*52/12*10)/10;
+  const hAn      = Math.round(hSemaine*52*10)/10;
+
+  const hSemEl = document.getElementById('fi-heures');
+  const hMoisEl = document.getElementById('fi-heures-mois');
+  if (hSemEl && hSemaine) hSemEl.value = hSemaine;
+  if (hMoisEl && hMois)   hMoisEl.value = Math.round(hMois);
+
+  const tarif  = parseFloat(document.getElementById('fi-tarif-heure')?.value)  || 0;
+  const repas  = parseFloat(document.getElementById('fi-frais-repas')?.value)  || 0;
+  const fixes  = parseFloat(document.getElementById('fi-frais-fixes')?.value)  || 0;
+  const divers = parseFloat(document.getElementById('fi-frais-divers')?.value) || 0;
+  const diversLabel = document.getElementById('fi-frais-divers-label')?.value || 'Frais divers';
+
+  const coutHMois     = hMois * tarif;
+  const coutRepasMois = repas * selected.length * 52/12;
+  const coutMois      = coutHMois + coutRepasMois + fixes + divers;
+  const coutAn        = coutMois * 12;
+
+  const fmt = v => v ? v.toFixed(0)+' €' : '—';
+  const fmtH = v => v ? v+'h' : '—';
+
+  // Durée du contrat
+  const entreeVal = document.getElementById('fi-entree')?.value;
+  const sortieVal = document.getElementById('fi-sortie')?.value;
+  let dureeStr = '', coutTotal = 0, dureeLabel = '';
+  if (entreeVal && sortieVal) {
+    const d1 = new Date(entreeVal), d2 = new Date(sortieVal);
+    const mois = Math.round((d2 - d1) / (1000*60*60*24*30.44));
+    if (mois > 0) {
+      const ans = Math.floor(mois/12), moRest = mois%12;
+      dureeLabel = (ans ? ans+'an'+(ans>1?'s':'')+' ' : '') + (moRest ? moRest+' mois' : '');
+      coutTotal = coutMois * mois;
+      dureeStr = `<div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${dureeLabel}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">durée</div>
+      </div>
+      <div style="text-align:center;${tarif?'':'opacity:.4'}">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmt(tarif?coutTotal:0)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">coût total</div>
+      </div>`;
+    }
+  }
+
+  const totauxEl = document.getElementById('fi-totaux-contrat');
+  if (totauxEl) totauxEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(${dureeStr ? 6 : 4},1fr);gap:10px;padding:14px;background:var(--surface2);border-radius:10px;margin-top:4px">
+      <div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmtH(hSemaine)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">/ semaine</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmtH(hMois)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">/ mois</div>
+      </div>
+      <div style="text-align:center;${tarif?'':'opacity:.4'}">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmt(tarif?coutMois:0)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">coût / mois</div>
+      </div>
+      <div style="text-align:center;${tarif?'':'opacity:.4'}">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmt(tarif?coutAn:0)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">coût / an</div>
+      </div>
+      ${dureeStr}
+    </div>
+    ${tarif ? `<div style="margin-top:10px;font-size:11.5px;color:var(--ink2);line-height:1.8">
+      <span style="margin-right:12px">⏱ ${hMois}h × ${tarif}€ = <b>${Math.round(coutHMois)}€</b></span>
+      ${repas ? `<span style="margin-right:12px">🍽 Repas : <b>${Math.round(coutRepasMois)}€/mois</b></span>` : ''}
+      ${fixes ? `<span style="margin-right:12px">📋 Fixes : <b>${fixes}€/mois</b></span>` : ''}
+      ${divers ? `<span>${diversLabel} : <b>${divers}€/mois</b></span>` : ''}
+    </div>` : ''}
+    ${(entreeVal && sortieVal && tarif && coutTotal) ? `<div style="margin-top:8px;font-size:11.5px;color:var(--ink2)">
+      📅 Contrat du <b>${new Date(entreeVal).toLocaleDateString('fr-FR')}</b> au <b>${new Date(sortieVal).toLocaleDateString('fr-FR')}</b> — <b>${dureeLabel}</b> — coût total estimé : <b>${Math.round(coutTotal).toLocaleString('fr-FR')} €</b>
+    </div>` : ''}`;
+}
+
+function syncContratFromCreche() {
+  const creche = document.getElementById('fi-creche')?.value;
+  const mode = getModeFinancement(creche);
+  if (!mode) return;
+  const sel = document.getElementById('fi-contrat-caf');
+  if (!sel) return;
+  sel.value = mode;
+  // Indiquer visuellement que le champ est verrouillé par le mode crèche
+  sel.style.borderColor = mode === 'PSU' ? '#6D28D9' : '#B45309';
+  sel.title = 'Mode ' + mode + ' défini dans les paramètres de la crèche';
+  syncTauxCafToTarif();
+}
+
+function renderReferents() {
+  const contrat = document.getElementById('fi-contrat-caf')?.value;
+  const tarifEl = document.getElementById('fi-tarif-heure');
+  const tauxRaw = document.getElementById('fi-taux-caf')?.value || '';
+
+  if (!tarifEl) return;
+
+  if (contrat === 'PSU') {
+    // Extraire la valeur numérique du taux CAF (accepte "0,42" "0.42" "0,42€/h")
+    const num = parseFloat(tauxRaw.replace(',', '.').replace(/[^0-9.]/g, ''));
+    if (!isNaN(num) && num > 0) {
+      tarifEl.value = num;
+      tarifEl.title = 'Pré-rempli depuis le taux horaire CAF (PSU)';
+      tarifEl.style.borderColor = '#6D28D9';
+      calcHorairesTotaux();
+    } else {
+      tarifEl.placeholder = 'Auto depuis taux CAF';
+      tarifEl.style.borderColor = '';
+    }
+  } else {
+    // PAJE : champ libre, pas de pré-remplissage automatique
+    tarifEl.placeholder = '0.00';
+    tarifEl.title = '';
+    tarifEl.style.borderColor = '';
   }
 }
 
@@ -5160,6 +5633,20 @@ function saveFicheEnfant() {
     heures: parseInt(getV('fi-heures'))||40,
     heures_mois: parseInt(getV('fi-heures-mois'))||0,
     jours_presence: joursPresence,
+    horaires_detail: (() => {
+      const h = {};
+      [0,1,2,3,4].forEach(j => {
+        const d = document.getElementById('fi-horaire-debut-'+j);
+        const f = document.getElementById('fi-horaire-fin-'+j);
+        if (d && d.value) h[j] = { debut: d.value, fin: f ? f.value : '' };
+      });
+      return h;
+    })(),
+    tarif_heure: parseFloat(document.getElementById('fi-tarif-heure')?.value)||0,
+    frais_repas: parseFloat(document.getElementById('fi-frais-repas')?.value)||0,
+    frais_fixes: parseFloat(document.getElementById('fi-frais-fixes')?.value)||0,
+    frais_divers: parseFloat(document.getElementById('fi-frais-divers')?.value)||0,
+    frais_divers_label: document.getElementById('fi-frais-divers-label')?.value||'',
     allergies: getV('fi-allergies'), medecin: getV('fi-medecin'),
     pai: getV('fi-pai'), notes_libres: getV('fi-notes-text'),
   };
@@ -6486,16 +6973,29 @@ function renderParametres() {
     ).join('');
   }
 
-  list.innerHTML = CRECHES_DATA.map((c, i) => `
-    <div style="background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px">
+  list.innerHTML = CRECHES_DATA.map((c, i) => {
+    const mode = c.mode_financement || 'PSU';
+    return `
+    <div style="background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="width:32px;height:32px;border-radius:50%;background:${c.color};flex-shrink:0;cursor:pointer" onclick="document.getElementById('color-picker-${i}').click()" title="Changer la couleur"></div>
       <input type="color" id="color-picker-${i}" value="${c.color}" style="display:none" onchange="changerCouleur(${i}, this.value)">
       <input type="text" value="${c.nom}" id="creche-nom-${i}"
-        style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;background:var(--bg)"
+        style="flex:1;min-width:120px;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;background:var(--bg)"
         onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
         onchange="changerNom(${i}, this.value)">
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button onclick="changerModeFinancement(${i},'PSU')"
+          style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:2px solid ${mode==='PSU'?'#6D28D9':'var(--border)'};background:${mode==='PSU'?'#EDE9FE':'var(--surface2)'};color:${mode==='PSU'?'#6D28D9':'var(--ink3)'}">
+          PSU
+        </button>
+        <button onclick="changerModeFinancement(${i},'PAJE')"
+          style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:2px solid ${mode==='PAJE'?'#B45309':'var(--border)'};background:${mode==='PAJE'?'#FEF3C7':'var(--surface2)'};color:${mode==='PAJE'?'#B45309':'var(--ink3)'}">
+          PAJE
+        </button>
+      </div>
       <button onclick="supprimerCreche(${i})" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:18px;padding:4px" title="Supprimer">🗑</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   if (typeof renderPlanningParamHoraires === 'function') renderPlanningParamHoraires();
 }
 
@@ -6561,6 +7061,18 @@ function changerCouleur(i, color) {
   renderParametres();
   renderSidebarCreches();
   showNotif('✅ Couleur mise à jour');
+}
+
+function changerModeFinancement(i, mode) {
+  CRECHES_DATA[i].mode_financement = mode;
+  sauverCreches();
+  renderParametres();
+  showNotif('✅ Mode ' + mode + ' enregistré pour ' + CRECHES_DATA[i].nom);
+}
+
+function getModeFinancement(crecheNom) {
+  const c = (CRECHES_DATA || []).find(x => x.nom === crecheNom);
+  return c ? (c.mode_financement || 'PSU') : null;
 }
 
 function ajouterCreche() {
@@ -6632,11 +7144,9 @@ async function renderDashboardDirectrice(dateStr) {
 
   let enfantsPresents = '—';
   try {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const pts = await sbGet('pointages_enfants',
-      'date=eq.'+todayStr+'&statut=eq.present&select=id' + (currentCreche !== 'all' ? '&creche=eq.'+encodeURIComponent(currentCreche) : '')
-    ).catch(() => []);
-    enfantsPresents = pts.length;
+    const cid = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
+    const liste = getFamilles(cid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+    enfantsPresents = liste.length;
   } catch(e) {}
 
   const kpiEl = document.getElementById('dash-dir-kpis');
@@ -6682,14 +7192,9 @@ async function renderDashboardDirectrice(dateStr) {
     }
   }
 
+  // dash-dir-taux fusionné dans dash-dir-planning
   const tauxEl = document.getElementById('dash-dir-taux');
-  if (tauxEl) tauxEl.innerHTML = `
-    <div style="font-size:13px;font-weight:700;margin-bottom:10px">📊 Taux encadrement</div>
-    <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Consultez le planning pour le détail</div>
-    <button onclick="showPage('planning', document.querySelector('.nav-item[onclick*=planning]'))"
-      style="width:100%;padding:8px;background:var(--accent-lt);color:var(--accent);border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
-      Voir le planning →
-    </button>`;
+  if (tauxEl) { tauxEl.innerHTML = ''; tauxEl.style.display = 'none'; }
 
   const alertesEl = document.getElementById('dash-dir-alertes');
   if (alertesEl) {
@@ -6713,15 +7218,75 @@ async function renderDashboardDirectrice(dateStr) {
     const todayDate = new Date();
     const monday = new Date(todayDate);
     monday.setDate(todayDate.getDate() - (todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1));
-    planEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">📅 Semaine en cours</div>' +
-      jours.map((j, i) => {
-        const d = new Date(monday); d.setDate(monday.getDate() + i);
-        const isToday = d.toDateString() === todayDate.toDateString();
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px'+(isToday?';font-weight:700;color:var(--accent)':'')+'">'+
-          '<span>'+j+' '+d.getDate()+'/'+(d.getMonth()+1)+'</span>'+
-          '<span style="font-size:11px;color:var(--ink3)">'+(isToday ? "Aujourd'hui" : '')+'</span></div>';
-      }).join('') +
-      '<button onclick="showPage(\'planning\', document.querySelector(\'.nav-item[onclick*=planning]\'))" style="width:100%;margin-top:10px;padding:7px;background:none;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Planning complet →</button>';
+
+    // Mode "Toutes les crèches" → message orienteur
+    if (!currentCreche || currentCreche === 'all') {
+      const totalEnfants = getFamilles('__all__').filter(e => !e.sortie || new Date(e.sortie) >= new Date()).length;
+      planEl.innerHTML =
+        '<div style="font-size:13px;font-weight:700;margin-bottom:12px">📅 Encadrement · semaine en cours</div>' +
+        '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">' +
+          '<div style="font-size:28px;font-weight:800;font-family:Syne,sans-serif;margin-bottom:4px">' + totalEnfants + '</div>' +
+          '<div style="font-size:12px;color:var(--ink3);margin-bottom:14px">enfants inscrits sur le réseau</div>' +
+          '<div style="font-size:12.5px;color:var(--ink2);margin-bottom:14px">Sélectionnez une crèche dans la sidebar pour voir<br>le détail de l\'encadrement jour par jour.</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">' +
+            (CRECHES_DATA || []).map(c =>
+              '<button onclick="filterCreche(\'' + c.nom + '\', null); renderDashboard();" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">' + c.nom + '</button>'
+            ).join('') +
+          '</div>' +
+        '</div>' +
+        '<button onclick="showPage(\'planning\', document.querySelector(\'.nav-item[onclick*=planning]\'))" style="width:100%;margin-top:12px;padding:7px;background:none;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Planning complet →</button>';
+      return;
+    }
+    const famCid = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
+    const cid = famCid;
+    let weekData = { creneaux: [] };
+    try { weekData = peGetWeek(cid); } catch(e) {}
+
+    // Enfants inscrits actifs
+    const enfantsActifs = getFamilles(famCid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+    const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+    const { prosMin } = calcTauxEncadrement(enfantsActifs, prefs.optionEncadrement || 'NM8M');
+
+    const rows = jours.map((j, i) => {
+      const dayNum = i; // jours_presence stocke 0=Lun … 4=Ven
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      const isToday = d.toDateString() === todayDate.toDateString();
+      const dayLabel = j + ' ' + d.getDate() + '/' + (d.getMonth()+1);
+
+      const nbEnfants = enfantsActifs.filter(e => {
+        if (!e.jours_presence || !e.jours_presence.length) return true;
+        return e.jours_presence.includes(dayNum) || e.jours_presence.includes(String(dayNum));
+      }).length;
+
+      const prosSet = new Set((weekData.creneaux || []).filter(c => c.jour === i).map(c => c.pro).filter(Boolean));
+      const nbPros = prosSet.size;
+
+      let statut, statutStyle;
+      if (nbEnfants === 0) { statut = '—'; statutStyle = 'background:#F1F5F9;color:var(--ink3)'; }
+      else if (nbPros >= prosMin) { statut = '✓ OK'; statutStyle = 'background:#F0FDF4;color:#16A34A'; }
+      else if (nbPros > 0 && nbPros === prosMin - 1) { statut = '⚠ Limite'; statutStyle = 'background:#FFFBEB;color:#D97706'; }
+      else { statut = '✗ Insuffisant'; statutStyle = 'background:#FEF2F2;color:#DC2626'; }
+
+      return '<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);' + (isToday ? 'font-weight:700' : '') + '">' +
+        '<span style="font-size:12.5px;' + (isToday ? 'color:var(--accent)' : 'color:var(--ink2)') + '">' + dayLabel + (isToday ? ' ●' : '') + '</span>' +
+        '<div style="text-align:center"><span style="font-size:18px;font-weight:800;font-family:Syne,sans-serif">' + nbEnfants + '</span><div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em">enfants</div></div>' +
+        '<div style="text-align:center"><span style="font-size:18px;font-weight:800;font-family:Syne,sans-serif">' + nbPros + '</span><span style="font-size:11px;color:var(--ink3);font-weight:500"> / ' + prosMin + ' min</span><div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em">pros</div></div>' +
+        '<div style="text-align:right"><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;' + statutStyle + '">' + statut + '</span></div>' +
+        '</div>';
+    }).join('');
+
+    planEl.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+        '<div style="font-size:13px;font-weight:700">📅 Encadrement · semaine en cours</div>' +
+        '<button onclick="showPage(\'planning\', document.querySelector(\'.nav-item[onclick*=planning]\'))" style="font-size:11px;font-weight:600;color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:4px 10px;cursor:pointer">Planning →</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--border);margin-bottom:2px">' +
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink3)">Jour</div>' +
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink3);text-align:center">Enfants</div>' +
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink3);text-align:center">Pros</div>' +
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink3);text-align:right">Statut</div>' +
+      '</div>' +
+      rows;
   }
 
   const statsEl = document.getElementById('dash-dir-stats');
@@ -6744,11 +7309,9 @@ async function renderDashboardAuxiliaire(dateStr) {
 
   let enfantsPresents = '—';
   try {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const pts = await sbGet('pointages_enfants',
-      'date=eq.'+todayStr+'&statut=eq.present&select=id' + (currentCreche !== 'all' ? '&creche=eq.'+encodeURIComponent(currentCreche) : '')
-    ).catch(() => []);
-    enfantsPresents = pts.length;
+    const cid = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
+    const liste = getFamilles(cid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+    enfantsPresents = liste.length;
   } catch(e) {}
 
   const kpiEl = document.getElementById('dash-aux-kpis');
@@ -6988,7 +7551,7 @@ function applyRoleAccess() {
   const rhCard = document.getElementById('dash-dir-equipe');
   if (rhCard) rhCard.style.display = ['admin','directrice'].includes(role) ? '' : 'none';
   const tauxCard = document.getElementById('dash-dir-taux');
-  if (tauxCard) tauxCard.style.display = ['admin','directrice'].includes(role) ? '' : 'none';
+  if (tauxCard) tauxCard.style.display = 'none'; // fusionné dans dash-dir-planning
   const planningCard = document.getElementById('dash-dir-planning');
   if (planningCard) planningCard.style.display = ['admin','directrice','auxiliaire'].includes(role) ? '' : 'none';
   const famillesCard = document.getElementById('dash-aux-enfants');
@@ -7352,7 +7915,10 @@ async function hubLoadKPIs(role) {
         const chips = [];
         if (stocksBas > 0) chips.push(`<div class="hub-s-chip warn">⚠ ${stocksBas} stock${stocksBas>1?'s':''} bas</div>`);
         else chips.push('<div class="hub-s-chip ok">✓ Stocks OK</div>');
-        chips.push(`<div class="hub-s-chip ok">\u2713 Ratio \u00e0 v\u00e9rifier dans Structures</div>`);
+        if (vaccLate > 0) chips.push(`<div class="hub-s-chip warn" style="background:#FBEAEA;color:#C0392B;border-color:#F0C8C3">⚠ ${vaccLate} vaccin${vaccLate>1?'s':''} en retard</div>`);
+        if (vaccSoon > 0) chips.push(`<div class="hub-s-chip warn">🔔 ${vaccSoon} rappel${vaccSoon>1?'s':''} ce mois</div>`);
+        if (!vaccLate && !vaccSoon) chips.push('<div class="hub-s-chip ok">✓ Vaccins à jour</div>');
+        chips.push(`<div class="hub-s-chip ok">\u2713 Ratio à vérifier dans Structures</div>`);
         alertsEl.innerHTML = chips.join('');
       }
     } else {
@@ -8589,8 +9155,6 @@ document.addEventListener('fullscreenchange', _syncFullscreenBtn);
 document.addEventListener('webkitfullscreenchange', _syncFullscreenBtn);
 
 function showPage(page, btn) {
-  // Masquer le hub-screen si visible (évite que z-index:9990 cache le contenu)
-  hideHub();
   currentPage = page;
   ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
@@ -9914,7 +10478,8 @@ const RH_TABLES = new Set([
   'utilisateurs','recrutements','contrats','conges',
   'formations_rh','documents_rh','stagiaires','planning','pointages','pointages_enfants',
   'enfants','berceaux','salaries','planning_semaines','parametres',
-  'transmissions','menus'
+  'transmissions','menus',
+  'vaccins_ref','vaccinations_enfant'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -11068,8 +11633,8 @@ function peGetMonday() {
 }
 
 function peGoWeek(dir) {
-  if (dir === 0) { peWeekOffset = 0; peGanttDay = -1; peGanttDay2 = -1; }
-  else { peWeekOffset += dir; peGanttDay = -1; peGanttDay2 = -1; }
+  if (dir === 0) { peWeekOffset = 0; peGanttDay = -1; }
+  else { peWeekOffset += dir; peGanttDay = 0; }
   renderActiveTab();
 }
 
