@@ -12029,132 +12029,141 @@ function ikGenerate() {
   });
   totalEur = Math.round(totalEur*100)/100;
 
-  const S = {
-    titre: `<Style ss:ID="S_T"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="14" ss:Name="Arial" ss:Color="#FFFFFF"/><Interior ss:Color="#006400" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="3"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="3"/></Borders></Style>`,
-    hy:  `<Style ss:ID="S_HY"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="8" ss:Name="Arial"/><Interior ss:Color="#FFFF99" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
-    hy10:`<Style ss:ID="S_HY10"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="10" ss:Name="Arial"/><Interior ss:Color="#FFFF99" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
-    hy12:`<Style ss:ID="S_HY12"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="12" ss:Name="Arial"/><Interior ss:Color="#FFFF99" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders><NumberFormat ss:Format="0.000"/></Style>`,
-    bl:  `<Style ss:ID="S_BL"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="14" ss:Name="Arial"/><Interior ss:Color="#CCFFFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="2"/></Borders><NumberFormat ss:Format="#,##0.00"/></Style>`,
-    bll: `<Style ss:ID="S_BLL"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="14" ss:Name="Arial"/><Interior ss:Color="#CCFFFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="2"/></Borders></Style>`,
-    gl:  `<Style ss:ID="S_GL"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:Bold="1" ss:Size="8" ss:Name="Arial"/><Interior ss:Color="#CCFFCC" ss:Pattern="Solid"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
-    sec: `<Style ss:ID="S_SEC"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="10" ss:Name="Arial" ss:Color="#FF0000"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
-    dat: `<Style ss:ID="S_DAT"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Size="8" ss:Name="Arial"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
-    datl:`<Style ss:ID="S_DATL"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Font ss:Size="8" ss:Name="Arial"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
-    mnt: `<Style ss:ID="S_MNT"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="8" ss:Name="Arial" ss:Color="#FF0000"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders><NumberFormat ss:Format="#,##0.00"/></Style>`,
-    tot: `<Style ss:ID="S_TOT"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="9" ss:Name="Arial"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="2"/></Borders></Style>`,
-    totm:`<Style ss:ID="S_TOTM"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="9" ss:Name="Arial" ss:Color="#FF0000"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="2"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="2"/></Borders><NumberFormat ss:Format="#,##0.00"/></Style>`,
-    vs:  `<Style ss:ID="S_VS"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="8" ss:Name="Arial"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
-    vsb: `<Style ss:ID="S_VSB"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Size="9" ss:Name="Arial"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>`,
-  };
+  // Export ExcelJS avec styles complets
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('FDEPvi');
 
-  const dataXml = rows.map(r=>`
-    <Row ss:Height="16">
-      <Cell ss:StyleID="S_DAT"><Data ss:Type="String">${fmtD(r.date)}</Data></Cell>
-      <Cell ss:StyleID="S_DATL"><Data ss:Type="String">${r.trajet}</Data></Cell>
-      <Cell ss:StyleID="S_DAT"><Data ss:Type="Number">${r.nbr}</Data></Cell>
-      <Cell ss:StyleID="S_DAT"><Data ss:Type="Number">${r.km}</Data></Cell>
-      <Cell ss:StyleID="S_DAT"><Data ss:Type="Number">${r.nbKm}</Data></Cell>
-      <Cell/>
-      <Cell ss:StyleID="S_MNT"><Data ss:Type="Number">${r.mont}</Data></Cell>
-    </Row>`).join('');
+  ws.columns = [
+    {width:14},{width:24},{width:12},{width:12},{width:12},{width:5},{width:14}
+  ];
 
-  // Export XLSX via SheetJS
-  const wb = XLSX.utils.book_new();
-  const wsData = [];
-
-  // Styles via cellule object
-  const mkCell = (v, t, style) => ({ v, t: t||'s', s: style||{} });
-
-  const GREEN  = { fgColor: { rgb: '006400' } };
-  const YELLOW = { fgColor: { rgb: 'FFFF99' } };
-  const BLUE   = { fgColor: { rgb: 'CCFFFF' } };
-  const LGREEN = { fgColor: { rgb: 'CCFFCC' } };
-  const WHITE  = {};
-
-  const bold = (sz) => ({ bold: true, sz: sz||9, name: 'Arial' });
-  const norm = (sz) => ({ sz: sz||9, name: 'Arial' });
-
-  function cell(v, bg, font, numFmt, halign) {
-    return {
-      v, t: typeof v === 'number' ? 'n' : 's',
-      s: {
-        fill: bg ? { patternType:'solid', fgColor: bg } : undefined,
-        font: font || norm(9),
-        alignment: { horizontal: halign||'center', vertical:'center', wrapText: true },
-        numFmt: numFmt || undefined,
-        border: {
-          top:    { style:'thin', color:{rgb:'000000'} },
-          bottom: { style:'thin', color:{rgb:'000000'} },
-          left:   { style:'thin', color:{rgb:'000000'} },
-          right:  { style:'thin', color:{rgb:'000000'} }
-        }
-      }
-    };
+  function styleCell(cell, opts) {
+    if (opts.bg)   cell.fill   = { type:'pattern', pattern:'solid', fgColor:{argb: opts.bg} };
+    if (opts.bold || opts.sz || opts.color) cell.font = { bold:!!opts.bold, size: opts.sz||9, name:'Arial', color:{ argb: opts.color||'FF000000' } };
+    cell.alignment = { horizontal: opts.align||'center', vertical:'middle', wrapText:true };
+    if (opts.border !== false) {
+      const b = { style:'thin', color:{argb:'FF000000'} };
+      const thick = { style:'medium', color:{argb:'FF000000'} };
+      const bord = opts.thick ? thick : b;
+      cell.border = { top:bord, bottom:bord, left:bord, right:bord };
+    }
+    if (opts.fmt) cell.numFmt = opts.fmt;
   }
 
-  // Ligne titre
-  wsData.push([cell('C3F      Frais de déplacements            C3F', GREEN, { bold:true, sz:14, name:'Arial', color:{rgb:'FFFFFF'} })]);
-  wsData.push([]);
-  // Ligne salarié + période
-  wsData.push([
-    cell('Salarié', YELLOW, bold(8)),
-    cell(salarie, YELLOW, bold(10)),
-    cell(''), cell(''),
-    cell('Période du', YELLOW, bold(8)),
-    cell(fmtD(firstDay), YELLOW, bold(8)),
-    cell('au', YELLOW, bold(8)),
-  ]);
-  wsData.push([cell(fmtD(lastDay), YELLOW, bold(8)), cell(''), cell(''), cell(''), cell(''), cell(''), cell(totalEur, BLUE, bold(14), '#,##0.00')]);
-  wsData.push([]);
-  wsData.push([cell(totalEur, undefined, { bold:true, sz:11, name:'Arial', color:{rgb:'FF0000'} }, '#,##0.00')]);
-  wsData.push([]);
-  // En-têtes colonnes
-  wsData.push([
-    cell('Date', LGREEN, bold(8)),
-    cell('Trajet', LGREEN, bold(8)),
-    cell('Nb trajets', LGREEN, bold(8)),
-    cell('km/trajet', LGREEN, bold(8)),
-    cell('Nb KM', LGREEN, bold(8)),
-    cell(''),
-    cell('Montant', LGREEN, bold(8)),
-  ]);
-  // Section
-  wsData.push([cell(' FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D\'UN DOSSIER', undefined, { bold:true, sz:10, name:'Arial', color:{rgb:'FF0000'} })]);
-  // Données
-  rows.forEach(r => {
-    wsData.push([
-      cell(fmtD(r.date), undefined, norm(8)),
-      cell(r.trajet, undefined, { ...norm(8), ...{} }, undefined, 'left'),
-      cell(r.nbr, undefined, norm(8)),
-      cell(r.km, undefined, norm(8)),
-      cell(r.nbKm, undefined, norm(8)),
-      cell(''),
-      cell(r.mont, undefined, { bold:true, sz:8, name:'Arial', color:{rgb:'FF0000'} }, '#,##0.00'),
-    ]);
+  // Ligne 1 — Titre vert
+  ws.mergeCells('A1:G1');
+  const t1 = ws.getCell('A1');
+  t1.value = 'C3F      Frais de déplacements            C3F';
+  styleCell(t1, { bg:'FF006400', bold:true, sz:14, color:'FFFFFFFF' });
+  ws.getRow(1).height = 22;
+
+  // Ligne 2 — vide
+  ws.getRow(2).height = 6;
+
+  // Ligne 3 — Salarié + période (jaune)
+  ws.getRow(3).height = 20;
+  const yOpts = { bg:'FFFFFF99', bold:true, sz:8 };
+  const r3cells = [
+    ['A3','Salarié'], ['B3',salarie], ['C3',''], ['D3',''],
+    ['E3','Période du'], ['F3',fmtD(firstDay)], ['G3','au']
+  ];
+  r3cells.forEach(([addr,val])=>{ const c=ws.getCell(addr); c.value=val; styleCell(c,yOpts); });
+
+  // Ligne 4 — date fin + total (bleu)
+  ws.getRow(4).height = 20;
+  ['A4','B4','C4','D4','E4','F4'].forEach(addr=>{ const c=ws.getCell(addr); c.value=''; styleCell(c,yOpts); });
+  const dateFinCell = ws.getCell('A4');
+  dateFinCell.value = fmtD(lastDay);
+  const totalCell = ws.getCell('G4');
+  totalCell.value = totalEur;
+  styleCell(totalCell, { bg:'FFCCFFFF', bold:true, sz:14, fmt:'#,##0.00', thick:true });
+
+  // Ligne 5 — vide
+  ws.getRow(5).height = 6;
+
+  // Ligne 6 — sous-total rouge
+  ws.getRow(6).height = 16;
+  const stCell = ws.getCell('A6');
+  stCell.value = totalEur;
+  styleCell(stCell, { color:'FFFF0000', bold:true, sz:11, fmt:'#,##0.00', border:false });
+
+  // Ligne 7 — vide
+  ws.getRow(7).height = 5;
+
+  // Ligne 8 — en-têtes colonnes (vert clair)
+  ws.getRow(8).height = 20;
+  const headers = ['Date','Trajet','Nb trajets','km/trajet','Nb KM','','Montant'];
+  const hAddrs = ['A8','B8','C8','D8','E8','F8','G8'];
+  headers.forEach((h,i) => {
+    const c = ws.getCell(hAddrs[i]);
+    c.value = h;
+    styleCell(c, { bg:'FFCCFFCC', bold:true, sz:8 });
   });
-  // Total
-  wsData.push([
-    cell('TOTAL', undefined, bold(9)), cell(''), cell(''), cell(''), cell(''), cell(''),
-    cell(totalEur, undefined, { bold:true, sz:9, name:'Arial', color:{rgb:'FF0000'} }, '#,##0.00')
-  ]);
-  wsData.push([]);
+
+  // Ligne 9 — section rouge
+  ws.getRow(9).height = 18;
+  ws.mergeCells('A9:G9');
+  const secCell = ws.getCell('A9');
+  secCell.value = ' FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D\'UN DOSSIER';
+  styleCell(secCell, { color:'FFFF0000', bold:true, sz:10 });
+
+  // Lignes de données
+  rows.forEach((r, i) => {
+    const rowNum = 10 + i;
+    ws.getRow(rowNum).height = 16;
+    const vals = [fmtD(r.date), r.trajet, r.nbr, r.km, r.nbKm, '', r.mont];
+    const aligns = ['center','left','center','center','center','center','center'];
+    const fmts = [null, null, null, null, null, null, '#,##0.00'];
+    vals.forEach((v, ci) => {
+      const c = ws.getRow(rowNum).getCell(ci+1);
+      c.value = v;
+      styleCell(c, { sz:8, align: aligns[ci], fmt: fmts[ci]||undefined,
+        ...(ci===6 ? { bold:true, color:'FFFF0000' } : {}) });
+    });
+  });
+
+  // Ligne TOTAL
+  const totRow = 10 + rows.length;
+  ws.getRow(totRow).height = 18;
+  ws.mergeCells(`A${totRow}:F${totRow}`);
+  const totLbl = ws.getCell(`A${totRow}`);
+  totLbl.value = 'TOTAL';
+  styleCell(totLbl, { bold:true, sz:9, thick:true });
+  const totMnt = ws.getCell(`G${totRow}`);
+  totMnt.value = totalEur;
+  styleCell(totMnt, { bold:true, sz:9, color:'FFFF0000', fmt:'#,##0.00', thick:true });
+
+  ws.getRow(totRow+1).height = 10;
+
   // Visa
-  wsData.push([
-    cell('VISA ENTREPRISE', undefined, bold(8)), cell(''), cell(''),
-    cell('MOIS DE PAIE', undefined, bold(8)), cell(''), cell(''),
-    cell('VISA SALARIE', undefined, bold(8))
-  ]);
-  wsData.push([
-    cell('', undefined, bold(9)), cell(''), cell(''),
-    cell(monthName, undefined, bold(9)), cell(''), cell(''),
-    cell('', undefined, bold(9))
-  ]);
+  const visaRow = totRow + 2;
+  ws.getRow(visaRow).height = 18;
+  ws.mergeCells(`A${visaRow}:B${visaRow}`);
+  const ve = ws.getCell(`A${visaRow}`); ve.value='VISA ENTREPRISE'; styleCell(ve,{bold:true,sz:8});
+  ws.mergeCells(`D${visaRow}:E${visaRow}`);
+  const mp = ws.getCell(`D${visaRow}`); mp.value='MOIS DE PAIE'; styleCell(mp,{bold:true,sz:8});
+  ws.mergeCells(`F${visaRow}:G${visaRow}`);
+  const vs = ws.getCell(`F${visaRow}`); vs.value='VISA SALARIE'; styleCell(vs,{bold:true,sz:8});
 
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [{wch:14},{wch:22},{wch:11},{wch:11},{wch:11},{wch:5},{wch:14}];
+  const visaRow2 = visaRow + 1;
+  ws.getRow(visaRow2).height = 18;
+  ws.mergeCells(`A${visaRow2}:B${visaRow2}`);
+  styleCell(ws.getCell(`A${visaRow2}`),{bold:true,sz:9});
+  ws.mergeCells(`D${visaRow2}:E${visaRow2}`);
+  const mpv = ws.getCell(`D${visaRow2}`); mpv.value=monthName; styleCell(mpv,{bold:true,sz:9});
+  ws.mergeCells(`F${visaRow2}:G${visaRow2}`);
+  styleCell(ws.getCell(`F${visaRow2}`),{bold:true,sz:9});
 
-  XLSX.utils.book_append_sheet(wb, ws, 'FDEPvi');
-  XLSX.writeFile(wb, `JUSTIF_IK_${month}.xlsx`);
+  // Freeze row 9
+  ws.views = [{ state:'frozen', ySplit:9 }];
+
+  wb.xlsx.writeBuffer().then(buf => {
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=`JUSTIF_IK_${month}.xlsx`; a.click();
+    URL.revokeObjectURL(url);
+  });
 }
 
 
@@ -13613,6 +13622,7 @@ async function enregistrerPointage(type) {
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 
 <script>
 // ── IMPORT EXCEL ──────────────────────────────────────────────────────────
