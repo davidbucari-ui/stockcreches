@@ -6975,6 +6975,7 @@ async function renderDashboardDirectrice(dateStr) {
       return;
     }
     const famCid = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
+    const cid = famCid;
     let weekData = { creneaux: [] };
     try { weekData = peGetWeek(cid); } catch(e) {}
 
