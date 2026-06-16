@@ -1767,7 +1767,7 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="fiche-card">
             <div class="fiche-card-title">Contrat d'accueil</div>
             <div class="fi-row">
-              <div class="fi-field"><label>Crèche *</label><select id="fi-creche"></select></div>
+              <div class="fi-field"><label>Crèche *</label><select id="fi-creche" onchange="syncContratFromCreche()"></select></div>
               <div class="fi-field"><label>Berceau entreprise</label><select id="fi-berceau"></select></div>
             </div>
             <div class="fi-row">
@@ -5101,6 +5101,7 @@ function openFicheEnfant(id) {
   if (divLabel && e.frais_divers_label) divLabel.value = e.frais_divers_label;
   calcHorairesTotaux();
   syncTauxCafToTarif();
+  syncContratFromCreche();
 
   // Onglet Notes
   setV('fi-allergies', e.allergies); setV('fi-medecin', e.medecin);
@@ -5515,7 +5516,20 @@ function calcHorairesTotaux() {
     </div>` : ''}`;
 }
 
-function syncTauxCafToTarif() {
+function syncContratFromCreche() {
+  const creche = document.getElementById('fi-creche')?.value;
+  const mode = getModeFinancement(creche);
+  if (!mode) return;
+  const sel = document.getElementById('fi-contrat-caf');
+  if (!sel) return;
+  sel.value = mode;
+  // Indiquer visuellement que le champ est verrouillé par le mode crèche
+  sel.style.borderColor = mode === 'PSU' ? '#6D28D9' : '#B45309';
+  sel.title = 'Mode ' + mode + ' défini dans les paramètres de la crèche';
+  syncTauxCafToTarif();
+}
+
+function renderReferents() {
   const contrat = document.getElementById('fi-contrat-caf')?.value;
   const tarifEl = document.getElementById('fi-tarif-heure');
   const tauxRaw = document.getElementById('fi-taux-caf')?.value || '';
@@ -6959,16 +6973,29 @@ function renderParametres() {
     ).join('');
   }
 
-  list.innerHTML = CRECHES_DATA.map((c, i) => `
-    <div style="background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px">
+  list.innerHTML = CRECHES_DATA.map((c, i) => {
+    const mode = c.mode_financement || 'PSU';
+    return `
+    <div style="background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="width:32px;height:32px;border-radius:50%;background:${c.color};flex-shrink:0;cursor:pointer" onclick="document.getElementById('color-picker-${i}').click()" title="Changer la couleur"></div>
       <input type="color" id="color-picker-${i}" value="${c.color}" style="display:none" onchange="changerCouleur(${i}, this.value)">
       <input type="text" value="${c.nom}" id="creche-nom-${i}"
-        style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;background:var(--bg)"
+        style="flex:1;min-width:120px;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit;outline:none;background:var(--bg)"
         onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
         onchange="changerNom(${i}, this.value)">
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button onclick="changerModeFinancement(${i},'PSU')"
+          style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:2px solid ${mode==='PSU'?'#6D28D9':'var(--border)'};background:${mode==='PSU'?'#EDE9FE':'var(--surface2)'};color:${mode==='PSU'?'#6D28D9':'var(--ink3)'}">
+          PSU
+        </button>
+        <button onclick="changerModeFinancement(${i},'PAJE')"
+          style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:2px solid ${mode==='PAJE'?'#B45309':'var(--border)'};background:${mode==='PAJE'?'#FEF3C7':'var(--surface2)'};color:${mode==='PAJE'?'#B45309':'var(--ink3)'}">
+          PAJE
+        </button>
+      </div>
       <button onclick="supprimerCreche(${i})" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:18px;padding:4px" title="Supprimer">🗑</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   if (typeof renderPlanningParamHoraires === 'function') renderPlanningParamHoraires();
 }
 
@@ -7034,6 +7061,18 @@ function changerCouleur(i, color) {
   renderParametres();
   renderSidebarCreches();
   showNotif('✅ Couleur mise à jour');
+}
+
+function changerModeFinancement(i, mode) {
+  CRECHES_DATA[i].mode_financement = mode;
+  sauverCreches();
+  renderParametres();
+  showNotif('✅ Mode ' + mode + ' enregistré pour ' + CRECHES_DATA[i].nom);
+}
+
+function getModeFinancement(crecheNom) {
+  const c = (CRECHES_DATA || []).find(x => x.nom === crecheNom);
+  return c ? (c.mode_financement || 'PSU') : null;
 }
 
 function ajouterCreche() {
