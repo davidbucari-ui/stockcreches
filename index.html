@@ -5074,6 +5074,7 @@ function openFicheEnfant(id) {
   setV('fi-heures-mois', e.heures_mois || Math.round((e.heures||0)*52/12));
   const joursCbs = document.querySelectorAll('#fi-jours-presence input');
   joursCbs.forEach(cb => { cb.checked = (e.jours_presence||[]).includes(parseInt(cb.value)); });
+  syncJoursCount(); // sync le compteur avec les cases cochées
 
   // Onglet Notes
   setV('fi-allergies', e.allergies); setV('fi-medecin', e.medecin);
