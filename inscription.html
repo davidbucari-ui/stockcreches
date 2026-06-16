@@ -645,17 +645,11 @@
 
     <div class="card">
       <div class="card-title">Horaires habituels</div>
-      <div class="row">
-        <div class="field">
-          <label>Heure d'arrivée habituelle</label>
-          <input type="time" id="a-heure-arrivee" value="08:00">
-        </div>
-        <div class="field">
-          <label>Heure de départ habituelle</label>
-          <input type="time" id="a-heure-depart" value="18:00">
-        </div>
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Indiquez les horaires d'arrivée et de départ pour chaque jour sélectionné ci-dessus.</p>
+      <div id="horaires-par-jour">
+        <div style="color:var(--ink3);font-size:13px;padding:8px 0">Sélectionnez d'abord les jours de présence ci-dessus.</div>
       </div>
-      <div class="row solo">
+      <div class="row solo" style="margin-top:14px">
         <div class="field">
           <label>Informations complémentaires</label>
           <textarea id="a-notes" rows="3" placeholder="Besoins particuliers, contraintes horaires..."></textarea>
@@ -826,6 +820,8 @@ function renderReferentForms() {
 }
 
 // ── Jours ───────────────────────────────────────────────
+const JOURS_NOMS_INS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+
 function toggleJour(btn) {
   btn.classList.toggle('selected');
   const j = parseInt(btn.dataset.jour);
@@ -833,6 +829,66 @@ function toggleJour(btn) {
     if (!joursSelectionnes.includes(j)) joursSelectionnes.push(j);
   } else {
     joursSelectionnes = joursSelectionnes.filter(x => x !== j);
+  }
+  renderHorairesInscription();
+}
+
+function renderHorairesInscription() {
+  const el = document.getElementById('horaires-par-jour');
+  if (!el) return;
+  const sorted = [...joursSelectionnes].sort();
+  if (!sorted.length) {
+    el.innerHTML = '<div style="color:#8A8580;font-size:13px;padding:8px 0">Sélectionnez d\'abord les jours de présence ci-dessus.</div>';
+    return;
+  }
+  // Préserver les valeurs existantes
+  const prev = {};
+  sorted.forEach(j => {
+    const d = document.getElementById('ins-debut-'+j);
+    const f = document.getElementById('ins-fin-'+j);
+    if (d) prev[j] = { debut: d.value, fin: f ? f.value : '' };
+  });
+
+  const inpStyle = 'width:100%;padding:8px 10px;border:1px solid #E3DED7;border-radius:9px;font-size:14px;font-family:inherit;background:#F0EDE8;color:#1C1917';
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:90px 1fr 1fr 70px;gap:10px;padding-bottom:6px;border-bottom:2px solid #E3DED7;margin-bottom:4px">
+      <div style="font-size:10px;font-weight:700;color:#8A8580;text-transform:uppercase">Jour</div>
+      <div style="font-size:10px;font-weight:700;color:#8A8580;text-transform:uppercase">Arrivée</div>
+      <div style="font-size:10px;font-weight:700;color:#8A8580;text-transform:uppercase">Départ</div>
+      <div style="font-size:10px;font-weight:700;color:#8A8580;text-transform:uppercase;text-align:center">Total</div>
+    </div>` +
+    sorted.map(j => {
+      const debut = prev[j]?.debut || '08:00';
+      const fin   = prev[j]?.fin   || '17:00';
+      return `<div style="display:grid;grid-template-columns:90px 1fr 1fr 70px;gap:10px;align-items:end;padding:8px 0;border-bottom:1px solid #E3DED7">
+        <div style="font-size:13px;font-weight:600;padding-bottom:4px">${JOURS_NOMS_INS[j]}</div>
+        <div><label style="font-size:10.5px;font-weight:700;color:#8A8580;text-transform:uppercase;display:block;margin-bottom:4px">Arrivée</label>
+          <input type="time" id="ins-debut-${j}" value="${debut}" oninput="updateTotalJour(${j})" style="${inpStyle}"></div>
+        <div><label style="font-size:10.5px;font-weight:700;color:#8A8580;text-transform:uppercase;display:block;margin-bottom:4px">Départ</label>
+          <input type="time" id="ins-fin-${j}" value="${fin}" oninput="updateTotalJour(${j})" style="${inpStyle}"></div>
+        <div style="text-align:center">
+          <div style="font-size:9px;font-weight:700;color:#8A8580;text-transform:uppercase;margin-bottom:4px">Total</div>
+          <div id="ins-total-${j}" style="font-size:15px;font-weight:800">—</div>
+        </div>
+      </div>`;
+    }).join('');
+
+  sorted.forEach(j => updateTotalJour(j));
+}
+
+function updateTotalJour(j) {
+  const debut = document.getElementById('ins-debut-'+j)?.value;
+  const fin   = document.getElementById('ins-fin-'+j)?.value;
+  const el    = document.getElementById('ins-total-'+j);
+  if (!el) return;
+  if (debut && fin) {
+    const [dh,dm] = debut.split(':').map(Number);
+    const [fh,fm] = fin.split(':').map(Number);
+    const mins = (fh*60+fm)-(dh*60+dm);
+    if (mins > 0) {
+      const h = Math.floor(mins/60), m = mins%60;
+      el.textContent = h+'h'+(m ? String(m).padStart(2,'0') : '');
+    } else { el.textContent = '—'; }
   }
 }
 
@@ -920,6 +976,15 @@ function telecharger() {
       jours: parseInt(v('a-jours')) || 5,
       heures: parseInt(v('a-heures')) || 40,
       jours_presence: joursSelectionnes,
+      horaires_detail: (() => {
+        const h = {};
+        joursSelectionnes.forEach(j => {
+          const debut = document.getElementById('ins-debut-'+j)?.value;
+          const fin   = document.getElementById('ins-fin-'+j)?.value;
+          if (debut || fin) h[j] = { debut: debut||'', fin: fin||'' };
+        });
+        return h;
+      })(),
       notes_libres: v('a-notes'),
     },
     parent1: {
