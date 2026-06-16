@@ -6881,11 +6881,9 @@ async function renderDashboardDirectrice(dateStr) {
 
   let enfantsPresents = '—';
   try {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const pts = await sbGet('pointages_enfants',
-      'date=eq.'+todayStr+'&statut=eq.present&select=id' + (currentCreche !== 'all' ? '&creche=eq.'+encodeURIComponent(currentCreche) : '')
-    ).catch(() => []);
-    enfantsPresents = pts.length;
+    const cid = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
+    const liste = getFamilles(cid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+    enfantsPresents = liste.length;
   } catch(e) {}
 
   const kpiEl = document.getElementById('dash-dir-kpis');
@@ -6993,11 +6991,9 @@ async function renderDashboardAuxiliaire(dateStr) {
 
   let enfantsPresents = '—';
   try {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const pts = await sbGet('pointages_enfants',
-      'date=eq.'+todayStr+'&statut=eq.present&select=id' + (currentCreche !== 'all' ? '&creche=eq.'+encodeURIComponent(currentCreche) : '')
-    ).catch(() => []);
-    enfantsPresents = pts.length;
+    const cid = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
+    const liste = getFamilles(cid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+    enfantsPresents = liste.length;
   } catch(e) {}
 
   const kpiEl = document.getElementById('dash-aux-kpis');
