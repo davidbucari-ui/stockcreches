@@ -6956,8 +6956,24 @@ async function renderDashboardDirectrice(dateStr) {
     const monday = new Date(todayDate);
     monday.setDate(todayDate.getDate() - (todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1));
 
-    // Planning équipe de la semaine
-    const cid = (currentCreche && currentCreche !== 'all') ? currentCreche : (CRECHES_DATA?.[0]?.nom || '');
+    // Mode "Toutes les crèches" → message orienteur
+    if (!currentCreche || currentCreche === 'all') {
+      const totalEnfants = getFamilles('__all__').filter(e => !e.sortie || new Date(e.sortie) >= new Date()).length;
+      planEl.innerHTML =
+        '<div style="font-size:13px;font-weight:700;margin-bottom:12px">📅 Encadrement · semaine en cours</div>' +
+        '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center">' +
+          '<div style="font-size:28px;font-weight:800;font-family:Syne,sans-serif;margin-bottom:4px">' + totalEnfants + '</div>' +
+          '<div style="font-size:12px;color:var(--ink3);margin-bottom:14px">enfants inscrits sur le réseau</div>' +
+          '<div style="font-size:12.5px;color:var(--ink2);margin-bottom:14px">Sélectionnez une crèche dans la sidebar pour voir<br>le détail de l\'encadrement jour par jour.</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">' +
+            (CRECHES_DATA || []).map(c =>
+              '<button onclick="filterCreche(\'' + c.nom + '\', null)" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">' + c.nom + '</button>'
+            ).join('') +
+          '</div>' +
+        '</div>' +
+        '<button onclick="showPage(\'planning\', document.querySelector(\'.nav-item[onclick*=planning]\'))" style="width:100%;margin-top:12px;padding:7px;background:none;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Planning complet →</button>';
+      return;
+    }
     const famCid = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
     let weekData = { creneaux: [] };
     try { weekData = peGetWeek(cid); } catch(e) {}
