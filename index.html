@@ -11068,8 +11068,8 @@ function peGetMonday() {
 }
 
 function peGoWeek(dir) {
-  if (dir === 0) { peWeekOffset = 0; peGanttDay = -1; }
-  else { peWeekOffset += dir; peGanttDay = 0; }
+  if (dir === 0) { peWeekOffset = 0; peGanttDay = -1; peGanttDay2 = -1; }
+  else { peWeekOffset += dir; peGanttDay = -1; peGanttDay2 = -1; }
   renderActiveTab();
 }
 
