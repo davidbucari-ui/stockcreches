@@ -12058,69 +12058,103 @@ function ikGenerate() {
       <Cell ss:StyleID="S_MNT"><Data ss:Type="Number">${r.mont}</Data></Cell>
     </Row>`).join('');
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:x="urn:schemas-microsoft-com:office:excel">
-<Styles>${Object.values(S).join('')}</Styles>
-<Worksheet ss:Name="FDEPvi">
-<x:WorksheetOptions><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>9</x:SplitHorizontal><x:TopRowBottomPane>9</x:TopRowBottomPane><x:ActivePane>2</x:ActivePane></x:WorksheetOptions>
-<Table>
-  <Column ss:Width="90"/><Column ss:Width="150"/><Column ss:Width="75"/><Column ss:Width="75"/><Column ss:Width="75"/><Column ss:Width="30"/><Column ss:Width="105"/>
-  <Row ss:Height="22"><Cell ss:StyleID="S_T" ss:MergeAcross="6"><Data ss:Type="String">C3F      Frais de déplacements            C3F</Data></Cell></Row>
-  <Row ss:Height="6"/>
-  <Row ss:Height="25">
-    <Cell ss:StyleID="S_HY"><Data ss:Type="String">N°</Data></Cell>
-    <Cell ss:StyleID="S_HY10" ss:MergeAcross="2"><Data ss:Type="String">${salarie}</Data></Cell>
-    <Cell ss:StyleID="S_HY10" ss:MergeAcross="1"><Data ss:Type="String">Période</Data></Cell>
-    <Cell/>
-    <Cell ss:StyleID="S_BLL"><Data ss:Type="String">TOTAL</Data></Cell>
-  </Row>
-  <Row ss:Height="25">
-    <Cell ss:StyleID="S_HY"><Data ss:Type="String">Barème KM</Data></Cell>
-    <Cell ss:StyleID="S_HY12"><Data ss:Type="Number">${bareme}</Data></Cell>
-    <Cell ss:StyleID="S_HY"><Data ss:Type="String">du</Data></Cell>
-    <Cell ss:StyleID="S_HY"><Data ss:Type="String">${fmtD(firstDay)}</Data></Cell>
-    <Cell ss:StyleID="S_HY"><Data ss:Type="String">au</Data></Cell>
-    <Cell ss:StyleID="S_HY"><Data ss:Type="String">${fmtD(lastDay)}</Data></Cell>
-    <Cell ss:StyleID="S_BL"><Data ss:Type="Number">${totalEur}</Data></Cell>
-  </Row>
-  <Row ss:Height="6"/>
-  <Row ss:Height="14"><Cell/><Cell/><Cell/><Cell/><Cell/><Cell/><Cell ss:StyleID="S_MNT"><Data ss:Type="Number">${totalEur}</Data></Cell></Row>
-  <Row ss:Height="5"/>
-  <Row ss:Height="20">
-    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Date</Data></Cell>
-    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Trajet</Data></Cell>
-    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Nb trajets</Data></Cell>
-    <Cell ss:StyleID="S_GL"><Data ss:Type="String">km/trajet</Data></Cell>
-    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Nb KM</Data></Cell>
-    <Cell/>
-    <Cell ss:StyleID="S_GL"><Data ss:Type="String">Montant</Data></Cell>
-  </Row>
-  <Row ss:Height="22"><Cell ss:StyleID="S_SEC" ss:MergeAcross="6"><Data ss:Type="String"> FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D'UN DOSSIER</Data></Cell></Row>
-  ${dataXml}
-  <Row ss:Height="16"><Cell ss:StyleID="S_TOT" ss:MergeAcross="5"><Data ss:Type="String">TOTAL</Data></Cell><Cell ss:StyleID="S_TOTM"><Data ss:Type="Number">${totalEur}</Data></Cell></Row>
-  <Row ss:Height="10"/>
-  <Row ss:Height="18">
-    <Cell ss:StyleID="S_VS" ss:MergeAcross="1"><Data ss:Type="String">VISA ENTREPRISE</Data></Cell>
-    <Cell/><Cell ss:StyleID="S_VS" ss:MergeAcross="1"><Data ss:Type="String">MOIS DE PAIE</Data></Cell>
-    <Cell/><Cell/>
-    <Cell ss:StyleID="S_VS" ss:MergeAcross="1"><Data ss:Type="String">VISA SALARIE</Data></Cell>
-  </Row>
-  <Row ss:Height="18">
-    <Cell ss:StyleID="S_VSB" ss:MergeAcross="1"/>
-    <Cell/><Cell ss:StyleID="S_VSB" ss:MergeAcross="1"><Data ss:Type="String">${monthName}</Data></Cell>
-    <Cell/><Cell/>
-    <Cell ss:StyleID="S_VSB" ss:MergeAcross="1"/>
-  </Row>
-</Table>
-</Worksheet>
-</Workbook>`;
+  // Export XLSX via SheetJS
+  const wb = XLSX.utils.book_new();
+  const wsData = [];
 
-  const blob = new Blob(['\uFEFF'+xml], {type:'application/vnd.ms-excel;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download=`JUSTIF_IK_${month}.xml`; a.click();
-  URL.revokeObjectURL(url);
+  // Styles via cellule object
+  const mkCell = (v, t, style) => ({ v, t: t||'s', s: style||{} });
+
+  const GREEN  = { fgColor: { rgb: '006400' } };
+  const YELLOW = { fgColor: { rgb: 'FFFF99' } };
+  const BLUE   = { fgColor: { rgb: 'CCFFFF' } };
+  const LGREEN = { fgColor: { rgb: 'CCFFCC' } };
+  const WHITE  = {};
+
+  const bold = (sz) => ({ bold: true, sz: sz||9, name: 'Arial' });
+  const norm = (sz) => ({ sz: sz||9, name: 'Arial' });
+
+  function cell(v, bg, font, numFmt, halign) {
+    return {
+      v, t: typeof v === 'number' ? 'n' : 's',
+      s: {
+        fill: bg ? { patternType:'solid', fgColor: bg } : undefined,
+        font: font || norm(9),
+        alignment: { horizontal: halign||'center', vertical:'center', wrapText: true },
+        numFmt: numFmt || undefined,
+        border: {
+          top:    { style:'thin', color:{rgb:'000000'} },
+          bottom: { style:'thin', color:{rgb:'000000'} },
+          left:   { style:'thin', color:{rgb:'000000'} },
+          right:  { style:'thin', color:{rgb:'000000'} }
+        }
+      }
+    };
+  }
+
+  // Ligne titre
+  wsData.push([cell('C3F      Frais de déplacements            C3F', GREEN, { bold:true, sz:14, name:'Arial', color:{rgb:'FFFFFF'} })]);
+  wsData.push([]);
+  // Ligne salarié + période
+  wsData.push([
+    cell('Salarié', YELLOW, bold(8)),
+    cell(salarie, YELLOW, bold(10)),
+    cell(''), cell(''),
+    cell('Période du', YELLOW, bold(8)),
+    cell(fmtD(firstDay), YELLOW, bold(8)),
+    cell('au', YELLOW, bold(8)),
+  ]);
+  wsData.push([cell(fmtD(lastDay), YELLOW, bold(8)), cell(''), cell(''), cell(''), cell(''), cell(''), cell(totalEur, BLUE, bold(14), '#,##0.00')]);
+  wsData.push([]);
+  wsData.push([cell(totalEur, undefined, { bold:true, sz:11, name:'Arial', color:{rgb:'FF0000'} }, '#,##0.00')]);
+  wsData.push([]);
+  // En-têtes colonnes
+  wsData.push([
+    cell('Date', LGREEN, bold(8)),
+    cell('Trajet', LGREEN, bold(8)),
+    cell('Nb trajets', LGREEN, bold(8)),
+    cell('km/trajet', LGREEN, bold(8)),
+    cell('Nb KM', LGREEN, bold(8)),
+    cell(''),
+    cell('Montant', LGREEN, bold(8)),
+  ]);
+  // Section
+  wsData.push([cell(' FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D\'UN DOSSIER', undefined, { bold:true, sz:10, name:'Arial', color:{rgb:'FF0000'} })]);
+  // Données
+  rows.forEach(r => {
+    wsData.push([
+      cell(fmtD(r.date), undefined, norm(8)),
+      cell(r.trajet, undefined, { ...norm(8), ...{} }, undefined, 'left'),
+      cell(r.nbr, undefined, norm(8)),
+      cell(r.km, undefined, norm(8)),
+      cell(r.nbKm, undefined, norm(8)),
+      cell(''),
+      cell(r.mont, undefined, { bold:true, sz:8, name:'Arial', color:{rgb:'FF0000'} }, '#,##0.00'),
+    ]);
+  });
+  // Total
+  wsData.push([
+    cell('TOTAL', undefined, bold(9)), cell(''), cell(''), cell(''), cell(''), cell(''),
+    cell(totalEur, undefined, { bold:true, sz:9, name:'Arial', color:{rgb:'FF0000'} }, '#,##0.00')
+  ]);
+  wsData.push([]);
+  // Visa
+  wsData.push([
+    cell('VISA ENTREPRISE', undefined, bold(8)), cell(''), cell(''),
+    cell('MOIS DE PAIE', undefined, bold(8)), cell(''), cell(''),
+    cell('VISA SALARIE', undefined, bold(8))
+  ]);
+  wsData.push([
+    cell('', undefined, bold(9)), cell(''), cell(''),
+    cell(monthName, undefined, bold(9)), cell(''), cell(''),
+    cell('', undefined, bold(9))
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{wch:14},{wch:22},{wch:11},{wch:11},{wch:11},{wch:5},{wch:14}];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'FDEPvi');
+  XLSX.writeFile(wb, `JUSTIF_IK_${month}.xlsx`);
 }
 
 
