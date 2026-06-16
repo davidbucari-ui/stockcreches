@@ -4231,6 +4231,16 @@ function renderHub() {
 
 // ── Storage helpers ───────────────────────────────────────────────
 function getFamilles(crecheId) {
+  if (crecheId === '__all__') {
+    const all = [];
+    (CRECHES_DATA || []).forEach(c => {
+      try {
+        const arr = JSON.parse(localStorage.getItem('orevy_familles_' + c.nom) || '[]');
+        arr.forEach(e => all.push(Object.assign({}, e, { _creche: c.nom })));
+      } catch {}
+    });
+    return dedupeById(all);
+  }
   const key = 'orevy_familles_' + (crecheId || 'all');
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
 }
@@ -4447,9 +4457,16 @@ function renderFamilles() {
     (currentCreche && currentCreche !== 'all' ? [{nom: currentCreche}] : [{nom: 'Crèche'}]);
   if (sel) {
     const cur = sel.value;
-    sel.innerHTML = crechesList.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
-    if (cur && crechesList.some(c => c.nom === cur)) sel.value = cur;
+    const totalAll = (CRECHES_DATA || []).reduce((s, c) => {
+      try { return s + JSON.parse(localStorage.getItem('orevy_familles_' + c.nom) || '[]').length; } catch { return s; }
+    }, 0);
+    sel.innerHTML = `<option value="__all__">🏘 Toutes les crèches (${totalAll})</option>` +
+      crechesList.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+    if (cur && (cur === '__all__' || crechesList.some(c => c.nom === cur))) sel.value = cur;
   }
+  // Désactiver l'ajout en mode toutes crèches
+  const addBtn = document.querySelector('#page-familles .btn-primary');
+  if (addBtn) addBtn.disabled = getCrecheId() === '__all__';
   renderFamillesKPI();
   renderFamillesList();
   renderFamillesBerceaux();
@@ -4540,7 +4557,11 @@ function renderFamillesList() {
       const sortieProche = sortieDate && (sortieDate - today) < 30*24*3600*1000 && sortieDate >= today;
       const sorti = sortieDate && sortieDate < today;
 
-      return `<div onclick="openFicheEnfant('${e.id}')"
+      const isAll = crecheId === '__all__';
+      const onclickFn = isAll
+        ? `(function(){var sel=document.getElementById('fam-creche-sel');if(sel)sel.value='${e._creche||''}';openFicheEnfant('${e.id}');})()`
+        : `openFicheEnfant('${e.id}')`;
+      return `<div onclick="${onclickFn}" 
         style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s;${sorti?'opacity:0.5':''}"
         onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'"
         onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
@@ -4558,6 +4579,7 @@ function renderFamillesList() {
           <span style="background:${cafColor.bg};color:${cafColor.text};padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">${e.contrat_caf||'—'}</span>
           ${e.berceau ? `<span style="background:#FFE4E6;color:#BE123C;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">🏢 ${e.berceau}</span>` : ''}
           ${e.jours ? `<span style="background:var(--bg);color:var(--ink3);padding:3px 9px;border-radius:10px;font-size:11px;font-weight:600">${e.jours}j/sem</span>` : ''}
+          ${(isAll && e._creche) ? `<span style="background:#E7EEE7;color:var(--accent);padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700">📍 ${e._creche}</span>` : ''}
         </div>
         ${e.notes ? `<div style="margin-top:8px;font-size:11px;color:var(--ink3);background:var(--bg);border-radius:6px;padding:6px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.notes}</div>` : ''}
       </div>`;
