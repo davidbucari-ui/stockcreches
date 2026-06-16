@@ -1697,8 +1697,8 @@ textarea { resize: vertical; min-height: 72px; }
               </div>
             </div>
             <div class="fi-row">
-              <div class="fi-field"><label>Date d'entrée</label><input id="fi-entree" type="date"></div>
-              <div class="fi-field"><label>Date de sortie prévue</label><input id="fi-sortie" type="date"></div>
+              <div class="fi-field"><label>Date d'entrée</label><input id="fi-entree" type="date" onchange="calcHorairesTotaux()"></div>
+              <div class="fi-field"><label>Date de sortie prévue</label><input id="fi-sortie" type="date" onchange="calcHorairesTotaux()"></div>
             </div>
           </div>
           <div class="fiche-card">
@@ -5458,9 +5458,31 @@ function calcHorairesTotaux() {
   const fmt = v => v ? v.toFixed(0)+' €' : '—';
   const fmtH = v => v ? v+'h' : '—';
 
+  // Durée du contrat
+  const entreeVal = document.getElementById('fi-entree')?.value;
+  const sortieVal = document.getElementById('fi-sortie')?.value;
+  let dureeStr = '', coutTotal = 0, dureeLabel = '';
+  if (entreeVal && sortieVal) {
+    const d1 = new Date(entreeVal), d2 = new Date(sortieVal);
+    const mois = Math.round((d2 - d1) / (1000*60*60*24*30.44));
+    if (mois > 0) {
+      const ans = Math.floor(mois/12), moRest = mois%12;
+      dureeLabel = (ans ? ans+'an'+(ans>1?'s':'')+' ' : '') + (moRest ? moRest+' mois' : '');
+      coutTotal = coutMois * mois;
+      dureeStr = `<div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${dureeLabel}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">durée</div>
+      </div>
+      <div style="text-align:center;${tarif?'':'opacity:.4'}">
+        <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmt(tarif?coutTotal:0)}</div>
+        <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">coût total</div>
+      </div>`;
+    }
+  }
+
   const totauxEl = document.getElementById('fi-totaux-contrat');
   if (totauxEl) totauxEl.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px;background:var(--surface2);border-radius:10px;margin-top:4px">
+    <div style="display:grid;grid-template-columns:repeat(${dureeStr ? 6 : 4},1fr);gap:10px;padding:14px;background:var(--surface2);border-radius:10px;margin-top:4px">
       <div style="text-align:center">
         <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmtH(hSemaine)}</div>
         <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">/ semaine</div>
@@ -5477,12 +5499,16 @@ function calcHorairesTotaux() {
         <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">${fmt(tarif?coutAn:0)}</div>
         <div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">coût / an</div>
       </div>
+      ${dureeStr}
     </div>
     ${tarif ? `<div style="margin-top:10px;font-size:11.5px;color:var(--ink2);line-height:1.8">
       <span style="margin-right:12px">⏱ ${hMois}h × ${tarif}€ = <b>${Math.round(coutHMois)}€</b></span>
       ${repas ? `<span style="margin-right:12px">🍽 Repas : <b>${Math.round(coutRepasMois)}€/mois</b></span>` : ''}
       ${fixes ? `<span style="margin-right:12px">📋 Fixes : <b>${fixes}€/mois</b></span>` : ''}
       ${divers ? `<span>${diversLabel} : <b>${divers}€/mois</b></span>` : ''}
+    </div>` : ''}
+    ${(entreeVal && sortieVal && tarif && coutTotal) ? `<div style="margin-top:8px;font-size:11.5px;color:var(--ink2)">
+      📅 Contrat du <b>${new Date(entreeVal).toLocaleDateString('fr-FR')}</b> au <b>${new Date(sortieVal).toLocaleDateString('fr-FR')}</b> — <b>${dureeLabel}</b> — coût total estimé : <b>${Math.round(coutTotal).toLocaleString('fr-FR')} €</b>
     </div>` : ''}`;
 }
 
