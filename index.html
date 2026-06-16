@@ -1690,7 +1690,7 @@ textarea { resize: vertical; min-height: 72px; }
                 </select>
               </div>
               <div class="fi-field"><label>Contrat CAF *</label>
-                <select id="fi-contrat-caf">
+                <select id="fi-contrat-caf" onchange="syncTauxCafToTarif()">
                   <option value="PSU">PSU — Prestation de Service Unique</option>
                   <option value="PAJE">PAJE — Prestation d'Accueil du Jeune Enfant</option>
                 </select>
@@ -1712,7 +1712,7 @@ textarea { resize: vertical; min-height: 72px; }
               <div class="fi-field"><label>Quotient familial</label><input id="fi-qf" type="text" placeholder="Ex : 1240"></div>
             </div>
             <div class="fi-row solo">
-              <div class="fi-field"><label>Taux horaire CAF</label><input id="fi-taux-caf" type="text" placeholder="Ex : 0,42 €/h"></div>
+              <div class="fi-field"><label>Taux horaire CAF</label><input id="fi-taux-caf" type="text" placeholder="Ex : 0,42 €/h" oninput="syncTauxCafToTarif()"></div>
             </div>
           </div>
         </div>
@@ -5097,6 +5097,7 @@ function openFicheEnfant(id) {
   const divLabel = document.getElementById('fi-frais-divers-label');
   if (divLabel && e.frais_divers_label) divLabel.value = e.frais_divers_label;
   calcHorairesTotaux();
+  syncTauxCafToTarif();
 
   // Onglet Notes
   setV('fi-allergies', e.allergies); setV('fi-medecin', e.medecin);
@@ -5483,6 +5484,33 @@ function calcHorairesTotaux() {
       ${fixes ? `<span style="margin-right:12px">📋 Fixes : <b>${fixes}€/mois</b></span>` : ''}
       ${divers ? `<span>${diversLabel} : <b>${divers}€/mois</b></span>` : ''}
     </div>` : ''}`;
+}
+
+function syncTauxCafToTarif() {
+  const contrat = document.getElementById('fi-contrat-caf')?.value;
+  const tarifEl = document.getElementById('fi-tarif-heure');
+  const tauxRaw = document.getElementById('fi-taux-caf')?.value || '';
+
+  if (!tarifEl) return;
+
+  if (contrat === 'PSU') {
+    // Extraire la valeur numérique du taux CAF (accepte "0,42" "0.42" "0,42€/h")
+    const num = parseFloat(tauxRaw.replace(',', '.').replace(/[^0-9.]/g, ''));
+    if (!isNaN(num) && num > 0) {
+      tarifEl.value = num;
+      tarifEl.title = 'Pré-rempli depuis le taux horaire CAF (PSU)';
+      tarifEl.style.borderColor = '#6D28D9';
+      calcHorairesTotaux();
+    } else {
+      tarifEl.placeholder = 'Auto depuis taux CAF';
+      tarifEl.style.borderColor = '';
+    }
+  } else {
+    // PAJE : champ libre, pas de pré-remplissage automatique
+    tarifEl.placeholder = '0.00';
+    tarifEl.title = '';
+    tarifEl.style.borderColor = '';
+  }
 }
 
 function renderReferents() {
