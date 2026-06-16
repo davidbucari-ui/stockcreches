@@ -12024,144 +12024,131 @@ function ikGenerate() {
   let totalEur = 0;
   const rows = active.map(r => {
     const km = dist[r.creche]!==undefined ? dist[r.creche] : 0;
-    const nbKm = r.nbr*km, mont = Math.round(nbKm*bareme*100)/100;
-    totalEur += mont; return {date:r.date,trajet:r.trajet,nbr:r.nbr,km,nbKm,mont};
+    const nbKm = r.nbr*km, mont = nbKm*bareme;
+    totalEur += mont; return {date:r.date,trajet:r.trajet,nbr:r.nbr,km,nbKm,mont:Math.round(mont*100)/100};
   });
   totalEur = Math.round(totalEur*100)/100;
 
-  // Export ExcelJS avec styles complets
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('FDEPvi');
 
-  ws.columns = [
-    {width:14},{width:24},{width:12},{width:12},{width:12},{width:5},{width:14}
-  ];
+  // Largeurs colonnes : A=12 B=26 C=11 D=11 E=11 F=5 G=14
+  ws.columns = [{width:12},{width:26},{width:11},{width:11},{width:11},{width:5},{width:14}];
 
-  function styleCell(cell, opts) {
-    if (opts.bg)   cell.fill   = { type:'pattern', pattern:'solid', fgColor:{argb: opts.bg} };
-    if (opts.bold || opts.sz || opts.color) cell.font = { bold:!!opts.bold, size: opts.sz||9, name:'Arial', color:{ argb: opts.color||'FF000000' } };
-    cell.alignment = { horizontal: opts.align||'center', vertical:'middle', wrapText:true };
-    if (opts.border !== false) {
-      const b = { style:'thin', color:{argb:'FF000000'} };
-      const thick = { style:'medium', color:{argb:'FF000000'} };
-      const bord = opts.thick ? thick : b;
-      cell.border = { top:bord, bottom:bord, left:bord, right:bord };
-    }
-    if (opts.fmt) cell.numFmt = opts.fmt;
+  function bc(bg, fontColor, bold, sz) {
+    return {
+      fill: bg ? {type:'pattern',pattern:'solid',fgColor:{argb:bg}} : undefined,
+      font: {bold:!!bold, size:sz||9, name:'Arial', color:{argb: fontColor||'FF000000'}},
+      alignment: {horizontal:'center', vertical:'middle', wrapText:false},
+      border: {
+        top:{style:'thin',color:{argb:'FF000000'}},
+        bottom:{style:'thin',color:{argb:'FF000000'}},
+        left:{style:'thin',color:{argb:'FF000000'}},
+        right:{style:'thin',color:{argb:'FF000000'}}
+      }
+    };
+  }
+  function applyStyle(cell, style, fmt, halign) {
+    if (style.fill) cell.fill = style.fill;
+    if (style.font) cell.font = style.font;
+    cell.alignment = {...(style.alignment||{}), horizontal: halign||style.alignment.horizontal};
+    cell.border = style.border;
+    if (fmt) cell.numFmt = fmt;
   }
 
-  // Ligne 1 — Titre vert
-  ws.mergeCells('A1:G1');
-  const t1 = ws.getCell('A1');
-  t1.value = 'C3F      Frais de déplacements            C3F';
-  styleCell(t1, { bg:'FF006400', bold:true, sz:14, color:'FFFFFFFF' });
-  ws.getRow(1).height = 22;
+  const S = {
+    titre:  bc('FF006400','FFFFFFFF',true,14),
+    jaune:  bc('FFFFFF99','FF000000',true,9),
+    bleu:   bc('FFCCFFFF','FF000000',true,14),
+    vvert:  bc('FFCCFFCC','FF000000',true,8),
+    rouge:  bc(null,'FFFF0000',true,10),
+    data:   bc(null,'FF000000',false,8),
+    tot:    bc(null,'FF000000',true,9),
+    totR:   bc(null,'FFFF0000',true,9),
+    visa:   bc(null,'FF000000',true,8),
+  };
 
-  // Ligne 2 — vide
-  ws.getRow(2).height = 6;
+  // R1 — Titre vert
+  ws.mergeCells('A1:G1'); ws.getRow(1).height=22;
+  const c1=ws.getCell('A1'); c1.value='C3F      Frais de déplacements            C3F'; applyStyle(c1,S.titre,'center');
 
-  // Ligne 3 — Salarié + période (jaune)
-  ws.getRow(3).height = 20;
-  const yOpts = { bg:'FFFFFF99', bold:true, sz:8 };
-  const r3cells = [
-    ['A3','Salarié'], ['B3',salarie], ['C3',''], ['D3',''],
-    ['E3','Période du'], ['F3',fmtD(firstDay)], ['G3','au']
-  ];
-  r3cells.forEach(([addr,val])=>{ const c=ws.getCell(addr); c.value=val; styleCell(c,yOpts); });
+  // R2 — vide
+  ws.getRow(2).height=6;
 
-  // Ligne 4 — date fin + total (bleu)
-  ws.getRow(4).height = 20;
-  ['A4','B4','C4','D4','E4','F4'].forEach(addr=>{ const c=ws.getCell(addr); c.value=''; styleCell(c,yOpts); });
-  const dateFinCell = ws.getCell('A4');
-  dateFinCell.value = fmtD(lastDay);
-  const totalCell = ws.getCell('G4');
-  totalCell.value = totalEur;
-  styleCell(totalCell, { bg:'FFCCFFFF', bold:true, sz:14, fmt:'#,##0.00', thick:true });
+  // R3 — Salarié | nom | | | Période du | date debut | au
+  ws.getRow(3).height=20;
+  [['A3','Salarié'],['B3',salarie],['C3',''],['D3',''],
+   ['E3','Période du'],['F3',fmtD(firstDay)],['G3','au']
+  ].forEach(([addr,val])=>{ const c=ws.getCell(addr); c.value=val; applyStyle(c,S.jaune); });
 
-  // Ligne 5 — vide
-  ws.getRow(5).height = 6;
+  // R4 — date fin sur A4, total sur G4 bleu
+  ws.getRow(4).height=20;
+  ['A4','B4','C4','D4','E4','F4'].forEach(addr=>{ applyStyle(ws.getCell(addr),S.jaune); });
+  ws.getCell('A4').value = fmtD(lastDay);
+  const cTot=ws.getCell('G4'); cTot.value=totalEur; applyStyle(cTot,S.bleu,'#,##0.00');
 
-  // Ligne 6 — sous-total rouge
-  ws.getRow(6).height = 16;
-  const stCell = ws.getCell('A6');
-  stCell.value = totalEur;
-  styleCell(stCell, { color:'FFFF0000', bold:true, sz:11, fmt:'#,##0.00', border:false });
+  // R5 — vide
+  ws.getRow(5).height=5;
 
-  // Ligne 7 — vide
-  ws.getRow(7).height = 5;
+  // R6 — sous-total rouge à gauche (montant récapitulatif)
+  ws.getRow(6).height=14;
+  const cSub=ws.getCell('G6'); cSub.value=totalEur;
+  cSub.font={bold:true,size:11,name:'Arial',color:{argb:'FFFF0000'}};
+  cSub.alignment={horizontal:'center',vertical:'middle'};
+  cSub.numFmt='#,##0.00';
 
-  // Ligne 8 — en-têtes colonnes (vert clair)
-  ws.getRow(8).height = 20;
-  const headers = ['Date','Trajet','Nb trajets','km/trajet','Nb KM','','Montant'];
-  const hAddrs = ['A8','B8','C8','D8','E8','F8','G8'];
-  headers.forEach((h,i) => {
-    const c = ws.getCell(hAddrs[i]);
-    c.value = h;
-    styleCell(c, { bg:'FFCCFFCC', bold:true, sz:8 });
-  });
+  // R7 — vide
+  ws.getRow(7).height=5;
 
-  // Ligne 9 — section rouge
-  ws.getRow(9).height = 18;
-  ws.mergeCells('A9:G9');
-  const secCell = ws.getCell('A9');
-  secCell.value = ' FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D\'UN DOSSIER';
-  styleCell(secCell, { color:'FFFF0000', bold:true, sz:10 });
+  // R8 — en-têtes colonnes vert clair
+  ws.getRow(8).height=20;
+  [['A8','Date'],['B8','Trajet'],['C8','Nb trajets'],
+   ['D8','km/trajet'],['E8','Nb KM'],['F8',''],['G8','Montant']
+  ].forEach(([addr,val])=>{ const c=ws.getCell(addr); c.value=val; applyStyle(c,S.vvert); });
 
-  // Lignes de données
-  rows.forEach((r, i) => {
-    const rowNum = 10 + i;
-    ws.getRow(rowNum).height = 16;
-    const vals = [fmtD(r.date), r.trajet, r.nbr, r.km, r.nbKm, '', r.mont];
-    const aligns = ['center','left','center','center','center','center','center'];
-    const fmts = [null, null, null, null, null, null, '#,##0.00'];
-    vals.forEach((v, ci) => {
-      const c = ws.getRow(rowNum).getCell(ci+1);
-      c.value = v;
-      styleCell(c, { sz:8, align: aligns[ci], fmt: fmts[ci]||undefined,
-        ...(ci===6 ? { bold:true, color:'FFFF0000' } : {}) });
+  // R9 — section rouge mergée
+  ws.mergeCells('A9:G9'); ws.getRow(9).height=18;
+  const cSec=ws.getCell('A9');
+  cSec.value=' FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D\'UN DOSSIER';
+  applyStyle(cSec,S.rouge);
+
+  // Données
+  rows.forEach((r,i) => {
+    const rn=10+i; ws.getRow(rn).height=16;
+    const vals=[fmtD(r.date),r.trajet,r.nbr,r.km,r.nbKm,'',r.mont];
+    vals.forEach((v,ci)=>{
+      const c=ws.getRow(rn).getCell(ci+1); c.value=v;
+      applyStyle(c,S.data, ci===6?'#,##0.00':undefined, ci===1?'left':'center');
+      if(ci===6){ c.font={bold:true,size:8,name:'Arial',color:{argb:'FFFF0000'}}; }
     });
   });
 
   // Ligne TOTAL
-  const totRow = 10 + rows.length;
-  ws.getRow(totRow).height = 18;
-  ws.mergeCells(`A${totRow}:F${totRow}`);
-  const totLbl = ws.getCell(`A${totRow}`);
-  totLbl.value = 'TOTAL';
-  styleCell(totLbl, { bold:true, sz:9, thick:true });
-  const totMnt = ws.getCell(`G${totRow}`);
-  totMnt.value = totalEur;
-  styleCell(totMnt, { bold:true, sz:9, color:'FFFF0000', fmt:'#,##0.00', thick:true });
+  const totR=10+rows.length; ws.getRow(totR).height=18;
+  ws.mergeCells(`A${totR}:F${totR}`);
+  const cTL=ws.getCell(`A${totR}`); cTL.value='TOTAL'; applyStyle(cTL,S.tot);
+  cTL.border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}},left:{style:'medium',color:{argb:'FF000000'}},right:{style:'medium',color:{argb:'FF000000'}}};
+  const cTM=ws.getCell(`G${totR}`); cTM.value=totalEur; applyStyle(cTM,S.totR,'#,##0.00');
+  cTM.border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}},left:{style:'medium',color:{argb:'FF000000'}},right:{style:'medium',color:{argb:'FF000000'}}};
 
-  ws.getRow(totRow+1).height = 10;
+  ws.getRow(totR+1).height=10;
 
   // Visa
-  const visaRow = totRow + 2;
-  ws.getRow(visaRow).height = 18;
-  ws.mergeCells(`A${visaRow}:B${visaRow}`);
-  const ve = ws.getCell(`A${visaRow}`); ve.value='VISA ENTREPRISE'; styleCell(ve,{bold:true,sz:8});
-  ws.mergeCells(`D${visaRow}:E${visaRow}`);
-  const mp = ws.getCell(`D${visaRow}`); mp.value='MOIS DE PAIE'; styleCell(mp,{bold:true,sz:8});
-  ws.mergeCells(`F${visaRow}:G${visaRow}`);
-  const vs = ws.getCell(`F${visaRow}`); vs.value='VISA SALARIE'; styleCell(vs,{bold:true,sz:8});
+  const vR=totR+2; ws.getRow(vR).height=18;
+  ws.mergeCells(`A${vR}:B${vR}`); const cVE=ws.getCell(`A${vR}`); cVE.value='VISA ENTREPRISE'; applyStyle(cVE,S.visa);
+  ws.mergeCells(`D${vR}:E${vR}`); const cMP=ws.getCell(`D${vR}`); cMP.value='MOIS DE PAIE'; applyStyle(cMP,S.visa);
+  ws.mergeCells(`F${vR}:G${vR}`); const cVS=ws.getCell(`F${vR}`); cVS.value='VISA SALARIE'; applyStyle(cVS,S.visa);
+  const vR2=vR+1; ws.getRow(vR2).height=18;
+  ws.mergeCells(`A${vR2}:B${vR2}`); applyStyle(ws.getCell(`A${vR2}`),S.visa);
+  ws.mergeCells(`D${vR2}:E${vR2}`); const cMPV=ws.getCell(`D${vR2}`); cMPV.value=monthName; applyStyle(cMPV,S.visa);
+  ws.mergeCells(`F${vR2}:G${vR2}`); applyStyle(ws.getCell(`F${vR2}`),S.visa);
 
-  const visaRow2 = visaRow + 1;
-  ws.getRow(visaRow2).height = 18;
-  ws.mergeCells(`A${visaRow2}:B${visaRow2}`);
-  styleCell(ws.getCell(`A${visaRow2}`),{bold:true,sz:9});
-  ws.mergeCells(`D${visaRow2}:E${visaRow2}`);
-  const mpv = ws.getCell(`D${visaRow2}`); mpv.value=monthName; styleCell(mpv,{bold:true,sz:9});
-  ws.mergeCells(`F${visaRow2}:G${visaRow2}`);
-  styleCell(ws.getCell(`F${visaRow2}`),{bold:true,sz:9});
+  ws.views=[{state:'frozen',ySplit:9}];
 
-  // Freeze row 9
-  ws.views = [{ state:'frozen', ySplit:9 }];
-
-  wb.xlsx.writeBuffer().then(buf => {
-    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href=url; a.download=`JUSTIF_IK_${month}.xlsx`; a.click();
+  wb.xlsx.writeBuffer().then(buf=>{
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`JUSTIF_IK_${month}.xlsx`; a.click();
     URL.revokeObjectURL(url);
   });
 }
