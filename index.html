@@ -1802,7 +1802,6 @@ textarea { resize: vertical; min-height: 72px; }
             </div>
             <div id="fi-totaux-contrat"></div>
           </div>
-        </div><!-- /fi-accueil -->
 
         <!-- NOTES -->
         <div id="fi-notes" style="display:none">
@@ -17549,13 +17548,16 @@ function _coordCellStyle(creche) {
 
 // Calcule le numéro de semaine réel de la semaine courante
 function _coordGetCurrentWeekNum() {
-  return getISOWeekNumber(new Date());
+  // Tient compte de la navigation Préc./Suiv. (peWeekOffset)
+  const d = new Date();
+  d.setDate(d.getDate() + (typeof peWeekOffset !== 'undefined' ? peWeekOffset * 7 : 0));
+  return getISOWeekNumber(d);
 }
 
-// Calcule le numéro de semaine dans le cycle 1–4 à partir de la semaine ISO courante
+// Calcule le numéro de semaine dans le cycle 1–4 à partir de la semaine naviguée
 function _coordCycleIndex() {
   const wn = _coordGetCurrentWeekNum();
-  return ((wn - 1) % 4); // 0,1,2,3
+  return ((wn - 1) % 4 + 4) % 4; // 0,1,2,3
 }
 
 function _coordHtmlRotation() {
