@@ -1123,12 +1123,12 @@ textarea { resize: vertical; min-height: 72px; }
           <div id="dash-dir-creche" style="font-size:13px;color:var(--ink3);font-weight:600"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px" id="dash-dir-kpis"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
           <div id="dash-dir-equipe" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
-          <div id="dash-dir-taux" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
           <div id="dash-dir-alertes" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div id="dash-dir-taux" style="display:none"></div>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px">
           <div id="dash-dir-planning" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
           <div id="dash-dir-stats" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
         </div>
@@ -6960,15 +6960,57 @@ async function renderDashboardDirectrice(dateStr) {
     const todayDate = new Date();
     const monday = new Date(todayDate);
     monday.setDate(todayDate.getDate() - (todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1));
-    planEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">📅 Semaine en cours</div>' +
-      jours.map((j, i) => {
-        const d = new Date(monday); d.setDate(monday.getDate() + i);
-        const isToday = d.toDateString() === todayDate.toDateString();
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px'+(isToday?';font-weight:700;color:var(--accent)':'')+'">'+
-          '<span>'+j+' '+d.getDate()+'/'+(d.getMonth()+1)+'</span>'+
-          '<span style="font-size:11px;color:var(--ink3)">'+(isToday ? "Aujourd'hui" : '')+'</span></div>';
-      }).join('') +
-      '<button onclick="showPage(\'planning\', document.querySelector(\'.nav-item[onclick*=planning]\'))" style="width:100%;margin-top:10px;padding:7px;background:none;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Planning complet →</button>';
+
+    // Planning équipe de la semaine
+    const cid = (currentCreche && currentCreche !== 'all') ? currentCreche : (CRECHES_DATA?.[0]?.nom || '');
+    let weekData = { creneaux: [] };
+    try { weekData = peGetWeek(cid); } catch(e) {}
+
+    // Enfants inscrits actifs
+    const enfantsActifs = getFamilles(cid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+    const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+    const { prosMin } = calcTauxEncadrement(enfantsActifs, prefs.optionEncadrement || 'NM8M');
+
+    const rows = jours.map((j, i) => {
+      const dayNum = i + 1;
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      const isToday = d.toDateString() === todayDate.toDateString();
+      const dayLabel = j + ' ' + d.getDate() + '/' + (d.getMonth()+1);
+
+      const nbEnfants = enfantsActifs.filter(e => {
+        if (!e.jours_presence || !e.jours_presence.length) return true;
+        return e.jours_presence.includes(dayNum) || e.jours_presence.includes(String(dayNum));
+      }).length;
+
+      const prosSet = new Set((weekData.creneaux || []).filter(c => c.jour === i).map(c => c.pro).filter(Boolean));
+      const nbPros = prosSet.size;
+
+      let statut, statutStyle;
+      if (nbEnfants === 0) { statut = '—'; statutStyle = 'background:#F1F5F9;color:var(--ink3)'; }
+      else if (nbPros >= prosMin) { statut = '✓ OK'; statutStyle = 'background:#F0FDF4;color:#16A34A'; }
+      else if (nbPros > 0 && nbPros === prosMin - 1) { statut = '⚠ Limite'; statutStyle = 'background:#FFFBEB;color:#D97706'; }
+      else { statut = '✗ Insuffisant'; statutStyle = 'background:#FEF2F2;color:#DC2626'; }
+
+      return '<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);' + (isToday ? 'font-weight:700' : '') + '">' +
+        '<span style="font-size:12.5px;' + (isToday ? 'color:var(--accent)' : 'color:var(--ink2)') + '">' + dayLabel + (isToday ? ' ●' : '') + '</span>' +
+        '<div style="text-align:center"><span style="font-size:18px;font-weight:800;font-family:Syne,sans-serif">' + nbEnfants + '</span><div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em">enfants</div></div>' +
+        '<div style="text-align:center"><span style="font-size:18px;font-weight:800;font-family:Syne,sans-serif">' + nbPros + '</span><span style="font-size:11px;color:var(--ink3);font-weight:500"> / ' + prosMin + ' min</span><div style="font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em">pros</div></div>' +
+        '<div style="text-align:right"><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;' + statutStyle + '">' + statut + '</span></div>' +
+        '</div>';
+    }).join('');
+
+    planEl.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+        '<div style="font-size:13px;font-weight:700">📅 Encadrement · semaine en cours</div>' +
+        '<button onclick="showPage(\'planning\', document.querySelector(\'.nav-item[onclick*=planning]\'))" style="font-size:11px;font-weight:600;color:var(--accent);background:none;border:1px solid var(--accent);border-radius:8px;padding:4px 10px;cursor:pointer">Planning →</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--border);margin-bottom:2px">' +
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink3)">Jour</div>' +
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink3);text-align:center">Enfants</div>' +
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink3);text-align:center">Pros</div>' +
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink3);text-align:right">Statut</div>' +
+      '</div>' +
+      rows;
   }
 
   const statsEl = document.getElementById('dash-dir-stats');
