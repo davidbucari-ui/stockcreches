@@ -1668,6 +1668,7 @@ textarea { resize: vertical; min-height: 72px; }
           <button class="fiche-tab" data-tab="fi-planning"  onclick="switchFicheTab('fi-planning',this)"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Planning</button>
           <button class="fiche-tab" data-tab="fi-factures"  onclick="switchFicheTab('fi-factures',this)"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Factures</button>
           <button class="fiche-tab" data-tab="fi-docs"      onclick="switchFicheTab('fi-docs',this)"      style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Documents</button>
+          <button class="fiche-tab" data-tab="fi-sante"    onclick="switchFicheTab('fi-sante',this);loadVaccinsFiche()"    style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">💉 Santé</button>
         </div>
 
         <!-- IDENTITÉ -->
@@ -1818,6 +1819,18 @@ textarea { resize: vertical; min-height: 72px; }
           <div style="padding:48px;text-align:center;color:var(--ink3)">
             <div style="font-size:40px;margin-bottom:12px">🧾</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:6px">Factures et règlements</div>
+          </div>
+        </div>
+
+        <!-- SANTE / VACCINATIONS -->
+        <div id="fi-sante" style="display:none">
+          <div class="fiche-card">
+            <div class="fiche-card-title" style="display:flex;align-items:center;justify-content:space-between">
+              <span>Suivi vaccinations</span>
+              <span id="vacc-statut-badge" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--surface2);color:var(--ink3)">Chargement…</span>
+            </div>
+            <div id="vacc-alertes" style="margin-bottom:14px"></div>
+            <div id="vacc-groups"></div>
           </div>
         </div>
 
@@ -5064,7 +5077,7 @@ function showFamillesFromFiche() {
 }
 
 function switchFicheTab(tabId, btn) {
-  ['fi-identite','fi-parents','fi-accueil','fi-notes','fi-planning','fi-factures','fi-docs'].forEach(id => {
+  ['fi-identite','fi-parents','fi-accueil','fi-notes','fi-planning','fi-factures','fi-docs','fi-sante'].forEach(id => {
     const p = document.getElementById(id);
     if (p) p.style.display = 'none';
   });
@@ -5082,6 +5095,219 @@ function switchFicheTab(tabId, btn) {
     activeBtn.style.fontWeight = '700';
   }
 }
+
+// ─── SUIVI VACCINATIONS ─────────────────────────────────────────────────────
+const VACC_CALENDAR = [
+  { id:'hexa',    nom:'Diphtérie - Tétanos - Coqueluche - Poliomyélite - Hib - Hépatite B', marques:'Infanrix Hexa / Hexyon / Vaxelis', obligatoire:true,
+    doses:[{label:'1ère dose',age:'2 mois',offset:61},{label:'2e dose',age:'4 mois',offset:123},{label:'Rappel',age:'11 mois',offset:335}] },
+  { id:'pneumo',  nom:'Pneumocoque', marques:'Prevenar 13 / Pneumovax', obligatoire:true,
+    doses:[{label:'1ère dose',age:'2 mois',offset:61},{label:'2e dose',age:'4 mois',offset:123},{label:'Rappel',age:'11 mois',offset:335}] },
+  { id:'menb',    nom:'Méningocoque B', marques:'Bexsero', obligatoire:false,
+    doses:[{label:'1ère dose',age:'3 mois',offset:91},{label:'2e dose',age:'5 mois',offset:152},{label:'Rappel',age:'12 mois',offset:365}] },
+  { id:'menacwy', nom:'Méningocoque ACWY', marques:'Nimenrix / Menquadfi', obligatoire:true,
+    doses:[{label:'1ère dose',age:'6 mois',offset:182},{label:'Rappel',age:'12 mois',offset:365}] },
+  { id:'ror',     nom:'Rougeole - Oreillons - Rubéole (ROR)', marques:'M-M-RVaxPro / Priorix', obligatoire:true,
+    doses:[{label:'1ère dose',age:'12 mois',offset:365},{label:'2e dose',age:'18 mois',offset:548}] }
+];
+let vaccOpenForm = null;
+let vaccRows = [];
+
+async function loadVaccinsFiche() {
+  const groupsEl = document.getElementById('vacc-groups');
+  const alertesEl = document.getElementById('vacc-alertes');
+  const badge = document.getElementById('vacc-statut-badge');
+  if (!groupsEl || !ficheEnfantId) return;
+
+  groupsEl.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:12px 0">Chargement…</div>';
+
+  // Récupérer la date de naissance
+  const crecheId = getCrecheId();
+  const enfants = getFamilles(crecheId);
+  const enfant = enfants.find(e => e.id === ficheEnfantId);
+  const ddn = enfant && enfant.ddn ? enfant.ddn : null;
+
+  // Charger les réalisations depuis Supabase
+  try {
+    const rows = await sbGet('vaccinations_enfant',
+      'select=*&enfant_id=eq.' + ficheEnfantId);
+    vaccRows = Array.isArray(rows) ? rows : [];
+  } catch(e) {
+    vaccRows = [];
+    console.warn('[Vaccins]', e.message);
+  }
+
+  if (!ddn) {
+    groupsEl.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:12px 0">⚠ Date de naissance non renseignée — impossible de calculer les échéances.</div>';
+    return;
+  }
+
+  renderVaccinsPanel(ddn);
+}
+
+function renderVaccinsPanel(ddn) {
+  const groupsEl = document.getElementById('vacc-groups');
+  const alertesEl = document.getElementById('vacc-alertes');
+  const badge = document.getElementById('vacc-statut-badge');
+  const dob = new Date(ddn + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  let totalDoses = 0, doneDoses = 0, lateDoses = 0, soonDoses = 0;
+  let html = '';
+
+  VACC_CALENDAR.forEach(group => {
+    const obligTag = group.obligatoire
+      ? `<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--success-bg,#E7EEE7);color:var(--accent);white-space:nowrap">Obligatoire</span>`
+      : `<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--surface2);color:var(--ink3);border:1px solid var(--border);white-space:nowrap">Recommandé</span>`;
+
+    let rowsHTML = '';
+    group.doses.forEach((dose, i) => {
+      const refId = group.id + '_' + i;
+      totalDoses++;
+      const dueDate = new Date(dob.getTime() + dose.offset * 86400000);
+      const saved = vaccRows.find(r => r.vaccin_ref_id === refId);
+      const isDone = saved && saved.date_realisee;
+      const diff = Math.round((dueDate - today) / 86400000);
+
+      let statut, statusLabel, statusStyle, dateLabel;
+      if (isDone) {
+        statut = 'done'; doneDoses++;
+        const dr = new Date(saved.date_realisee + 'T00:00:00');
+        dateLabel = 'Fait le ' + dr.toLocaleDateString('fr-FR');
+        statusLabel = '✓ Fait';
+        statusStyle = 'background:#E7EEE7;color:var(--accent)';
+      } else if (diff < 0) {
+        statut = 'late'; lateDoses++;
+        dateLabel = 'Éch. ' + dueDate.toLocaleDateString('fr-FR');
+        statusLabel = 'Retard ' + Math.abs(diff) + 'j';
+        statusStyle = 'background:#FBEAEA;color:#C0392B';
+      } else if (diff <= 30) {
+        statut = 'soon'; soonDoses++;
+        dateLabel = 'Éch. ' + dueDate.toLocaleDateString('fr-FR');
+        statusLabel = 'Dans ' + diff + 'j';
+        statusStyle = 'background:#FBEDE6;color:#C4623A';
+      } else {
+        statut = 'upcoming';
+        dateLabel = 'Éch. ' + dueDate.toLocaleDateString('fr-FR');
+        statusLabel = dueDate.toLocaleDateString('fr-FR');
+        statusStyle = 'background:var(--surface2);color:var(--ink3)';
+      }
+
+      const defaultDate = isDone ? saved.date_realisee : new Date().toISOString().split('T')[0];
+      const formHTML = (vaccOpenForm === ficheEnfantId + '_' + refId) ? `
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 14px;border-top:1px solid var(--border)">
+          <input type="date" id="vacc-input-${refId}" value="${defaultDate}"
+            style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--ink)">
+          <button onclick="saveVaccDose('${refId}','${ddn}')"
+            style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">Enregistrer</button>
+          ${isDone ? `<button onclick="undoVaccDose('${refId}','${ddn}')"
+            style="background:#FBEAEA;color:#C0392B;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">Annuler</button>` : ''}
+          <button onclick="vaccOpenForm=null;renderVaccinsPanel('${ddn}')"
+            style="background:var(--surface2);color:var(--ink2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer">Fermer</button>
+        </div>` : '';
+
+      rowsHTML += `
+        <div onclick="vaccOpenForm=vaccOpenForm==='${ficheEnfantId}_${refId}'?null:'${ficheEnfantId}_${refId}';renderVaccinsPanel('${ddn}')"
+          style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);cursor:pointer">
+          <div style="font-size:12px;font-weight:600;color:var(--ink2);width:62px;flex-shrink:0">${dose.age}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600">${dose.label}</div>
+            <div style="font-size:11.5px;color:var(--ink3);margin-top:1px">${dateLabel}</div>
+          </div>
+          <div style="font-size:11px;font-weight:700;padding:5px 10px;border-radius:99px;white-space:nowrap;flex-shrink:0;${statusStyle}">${statusLabel}</div>
+        </div>
+        ${formHTML}`;
+    });
+
+    html += `
+      <div style="margin-bottom:16px;padding-bottom:4px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:13.5px;font-weight:800;line-height:1.3">${group.nom}</div>
+            <div style="font-size:11.5px;color:var(--ink3);margin-top:2px">${group.marques}</div>
+          </div>
+          ${obligTag}
+        </div>
+        ${rowsHTML}
+      </div>`;
+  });
+
+  groupsEl.innerHTML = html;
+
+  // Badge statut global
+  if (badge) {
+    if (lateDoses > 0) {
+      badge.textContent = lateDoses + ' en retard';
+      badge.style.cssText = 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:#FBEAEA;color:#C0392B';
+    } else if (soonDoses > 0) {
+      badge.textContent = soonDoses + ' rappel' + (soonDoses>1?'s':'') + ' ce mois';
+      badge.style.cssText = 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:#FBEDE6;color:#C4623A';
+    } else {
+      badge.textContent = doneDoses + '/' + totalDoses + ' doses';
+      badge.style.cssText = 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:#E7EEE7;color:var(--accent)';
+    }
+  }
+
+  // Bandeau alertes
+  if (alertesEl) {
+    let alertHTML = '';
+    if (lateDoses > 0) alertHTML += `<div style="background:#FBEAEA;border:1px solid #F0C8C3;border-radius:10px;padding:11px 14px;margin-bottom:8px;font-size:12.5px"><b style="color:#C0392B">⚠ ${lateDoses} vaccin${lateDoses>1?'s':''} en retard</b> — contacter la famille</div>`;
+    if (soonDoses > 0) alertHTML += `<div style="background:#FBEDE6;border:1px solid #F2D6C5;border-radius:10px;padding:11px 14px;margin-bottom:8px;font-size:12.5px"><b style="color:#C4623A">🔔 ${soonDoses} rappel${soonDoses>1?'s':''} dans les 30 jours</b> — rappel à prévoir</div>`;
+    alertesEl.innerHTML = alertHTML;
+  }
+}
+
+async function saveVaccDose(refId, ddn) {
+  const val = document.getElementById('vacc-input-' + refId);
+  if (!val || !val.value) return;
+  const existing = vaccRows.find(r => r.vaccin_ref_id === refId);
+  try {
+    if (existing) {
+      await sbUpdate('vaccinations_enfant', existing.id, { date_realisee: val.value, statut: 'done', updated_at: new Date().toISOString() });
+      existing.date_realisee = val.value; existing.statut = 'done';
+    } else {
+      const crecheId = getCrecheId();
+      const enfants = getFamilles(crecheId);
+      const enfant = enfants.find(e => e.id === ficheEnfantId);
+      const dob = new Date(ddn + 'T00:00:00');
+      const refParts = refId.split('_');
+      const doseIdx = parseInt(refParts[refParts.length-1]);
+      const group = VACC_CALENDAR.find(g => refId.startsWith(g.id + '_'));
+      const dose = group ? group.doses[doseIdx] : null;
+      const datePrevue = dose ? new Date(dob.getTime() + dose.offset * 86400000).toISOString().split('T')[0] : null;
+      const newRow = await sbInsert('vaccinations_enfant', {
+        enfant_id: ficheEnfantId,
+        vaccin_ref_id: refId,
+        date_prevue: datePrevue,
+        date_realisee: val.value,
+        statut: 'done',
+        saisie_par: 'equipe'
+      });
+      if (Array.isArray(newRow) && newRow[0]) vaccRows.push(newRow[0]);
+      else vaccRows.push({ vaccin_ref_id: refId, date_realisee: val.value, statut: 'done' });
+    }
+    showNotif('✓ Vaccination enregistrée');
+  } catch(e) {
+    showNotif('Erreur : ' + e.message);
+    console.error('[Vaccins save]', e);
+  }
+  vaccOpenForm = null;
+  renderVaccinsPanel(ddn);
+}
+
+async function undoVaccDose(refId, ddn) {
+  const existing = vaccRows.find(r => r.vaccin_ref_id === refId);
+  if (!existing) return;
+  try {
+    await sbUpdate('vaccinations_enfant', existing.id, { date_realisee: null, statut: 'upcoming', updated_at: new Date().toISOString() });
+    existing.date_realisee = null; existing.statut = 'upcoming';
+    showNotif('Vaccination annulée');
+  } catch(e) {
+    showNotif('Erreur : ' + e.message);
+  }
+  vaccOpenForm = null;
+  renderVaccinsPanel(ddn);
+}
+// ─── FIN SUIVI VACCINATIONS ──────────────────────────────────────────────────
 
 function renderReferents() {
   const el = document.getElementById('fi-referents-list');
@@ -7352,7 +7578,10 @@ async function hubLoadKPIs(role) {
         const chips = [];
         if (stocksBas > 0) chips.push(`<div class="hub-s-chip warn">⚠ ${stocksBas} stock${stocksBas>1?'s':''} bas</div>`);
         else chips.push('<div class="hub-s-chip ok">✓ Stocks OK</div>');
-        chips.push(`<div class="hub-s-chip ok">\u2713 Ratio \u00e0 v\u00e9rifier dans Structures</div>`);
+        if (vaccLate > 0) chips.push(`<div class="hub-s-chip warn" style="background:#FBEAEA;color:#C0392B;border-color:#F0C8C3">⚠ ${vaccLate} vaccin${vaccLate>1?'s':''} en retard</div>`);
+        if (vaccSoon > 0) chips.push(`<div class="hub-s-chip warn">🔔 ${vaccSoon} rappel${vaccSoon>1?'s':''} ce mois</div>`);
+        if (!vaccLate && !vaccSoon) chips.push('<div class="hub-s-chip ok">✓ Vaccins à jour</div>');
+        chips.push(`<div class="hub-s-chip ok">\u2713 Ratio à vérifier dans Structures</div>`);
         alertsEl.innerHTML = chips.join('');
       }
     } else {
@@ -9912,7 +10141,8 @@ const RH_TABLES = new Set([
   'utilisateurs','recrutements','contrats','conges',
   'formations_rh','documents_rh','stagiaires','planning','pointages','pointages_enfants',
   'enfants','berceaux','salaries','planning_semaines','parametres',
-  'transmissions','menus'
+  'transmissions','menus',
+  'vaccins_ref','vaccinations_enfant'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
