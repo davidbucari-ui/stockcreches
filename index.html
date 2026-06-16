@@ -6967,7 +6967,7 @@ async function renderDashboardDirectrice(dateStr) {
           '<div style="font-size:12.5px;color:var(--ink2);margin-bottom:14px">Sélectionnez une crèche dans la sidebar pour voir<br>le détail de l\'encadrement jour par jour.</div>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">' +
             (CRECHES_DATA || []).map(c =>
-              '<button onclick="filterCreche(\'' + c.nom + '\', null)" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">' + c.nom + '</button>'
+              '<button onclick="filterCreche(\'' + c.nom + '\', null); renderDashboard();" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">' + c.nom + '</button>'
             ).join('') +
           '</div>' +
         '</div>' +
