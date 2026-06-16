@@ -1782,11 +1782,11 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="fiche-card">
             <div class="fiche-card-title">Jours de présence habituels</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0" id="fi-jours-presence">
-              <label class="jour-toggle"><input type="checkbox" value="0"><span>Lundi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="1"><span>Mardi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="2"><span>Mercredi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="3"><span>Jeudi</span></label>
-              <label class="jour-toggle"><input type="checkbox" value="4"><span>Vendredi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="0" onchange="syncJoursCount()"><span>Lundi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="1" onchange="syncJoursCount()"><span>Mardi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="2" onchange="syncJoursCount()"><span>Mercredi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="3" onchange="syncJoursCount()"><span>Jeudi</span></label>
+              <label class="jour-toggle"><input type="checkbox" value="4" onchange="syncJoursCount()"><span>Vendredi</span></label>
             </div>
           </div>
         </div>
@@ -5332,6 +5332,12 @@ async function undoVaccDose(refId, ddn) {
 }
 // ─── FIN SUIVI VACCINATIONS ──────────────────────────────────────────────────
 
+function syncJoursCount() {
+  const cbs = document.querySelectorAll('#fi-jours-presence input:checked');
+  const joursEl = document.getElementById('fi-jours');
+  if (joursEl) joursEl.value = cbs.length;
+}
+
 function renderReferents() {
   const el = document.getElementById('fi-referents-list');
   if (!el) return;
@@ -6985,7 +6991,7 @@ async function renderDashboardDirectrice(dateStr) {
     const { prosMin } = calcTauxEncadrement(enfantsActifs, prefs.optionEncadrement || 'NM8M');
 
     const rows = jours.map((j, i) => {
-      const dayNum = i + 1;
+      const dayNum = i; // jours_presence stocke 0=Lun … 4=Ven
       const d = new Date(monday); d.setDate(monday.getDate() + i);
       const isToday = d.toDateString() === todayDate.toDateString();
       const dayLabel = j + ' ' + d.getDate() + '/' + (d.getMonth()+1);
