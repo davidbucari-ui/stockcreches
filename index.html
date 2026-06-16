@@ -1803,6 +1803,8 @@ textarea { resize: vertical; min-height: 72px; }
             <div id="fi-totaux-contrat"></div>
           </div>
 
+        </div><!-- /fi-accueil -->
+
         <!-- NOTES -->
         <div id="fi-notes" style="display:none">
           <div class="fiche-card">
@@ -17548,7 +17550,6 @@ function _coordCellStyle(creche) {
 
 // Calcule le numéro de semaine réel de la semaine courante
 function _coordGetCurrentWeekNum() {
-  // Tient compte de la navigation Préc./Suiv. (peWeekOffset)
   const d = new Date();
   d.setDate(d.getDate() + (typeof peWeekOffset !== 'undefined' ? peWeekOffset * 7 : 0));
   return getISOWeekNumber(d);
