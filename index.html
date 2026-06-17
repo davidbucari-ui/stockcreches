@@ -12018,11 +12018,12 @@ function ikGenerate() {
   const mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const monthName = mnames[monthNum-1];
   function fmtD(d) { if(!d)return''; const dt=new Date(d+'T12:00:00'); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
-  const firstDay = `${year}-${String(monthNum).padStart(2,'0')}-01`;
-  const ld = new Date(year, monthNum, 0);
-  const lastDay = `${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
+  const firstDay = new Date(year, monthNum-1, 1);
+  const lastDay  = new Date(year, monthNum, 0);
   let totalEur = 0;
-  const rows = active.map(r => {
+  // MAX 6 lignes de données (comme l'original — lignes 10 à 15)
+  const MAX_ROWS = 6;
+  const rows = active.slice(0, MAX_ROWS).map(r => {
     const km = dist[r.creche]!==undefined ? dist[r.creche] : 0;
     const nbKm = r.nbr*km, mont = nbKm*bareme;
     totalEur += mont; return {date:r.date,trajet:r.trajet,nbr:r.nbr,km,nbKm,mont:Math.round(mont*100)/100};
@@ -12032,118 +12033,216 @@ function ikGenerate() {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('FDEPvi');
 
-  // Largeurs colonnes : A=12 B=26 C=11 D=11 E=11 F=5 G=14
-  ws.columns = [{width:12},{width:26},{width:11},{width:11},{width:11},{width:5},{width:14}];
+  // === LARGEURS COLONNES EXACTES (depuis l'original) ===
+  // A=9, B=10.625, C=10.625, D=8.625(col4), E=8.625, F=8.625, G=13.375, H=9.5, I=8.875, J=9, K=8.625, L=8.75, M=8.125, N=9.875
+  ws.columns = [
+    {width:9},      // A
+    {width:10.625}, // B
+    {width:10.625}, // C
+    {width:8.625},  // D
+    {width:8.625},  // E
+    {width:8.625},  // F
+    {width:13.375}, // G
+    {width:9.5},    // H
+    {width:8.875},  // I
+    {width:9},      // J
+    {width:8.625},  // K
+    {width:8.75},   // L
+    {width:8.125},  // M
+    {width:9.875},  // N
+  ];
 
-  function bc(bg, fontColor, bold, sz) {
-    return {
-      fill: bg ? {type:'pattern',pattern:'solid',fgColor:{argb:bg}} : undefined,
-      font: {bold:!!bold, size:sz||9, name:'Arial', color:{argb: fontColor||'FF000000'}},
-      alignment: {horizontal:'center', vertical:'middle', wrapText:false},
-      border: {
-        top:{style:'thin',color:{argb:'FF000000'}},
-        bottom:{style:'thin',color:{argb:'FF000000'}},
-        left:{style:'thin',color:{argb:'FF000000'}},
-        right:{style:'thin',color:{argb:'FF000000'}}
-      }
-    };
+  // === COULEURS (issues de la palette indexée du fichier original) ===
+  // fill indexed 43 = FF339966 (Sea Green) → en-tête titre R1
+  // fill indexed 42 = FF003366 (Dark Blue) → zone TOTAL M4:N4
+  // fill indexed 41 = FF969696 (Gray 40%)  → zone données
+  // font indexed 16 = FF800000 (Dark Red)  → textes en-têtes sombres
+  // font indexed 10 = FFFF0000 (Red)       → montants
+  const FILL_GREEN  = {type:'pattern',pattern:'solid',fgColor:{argb:'FF339966'}};
+  const FILL_BLUE   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF003366'}};
+  const FILL_GRAY   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF969696'}};
+  const FILL_LTGREEN= {type:'pattern',pattern:'solid',fgColor:{argb:'FF339966'}}; // réutilisé
+  const BORDER_THIN = {style:'thin', color:{argb:'FF000000'}};
+  const BORDER_MED  = {style:'medium',color:{argb:'FF000000'}};
+  const bThin = {left:BORDER_THIN,right:BORDER_THIN,top:BORDER_THIN,bottom:BORDER_THIN};
+  const bMed  = {left:BORDER_MED, right:BORDER_MED, top:BORDER_MED, bottom:BORDER_MED};
+  const bMedTop = {left:BORDER_MED,right:BORDER_MED,top:BORDER_MED,bottom:{style:'none'}};
+
+  function s(cell, {fill, font, align, border, numFmt}={}) {
+    if (fill)   cell.fill   = fill;
+    if (font)   cell.font   = font;
+    if (align)  cell.alignment = align;
+    if (border) cell.border = border;
+    if (numFmt) cell.numFmt = numFmt;
   }
-  function applyStyle(cell, style, fmt, halign) {
-    if (style.fill) cell.fill = style.fill;
-    if (style.font) cell.font = style.font;
-    cell.alignment = {...(style.alignment||{}), horizontal: halign||style.alignment.horizontal};
-    cell.border = style.border;
-    if (fmt) cell.numFmt = fmt;
-  }
+  const AC = {horizontal:'center',vertical:'center'};
+  const ACC= {horizontal:'centerContinuous',vertical:'center'};
+  const AW = {horizontal:'center',vertical:'center',wrapText:true};
 
-  const S = {
-    titre:  bc('FF006400','FFFFFFFF',true,14),
-    jaune:  bc('FFFFFF99','FF000000',true,9),
-    bleu:   bc('FFCCFFFF','FF000000',true,14),
-    vvert:  bc('FFCCFFCC','FF000000',true,8),
-    rouge:  bc(null,'FFFF0000',true,10),
-    data:   bc(null,'FF000000',false,8),
-    tot:    bc(null,'FF000000',true,9),
-    totR:   bc(null,'FFFF0000',true,9),
-    visa:   bc(null,'FF000000',true,8),
-  };
+  // === R1 — TITRE (hauteur 21) ===
+  ws.getRow(1).height = 21;
+  ws.mergeCells('A1:N1');
+  s(ws.getCell('A1'), {
+    fill: FILL_GREEN,
+    font: {size:16, name:'Verdana', color:{argb:'FFFFFFFF'}},
+    align: ACC,
+    border: {left:BORDER_THIN,top:BORDER_THIN,bottom:BORDER_THIN,right:{style:'none'}}
+  });
+  ws.getCell('A1').value = 'C3F      Frais de deplacements            C3F';
 
-  // R1 — Titre vert
-  ws.mergeCells('A1:G1'); ws.getRow(1).height=22;
-  const c1=ws.getCell('A1'); c1.value='C3F      Frais de déplacements            C3F'; applyStyle(c1,S.titre,'center');
+  // === R2 — vide (hauteur 16.5) ===
+  ws.getRow(2).height = 16.5;
 
-  // R2 — vide
-  ws.getRow(2).height=6;
+  // === R3 — N° | xxx | | | E3:H3=Nom salarié | I3:L3=Période | M3:N3=TOTAL (hauteur 24.95) ===
+  ws.getRow(3).height = 24.95;
+  s(ws.getCell('A3'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+  ws.getCell('A3').value = 'N°';
+  ws.mergeCells('B3:D3');
+  s(ws.getCell('B3'), {fill:FILL_GRAY,font:{bold:true,size:12,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+  ws.getCell('B3').value = 'xxx';
+  ws.mergeCells('E3:H3');
+  s(ws.getCell('E3'), {fill:FILL_GRAY,font:{bold:true,size:10,name:'Verdana',color:{argb:'FF800000'}},align:AW,border:bThin});
+  ws.getCell('E3').value = salarie;
+  ws.mergeCells('I3:L3');
+  s(ws.getCell('I3'), {fill:FILL_GRAY,font:{bold:true,size:11,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+  ws.getCell('I3').value = 'Période';
+  ws.mergeCells('M3:N3');
+  s(ws.getCell('M3'), {fill:FILL_GRAY,font:{bold:true,size:14,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+  ws.getCell('M3').value = 'TOTAL';
 
-  // R3 — Salarié | nom | | | Période du | date debut | au
-  ws.getRow(3).height=20;
-  [['A3','Salarié'],['B3',salarie],['C3',''],['D3',''],
-   ['E3','Période du'],['F3',fmtD(firstDay)],['G3','au']
-  ].forEach(([addr,val])=>{ const c=ws.getCell(addr); c.value=val; applyStyle(c,S.jaune); });
+  // === R4 — Barème KM | valeur | | | du | date_debut | au | date_fin | TOTAL=formule (hauteur 24.95) ===
+  ws.getRow(4).height = 24.95;
+  s(ws.getCell('A4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AW,border:bThin});
+  ws.getCell('A4').value = 'Barème KM';
+  ws.mergeCells('B4:D4');
+  s(ws.getCell('B4'), {fill:FILL_GRAY,font:{bold:true,size:12,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+  ws.getCell('B4').value = bareme;
+  ws.getCell('B4').numFmt = '0.000';
+  s(ws.getCell('I4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+  ws.getCell('I4').value = 'du';
+  s(ws.getCell('J4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+  ws.getCell('J4').value = firstDay; ws.getCell('J4').numFmt = 'd/m/yy';
+  s(ws.getCell('K4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+  ws.getCell('K4').value = 'au';
+  s(ws.getCell('L4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+  ws.getCell('L4').value = lastDay; ws.getCell('L4').numFmt = 'd/m/yy';
+  ws.mergeCells('M4:N4');
+  s(ws.getCell('M4'), {fill:FILL_BLUE,font:{bold:true,size:12,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bMed});
+  ws.getCell('M4').value = totalEur; ws.getCell('M4').numFmt = '#,##0.00\\ _€';
 
-  // R4 — date fin sur A4, total sur G4 bleu
-  ws.getRow(4).height=20;
-  ['A4','B4','C4','D4','E4','F4'].forEach(addr=>{ applyStyle(ws.getCell(addr),S.jaune); });
-  ws.getCell('A4').value = fmtD(lastDay);
-  const cTot=ws.getCell('G4'); cTot.value=totalEur; applyStyle(cTot,S.bleu,'#,##0.00');
+  // === R5 — vide ligne total (hauteur 24.95) ===
+  ws.getRow(5).height = 24.95;
+  ws.mergeCells('I5:L5');
+  s(ws.getCell('I5'), {fill:FILL_GRAY,align:AC,border:bThin});
+  ws.mergeCells('M5:N5');
+  s(ws.getCell('M5'), {fill:FILL_GRAY,border:bMed});
 
-  // R5 — vide
-  ws.getRow(5).height=5;
+  // === R6 — TOTAUX colonnes G→N (hauteur 18) ===
+  ws.getRow(6).height = 18;
+  // G6:N6 = SUM des lignes 9→15
+  ['G','H','I','J','K','L','M','N'].forEach(col => {
+    const startR = 9, endR = 15;
+    const c = ws.getCell(`${col}6`);
+    // Calculer la somme réelle depuis les données
+    let colSum = 0;
+    if (col === 'G') rows.forEach(r => colSum += r.mont);
+    else if (col === 'N') colSum = totalEur;
+    c.value = col==='G'||col==='N' ? colSum : 0;
+    s(c, {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
+    if (col==='G'||col==='N') c.numFmt = '#,##0.00\\ _€';
+  });
+  // E6:F6 vides avec fill gray
+  ['E6','F6'].forEach(addr => s(ws.getCell(addr), {fill:FILL_GRAY,border:bThin}));
 
-  // R6 — sous-total rouge à gauche (montant récapitulatif)
-  ws.getRow(6).height=14;
-  const cSub=ws.getCell('G6'); cSub.value=totalEur;
-  cSub.font={bold:true,size:11,name:'Arial',color:{argb:'FFFF0000'}};
-  cSub.alignment={horizontal:'center',vertical:'middle'};
-  cSub.numFmt='#,##0.00';
+  // === R7 — vide (hauteur 13.5) ===
+  ws.getRow(7).height = 13.5;
 
-  // R7 — vide
-  ws.getRow(7).height=5;
-
-  // R8 — en-têtes colonnes vert clair
-  ws.getRow(8).height=20;
-  [['A8','Date'],['B8','Trajet'],['C8','Nb trajets'],
-   ['D8','km/trajet'],['E8','Nb KM'],['F8',''],['G8','Montant']
-  ].forEach(([addr,val])=>{ const c=ws.getCell(addr); c.value=val; applyStyle(c,S.vvert); });
-
-  // R9 — section rouge mergée
-  ws.mergeCells('A9:G9'); ws.getRow(9).height=18;
-  const cSec=ws.getCell('A9');
-  cSec.value=' FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D\'UN DOSSIER';
-  applyStyle(cSec,S.rouge);
-
-  // Données
-  rows.forEach((r,i) => {
-    const rn=10+i; ws.getRow(rn).height=16;
-    const vals=[fmtD(r.date),r.trajet,r.nbr,r.km,r.nbKm,'',r.mont];
-    vals.forEach((v,ci)=>{
-      const c=ws.getRow(rn).getCell(ci+1); c.value=v;
-      applyStyle(c,S.data, ci===6?'#,##0.00':undefined, ci===1?'left':'center');
-      if(ci===6){ c.font={bold:true,size:8,name:'Arial',color:{argb:'FFFF0000'}}; }
-    });
+  // === R8 — EN-TÊTES COLONNES (hauteur 19.5) ===
+  ws.getRow(8).height = 19.5;
+  const hdrs = [
+    ['A8','Date'],['B8','trajet'],['C8','nbr trajet'],['D8','km/trajet'],
+    ['E8','Nb KM'],['F8',null],['G8','Valorisation KM'],
+    ['H8',null],['I8',null],['J8',null],['K8',null],['L8',null],
+    ['M8','TVA'],['N8','TOTAL HT']
+  ];
+  hdrs.forEach(([addr,val]) => {
+    s(ws.getCell(addr), {fill:FILL_GREEN,font:{bold:true,size:8,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bThin});
+    if (val) ws.getCell(addr).value = val;
   });
 
-  // Ligne TOTAL
-  const totR=10+rows.length; ws.getRow(totR).height=18;
-  ws.mergeCells(`A${totR}:F${totR}`);
-  const cTL=ws.getCell(`A${totR}`); cTL.value='TOTAL'; applyStyle(cTL,S.tot);
-  cTL.border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}},left:{style:'medium',color:{argb:'FF000000'}},right:{style:'medium',color:{argb:'FF000000'}}};
-  const cTM=ws.getCell(`G${totR}`); cTM.value=totalEur; applyStyle(cTM,S.totR,'#,##0.00');
-  cTM.border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}},left:{style:'medium',color:{argb:'FF000000'}},right:{style:'medium',color:{argb:'FF000000'}}};
+  // === R9 — Section titre (hauteur 24.95) ===
+  ws.getRow(9).height = 24.95;
+  ws.mergeCells('A9:N9');
+  s(ws.getCell('A9'), {fill:FILL_GREEN,font:{bold:true,size:10,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AC,border:bThin});
+  ws.getCell('A9').value = " FRAIS DE DEPLACEMENT ENGAGES DANS LE CADRE D'UN DOSSIER";
 
-  ws.getRow(totR+1).height=10;
+  // === LIGNES DONNÉES R10→R15 (6 lignes fixes, hauteur 15.95) ===
+  for (let i=0; i<MAX_ROWS; i++) {
+    const rn = 10+i;
+    ws.getRow(rn).height = 15.95;
+    const r = rows[i];
+    if (r) {
+      s(ws.getCell(`A${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:AC,border:bThin});
+      ws.getCell(`A${rn}`).value = new Date(r.date+'T12:00:00'); ws.getCell(`A${rn}`).numFmt = 'dd/mm/yy';
+      s(ws.getCell(`B${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:{horizontal:'left',vertical:'center'},border:bThin});
+      ws.getCell(`B${rn}`).value = r.trajet;
+      s(ws.getCell(`C${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:AC,border:bThin});
+      ws.getCell(`C${rn}`).value = r.nbr;
+      s(ws.getCell(`D${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:AC,border:bThin});
+      ws.getCell(`D${rn}`).value = r.km;
+      s(ws.getCell(`E${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:AC,border:bThin});
+      ws.getCell(`E${rn}`).value = r.nbKm;
+      s(ws.getCell(`F${rn}`), {fill:FILL_GRAY,border:bThin});
+      s(ws.getCell(`G${rn}`), {fill:FILL_GRAY,font:{bold:true,size:7,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin,numFmt:'#,##0.00\\ _€'});
+      ws.getCell(`G${rn}`).value = r.mont;
+      ['H','I','J','K','L'].forEach(col => { s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bThin}); });
+      s(ws.getCell(`M${rn}`), {fill:FILL_GRAY,font:{bold:true,size:7,name:'Verdana'},align:AC,border:bThin});
+      s(ws.getCell(`N${rn}`), {fill:FILL_GRAY,font:{bold:true,size:7,name:'Verdana',color:{argb:'FFFF0000'}},align:AC,border:bThin,numFmt:'#,##0.00\\ _€'});
+      ws.getCell(`N${rn}`).value = r.mont;
+    } else {
+      // ligne vide
+      'ABCDEFGHIJKLMN'.split('').forEach(col => { s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bThin}); });
+    }
+  }
 
-  // Visa
-  const vR=totR+2; ws.getRow(vR).height=18;
-  ws.mergeCells(`A${vR}:B${vR}`); const cVE=ws.getCell(`A${vR}`); cVE.value='VISA ENTREPRISE'; applyStyle(cVE,S.visa);
-  ws.mergeCells(`D${vR}:E${vR}`); const cMP=ws.getCell(`D${vR}`); cMP.value='MOIS DE PAIE'; applyStyle(cMP,S.visa);
-  ws.mergeCells(`F${vR}:G${vR}`); const cVS=ws.getCell(`F${vR}`); cVS.value='VISA SALARIE'; applyStyle(cVS,S.visa);
-  const vR2=vR+1; ws.getRow(vR2).height=18;
-  ws.mergeCells(`A${vR2}:B${vR2}`); applyStyle(ws.getCell(`A${vR2}`),S.visa);
-  ws.mergeCells(`D${vR2}:E${vR2}`); const cMPV=ws.getCell(`D${vR2}`); cMPV.value=monthName; applyStyle(cMPV,S.visa);
-  ws.mergeCells(`F${vR2}:G${vR2}`); applyStyle(ws.getCell(`F${vR2}`),S.visa);
+  // === R16 — VISA / MOIS DE PAIE / VISA SALARIE (hauteur 27) ===
+  ws.getRow(16).height = 27;
+  ws.mergeCells('A16:A19');
+  s(ws.getCell('A16'), {fill:FILL_GREEN,font:{bold:true,size:9,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bMed});
+  ws.getCell('A16').value = 'VISA ENTREPRISE ';
+  ws.mergeCells('E16:E19');
+  s(ws.getCell('E16'), {fill:FILL_GREEN,font:{bold:true,size:9,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bMed});
+  ws.getCell('E16').value = 'MOIS DE PAIE';
+  ws.mergeCells('I16:I19');
+  s(ws.getCell('I16'), {fill:FILL_GREEN,font:{bold:true,size:9,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bMed});
+  ws.getCell('I16').value = 'VISA SALARIE';
+  ws.mergeCells('L16:L19');
+  s(ws.getCell('L16'), {fill:FILL_GRAY,border:bMed});
+  ws.mergeCells('M16:N16');
+  s(ws.getCell('M16'), {fill:FILL_GREEN,font:{bold:true,size:9,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bMed});
+  // Cellules intérieures R16 remplies
+  ['B16','C16','D16','F16','G16','H16','J16','K16'].forEach(addr => {
+    s(ws.getCell(addr), {fill:FILL_GRAY,border:bMed});
+  });
+  // R17-19 — espaces signature
+  [17,18,19].forEach(rn => {
+    ws.getRow(rn).height = rn===19 ? 13.5 : 15.95;
+    ['B','C','D'].forEach(col => s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bMed}));
+    ['F','G','H'].forEach(col => s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bMed}));
+    ['J','K'].forEach(col => s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bMed}));
+    ['M','N'].forEach(col => s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bMed}));
+    if (rn===17) {
+      ws.getCell(`F${rn}`).value = monthName;
+      ws.getCell(`F${rn}`).font = {bold:true,size:9,name:'Verdana',color:{argb:'FF800000'}};
+      ws.getCell(`F${rn}`).alignment = AC;
+    }
+  });
 
-  ws.views=[{state:'frozen',ySplit:9}];
+  // === PAGE SETUP ===
+  ws.pageSetup.paperSize = 9; // A4
+  ws.pageSetup.orientation = 'portrait';
+  ws.printArea = 'A1:N19';
+  ws.views = [{state:'normal'}];
 
   wb.xlsx.writeBuffer().then(buf=>{
     const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
