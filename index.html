@@ -8300,6 +8300,9 @@ function filterCreche(creche, el) {
   else if (currentPage === 'planning') renderActiveTab();
   else if (currentPage === 'rh') renderSalaries();
   else if (currentPage === 'dashboard') renderDashboard();
+  // Rafraîchir le Hub si visible (KPIs + greeting crèche)
+  const hubEl = document.getElementById('hub-screen');
+  if (hubEl && hubEl.style.display !== 'none') showHub();
   renderStats();
   updateCounts();
 }
