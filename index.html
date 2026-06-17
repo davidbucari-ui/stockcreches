@@ -3013,7 +3013,7 @@ try {
 // Réparation : si la liste est vide ou invalide, revenir à la liste par défaut
 if (!Array.isArray(CRECHES_DATA) || CRECHES_DATA.length === 0) {
   CRECHES_DATA = CRECHES_DEFAUT;
-  try { localStorage.setItem('koala_creches', JSON.stringify(CRECHES_DATA)); } catch {}
+  try { try { localStorage.setItem('koala_creches', JSON.stringify(CRECHES_DATA)); } catch(e) { console.warn('[Orevy] localStorage plein — crèches non sauvegardées', e); } } catch {}
 }
 // Réparation : migrer les données enregistrées sous la clé erronée "Crèche"
 // (créée quand la liste des crèches était vide) vers la première vraie crèche
@@ -3116,7 +3116,7 @@ function handleLogoUpload(e) {
   const reader = new FileReader();
   reader.onload = ev => {
     const data = ev.target.result;
-    localStorage.setItem('companyLogo', data);
+    try { localStorage.setItem('companyLogo', data); } catch(e) { console.warn('[Orevy] localStorage plein', e); }
     applyLogo(data);
   };
   reader.readAsDataURL(file);
@@ -3141,7 +3141,7 @@ function applyLogo(data) {
 
 function removeLogo(e) {
   e.stopPropagation();
-  localStorage.removeItem('companyLogo');
+  try { localStorage.removeItem('companyLogo'); } catch(e) {}
   applyLogo(null);
 }
 
@@ -3363,7 +3363,7 @@ let lastScannedCode = null;
 
 function openScanner() {
   // Sauvegarder l'état actuel
-  localStorage.setItem('scannerReturn', 'true');
+  try { localStorage.setItem('scannerReturn', 'true'); } catch(e) {}
   // Ouvrir une page scanner dédiée
   const scanPage = window.open('', '_blank');
   if (!scanPage) {
@@ -3412,7 +3412,7 @@ function buildScannerPage() {
   </div>
   <div class="status" id="status">Pointez vers un code-barres…</div>
   <script>
-    async function init() {
+    async function initScanner() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
         const video = document.getElementById('video');
@@ -3459,7 +3459,7 @@ function buildScannerPage() {
         window.close();
       }
     }
-    init();
+    initScanner();
   <\/script>
 
 
@@ -5531,7 +5531,7 @@ function syncContratFromCreche() {
   syncTauxCafToTarif();
 }
 
-function renderReferents() {
+function syncTarifCAF() {
   const contrat = document.getElementById('fi-contrat-caf')?.value;
   const tarifEl = document.getElementById('fi-tarif-heure');
   const tauxRaw = document.getElementById('fi-taux-caf')?.value || '';
@@ -7600,7 +7600,7 @@ async function checkSession() {
       try {
         const res = await fetch(`${SUPA_RH_URL}/auth/v1/user`, {
           headers: { 'apikey': SUPA_RH_KEY, 'Authorization': 'Bearer ' + token }
-        });
+        }).catch(() => ({ok:false}));
         const data = await res.json();
         if (data.email) {
           currentUser = data;
@@ -10583,7 +10583,7 @@ window.addEventListener('online', () => {
 async function sbGet(table, params='') {
   const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}?${params}&order=id.asc`, {
     headers: { ..._sbHeaders(table), 'Prefer': 'return=representation' }
-  });
+  }).catch(e => { console.warn('[Orevy] Erreur réseau sbList:', e); return {ok:false,json:async()=>[]}; });
   if (!r.ok) throw new Error(`GET ${table} : ${r.status}`);
   return r.json();
 }
@@ -10619,7 +10619,7 @@ async function sbDelete(table, id) {
   const r = await fetch(url, {
     method: 'DELETE',
     headers: _sbHeaders(table),
-  });
+  }).catch(e => { console.warn('[Orevy] Erreur réseau sbDelete:', e); return {ok:false,status:0}; });
   if (!r.ok) throw new Error(`DELETE ${table} : ${r.status}`);
 }
 
@@ -10627,7 +10627,7 @@ async function sbDelete(table, id) {
 async function sbDeleteWhere(table, filter) {
   const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}?${filter}`, {
     method: 'DELETE', headers: _sbHeaders(table),
-  });
+  }).catch(e => { console.warn('[Orevy] Erreur réseau sbDeleteWhere:', e); return {ok:false,status:0}; });
   if (!r.ok) throw new Error(`DELETE ${table} : ${r.status}`);
 }
 
@@ -11135,7 +11135,8 @@ async function createAdminUser() {
         action: 'create', email, password,
         userData: { email, role, creche_id: creche || 'all', actif: true }
       })
-    });
+    })
+    .catch(e => { console.warn("[Orevy] Worker inaccessible:", e); throw new Error("Réseau indisponible"); });
     const data = await res.json();
     if (!res.ok) {
       console.error('[createAdminUser] Worker error:', data);
@@ -11893,9 +11894,9 @@ function ikLoadFromPlanning(yearMonth) {
 
   // Debug : montrer les noms trouvés dans le planning
   const nomsPlanning = [...new Set(allRows.map(r=>r.salarie))];
-  console.log('[IK] Salarié sélectionné:', salSel);
-  console.log('[IK] Noms trouvés dans le planning:', nomsPlanning);
-  console.log('[IK] Total lignes avant filtre:', allRows.length);
+  
+  
+  
 
   // Filtre insensible à la casse et aux espaces
   ikRows = allRows.filter(r => {
@@ -11908,7 +11909,7 @@ function ikLoadFromPlanning(yearMonth) {
   if (ikRows.length === 0 && allRows.length > 0) {
     // Le planning coordinateur EJE n'a pas de cr.pro — on prend toutes les lignes de la crèche
     ikRows = allRows.map(r => ({ ...r, salarie: salSel }));
-    console.log('[IK] Fallback: assignation au salarié sélectionné');
+    
   }
 
   ikSaveRows(month);
@@ -12017,202 +12018,133 @@ function ikGenerate() {
   const [year, monthNum] = month.split('-').map(Number);
   const mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const monthName = mnames[monthNum-1];
-  const firstDay = new Date(year, monthNum-1, 1);
-  const lastDay  = new Date(year, monthNum, 0);
-  function fmtDate(d) {
-    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-  }
-
-  // Calcul lignes — arrondi par ligne pour cohérence UI
+  function fmtD(d) { if(!d)return''; const dt=new Date(d+'T12:00:00'); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
+  const firstDay = `${year}-${String(monthNum).padStart(2,'0')}-01`;
+  const ld = new Date(year, monthNum, 0);
+  const lastDay = `${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
+  let totalEur = 0;
   const rows = active.map(r => {
     const km = dist[r.creche]!==undefined ? dist[r.creche] : 0;
-    const nbKm = r.nbr * km;
-    const mont = Math.round(nbKm * bareme * 100) / 100;
-    // Déduire lieu arrivée depuis le nom de crèche
-    const arr = r.creche || r.trajet.split('→').pop().trim() || '';
-    return {date:r.date, trajet:r.trajet, motif:'Coordination / déplacement professionnel', depart: cfg.depart||'', arrivee:arr, nbr:r.nbr, km, nbKm, mont};
+    const nbKm = r.nbr*km, mont = nbKm*bareme;
+    totalEur += mont; return {date:r.date,trajet:r.trajet,nbr:r.nbr,km,nbKm,mont:Math.round(mont*100)/100};
   });
-  const totalKm  = rows.reduce((a,r)=>a+r.nbKm, 0);
-  const totalEur = Math.round(rows.reduce((a,r)=>a+r.mont, 0)*100)/100;
+  totalEur = Math.round(totalEur*100)/100;
 
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('JUSTIF_IK');
+  const ws = wb.addWorksheet('FDEPvi');
 
-  // Largeurs — identiques au modèle validé
-  ws.columns = [
-    {width:9},   // A DATE
-    {width:16},  // B TRAJET
-    {width:28},  // C MOTIF
-    {width:16},  // D LIEU DÉPART
-    {width:14},  // E LIEU ARRIVÉE
-    {width:9},   // F NB TRAJETS
-    {width:14},  // G KM/TRAJET
-    {width:10},  // H TOTAL KM
-    {width:13},  // I MONTANT
-  ];
+  // Largeurs colonnes : A=12 B=26 C=11 D=11 E=11 F=5 G=14
+  ws.columns = [{width:12},{width:26},{width:11},{width:11},{width:11},{width:5},{width:14}];
 
-  // Styles helpers
-  const GREEN  = 'FF1A6B3C';
-  const LGRAY  = 'FFF2F2F2';
-  const DGRAY  = 'FFD9D9D9';
-  const BLUE   = 'FF1F3864';
-  const WHITE  = 'FFFFFFFF';
-  const YELLOW = 'FFFFF2CC';
-  function fill(argb) { return {type:'pattern',pattern:'solid',fgColor:{argb}}; }
-  function font(bold,sz,color,italic) { return {bold:!!bold,size:sz||9,name:'Calibri',color:{argb:color||'FF000000'},italic:!!italic}; }
-  function aln(h,v,wrap) { return {horizontal:h||'center',vertical:v||'center',wrapText:!!wrap}; }
-  const bThin = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}};
-  const bMed  = {left:{style:'medium'},right:{style:'medium'},top:{style:'medium'},bottom:{style:'medium'}};
-  function sc(cell,{f,fn,al,bo,nf}={}) {
-    if(f)  cell.fill=f;
-    if(fn) cell.font=fn;
-    if(al) cell.alignment=al;
-    if(bo) cell.border=bo;
-    if(nf) cell.numFmt=nf;
+  function bc(bg, fontColor, bold, sz) {
+    return {
+      fill: bg ? {type:'pattern',pattern:'solid',fgColor:{argb:bg}} : undefined,
+      font: {bold:!!bold, size:sz||9, name:'Arial', color:{argb: fontColor||'FF000000'}},
+      alignment: {horizontal:'center', vertical:'middle', wrapText:false},
+      border: {
+        top:{style:'thin',color:{argb:'FF000000'}},
+        bottom:{style:'thin',color:{argb:'FF000000'}},
+        left:{style:'thin',color:{argb:'FF000000'}},
+        right:{style:'thin',color:{argb:'FF000000'}}
+      }
+    };
+  }
+  function applyStyle(cell, style, fmt, halign) {
+    if (style.fill) cell.fill = style.fill;
+    if (style.font) cell.font = style.font;
+    cell.alignment = {...(style.alignment||{}), horizontal: halign||style.alignment.horizontal};
+    cell.border = style.border;
+    if (fmt) cell.numFmt = fmt;
   }
 
-  // ── R1 TITRE ──
-  ws.getRow(1).height=27.95;
-  ws.mergeCells('A1:I1');
-  ws.getCell('A1').value='REMBOURSEMENT DE FRAIS KILOMÉTRIQUES';
-  sc(ws.getCell('A1'),{f:fill(GREEN),fn:font(true,14,WHITE),al:aln(),bo:bThin});
+  const S = {
+    titre:  bc('FF006400','FFFFFFFF',true,14),
+    jaune:  bc('FFFFFF99','FF000000',true,9),
+    bleu:   bc('FFCCFFFF','FF000000',true,14),
+    vvert:  bc('FFCCFFCC','FF000000',true,8),
+    rouge:  bc(null,'FFFF0000',true,10),
+    data:   bc(null,'FF000000',false,8),
+    tot:    bc(null,'FF000000',true,9),
+    totR:   bc(null,'FFFF0000',true,9),
+    visa:   bc(null,'FF000000',true,8),
+  };
 
-  // ── R2 sous-titre ──
-  ws.getRow(2).height=14.1;
-  ws.mergeCells('A2:I2');
-  ws.getCell('A2').value='Art. 81-1° CGI — Barème kilométrique URSSAF — À conserver 5 ans';
-  sc(ws.getCell('A2'),{f:fill(BLUE),fn:font(false,8,WHITE,true),al:aln(),bo:bThin});
+  // R1 — Titre vert
+  ws.mergeCells('A1:G1'); ws.getRow(1).height=22;
+  const c1=ws.getCell('A1'); c1.value='C3F      Frais de déplacements            C3F'; applyStyle(c1,S.titre,'center');
 
-  // ── R3 vide ──
-  ws.getRow(3).height=6;
+  // R2 — vide
+  ws.getRow(2).height=6;
 
-  // ── R4-R6 BLOC IDENTITÉ ──
-  const idRows = [
-    [4,'EMPLOYEUR','KOALAKIDS','N° MATRICULE','xxx'],
-    [5,'SALARIÉ',salarie,'VÉHICULE','Marque / Modèle / Immat.'],
-    [6,'FONCTION','Éducateur de Jeunes Enfants / Coordinateur','PUISSANCE FISCALE','5 CV'],
-  ];
-  idRows.forEach(([rn,lbl,val,lbl2,val2])=>{
-    ws.getRow(rn).height=18;
-    ws.getCell(`A${rn}`).value=lbl;
-    sc(ws.getCell(`A${rn}`),{f:fill(DGRAY),fn:font(true,9),al:aln('left'),bo:bThin});
-    ws.mergeCells(`B${rn}:E${rn}`);
-    ws.getCell(`B${rn}`).value=val;
-    sc(ws.getCell(`B${rn}`),{f:fill(YELLOW),fn:font(false,9),al:aln('left'),bo:bThin});
-    ws.mergeCells(`F${rn}:G${rn}`);
-    ws.getCell(`F${rn}`).value=lbl2;
-    sc(ws.getCell(`F${rn}`),{f:fill(DGRAY),fn:font(true,9),al:aln(),bo:bThin});
-    ws.mergeCells(`H${rn}:I${rn}`);
-    ws.getCell(`H${rn}`).value=val2;
-    sc(ws.getCell(`H${rn}`),{f:fill(YELLOW),fn:font(false,9),al:aln('left'),bo:bThin});
-  });
+  // R3 — Salarié | nom | | | Période du | date debut | au
+  ws.getRow(3).height=20;
+  [['A3','Salarié'],['B3',salarie],['C3',''],['D3',''],
+   ['E3','Période du'],['F3',fmtD(firstDay)],['G3','au']
+  ].forEach(([addr,val])=>{ const c=ws.getCell(addr); c.value=val; applyStyle(c,S.jaune); });
 
-  // ── R7 PÉRIODE + BARÈME ──
-  ws.getRow(7).height=18;
-  ws.mergeCells('A7:B7');
-  ws.getCell('A7').value='PÉRIODE';
-  sc(ws.getCell('A7'),{f:fill(DGRAY),fn:font(true,9),al:aln(),bo:bThin});
-  ws.mergeCells('C7:E7');
-  ws.getCell('C7').value=`du ${fmtDate(firstDay)}  au  ${fmtDate(lastDay)}`;
-  sc(ws.getCell('C7'),{f:fill(YELLOW),fn:font(false,9),al:aln(),bo:bThin});
-  ws.mergeCells('F7:G7');
-  ws.getCell('F7').value='BARÈME €/km (URSSAF '+year+')';
-  sc(ws.getCell('F7'),{f:fill(DGRAY),fn:font(true,9),al:aln(),bo:bThin});
-  ws.mergeCells('H7:I7');
-  ws.getCell('H7').value=bareme;
-  ws.getCell('H7').numFmt='0.000 "€/km"';
-  sc(ws.getCell('H7'),{f:fill(YELLOW),fn:font(true,11,GREEN),al:aln(),bo:bThin});
+  // R4 — date fin sur A4, total sur G4 bleu
+  ws.getRow(4).height=20;
+  ['A4','B4','C4','D4','E4','F4'].forEach(addr=>{ applyStyle(ws.getCell(addr),S.jaune); });
+  ws.getCell('A4').value = fmtD(lastDay);
+  const cTot=ws.getCell('G4'); cTot.value=totalEur; applyStyle(cTot,S.bleu,'#,##0.00');
 
-  // ── R8 vide ──
-  ws.getRow(8).height=6;
+  // R5 — vide
+  ws.getRow(5).height=5;
 
-  // ── R9 EN-TÊTES ──
-  ws.getRow(9).height=36;
-  [['A9','DATE'],['B9','TRAJET\n(départ \u2192 arrivée)'],['C9','MOTIF DU\nDÉPLACEMENT'],
-   ['D9','LIEU DE\nDÉPART'],['E9','LIEU\nD\u2019ARRIVÉE'],['F9','NB\nTRAJETS'],
-   ['G9','KM /\nTRAJET'],['H9','TOTAL\nKM'],['I9','MONTANT\nREMBOURSÉ €']
-  ].forEach(([addr,val])=>{
-    ws.getCell(addr).value=val;
-    sc(ws.getCell(addr),{f:fill(GREEN),fn:font(true,8,WHITE),al:aln('center','center',true),bo:bThin});
-  });
+  // R6 — sous-total rouge à gauche (montant récapitulatif)
+  ws.getRow(6).height=14;
+  const cSub=ws.getCell('G6'); cSub.value=totalEur;
+  cSub.font={bold:true,size:11,name:'Arial',color:{argb:'FFFF0000'}};
+  cSub.alignment={horizontal:'center',vertical:'middle'};
+  cSub.numFmt='#,##0.00';
 
-  // ── R10 section ──
-  ws.getRow(10).height=14.1;
-  ws.mergeCells('A10:I10');
-  ws.getCell('A10').value='FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE PROFESSIONNEL';
-  sc(ws.getCell('A10'),{f:fill(GREEN),fn:font(true,8,WHITE),al:aln(),bo:bThin});
+  // R7 — vide
+  ws.getRow(7).height=5;
 
-  // ── DONNÉES R11+ ──
-  rows.forEach((r,i)=>{
-    const rn=11+i;
-    ws.getRow(rn).height=15;
-    const bg = i%2===0 ? WHITE : LGRAY;
-    const vals=[r.date, r.trajet, r.motif, r.depart, r.arrivee, r.nbr, r.km, r.nbKm, r.mont];
+  // R8 — en-têtes colonnes vert clair
+  ws.getRow(8).height=20;
+  [['A8','Date'],['B8','Trajet'],['C8','Nb trajets'],
+   ['D8','km/trajet'],['E8','Nb KM'],['F8',''],['G8','Montant']
+  ].forEach(([addr,val])=>{ const c=ws.getCell(addr); c.value=val; applyStyle(c,S.vvert); });
+
+  // R9 — section rouge mergée
+  ws.mergeCells('A9:G9'); ws.getRow(9).height=18;
+  const cSec=ws.getCell('A9');
+  cSec.value=' FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE D\'UN DOSSIER';
+  applyStyle(cSec,S.rouge);
+
+  // Données
+  rows.forEach((r,i) => {
+    const rn=10+i; ws.getRow(rn).height=16;
+    const vals=[fmtD(r.date),r.trajet,r.nbr,r.km,r.nbKm,'',r.mont];
     vals.forEach((v,ci)=>{
-      const col=String.fromCharCode(65+ci);
-      ws.getCell(`${col}${rn}`).value = ci===0 ? new Date(r.date+'T12:00:00') : v;
-      if(ci===0) ws.getCell(`${col}${rn}`).numFmt='dd/mm/yy';
-      if(ci===8) ws.getCell(`${col}${rn}`).numFmt='#,##0.00';
-      sc(ws.getCell(`${col}${rn}`),{
-        f:fill(bg),fn:font(false,8),
-        al:aln(ci>=1&&ci<=4?'left':'center'),
-        bo:bThin
-      });
+      const c=ws.getRow(rn).getCell(ci+1); c.value=v;
+      applyStyle(c,S.data, ci===6?'#,##0.00':undefined, ci===1?'left':'center');
+      if(ci===6){ c.font={bold:true,size:8,name:'Arial',color:{argb:'FFFF0000'}}; }
     });
   });
 
-  // ── TOTAL ──
-  const trn=11+rows.length;
-  ws.getRow(trn).height=20.1;
-  ws.mergeCells(`A${trn}:G${trn}`);
-  ws.getCell(`A${trn}`).value='TOTAL DU MOIS';
-  sc(ws.getCell(`A${trn}`),{f:fill(GREEN),fn:font(true,10,WHITE),al:aln(),bo:bMed});
-  ws.getCell(`H${trn}`).value=totalKm;
-  sc(ws.getCell(`H${trn}`),{f:fill(GREEN),fn:font(true,10,WHITE),al:aln(),bo:bMed});
-  ws.getCell(`I${trn}`).value=totalEur;
-  ws.getCell(`I${trn}`).numFmt='#,##0.00 "\u20ac"';
-  sc(ws.getCell(`I${trn}`),{f:fill(GREEN),fn:font(true,12,WHITE),al:aln(),bo:bMed});
+  // Ligne TOTAL
+  const totR=10+rows.length; ws.getRow(totR).height=18;
+  ws.mergeCells(`A${totR}:F${totR}`);
+  const cTL=ws.getCell(`A${totR}`); cTL.value='TOTAL'; applyStyle(cTL,S.tot);
+  cTL.border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}},left:{style:'medium',color:{argb:'FF000000'}},right:{style:'medium',color:{argb:'FF000000'}}};
+  const cTM=ws.getCell(`G${totR}`); cTM.value=totalEur; applyStyle(cTM,S.totR,'#,##0.00');
+  cTM.border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}},left:{style:'medium',color:{argb:'FF000000'}},right:{style:'medium',color:{argb:'FF000000'}}};
 
-  // ── ESPACES ──
-  ws.getRow(trn+1).height=8;
-  ws.getRow(trn+2).height=8;
+  ws.getRow(totR+1).height=10;
 
-  // ── SIGNATURES ──
-  const sr=trn+3;
-  [['A','C','VISA ENTREPRISE\n(Nom, date, signature)'],
-   ['D','F','MOIS DE PAIE\n(service RH)'],
-   ['G','I','VISA SALARIÉ\n(Nom, date, signature)']
-  ].forEach(([sc2,ec,lbl])=>{
-    ws.getRow(sr).height=27;
-    ws.getRow(sr+1).height=38.1;
-    ws.getRow(sr+2).height=18;
-    ws.mergeCells(`${sc2}${sr}:${ec}${sr}`);
-    ws.getCell(`${sc2}${sr}`).value=lbl.replace('\\n','\n');
-    sc(ws.getCell(`${sc2}${sr}`),{f:fill(GREEN),fn:font(true,8,WHITE),al:aln('center','center',true),bo:bMed});
-    ws.mergeCells(`${sc2}${sr+1}:${ec}${sr+1}`);
-    sc(ws.getCell(`${sc2}${sr+1}`),{f:fill(WHITE),bo:bMed});
-    ws.mergeCells(`${sc2}${sr+2}:${ec}${sr+2}`);
-    sc(ws.getCell(`${sc2}${sr+2}`),{f:fill(LGRAY),bo:bMed});
-  });
-  ws.getCell(`D${sr+2}`).value=monthName+' '+year;
-  ws.getCell(`D${sr+2}`).font={bold:true,size:10,name:'Calibri',color:{argb:GREEN}};
-  ws.getCell(`D${sr+2}`).alignment={horizontal:'center',vertical:'center'};
+  // Visa
+  const vR=totR+2; ws.getRow(vR).height=18;
+  ws.mergeCells(`A${vR}:B${vR}`); const cVE=ws.getCell(`A${vR}`); cVE.value='VISA ENTREPRISE'; applyStyle(cVE,S.visa);
+  ws.mergeCells(`D${vR}:E${vR}`); const cMP=ws.getCell(`D${vR}`); cMP.value='MOIS DE PAIE'; applyStyle(cMP,S.visa);
+  ws.mergeCells(`F${vR}:G${vR}`); const cVS=ws.getCell(`F${vR}`); cVS.value='VISA SALARIE'; applyStyle(cVS,S.visa);
+  const vR2=vR+1; ws.getRow(vR2).height=18;
+  ws.mergeCells(`A${vR2}:B${vR2}`); applyStyle(ws.getCell(`A${vR2}`),S.visa);
+  ws.mergeCells(`D${vR2}:E${vR2}`); const cMPV=ws.getCell(`D${vR2}`); cMPV.value=monthName; applyStyle(cMPV,S.visa);
+  ws.mergeCells(`F${vR2}:G${vR2}`); applyStyle(ws.getCell(`F${vR2}`),S.visa);
 
-  // ── NOTE LÉGALE ──
-  const nr=sr+4;
-  ws.getRow(nr).height=14.1;
-  ws.mergeCells(`A${nr}:I${nr}`);
-  ws.getCell(`A${nr}`).value='⚖ Document à conserver 5 ans — Exonération de charges sociales sous réserve du respect du barème fiscal URSSAF en vigueur (Art. 81-1° CGI + BOSS §855)';
-  sc(ws.getCell(`A${nr}`),{f:fill(LGRAY),fn:font(false,7,null,true),al:aln('left')});
-
-  // ── FREEZE lignes 1-10 ──
-  ws.views=[{state:'frozen',ySplit:10,topLeftCell:'A11'}];
-
-  // ── PAGE SETUP ──
-  ws.pageSetup.paperSize=9;
-  ws.pageSetup.orientation='landscape';
-  ws.pageSetup.fitToPage=true;
-  ws.pageSetup.fitToWidth=1;
+  ws.views=[{state:'frozen',ySplit:9}];
 
   wb.xlsx.writeBuffer().then(buf=>{
     const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -12221,6 +12153,8 @@ function ikGenerate() {
     URL.revokeObjectURL(url);
   });
 }
+
+
 function renderPlanningIK() {
   const el = document.getElementById('pe-ik-content');
   if (!el) return;
