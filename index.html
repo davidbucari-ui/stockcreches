@@ -12017,217 +12017,202 @@ function ikGenerate() {
   const [year, monthNum] = month.split('-').map(Number);
   const mnames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const monthName = mnames[monthNum-1];
-  function fmtD(d) { if(!d)return''; const dt=new Date(d+'T12:00:00'); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
   const firstDay = new Date(year, monthNum-1, 1);
   const lastDay  = new Date(year, monthNum, 0);
+  function fmtDate(d) {
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  }
+
+  // Calcul lignes — arrondi par ligne pour cohérence UI
   const rows = active.map(r => {
     const km = dist[r.creche]!==undefined ? dist[r.creche] : 0;
-    const nbKm = r.nbr*km;
-    const mont = Math.round(nbKm*bareme*100)/100;
-    return {date:r.date,trajet:r.trajet,nbr:r.nbr,km,nbKm,mont};
+    const nbKm = r.nbr * km;
+    const mont = Math.round(nbKm * bareme * 100) / 100;
+    // Déduire lieu arrivée depuis le nom de crèche
+    const arr = r.creche || r.trajet.split('→').pop().trim() || '';
+    return {date:r.date, trajet:r.trajet, motif:'Coordination / déplacement professionnel', depart: cfg.depart||'', arrivee:arr, nbr:r.nbr, km, nbKm, mont};
   });
-  // Total = somme des montants déjà arrondis (cohérence avec les lignes affichées)
-  const totalEur = Math.round(rows.reduce((acc,r)=>acc+r.mont,0)*100)/100;
+  const totalKm  = rows.reduce((a,r)=>a+r.nbKm, 0);
+  const totalEur = Math.round(rows.reduce((a,r)=>a+r.mont, 0)*100)/100;
 
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('FDEPvi');
+  const ws = wb.addWorksheet('JUSTIF_IK');
 
-  // === LARGEURS COLONNES EXACTES (depuis l'original) ===
-  // A=9, B=10.625, C=10.625, D=8.625(col4), E=8.625, F=8.625, G=13.375, H=9.5, I=8.875, J=9, K=8.625, L=8.75, M=8.125, N=9.875
+  // Largeurs — identiques au modèle validé
   ws.columns = [
-    {width:9},      // A
-    {width:10.625}, // B
-    {width:10.625}, // C
-    {width:8.625},  // D
-    {width:8.625},  // E
-    {width:8.625},  // F
-    {width:13.375}, // G
-    {width:9.5},    // H
-    {width:8.875},  // I
-    {width:9},      // J
-    {width:8.625},  // K
-    {width:8.75},   // L
-    {width:8.125},  // M
-    {width:9.875},  // N
+    {width:9},   // A DATE
+    {width:16},  // B TRAJET
+    {width:28},  // C MOTIF
+    {width:16},  // D LIEU DÉPART
+    {width:14},  // E LIEU ARRIVÉE
+    {width:9},   // F NB TRAJETS
+    {width:14},  // G KM/TRAJET
+    {width:10},  // H TOTAL KM
+    {width:13},  // I MONTANT
   ];
 
-  // === COULEURS (issues de la palette indexée du fichier original) ===
-  // fill indexed 43 = FF339966 (Sea Green) → en-tête titre R1
-  // fill indexed 42 = FF003366 (Dark Blue) → zone TOTAL M4:N4
-  // fill indexed 41 = FF969696 (Gray 40%)  → zone données
-  // font indexed 16 = FF800000 (Dark Red)  → textes en-têtes sombres
-  // font indexed 10 = FFFF0000 (Red)       → montants
-  const FILL_GREEN  = {type:'pattern',pattern:'solid',fgColor:{argb:'FF339966'}};
-  const FILL_BLUE   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF003366'}};
-  const FILL_GRAY   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF969696'}};
-  const FILL_LTGREEN= {type:'pattern',pattern:'solid',fgColor:{argb:'FF339966'}}; // réutilisé
-  const BORDER_THIN = {style:'thin', color:{argb:'FF000000'}};
-  const BORDER_MED  = {style:'medium',color:{argb:'FF000000'}};
-  const bThin = {left:BORDER_THIN,right:BORDER_THIN,top:BORDER_THIN,bottom:BORDER_THIN};
-  const bMed  = {left:BORDER_MED, right:BORDER_MED, top:BORDER_MED, bottom:BORDER_MED};
-  const bMedTop = {left:BORDER_MED,right:BORDER_MED,top:BORDER_MED,bottom:{style:'none'}};
-
-  function s(cell, {fill, font, align, border, numFmt}={}) {
-    if (fill)   cell.fill   = fill;
-    if (font)   cell.font   = font;
-    if (align)  cell.alignment = align;
-    if (border) cell.border = border;
-    if (numFmt) cell.numFmt = numFmt;
+  // Styles helpers
+  const GREEN  = 'FF1A6B3C';
+  const LGRAY  = 'FFF2F2F2';
+  const DGRAY  = 'FFD9D9D9';
+  const BLUE   = 'FF1F3864';
+  const WHITE  = 'FFFFFFFF';
+  const YELLOW = 'FFFFF2CC';
+  function fill(argb) { return {type:'pattern',pattern:'solid',fgColor:{argb}}; }
+  function font(bold,sz,color,italic) { return {bold:!!bold,size:sz||9,name:'Calibri',color:{argb:color||'FF000000'},italic:!!italic}; }
+  function aln(h,v,wrap) { return {horizontal:h||'center',vertical:v||'center',wrapText:!!wrap}; }
+  const bThin = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}};
+  const bMed  = {left:{style:'medium'},right:{style:'medium'},top:{style:'medium'},bottom:{style:'medium'}};
+  function sc(cell,{f,fn,al,bo,nf}={}) {
+    if(f)  cell.fill=f;
+    if(fn) cell.font=fn;
+    if(al) cell.alignment=al;
+    if(bo) cell.border=bo;
+    if(nf) cell.numFmt=nf;
   }
-  const AC = {horizontal:'center',vertical:'center'};
-  const ACC= {horizontal:'centerContinuous',vertical:'center'};
-  const AW = {horizontal:'center',vertical:'center',wrapText:true};
 
-  // === R1 — TITRE (hauteur 21) ===
-  ws.getRow(1).height = 21;
-  ws.mergeCells('A1:N1');
-  s(ws.getCell('A1'), {
-    fill: FILL_GREEN,
-    font: {size:16, name:'Verdana', color:{argb:'FFFFFFFF'}},
-    align: ACC,
-    border: {left:BORDER_THIN,top:BORDER_THIN,bottom:BORDER_THIN,right:{style:'none'}}
-  });
-  ws.getCell('A1').value = 'C3F      Frais de deplacements            C3F';
+  // ── R1 TITRE ──
+  ws.getRow(1).height=27.95;
+  ws.mergeCells('A1:I1');
+  ws.getCell('A1').value='REMBOURSEMENT DE FRAIS KILOMÉTRIQUES';
+  sc(ws.getCell('A1'),{f:fill(GREEN),fn:font(true,14,WHITE),al:aln(),bo:bThin});
 
-  // === R2 — vide (hauteur 16.5) ===
-  ws.getRow(2).height = 16.5;
+  // ── R2 sous-titre ──
+  ws.getRow(2).height=14.1;
+  ws.mergeCells('A2:I2');
+  ws.getCell('A2').value='Art. 81-1° CGI — Barème kilométrique URSSAF — À conserver 5 ans';
+  sc(ws.getCell('A2'),{f:fill(BLUE),fn:font(false,8,WHITE,true),al:aln(),bo:bThin});
 
-  // === R3 — N° | xxx | | | E3:H3=Nom salarié | I3:L3=Période | M3:N3=TOTAL (hauteur 24.95) ===
-  ws.getRow(3).height = 24.95;
-  s(ws.getCell('A3'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-  ws.getCell('A3').value = 'N°';
-  ws.mergeCells('B3:D3');
-  s(ws.getCell('B3'), {fill:FILL_GRAY,font:{bold:true,size:12,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-  ws.getCell('B3').value = 'xxx';
-  ws.mergeCells('E3:H3');
-  s(ws.getCell('E3'), {fill:FILL_GRAY,font:{bold:true,size:10,name:'Verdana',color:{argb:'FF800000'}},align:AW,border:bThin});
-  ws.getCell('E3').value = salarie;
-  ws.mergeCells('I3:L3');
-  s(ws.getCell('I3'), {fill:FILL_GRAY,font:{bold:true,size:11,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-  ws.getCell('I3').value = 'Période';
-  ws.mergeCells('M3:N3');
-  s(ws.getCell('M3'), {fill:FILL_GRAY,font:{bold:true,size:14,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-  ws.getCell('M3').value = 'TOTAL';
+  // ── R3 vide ──
+  ws.getRow(3).height=6;
 
-  // === R4 — Barème KM | valeur | | | du | date_debut | au | date_fin | TOTAL=formule (hauteur 24.95) ===
-  ws.getRow(4).height = 24.95;
-  s(ws.getCell('A4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AW,border:bThin});
-  ws.getCell('A4').value = 'Barème KM';
-  ws.mergeCells('B4:D4');
-  s(ws.getCell('B4'), {fill:FILL_GRAY,font:{bold:true,size:12,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-  ws.getCell('B4').value = bareme;
-  ws.getCell('B4').numFmt = '0.000';
-  s(ws.getCell('I4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-  ws.getCell('I4').value = 'du';
-  s(ws.getCell('J4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-  ws.getCell('J4').value = firstDay; ws.getCell('J4').numFmt = 'd/m/yy';
-  s(ws.getCell('K4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-  ws.getCell('K4').value = 'au';
-  s(ws.getCell('L4'), {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-  ws.getCell('L4').value = lastDay; ws.getCell('L4').numFmt = 'd/m/yy';
-  ws.mergeCells('M4:N4');
-  s(ws.getCell('M4'), {fill:FILL_BLUE,font:{bold:true,size:12,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bMed});
-  ws.getCell('M4').value = totalEur; ws.getCell('M4').numFmt = '#,##0.00\\ _€';
-
-  // === R5 — vide (hauteur 24.95) ===
-  ws.getRow(5).height = 24.95;
-
-  // === R6 — TOTAUX : seulement G6 (valorisation) et N6 (total HT) (hauteur 18) ===
-  ws.getRow(6).height = 18;
-  s(ws.getCell('G6'), {font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,numFmt:'#,##0.00\\ _\u20ac'});
-  ws.getCell('G6').value = totalEur;
-  s(ws.getCell('N6'), {font:{bold:true,size:8,name:'Verdana',color:{argb:'FFFF0000'}},align:AC,numFmt:'#,##0.00\\ _\u20ac'});
-  ws.getCell('N6').value = totalEur;
-
-  // === R7 — vide (hauteur 13.5) ===
-  ws.getRow(7).height = 13.5;
-
-  // === R8 — EN-TÊTES COLONNES (hauteur 19.5) ===
-  ws.getRow(8).height = 19.5;
-  const hdrs = [
-    ['A8','Date'],['B8','trajet'],['C8','nbr trajet'],['D8','km/trajet'],
-    ['E8','Nb KM'],['F8',null],['G8','Valorisation KM'],
-    ['H8',null],['I8',null],['J8',null],['K8',null],['L8',null],
-    ['M8','TVA'],['N8','TOTAL HT']
+  // ── R4-R6 BLOC IDENTITÉ ──
+  const idRows = [
+    [4,'EMPLOYEUR','KOALAKIDS','N° MATRICULE','xxx'],
+    [5,'SALARIÉ',salarie,'VÉHICULE','Marque / Modèle / Immat.'],
+    [6,'FONCTION','Éducateur de Jeunes Enfants / Coordinateur','PUISSANCE FISCALE','5 CV'],
   ];
-  hdrs.forEach(([addr,val]) => {
-    s(ws.getCell(addr), {fill:FILL_GREEN,font:{bold:true,size:8,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bThin});
-    if (val) ws.getCell(addr).value = val;
+  idRows.forEach(([rn,lbl,val,lbl2,val2])=>{
+    ws.getRow(rn).height=18;
+    ws.getCell(`A${rn}`).value=lbl;
+    sc(ws.getCell(`A${rn}`),{f:fill(DGRAY),fn:font(true,9),al:aln('left'),bo:bThin});
+    ws.mergeCells(`B${rn}:E${rn}`);
+    ws.getCell(`B${rn}`).value=val;
+    sc(ws.getCell(`B${rn}`),{f:fill(YELLOW),fn:font(false,9),al:aln('left'),bo:bThin});
+    ws.mergeCells(`F${rn}:G${rn}`);
+    ws.getCell(`F${rn}`).value=lbl2;
+    sc(ws.getCell(`F${rn}`),{f:fill(DGRAY),fn:font(true,9),al:aln(),bo:bThin});
+    ws.mergeCells(`H${rn}:I${rn}`);
+    ws.getCell(`H${rn}`).value=val2;
+    sc(ws.getCell(`H${rn}`),{f:fill(YELLOW),fn:font(false,9),al:aln('left'),bo:bThin});
   });
 
-  // === R9 — Section titre (hauteur 24.95) ===
-  ws.getRow(9).height = 24.95;
-  ws.mergeCells('A9:N9');
-  s(ws.getCell('A9'), {fill:FILL_GREEN,font:{bold:true,size:10,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AC,border:bThin});
-  ws.getCell('A9').value = " FRAIS DE DEPLACEMENT ENGAGES DANS LE CADRE D'UN DOSSIER";
+  // ── R7 PÉRIODE + BARÈME ──
+  ws.getRow(7).height=18;
+  ws.mergeCells('A7:B7');
+  ws.getCell('A7').value='PÉRIODE';
+  sc(ws.getCell('A7'),{f:fill(DGRAY),fn:font(true,9),al:aln(),bo:bThin});
+  ws.mergeCells('C7:E7');
+  ws.getCell('C7').value=`du ${fmtDate(firstDay)}  au  ${fmtDate(lastDay)}`;
+  sc(ws.getCell('C7'),{f:fill(YELLOW),fn:font(false,9),al:aln(),bo:bThin});
+  ws.mergeCells('F7:G7');
+  ws.getCell('F7').value='BARÈME €/km (URSSAF '+year+')';
+  sc(ws.getCell('F7'),{f:fill(DGRAY),fn:font(true,9),al:aln(),bo:bThin});
+  ws.mergeCells('H7:I7');
+  ws.getCell('H7').value=bareme;
+  ws.getCell('H7').numFmt='0.000 "€/km"';
+  sc(ws.getCell('H7'),{f:fill(YELLOW),fn:font(true,11,GREEN),al:aln(),bo:bThin});
 
-  // === LIGNES DONNÉES R10→R15 (6 lignes fixes, hauteur 15.95) ===
-  for (let i=0; i<rows.length; i++) {
-    const rn = 10+i;
-    ws.getRow(rn).height = 15.95;
-    const r = rows[i];
-    if (r) {
-      s(ws.getCell(`A${rn}`), {font:{size:7,name:'Verdana'},align:AC,border:bThin});
-      ws.getCell(`A${rn}`).value = new Date(r.date+'T12:00:00'); ws.getCell(`A${rn}`).numFmt = 'dd/mm/yy';
-      s(ws.getCell(`B${rn}`), {font:{size:7,name:'Verdana'},align:{horizontal:'left',vertical:'center'},border:bThin});
-      ws.getCell(`B${rn}`).value = r.trajet;
-      s(ws.getCell(`C${rn}`), {font:{size:7,name:'Verdana'},align:AC,border:bThin});
-      ws.getCell(`C${rn}`).value = r.nbr;
-      s(ws.getCell(`D${rn}`), {font:{size:7,name:'Verdana'},align:AC,border:bThin});
-      ws.getCell(`D${rn}`).value = r.km;
-      s(ws.getCell(`E${rn}`), {font:{size:7,name:'Verdana'},align:AC,border:bThin});
-      ws.getCell(`E${rn}`).value = r.nbKm;
-      s(ws.getCell(`F${rn}`), {border:bThin});
-      s(ws.getCell(`G${rn}`), {font:{bold:true,size:7,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin,numFmt:'#,##0.00\\ _\u20ac'});
-      ws.getCell(`G${rn}`).value = r.mont;
-      ['H','I','J','K','L'].forEach(col => { s(ws.getCell(`${col}${rn}`),{border:bThin}); });
-      s(ws.getCell(`M${rn}`), {font:{bold:true,size:7,name:'Verdana'},align:AC,border:bThin});
-      s(ws.getCell(`N${rn}`), {font:{bold:true,size:7,name:'Verdana',color:{argb:'FFFF0000'}},align:AC,border:bThin,numFmt:'#,##0.00\\ _\u20ac'});
-      ws.getCell(`N${rn}`).value = r.mont;
-    } else {
-      // ligne vide
-      'ABCDEFGHIJKLMN'.split('').forEach(col => { s(ws.getCell(`${col}${rn}`),{border:bThin}); });
-    }
-  }
+  // ── R8 vide ──
+  ws.getRow(8).height=6;
 
-  // === R16 — VISA / MOIS DE PAIE / VISA SALARIE (hauteur 27) ===
-  ws.getRow(16).height = 27;
-  ws.mergeCells('A16:A19');
-  s(ws.getCell('A16'), {fill:FILL_GREEN,font:{bold:true,size:9,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bMed});
-  ws.getCell('A16').value = 'VISA ENTREPRISE ';
-  ws.mergeCells('E16:E19');
-  s(ws.getCell('E16'), {fill:FILL_GREEN,font:{bold:true,size:9,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bMed});
-  ws.getCell('E16').value = 'MOIS DE PAIE';
-  ws.mergeCells('I16:I19');
-  s(ws.getCell('I16'), {fill:FILL_GREEN,font:{bold:true,size:9,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bMed});
-  ws.getCell('I16').value = 'VISA SALARIE';
-  ws.mergeCells('L16:L19');
-  s(ws.getCell('L16'), {fill:FILL_GRAY,border:bMed});
-  ws.mergeCells('M16:N16');
-  s(ws.getCell('M16'), {fill:FILL_GREEN,font:{bold:true,size:9,name:'Verdana',color:{argb:'FFFFFFFF'}},align:AW,border:bMed});
-  // Cellules intérieures R16 remplies
-  ['B16','C16','D16','F16','G16','H16','J16','K16'].forEach(addr => {
-    s(ws.getCell(addr), {fill:FILL_GRAY,border:bMed});
-  });
-  // R17-19 — espaces signature
-  [17,18,19].forEach(rn => {
-    ws.getRow(rn).height = rn===19 ? 13.5 : 15.95;
-    ['B','C','D'].forEach(col => s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bMed}));
-    ['F','G','H'].forEach(col => s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bMed}));
-    ['J','K'].forEach(col => s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bMed}));
-    ['M','N'].forEach(col => s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bMed}));
-    if (rn===17) {
-      ws.getCell(`F${rn}`).value = monthName;
-      ws.getCell(`F${rn}`).font = {bold:true,size:9,name:'Verdana',color:{argb:'FF800000'}};
-      ws.getCell(`F${rn}`).alignment = AC;
-    }
+  // ── R9 EN-TÊTES ──
+  ws.getRow(9).height=36;
+  [['A9','DATE'],['B9','TRAJET\n(départ \u2192 arrivée)'],['C9','MOTIF DU\nDÉPLACEMENT'],
+   ['D9','LIEU DE\nDÉPART'],['E9','LIEU\nD\u2019ARRIVÉE'],['F9','NB\nTRAJETS'],
+   ['G9','KM /\nTRAJET'],['H9','TOTAL\nKM'],['I9','MONTANT\nREMBOURSÉ €']
+  ].forEach(([addr,val])=>{
+    ws.getCell(addr).value=val;
+    sc(ws.getCell(addr),{f:fill(GREEN),fn:font(true,8,WHITE),al:aln('center','center',true),bo:bThin});
   });
 
-  // === PAGE SETUP ===
-  ws.pageSetup.paperSize = 9; // A4
-  ws.pageSetup.orientation = 'portrait';
-  ws.printArea = 'A1:N19';
-  ws.views = [{state:'normal'}];
+  // ── R10 section ──
+  ws.getRow(10).height=14.1;
+  ws.mergeCells('A10:I10');
+  ws.getCell('A10').value='FRAIS DE DÉPLACEMENT ENGAGÉS DANS LE CADRE PROFESSIONNEL';
+  sc(ws.getCell('A10'),{f:fill(GREEN),fn:font(true,8,WHITE),al:aln(),bo:bThin});
+
+  // ── DONNÉES R11+ ──
+  rows.forEach((r,i)=>{
+    const rn=11+i;
+    ws.getRow(rn).height=15;
+    const bg = i%2===0 ? WHITE : LGRAY;
+    const vals=[r.date, r.trajet, r.motif, r.depart, r.arrivee, r.nbr, r.km, r.nbKm, r.mont];
+    vals.forEach((v,ci)=>{
+      const col=String.fromCharCode(65+ci);
+      ws.getCell(`${col}${rn}`).value = ci===0 ? new Date(r.date+'T12:00:00') : v;
+      if(ci===0) ws.getCell(`${col}${rn}`).numFmt='dd/mm/yy';
+      if(ci===8) ws.getCell(`${col}${rn}`).numFmt='#,##0.00';
+      sc(ws.getCell(`${col}${rn}`),{
+        f:fill(bg),fn:font(false,8),
+        al:aln(ci>=1&&ci<=4?'left':'center'),
+        bo:bThin
+      });
+    });
+  });
+
+  // ── TOTAL ──
+  const trn=11+rows.length;
+  ws.getRow(trn).height=20.1;
+  ws.mergeCells(`A${trn}:G${trn}`);
+  ws.getCell(`A${trn}`).value='TOTAL DU MOIS';
+  sc(ws.getCell(`A${trn}`),{f:fill(GREEN),fn:font(true,10,WHITE),al:aln(),bo:bMed});
+  ws.getCell(`H${trn}`).value=totalKm;
+  sc(ws.getCell(`H${trn}`),{f:fill(GREEN),fn:font(true,10,WHITE),al:aln(),bo:bMed});
+  ws.getCell(`I${trn}`).value=totalEur;
+  ws.getCell(`I${trn}`).numFmt='#,##0.00 "\u20ac"';
+  sc(ws.getCell(`I${trn}`),{f:fill(GREEN),fn:font(true,12,WHITE),al:aln(),bo:bMed});
+
+  // ── ESPACES ──
+  ws.getRow(trn+1).height=8;
+  ws.getRow(trn+2).height=8;
+
+  // ── SIGNATURES ──
+  const sr=trn+3;
+  [['A','C','VISA ENTREPRISE\n(Nom, date, signature)'],
+   ['D','F','MOIS DE PAIE\n(service RH)'],
+   ['G','I','VISA SALARIÉ\n(Nom, date, signature)']
+  ].forEach(([sc2,ec,lbl])=>{
+    ws.getRow(sr).height=27;
+    ws.getRow(sr+1).height=38.1;
+    ws.getRow(sr+2).height=18;
+    ws.mergeCells(`${sc2}${sr}:${ec}${sr}`);
+    ws.getCell(`${sc2}${sr}`).value=lbl.replace('\\n','\n');
+    sc(ws.getCell(`${sc2}${sr}`),{f:fill(GREEN),fn:font(true,8,WHITE),al:aln('center','center',true),bo:bMed});
+    ws.mergeCells(`${sc2}${sr+1}:${ec}${sr+1}`);
+    sc(ws.getCell(`${sc2}${sr+1}`),{f:fill(WHITE),bo:bMed});
+    ws.mergeCells(`${sc2}${sr+2}:${ec}${sr+2}`);
+    sc(ws.getCell(`${sc2}${sr+2}`),{f:fill(LGRAY),bo:bMed});
+  });
+  ws.getCell(`D${sr+2}`).value=monthName+' '+year;
+  ws.getCell(`D${sr+2}`).font={bold:true,size:10,name:'Calibri',color:{argb:GREEN}};
+  ws.getCell(`D${sr+2}`).alignment={horizontal:'center',vertical:'center'};
+
+  // ── NOTE LÉGALE ──
+  const nr=sr+4;
+  ws.getRow(nr).height=14.1;
+  ws.mergeCells(`A${nr}:I${nr}`);
+  ws.getCell(`A${nr}`).value='⚖ Document à conserver 5 ans — Exonération de charges sociales sous réserve du respect du barème fiscal URSSAF en vigueur (Art. 81-1° CGI + BOSS §855)';
+  sc(ws.getCell(`A${nr}`),{f:fill(LGRAY),fn:font(false,7,null,true),al:aln('left')});
+
+  // ── FREEZE lignes 1-10 ──
+  ws.views=[{state:'frozen',ySplit:10,topLeftCell:'A11'}];
+
+  // ── PAGE SETUP ──
+  ws.pageSetup.paperSize=9;
+  ws.pageSetup.orientation='landscape';
+  ws.pageSetup.fitToPage=true;
+  ws.pageSetup.fitToWidth=1;
 
   wb.xlsx.writeBuffer().then(buf=>{
     const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -12236,8 +12221,6 @@ function ikGenerate() {
     URL.revokeObjectURL(url);
   });
 }
-
-
 function renderPlanningIK() {
   const el = document.getElementById('pe-ik-content');
   if (!el) return;
