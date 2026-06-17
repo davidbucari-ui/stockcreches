@@ -7141,8 +7141,18 @@ async function renderDashboardDirectrice(dateStr) {
   const crecheLabel = document.getElementById('dash-dir-creche');
   if (crecheLabel) crecheLabel.textContent = currentCreche === 'all' ? 'Toutes les structures' : currentCreche;
 
-  const low = getLowStockArticles();
-  const exp = getExpiryAlerts();
+  // Filtrer les articles par crèche sélectionnée
+  const articlesFiltered = currentCreche === 'all'
+    ? ARTICLES
+    : ARTICLES.filter(a => a.creche === currentCreche);
+
+  const low = articlesFiltered.filter(a => a.stock <= a.min && a.min > 0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = articlesFiltered.filter(a => {
+    if (!a.expiry) return false;
+    const d = new Date(a.expiry); d.setHours(0,0,0,0);
+    return Math.round((d - today) / 86400000) <= 30;
+  });
 
   let enfantsPresents = '—';
   try {
@@ -7159,7 +7169,7 @@ async function renderDashboardDirectrice(dateStr) {
     </div>
     <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
       <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Articles en stock</div>
-      <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif">${ARTICLES.length}</div>
+      <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif">${articlesFiltered.length}</div>
     </div>
     <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);${low.length>0?'border-left:3px solid var(--red)':''}">
       <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Alertes stock</div>
@@ -7167,7 +7177,7 @@ async function renderDashboardDirectrice(dateStr) {
     </div>
     <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
       <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Valeur stock</div>
-      <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif">${ARTICLES.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)} €</div>
+      <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif">${articlesFiltered.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)} €</div>
     </div>`;
 
   const equipeEl = document.getElementById('dash-dir-equipe');
@@ -7293,12 +7303,19 @@ async function renderDashboardDirectrice(dateStr) {
 
   const statsEl = document.getElementById('dash-dir-stats');
   if (statsEl) {
-    const commEnCours = COMMANDES.filter(c=>c.status==='en-cours').length;
+    const commEnCours = (currentCreche === 'all'
+      ? COMMANDES
+      : COMMANDES.filter(c => c.creche === currentCreche)
+    ).filter(c => c.status === 'en-cours').length;
+    const salActifs = (currentCreche === 'all'
+      ? SALARIES
+      : SALARIES.filter(s => s.creche === currentCreche)
+    ).filter(s => s.statut === 'actif').length;
     statsEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">📈 Résumé</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
-      '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Valeur stock</span><span style="font-weight:700">'+ARTICLES.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)+' €</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Valeur stock</span><span style="font-weight:700">'+articlesFiltered.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)+' €</span></div>' +
       '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Commandes en cours</span><span style="font-weight:700;color:'+(commEnCours>0?'var(--amber)':'var(--ink)')+'">'+commEnCours+'</span></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0"><span style="color:var(--ink2)">Salariés actifs</span><span style="font-weight:700">'+SALARIES.filter(s=>s.statut==='actif').length+'</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0"><span style="color:var(--ink2)">Salariés actifs</span><span style="font-weight:700">'+salActifs+'</span></div>' +
       '</div>';
   }
 }
@@ -7869,25 +7886,35 @@ function hideHub() {
 
 function enterStructures() {
   hideHub();
+  currentPage = 'dashboard';
+  renderDashboard();
 }
 
 async function hubLoadKPIs(role) {
   try {
     const todayStr = new Date().toISOString().split('T')[0];
+    const crecheFilter = (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all')
+      ? currentCreche : null;
 
-    // Enfants présents aujourd'hui (pointages)
+    // Enfants présents aujourd'hui (pointages) — filtrés par crèche si sélectionnée
     let enfants = '—';
     try {
-      const pts = await sbGet('pointages_enfants',
-        'select=id&horodatage=gte.' + todayStr + 'T00:00:00&type=eq.arrivee');
+      const params = 'select=id,creche_id&horodatage=gte.' + todayStr + 'T00:00:00&type=eq.arrivee'
+        + (crecheFilter ? '&creche_id=eq.' + encodeURIComponent(crecheFilter) : '');
+      const pts = await sbGet('pointages_enfants', params);
       if (Array.isArray(pts)) enfants = pts.length;
     } catch(e) { console.warn('[Hub KPI enfants]', e.message); }
 
-    // Stocks bas
+    // Stocks bas — filtrés par crèche si sélectionnée, uniquement si token Stocks disponible
     let stocksBas = 0;
     try {
-      const arts = await sbGet('articles', 'select=id,stock,stock_min&actif=eq.true');
-      if (Array.isArray(arts)) stocksBas = arts.filter(a => a.stock !== null && a.stock_min !== null && a.stock <= a.stock_min).length;
+      const tokenStocks = localStorage.getItem('sb_token_stocks');
+      if (tokenStocks) {
+        const paramsArt = 'select=id,stock,stock_min,creche&actif=eq.true'
+          + (crecheFilter ? '&creche=eq.' + encodeURIComponent(crecheFilter) : '');
+        const arts = await sbGet('articles', paramsArt);
+        if (Array.isArray(arts)) stocksBas = arts.filter(a => a.stock !== null && a.stock_min !== null && a.stock <= a.stock_min).length;
+      }
     } catch(e) { console.warn('[Hub KPI stocks]', e.message); }
 
     if (role === 'admin' || role === 'stagiaire') {
@@ -8300,6 +8327,11 @@ function filterCreche(creche, el) {
   else if (currentPage === 'planning') renderActiveTab();
   else if (currentPage === 'rh') renderSalaries();
   else if (currentPage === 'dashboard') renderDashboard();
+  // Sécurité : si page-dashboard est visible mais currentPage pas à jour
+  else {
+    const pd = document.getElementById('page-dashboard');
+    if (pd && pd.style.display !== 'none') renderDashboard();
+  }
   // Rafraîchir le Hub si visible (KPIs + greeting crèche)
   const hubEl = document.getElementById('hub-screen');
   if (hubEl && hubEl.style.display !== 'none') showHub();
@@ -10708,7 +10740,7 @@ async function loadData() {
   setIndicator('⏳ Connexion à Supabase…', 'var(--amber)');
   try {
     // Timeout de 8 secondes pour ne pas bloquer l'interface
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000));
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
     const [arts, cmds, fourns, histos, univs] = await Promise.race([
       Promise.all([
         sbGet('articles'),
