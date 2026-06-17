@@ -12020,15 +12020,14 @@ function ikGenerate() {
   function fmtD(d) { if(!d)return''; const dt=new Date(d+'T12:00:00'); return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`; }
   const firstDay = new Date(year, monthNum-1, 1);
   const lastDay  = new Date(year, monthNum, 0);
-  let totalEur = 0;
-  // MAX 6 lignes de données (comme l'original — lignes 10 à 15)
-  const MAX_ROWS = 6;
-  const rows = active.slice(0, MAX_ROWS).map(r => {
+  const rows = active.map(r => {
     const km = dist[r.creche]!==undefined ? dist[r.creche] : 0;
-    const nbKm = r.nbr*km, mont = nbKm*bareme;
-    totalEur += mont; return {date:r.date,trajet:r.trajet,nbr:r.nbr,km,nbKm,mont:Math.round(mont*100)/100};
+    const nbKm = r.nbr*km;
+    const mont = Math.round(nbKm*bareme*100)/100;
+    return {date:r.date,trajet:r.trajet,nbr:r.nbr,km,nbKm,mont};
   });
-  totalEur = Math.round(totalEur*100)/100;
+  // Total = somme des montants déjà arrondis (cohérence avec les lignes affichées)
+  const totalEur = Math.round(rows.reduce((acc,r)=>acc+r.mont,0)*100)/100;
 
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('FDEPvi');
@@ -12130,29 +12129,15 @@ function ikGenerate() {
   s(ws.getCell('M4'), {fill:FILL_BLUE,font:{bold:true,size:12,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bMed});
   ws.getCell('M4').value = totalEur; ws.getCell('M4').numFmt = '#,##0.00\\ _€';
 
-  // === R5 — vide ligne total (hauteur 24.95) ===
+  // === R5 — vide (hauteur 24.95) ===
   ws.getRow(5).height = 24.95;
-  ws.mergeCells('I5:L5');
-  s(ws.getCell('I5'), {fill:FILL_GRAY,align:AC,border:bThin});
-  ws.mergeCells('M5:N5');
-  s(ws.getCell('M5'), {fill:FILL_GRAY,border:bMed});
 
-  // === R6 — TOTAUX colonnes G→N (hauteur 18) ===
+  // === R6 — TOTAUX : seulement G6 (valorisation) et N6 (total HT) (hauteur 18) ===
   ws.getRow(6).height = 18;
-  // G6:N6 = SUM des lignes 9→15
-  ['G','H','I','J','K','L','M','N'].forEach(col => {
-    const startR = 9, endR = 15;
-    const c = ws.getCell(`${col}6`);
-    // Calculer la somme réelle depuis les données
-    let colSum = 0;
-    if (col === 'G') rows.forEach(r => colSum += r.mont);
-    else if (col === 'N') colSum = totalEur;
-    c.value = col==='G'||col==='N' ? colSum : 0;
-    s(c, {fill:FILL_GRAY,font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin});
-    if (col==='G'||col==='N') c.numFmt = '#,##0.00\\ _€';
-  });
-  // E6:F6 vides avec fill gray
-  ['E6','F6'].forEach(addr => s(ws.getCell(addr), {fill:FILL_GRAY,border:bThin}));
+  s(ws.getCell('G6'), {font:{bold:true,size:8,name:'Verdana',color:{argb:'FF800000'}},align:AC,numFmt:'#,##0.00\\ _\u20ac'});
+  ws.getCell('G6').value = totalEur;
+  s(ws.getCell('N6'), {font:{bold:true,size:8,name:'Verdana',color:{argb:'FFFF0000'}},align:AC,numFmt:'#,##0.00\\ _\u20ac'});
+  ws.getCell('N6').value = totalEur;
 
   // === R7 — vide (hauteur 13.5) ===
   ws.getRow(7).height = 13.5;
@@ -12177,31 +12162,31 @@ function ikGenerate() {
   ws.getCell('A9').value = " FRAIS DE DEPLACEMENT ENGAGES DANS LE CADRE D'UN DOSSIER";
 
   // === LIGNES DONNÉES R10→R15 (6 lignes fixes, hauteur 15.95) ===
-  for (let i=0; i<MAX_ROWS; i++) {
+  for (let i=0; i<rows.length; i++) {
     const rn = 10+i;
     ws.getRow(rn).height = 15.95;
     const r = rows[i];
     if (r) {
-      s(ws.getCell(`A${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:AC,border:bThin});
+      s(ws.getCell(`A${rn}`), {font:{size:7,name:'Verdana'},align:AC,border:bThin});
       ws.getCell(`A${rn}`).value = new Date(r.date+'T12:00:00'); ws.getCell(`A${rn}`).numFmt = 'dd/mm/yy';
-      s(ws.getCell(`B${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:{horizontal:'left',vertical:'center'},border:bThin});
+      s(ws.getCell(`B${rn}`), {font:{size:7,name:'Verdana'},align:{horizontal:'left',vertical:'center'},border:bThin});
       ws.getCell(`B${rn}`).value = r.trajet;
-      s(ws.getCell(`C${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:AC,border:bThin});
+      s(ws.getCell(`C${rn}`), {font:{size:7,name:'Verdana'},align:AC,border:bThin});
       ws.getCell(`C${rn}`).value = r.nbr;
-      s(ws.getCell(`D${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:AC,border:bThin});
+      s(ws.getCell(`D${rn}`), {font:{size:7,name:'Verdana'},align:AC,border:bThin});
       ws.getCell(`D${rn}`).value = r.km;
-      s(ws.getCell(`E${rn}`), {fill:FILL_GRAY,font:{size:7,name:'Verdana'},align:AC,border:bThin});
+      s(ws.getCell(`E${rn}`), {font:{size:7,name:'Verdana'},align:AC,border:bThin});
       ws.getCell(`E${rn}`).value = r.nbKm;
-      s(ws.getCell(`F${rn}`), {fill:FILL_GRAY,border:bThin});
-      s(ws.getCell(`G${rn}`), {fill:FILL_GRAY,font:{bold:true,size:7,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin,numFmt:'#,##0.00\\ _€'});
+      s(ws.getCell(`F${rn}`), {border:bThin});
+      s(ws.getCell(`G${rn}`), {font:{bold:true,size:7,name:'Verdana',color:{argb:'FF800000'}},align:AC,border:bThin,numFmt:'#,##0.00\\ _\u20ac'});
       ws.getCell(`G${rn}`).value = r.mont;
-      ['H','I','J','K','L'].forEach(col => { s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bThin}); });
-      s(ws.getCell(`M${rn}`), {fill:FILL_GRAY,font:{bold:true,size:7,name:'Verdana'},align:AC,border:bThin});
-      s(ws.getCell(`N${rn}`), {fill:FILL_GRAY,font:{bold:true,size:7,name:'Verdana',color:{argb:'FFFF0000'}},align:AC,border:bThin,numFmt:'#,##0.00\\ _€'});
+      ['H','I','J','K','L'].forEach(col => { s(ws.getCell(`${col}${rn}`),{border:bThin}); });
+      s(ws.getCell(`M${rn}`), {font:{bold:true,size:7,name:'Verdana'},align:AC,border:bThin});
+      s(ws.getCell(`N${rn}`), {font:{bold:true,size:7,name:'Verdana',color:{argb:'FFFF0000'}},align:AC,border:bThin,numFmt:'#,##0.00\\ _\u20ac'});
       ws.getCell(`N${rn}`).value = r.mont;
     } else {
       // ligne vide
-      'ABCDEFGHIJKLMN'.split('').forEach(col => { s(ws.getCell(`${col}${rn}`),{fill:FILL_GRAY,border:bThin}); });
+      'ABCDEFGHIJKLMN'.split('').forEach(col => { s(ws.getCell(`${col}${rn}`),{border:bThin}); });
     }
   }
 
