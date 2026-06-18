@@ -11162,7 +11162,7 @@ async function createAdminUser() {
   btn.disabled = true; btn.textContent = '⏳ Création…';
   try {
     // Création via Cloudflare Worker (service_role) pour contourner la restriction Supabase
-    const WORKER_URL = 'https://api.orevy.app/admin-users';
+    const WORKER_URL = 'https://orevy-proxy.david-bucari.workers.dev/admin-users';
     const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -11727,7 +11727,8 @@ function pePopulateCreches(selId) {
   const sel = document.getElementById(selId);
   if (!sel) return;
   const prev = sel.value;
-  sel.innerHTML = (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+  sel.innerHTML = '<option value="">Toutes les structures</option>' +
+    (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
   if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
 }
 
@@ -12934,9 +12935,14 @@ function exportPlanningPDF() {
   const fmtD     = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
   const endFri   = new Date(monday); endFri.setDate(monday.getDate()+4);
   const crecheId = document.getElementById('pe-creche')?.value || '';
-  const title    = `Planning ${crecheId ? '— ' + crecheId + ' — ' : ''}Semaine ${weekNum} · ${fmtD(monday)} au ${fmtD(endFri)}`;
-  // Cibler le conteneur de l'onglet actif (Gantt, Par salarié, Gantt visuel)
+  const title    = `Planning ${crecheId ? '\u2014 ' + crecheId + ' \u2014 ' : ''}Semaine ${weekNum} \u00b7 ${fmtD(monday)} au ${fmtD(endFri)}`;
+  // Cibler le conteneur de l'onglet actif
   const tab    = (typeof pePlanningTab !== 'undefined' && pePlanningTab) || 'gantt';
+  // Onglets coord et ik : pas d'export planning visuel pertinent
+  if (tab === 'coord' || tab === 'ik') {
+    showNotif('\u26a0 Export PDF disponible uniquement sur les vues Planning \u00e9quipe, Par salari\u00e9 et Gantt');
+    return;
+  }
   const srcId  = tab === 'hebdo' ? 'ph-grid' : tab === 'gantt2' ? 'pe-grid2' : 'pe-grid';
   const ganttEl = document.getElementById(srcId);
   if (!ganttEl) return;
@@ -12953,8 +12959,14 @@ function exportPlanningPDF() {
   cloneEl.id = 'pe-grid';
   const ganttHTML = cloneEl.outerHTML;
 
-  const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  // Ouvrir via blob URL (non bloqué par les navigateurs modernes)
+  const legendHTML = tab === 'hebdo' ? '' : `<div class="legend">
+    <span style="background:#F0FDF4;color:#16A34A">&#10003; Conforme</span>
+    <span style="background:#FFFBEB;color:#D97706">! Limite</span>
+    <span style="background:#FEF2F2;color:#DC2626">&#10007; Non conforme</span>
+  </div>`;
+  const dateGen = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <title>${title}</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -12974,30 +12986,24 @@ function exportPlanningPDF() {
     }
   </style>
   </head><body>
-  <h1>📅 ${title}</h1>
-  <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+  <h1>&#128197; ${title}</h1>
+  <div class="sub">Genere le ${dateGen}</div>
   ${ganttHTML}
-  ${tab === 'hebdo' ? '' : `<div class="legend">
-    <span style="background:#F0FDF4;color:#16A34A">✓ Conforme</span>
-    <span style="background:#FFFBEB;color:#D97706">! Limite</span>
-    <span style="background:#FEF2F2;color:#DC2626">✗ Non conforme</span>
-  </div>`}
+  ${legendHTML}
   <script>
     window.onload = function() {
-      const grid = document.getElementById('pe-grid');
-      if (!grid) return;
-      const LABEL_W = 120, START_H = 7, END_H = 20, TOTAL_MIN = (END_H - START_H) * 60;
-      const ganttW  = grid.offsetWidth - LABEL_W;
-
-      // Reposition bars using data-* attrs
-      grid.querySelectorAll('[data-debut-min]').forEach(bar => {
-        const debut = parseInt(bar.dataset.debutMin);
-        const fin   = parseInt(bar.dataset.finMin);
-        const top   = parseInt(bar.dataset.top || 0);
-        const h     = parseInt(bar.dataset.h   || 36);
-        const bg    = bar.dataset.barColorBg     || '';
-        const border= bar.dataset.barColorBorder || '';
-        const text  = bar.dataset.barColorText   || '';
+      var grid = document.getElementById('pe-grid');
+      if (!grid) { setTimeout(function(){ window.print(); }, 400); return; }
+      var LABEL_W = 120, START_H = 7, END_H = 20, TOTAL_MIN = (END_H - START_H) * 60;
+      var ganttW  = grid.offsetWidth - LABEL_W;
+      grid.querySelectorAll('[data-debut-min]').forEach(function(bar) {
+        var debut = parseInt(bar.dataset.debutMin);
+        var fin   = parseInt(bar.dataset.finMin);
+        var top   = parseInt(bar.dataset.top || 0);
+        var h     = parseInt(bar.dataset.h   || 36);
+        var bg    = bar.dataset.barColorBg     || '';
+        var border= bar.dataset.barColorBorder || '';
+        var text  = bar.dataset.barColorText   || '';
         bar.style.left     = (LABEL_W + (debut - START_H*60) / TOTAL_MIN * ganttW) + 'px';
         bar.style.width    = ((fin - debut) / TOTAL_MIN * ganttW) + 'px';
         bar.style.top      = top + 'px';
@@ -13005,46 +13011,50 @@ function exportPlanningPDF() {
         bar.style.position = 'absolute';
         if (bg)     bar.style.background   = bg;
         if (border) bar.style.borderColor  = border;
-        // fix text color on label inside bar
-        const lbl = bar.querySelector('div[style*="padding"]');
+        var lbl = bar.querySelector('div[style*="padding"]');
         if (lbl && text) lbl.style.color = text;
       });
-
-      // Reposition pause hatch divs
-      grid.querySelectorAll('[data-pause-debut]').forEach(h => {
-        const pd = parseInt(h.dataset.pauseDebut);
-        const pf = parseInt(h.dataset.pauseFin);
-        const bd = parseInt(h.dataset.barDebut);
-        const bf = parseInt(h.dataset.barFin);
-        const barW = (bf - bd) / TOTAL_MIN * ganttW;
+      grid.querySelectorAll('[data-pause-debut]').forEach(function(h) {
+        var pd = parseInt(h.dataset.pauseDebut);
+        var pf = parseInt(h.dataset.pauseFin);
+        var bd = parseInt(h.dataset.barDebut);
+        var bf = parseInt(h.dataset.barFin);
         h.style.position = 'absolute';
         h.style.left  = ((pd - bd) / (bf - bd) * 100).toFixed(3) + '%';
         h.style.width = ((pf - pd) / (bf - bd) * 100).toFixed(3) + '%';
       });
-
-      // Reposition hour labels
-      grid.querySelectorAll('[data-hour]').forEach(el => {
-        const h = parseInt(el.dataset.hour);
-        el.style.left = (LABEL_W + (h - START_H) / (END_H - START_H) * ganttW) + 'px';
+      grid.querySelectorAll('[data-hour]').forEach(function(el) {
+        var hh = parseInt(el.dataset.hour);
+        el.style.left = (LABEL_W + (hh - START_H) / (END_H - START_H) * ganttW) + 'px';
         el.style.transform = 'translateX(-50%)';
       });
-
-      // Hide current-time red line in PDF
-      grid.querySelectorAll('[style*="var(--red)"]').forEach(el => {
+      grid.querySelectorAll('[style*="var(--red)"]').forEach(function(el) {
         if (el.children.length <= 1 && el.style.width === '2px') el.style.display = 'none';
       });
-
-      setTimeout(() => window.print(), 600);
+      setTimeout(function(){ window.print(); }, 600);
     };
   <\/script>
-  
-
-
-
-
-
-</body></html>`);
-  w.document.close();
+</body></html>`;
+  try {
+    var blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    var blobUrl = URL.createObjectURL(blob);
+    var w = window.open(blobUrl, '_blank');
+    if (!w) {
+      var ifrm = document.getElementById('_orevy_print_frame');
+      if (!ifrm) {
+        ifrm = document.createElement('iframe');
+        ifrm.id = '_orevy_print_frame';
+        ifrm.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1200px;height:800px;border:none;';
+        document.body.appendChild(ifrm);
+      }
+      ifrm.onload = function() { setTimeout(function(){ ifrm.contentWindow.print(); }, 600); };
+      ifrm.src = blobUrl;
+      showNotif('&#9888; Popup bloque - impression via fenetre principale');
+    }
+    setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 30000);
+  } catch(e) {
+    showNotif('&#9888; Erreur export PDF : ' + e.message);
+  }
 }
 
 // Stub pour compatibilité Paramètres
