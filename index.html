@@ -1900,7 +1900,7 @@ textarea { resize: vertical; min-height: 72px; }
               style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
             </select>
             <button class="btn btn-primary" id="pe-add-btn" onclick="openModalPE(null,null)">+ Ajouter</button>
-            <button class="btn btn-secondary" onclick="exportPlanningXLSX()" title="Exporter le planning salarié en Excel">📊 Excel</button>
+            <button class="btn btn-secondary" onclick="exportPlanningPDF()">🖨 PDF</button>
           </div>
         </div>
 
@@ -11162,7 +11162,7 @@ async function createAdminUser() {
   btn.disabled = true; btn.textContent = '⏳ Création…';
   try {
     // Création via Cloudflare Worker (service_role) pour contourner la restriction Supabase
-    const WORKER_URL = 'https://orevy-proxy.david-bucari.workers.dev/admin-users';
+    const WORKER_URL = 'https://api.orevy.app/admin-users';
     const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -12928,336 +12928,123 @@ function deleteModalPE() {
   showNotif('🗑 Créneau supprimé');
 }
 
-function exportPlanningXLSX() {
+function exportPlanningPDF() {
   const monday   = peGetMonday();
   const weekNum  = getISOWeekNumber(monday);
+  const fmtD     = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
   const endFri   = new Date(monday); endFri.setDate(monday.getDate()+4);
   const crecheId = document.getElementById('pe-creche')?.value || '';
-  const fmtD     = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-  const fmtDShort= d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
-  const fmtDNum  = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
-  const horaires = getPlanningHoraires();
-  const week     = peGetWeek(crecheId);
+  const title    = `Planning ${crecheId ? '— ' + crecheId + ' — ' : ''}Semaine ${weekNum} · ${fmtD(monday)} au ${fmtD(endFri)}`;
+  // Cibler le conteneur de l'onglet actif (Gantt, Par salarié, Gantt visuel)
+  const tab    = (typeof pePlanningTab !== 'undefined' && pePlanningTab) || 'gantt';
+  const srcId  = tab === 'hebdo' ? 'ph-grid' : tab === 'gantt2' ? 'pe-grid2' : 'pe-grid';
+  const ganttEl = document.getElementById(srcId);
+  if (!ganttEl) return;
 
-  // Récupérer liste salariés
-  let salariesRH = [];
-  try { salariesRH = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
-  const rhNames = salariesRH.filter(s => !crecheId || s.creche === crecheId)
-    .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
-  const crNames = (week.creneaux||[]).map(c => c.pro);
-  const pros = [...new Set([...rhNames, ...crNames])].sort();
+  // Lire les vraies valeurs des variables CSS depuis la page
+  const root = getComputedStyle(document.documentElement);
+  const vars = ['--bg','--surface','--surface2','--border','--ink','--ink2','--ink3',
+    '--accent','--accent-lt','--green','--amber','--red','--red-lt','--green-lt',
+    '--amber-lt','--purple','--purple-lt','--radius'];
+  const cssVarBlock = vars.map(v => `${v}:${root.getPropertyValue(v).trim()}`).join(';');
 
-  const DAY_NAMES = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-  const fmtMin   = m => m > 0 ? `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}` : '';
+  // Cloner SANS modifier l'original ; normaliser l'id pour le script de mise en page
+  const cloneEl = ganttEl.cloneNode(true);
+  cloneEl.id = 'pe-grid';
+  const ganttHTML = cloneEl.outerHTML;
 
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Orevy Structures';
-  wb.created = new Date();
-
-  // ── Palette ──────────────────────────────────────────────────────
-  const C_BLEU_NUIT    = '1B3A5C';
-  const C_BLEU_MED     = '2E6DA4';
-  const C_GRIS_CLAIR   = 'F3F4F6';
-  const C_BLANC        = 'FFFFFF';
-  const C_GRIS_BORDER  = 'D1D5DB';
-  const SALBG = ['DBEAFE','DCFCE7','FEF3C7','EDE9FE','FFE4E6','D1FAE5','FCE7F3','FFF7ED'];
-  const SALTX = ['1D4ED8','15803D','B45309','6D28D9','BE123C','065F46','9D174D','C2410C'];
-
-  function hFill(hex)       { return { type:'pattern', pattern:'solid', fgColor:{argb:'FF'+hex} }; }
-  function hFont(opts={})   {
-    return { name:'Calibri', size:opts.size||10, bold:!!opts.bold,
-             italic:!!opts.italic, color:{argb:'FF'+(opts.color||'111827')} };
-  }
-  function hAlign(h,v,wrap) { return { horizontal:h||'center', vertical:v||'center', wrapText:!!wrap }; }
-  function thinBorder(color) {
-    const s = { style:'thin', color:{argb:'FF'+(color||C_GRIS_BORDER)} };
-    return { top:s, bottom:s, left:s, right:s };
-  }
-  function medBorder(color) {
-    const s = { style:'medium', color:{argb:'FF'+(color||'9CA3AF')} };
-    return { top:s, bottom:s, left:s, right:s };
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  // FEUILLE 1 — PLANNING ÉQUIPE (vue grille Horaire × Jours)
-  // ════════════════════════════════════════════════════════════════
-  const ws1 = wb.addWorksheet('Planning Équipe', { views:[{showGridLines:false}] });
-
-  // Colonnes
-  ws1.columns = [
-    { width:22 }, // A horaire label
-    { width:12 }, { width:12 }, { width:12 }, { width:12 }, { width:12 }, // B-F jours
-    { width:10 }, // G total
-  ];
-
-  // Ligne 1 : titre
-  const titleLabel1 = `Planning Équipe${crecheId?' — '+crecheId:''} — Semaine ${weekNum} · ${fmtD(monday)} au ${fmtD(endFri)}`;
-  ws1.mergeCells('A1:G1');
-  const t1 = ws1.getCell('A1');
-  t1.value = titleLabel1;
-  t1.font  = hFont({bold:true, size:12, color:C_BLANC});
-  t1.fill  = hFill(C_BLEU_NUIT);
-  t1.alignment = hAlign('center','center');
-  ws1.getRow(1).height = 26;
-
-  // Ligne 2 : sous-titre généré le
-  ws1.mergeCells('A2:G2');
-  const t2 = ws1.getCell('A2');
-  t2.value = `  Généré le ${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}  •  Orevy Structures`;
-  t2.font  = hFont({size:8, italic:true, color:'4B5563'});
-  t2.fill  = hFill('F0F4F8');
-  t2.alignment = hAlign('left','center');
-  ws1.getRow(2).height = 14;
-
-  // Ligne 3 : en-têtes jours
-  const ROW_HDRS = ['Horaire / Créneau', ...DAY_NAMES.map((n,i)=>{
-    const dt = new Date(monday); dt.setDate(monday.getDate()+i);
-    return `${n}\n${fmtDNum(dt)}`;
-  }), 'Total\nsemaine'];
-  const hdrRow = ws1.getRow(3);
-  hdrRow.height = 28;
-  ROW_HDRS.forEach((v,ci) => {
-    const cell = hdrRow.getCell(ci+1);
-    cell.value = v;
-    cell.font  = hFont({bold:true, size:9, color:C_BLANC});
-    cell.fill  = hFill(C_BLEU_MED);
-    cell.alignment = hAlign('center','center',true);
-    cell.border = thinBorder();
-  });
-
-  // Lignes données : une par horaire
-  const fmtMinCell = m => m > 0 ? fmtMin(m) : '—';
-  horaires.forEach((h, hi) => {
-    const bgHex = SALBG[hi % SALBG.length];
-    const txHex = SALTX[hi % SALTX.length];
-    const row = ws1.addRow([]);
-    row.height = 30;
-
-    // Col A : label horaire
-    const labelCell = row.getCell(1);
-    labelCell.value = `${h.name}\n${h.debut} – ${h.fin}`;
-    labelCell.font  = hFont({bold:true, size:9, color:txHex});
-    labelCell.fill  = hFill(bgHex);
-    labelCell.alignment = hAlign('left','center',true);
-    labelCell.border = thinBorder();
-
-    let weekTotalMin = 0;
-    DAY_NAMES.forEach((_,di) => {
-      const creneaux = (week.creneaux||[]).filter(cr => cr.horaire_idx === hi && cr.jour === di);
-      const cell = row.getCell(di+2);
-      let dayMin = 0;
-      let names = [];
-      creneaux.forEach(cr => {
-        names.push(cr.pro.split(' ')[0]);
-        if (h.debut && h.fin) {
-          const [dh,dm] = h.debut.split(':').map(Number);
-          const [fh,fm] = h.fin.split(':').map(Number);
-          let slotMin = (fh*60+fm)-(dh*60+dm);
-          if (cr.pause) {
-            const pm = cr.pause.match(/(\d+)h(\d*)\s*[–-]\s*(\d+)h(\d*)/);
-            if (pm) { const ps=parseInt(pm[1])*60+(parseInt(pm[2])||0), pe=parseInt(pm[3])*60+(parseInt(pm[4])||0); slotMin-=Math.max(0,pe-ps); }
-          }
-          dayMin += Math.max(0, slotMin);
-        }
-      });
-      weekTotalMin += dayMin;
-      if (names.length > 0) {
-        cell.value = names.join(', ') + (dayMin > 0 ? `\n${fmtMin(dayMin)}` : '');
-        cell.font  = hFont({size:9, bold:true, color:txHex});
-        cell.fill  = hFill(bgHex);
-      } else {
-        cell.value = '—';
-        cell.font  = hFont({size:9, color:'9CA3AF'});
-        cell.fill  = hFill(C_GRIS_CLAIR);
-      }
-      cell.alignment = hAlign('center','center',true);
-      cell.border = thinBorder();
-    });
-
-    // Col G : total semaine
-    const totCell = row.getCell(7);
-    totCell.value = weekTotalMin > 0 ? fmtMin(weekTotalMin) : '—';
-    totCell.font  = hFont({bold:true, size:10, color:txHex});
-    totCell.fill  = hFill(bgHex);
-    totCell.alignment = hAlign('center','center');
-    totCell.border = thinBorder();
-  });
-
-  // Ligne total nb présents par jour
-  const totRow = ws1.addRow([]);
-  totRow.height = 20;
-  const totLabel = totRow.getCell(1);
-  totLabel.value = 'Présents par jour';
-  totLabel.font  = hFont({bold:true, size:9, color:'374151'});
-  totLabel.fill  = hFill('E5E7EB');
-  totLabel.alignment = hAlign('left','center');
-  totLabel.border = thinBorder();
-  DAY_NAMES.forEach((_,di) => {
-    const nb = (week.creneaux||[]).filter(cr => cr.jour === di).length;
-    const tc = totRow.getCell(di+2);
-    tc.value = `${nb} pro${nb>1?'s':''}`;
-    tc.font  = hFont({bold:true, size:9, color: nb>=2?'15803D':nb===1?'B45309':'DC2626'});
-    tc.fill  = hFill(nb>=2?'DCFCE7':nb===1?'FEF3C7':'FEE2E2');
-    tc.alignment = hAlign('center','center');
-    tc.border = thinBorder();
-  });
-  totRow.getCell(7).fill = hFill('E5E7EB');
-  totRow.getCell(7).border = thinBorder();
-
-  ws1.views = [{state:'frozen', xSplit:1, ySplit:3}];
-
-  // ════════════════════════════════════════════════════════════════
-  // FEUILLE 2 — VUE PAR SALARIÉ
-  // ════════════════════════════════════════════════════════════════
-  const ws2 = wb.addWorksheet('Fiches Individuelles', { views:[{showGridLines:false}] });
-  ws2.columns = [
-    { width:20 }, // A salarié / label
-    { width:13 }, { width:13 }, { width:13 }, { width:13 }, { width:13 }, // B-F jours
-    { width:12 }, // G total
-    { width:18 }, // H notes
-  ];
-
-  const titRow2 = ws2.getRow(1);
-  ws2.mergeCells('A1:H1');
-  const tit2 = ws2.getCell('A1');
-  const titLabel2 = `Fiches individuelles${crecheId?' — '+crecheId:''} — Sem. ${weekNum} · ${fmtDShort(monday)} au ${fmtDShort(endFri)} ${endFri.getFullYear()}`;
-  tit2.value = titLabel2;
-  tit2.font  = hFont({bold:true, size:12, color:C_BLANC});
-  tit2.fill  = hFill(C_BLEU_NUIT);
-  tit2.alignment = hAlign('center','center');
-  titRow2.height = 26;
-
-  // En-têtes
-  const hdrs2 = ['Salarié(e)', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Total sem.', 'Notes'];
-  const hdrRow2 = ws2.addRow(hdrs2.map((v,i) => {
-    if (i > 0 && i < 6) {
-      const dt = new Date(monday); dt.setDate(monday.getDate()+i-1);
-      return `${v}\n${fmtDNum(dt)}`;
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>${title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
+    :root { ${cssVarBlock} }
+    body { font-family:'Instrument Sans',sans-serif; background:white; padding:30px 40px; }
+    h1 { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--ink); margin-bottom:4px; }
+    .sub { font-size:12px; color:var(--ink3); margin-bottom:20px; }
+    #pe-grid { position:relative; width:100%; overflow:visible; }
+    #pe-grid * { font-family:'Instrument Sans',sans-serif; }
+    .legend { display:flex; gap:14px; margin-top:14px; font-size:11px; flex-wrap:wrap; }
+    .legend span { padding:3px 10px; border-radius:12px; font-weight:700; }
+    @media print {
+      @page { size:A4 landscape; margin:0.8cm; }
+      body { padding:0; }
+      button { display:none !important; }
     }
-    return v;
-  }));
-  hdrRow2.height = 28;
-  hdrRow2.eachCell(cell => {
-    cell.font  = hFont({bold:true, size:9, color:C_BLANC});
-    cell.fill  = hFill(C_BLEU_MED);
-    cell.alignment = hAlign('center','center',true);
-    cell.border = thinBorder();
-  });
+  </style>
+  </head><body>
+  <h1>📅 ${title}</h1>
+  <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+  ${ganttHTML}
+  ${tab === 'hebdo' ? '' : `<div class="legend">
+    <span style="background:#F0FDF4;color:#16A34A">✓ Conforme</span>
+    <span style="background:#FFFBEB;color:#D97706">! Limite</span>
+    <span style="background:#FEF2F2;color:#DC2626">✗ Non conforme</span>
+  </div>`}
+  <script>
+    window.onload = function() {
+      const grid = document.getElementById('pe-grid');
+      if (!grid) return;
+      const LABEL_W = 120, START_H = 7, END_H = 20, TOTAL_MIN = (END_H - START_H) * 60;
+      const ganttW  = grid.offsetWidth - LABEL_W;
 
-  if (pros.length === 0) {
-    ws2.mergeCells('A3:H3');
-    const noSal = ws2.getCell('A3');
-    noSal.value = 'Aucun salarié enregistré. Ajoutez des salariés dans RH → Salariés.';
-    noSal.font  = hFont({size:10, color:'6B7280', italic:true});
-    noSal.alignment = hAlign('center','center');
-  }
-
-  pros.forEach((pro, pidx) => {
-    const bgHex = SALBG[pidx % SALBG.length];
-    const txHex = SALTX[pidx % SALTX.length];
-    const initial = pro.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2);
-
-    const dataRow = ws2.addRow([]);
-    dataRow.height = 36;
-
-    // Col A : salarié
-    const salCell = dataRow.getCell(1);
-    salCell.value = `${initial}  ${pro}`;
-    salCell.font  = hFont({bold:true, size:11, color:txHex});
-    salCell.fill  = hFill(bgHex);
-    salCell.alignment = hAlign('left','center');
-    salCell.border = medBorder(txHex);
-
-    let weekMin = 0;
-    DAY_NAMES.forEach((_,di) => {
-      const creneaux = (week.creneaux||[]).filter(cr => cr.pro === pro && cr.jour === di);
-      const cell = dataRow.getCell(di+2);
-      let dayMin = 0;
-      let lines = [];
-      creneaux.forEach(cr => {
-        const h = horaires[cr.horaire_idx] || {};
-        if (h.debut && h.fin) {
-          lines.push(`${h.debut}–${h.fin}`);
-          const [dh,dm] = h.debut.split(':').map(Number);
-          const [fh,fm] = h.fin.split(':').map(Number);
-          let slotMin = (fh*60+fm)-(dh*60+dm);
-          if (cr.pause) {
-            const pm = cr.pause.match(/(\d+)h(\d*)\s*[–-]\s*(\d+)h(\d*)/);
-            if (pm) { const ps=parseInt(pm[1])*60+(parseInt(pm[2])||0), pe=parseInt(pm[3])*60+(parseInt(pm[4])||0); slotMin-=Math.max(0,pe-ps); }
-          }
-          dayMin += Math.max(0, slotMin);
-        }
-        if (cr.pause) lines.push(`⏸ ${cr.pause}`);
+      // Reposition bars using data-* attrs
+      grid.querySelectorAll('[data-debut-min]').forEach(bar => {
+        const debut = parseInt(bar.dataset.debutMin);
+        const fin   = parseInt(bar.dataset.finMin);
+        const top   = parseInt(bar.dataset.top || 0);
+        const h     = parseInt(bar.dataset.h   || 36);
+        const bg    = bar.dataset.barColorBg     || '';
+        const border= bar.dataset.barColorBorder || '';
+        const text  = bar.dataset.barColorText   || '';
+        bar.style.left     = (LABEL_W + (debut - START_H*60) / TOTAL_MIN * ganttW) + 'px';
+        bar.style.width    = ((fin - debut) / TOTAL_MIN * ganttW) + 'px';
+        bar.style.top      = top + 'px';
+        bar.style.height   = h + 'px';
+        bar.style.position = 'absolute';
+        if (bg)     bar.style.background   = bg;
+        if (border) bar.style.borderColor  = border;
+        // fix text color on label inside bar
+        const lbl = bar.querySelector('div[style*="padding"]');
+        if (lbl && text) lbl.style.color = text;
       });
-      weekMin += dayMin;
 
-      if (lines.length > 0) {
-        cell.value = lines.join('\n') + (dayMin>0?`\n${fmtMin(dayMin)}`:'');
-        cell.font  = hFont({size:9, bold:lines.length>0, color:txHex});
-        cell.fill  = hFill(bgHex);
-      } else {
-        cell.value = '—';
-        cell.font  = hFont({size:11, color:'D1D5DB'});
-        cell.fill  = hFill(C_GRIS_CLAIR);
-      }
-      cell.alignment = hAlign('center','center',true);
-      cell.border = thinBorder();
-    });
+      // Reposition pause hatch divs
+      grid.querySelectorAll('[data-pause-debut]').forEach(h => {
+        const pd = parseInt(h.dataset.pauseDebut);
+        const pf = parseInt(h.dataset.pauseFin);
+        const bd = parseInt(h.dataset.barDebut);
+        const bf = parseInt(h.dataset.barFin);
+        const barW = (bf - bd) / TOTAL_MIN * ganttW;
+        h.style.position = 'absolute';
+        h.style.left  = ((pd - bd) / (bf - bd) * 100).toFixed(3) + '%';
+        h.style.width = ((pf - pd) / (bf - bd) * 100).toFixed(3) + '%';
+      });
 
-    // Total semaine
-    const totCell = dataRow.getCell(7);
-    totCell.value = weekMin > 0 ? fmtMin(weekMin) : '—';
-    totCell.font  = hFont({bold:true, size:11, color:txHex});
-    totCell.fill  = hFill(bgHex);
-    totCell.alignment = hAlign('center','center');
-    totCell.border = thinBorder();
+      // Reposition hour labels
+      grid.querySelectorAll('[data-hour]').forEach(el => {
+        const h = parseInt(el.dataset.hour);
+        el.style.left = (LABEL_W + (h - START_H) / (END_H - START_H) * ganttW) + 'px';
+        el.style.transform = 'translateX(-50%)';
+      });
 
-    // Notes
-    const noteCell = dataRow.getCell(8);
-    noteCell.fill  = hFill('F9FAFB');
-    noteCell.border = thinBorder();
-  });
+      // Hide current-time red line in PDF
+      grid.querySelectorAll('[style*="var(--red)"]').forEach(el => {
+        if (el.children.length <= 1 && el.style.width === '2px') el.style.display = 'none';
+      });
 
-  // Ligne totaux globaux
-  const totRow2 = ws2.addRow([]);
-  totRow2.height = 20;
-  ws2.mergeCells(`A${totRow2.number}:F${totRow2.number}`);
-  const totLbl2 = ws2.getCell(`A${totRow2.number}`);
-  totLbl2.value = 'Effectif présent par jour';
-  totLbl2.font  = hFont({bold:true, size:9, color:'374151'});
-  totLbl2.fill  = hFill('E5E7EB');
-  totLbl2.alignment = hAlign('left','center');
-  totLbl2.border = thinBorder();
-  DAY_NAMES.forEach((_,di) => {
-    const nb = pros.filter(p => (week.creneaux||[]).some(cr=>cr.pro===p&&cr.jour===di)).length;
-    const tc = ws2.getCell(totRow2.number, di+2);
-    tc.value = `${nb} / ${pros.length}`;
-    tc.font  = hFont({bold:true, size:9, color:nb>=2?'15803D':nb===1?'B45309':'DC2626'});
-    tc.fill  = hFill(nb>=2?'DCFCE7':nb===1?'FEF3C7':'FEE2E2');
-    tc.alignment = hAlign('center','center');
-    tc.border = thinBorder();
-  });
+      setTimeout(() => window.print(), 600);
+    };
+  <\/script>
+  
 
-  ws2.views = [{state:'frozen', xSplit:1, ySplit:2}];
 
-  // ════════════════════════════════════════════════════════════════
-  // TÉLÉCHARGEMENT
-  // ════════════════════════════════════════════════════════════════
-  const creche_slug = crecheId.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'') || 'toutes';
-  const filename = `Planning_${creche_slug}_S${String(weekNum).padStart(2,'0')}_${monday.getFullYear()}.xlsx`;
 
-  wb.xlsx.writeBuffer().then(buf => {
-    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }).catch(err => {
-    console.error('Export Excel planning:', err);
-    alert('Erreur lors de la génération Excel : ' + err.message);
-  });
+
+
+</body></html>`);
+  w.document.close();
 }
 
 // Stub pour compatibilité Paramètres
