@@ -7065,7 +7065,7 @@ async function sbUpsertParametre(cle, valeur) {
 
 async function chargerParamsSupabase() {
   try {
-    const res = await fetch(`${SUPA_RH_URL}/rest/v1/parametres?cle=in.(orevy_creches,orevy_prefs)&select=cle,valeur`, {
+    const res = await fetch(`${SUPA_RH_URL}/rest/v1/parametres?cle=in.(orevy_creches,orevy_prefs,orevy_coord_rotation_v2,orevy_coord_suivi_v2)&select=cle,valeur`, {
       headers: SUPA_RH_HEADERS
     });
     if (!res.ok) return;
@@ -7082,6 +7082,12 @@ async function chargerParamsSupabase() {
       if (row.cle === 'orevy_prefs' && row.valeur) {
         try { localStorage.setItem('orevy_prefs', JSON.stringify(row.valeur)); } catch {}
         appliquerPrefs();
+      }
+      if (row.cle === 'orevy_coord_rotation_v2' && row.valeur) {
+        try { localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(row.valeur)); } catch {}
+      }
+      if (row.cle === 'orevy_coord_suivi_v2' && row.valeur) {
+        try { localStorage.setItem('orevy_coord_suivi_v2', JSON.stringify(row.valeur)); } catch {}
       }
     });
   } catch(e) { console.warn('[Params] chargement Supabase:', e); }
@@ -17565,7 +17571,10 @@ let _coordTab = 'rotation';
 function coordGetSuiviData() {
   try { return JSON.parse(localStorage.getItem(COORD_SUIVI_LS) || '{}'); } catch { return {}; }
 }
-function coordSetSuiviData(d) { localStorage.setItem(COORD_SUIVI_LS, JSON.stringify(d)); }
+function coordSetSuiviData(d) {
+  localStorage.setItem(COORD_SUIVI_LS, JSON.stringify(d));
+  sbUpsertParametre('orevy_coord_suivi_v2', d).catch(e => console.warn('[Params] sync suivi coord:', e));
+}
 
 function renderPlanningCoord() {
   const el = document.getElementById('pe-coord-content');
@@ -17666,7 +17675,10 @@ function _coordGetRotation() {
     }),
   }));
 }
-function _coordSaveRotation(data) { localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(data)); }
+function _coordSaveRotation(data) {
+  localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(data));
+  sbUpsertParametre('orevy_coord_rotation_v2', data).catch(e => console.warn('[Params] sync rotation coord:', e));
+}
 
 function _coordCellStyle(creche) {
   if (!creche || creche === '') return { bg:'var(--bg)', color:'var(--ink3)', border:'var(--border)' };
