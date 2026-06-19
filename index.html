@@ -5596,6 +5596,8 @@ function syncContratFromCreche() {
   syncTauxCafToTarif();
 }
 
+function syncTauxCafToTarif() { syncTarifCAF(); }
+
 function syncTarifCAF() {
   const contrat = document.getElementById('fi-contrat-caf')?.value;
   const tarifEl = document.getElementById('fi-tarif-heure');
