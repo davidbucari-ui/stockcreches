@@ -11741,6 +11741,15 @@ function peGoWeek(dir) {
   if (dir === 0) { peWeekOffset = 0; peGanttDay = -1; }
   else { peWeekOffset += dir; peGanttDay = 0; }
   renderActiveTab();
+  // Synchroniser le sélecteur de période coordinateur sur le mois affiché
+  const mon = peGetMonday();
+  const val = mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0');
+  const sel = document.getElementById('coord-suivi-periode');
+  if (sel) {
+    // Si l'option existe, la sélectionner ; sinon ne rien faire
+    const opt = [...sel.options].find(o => o.value === val);
+    if (opt) sel.value = val;
+  }
 }
 
 // ── Source de données (localStorage) ──────────────────────────────
