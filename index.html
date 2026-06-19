@@ -11315,8 +11315,8 @@ async function toggleAdminUser(id, currentActif) {
 }
 
 async function changeAdminUserRole(id, currentRole, email) {
-  const roles = ['directrice', 'auxiliaire', 'stagiaire', 'admin'];
-  const labels = { directrice: '🌸 Directrice', auxiliaire: '🌿 Auxiliaire', stagiaire: '🎓 Stagiaire', admin: '👑 Admin' };
+  const roles = ['Directrice', 'Auxiliaire', 'Stagiaire', 'Admin'];
+  const labels = { Directrice: '🌸 Directrice', Auxiliaire: '🌿 Auxiliaire', Stagiaire: '🎓 Stagiaire', Admin: '👑 Admin' };
   const options = roles.map((r, i) => `${i+1}. ${labels[r]}${r === currentRole ? ' ✓ (actuel)' : ''}`).join('\n');
   const choice = prompt(`Changer le rôle de ${email}\n\n${options}\n\nSaisissez le numéro (1-4) :`);
   if (!choice) return;
