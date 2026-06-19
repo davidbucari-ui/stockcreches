@@ -3007,13 +3007,19 @@ const CRECHES_DEFAUT = [
 ];
 let CRECHES_DATA = [];
 try {
-  const saved = localStorage.getItem('koala_creches');
+  // Migration automatique koala_creches → orevy_creches
+  const oldSaved = localStorage.getItem('orevy_creches');
+  if (oldSaved) {
+    try { localStorage.setItem('orevy_creches', oldSaved); } catch(e) {}
+    localStorage.removeItem('koala_creches');
+  }
+  const saved = localStorage.getItem('orevy_creches');
   CRECHES_DATA = saved ? JSON.parse(saved) : CRECHES_DEFAUT;
 } catch { CRECHES_DATA = CRECHES_DEFAUT; }
 // Réparation : si la liste est vide ou invalide, revenir à la liste par défaut
 if (!Array.isArray(CRECHES_DATA) || CRECHES_DATA.length === 0) {
   CRECHES_DATA = CRECHES_DEFAUT;
-  try { try { localStorage.setItem('koala_creches', JSON.stringify(CRECHES_DATA)); } catch(e) { console.warn('[Orevy] localStorage plein — crèches non sauvegardées', e); } } catch {}
+  try { try { localStorage.setItem('orevy_creches', JSON.stringify(CRECHES_DATA)); } catch(e) { console.warn('[Orevy] localStorage plein — crèches non sauvegardées', e); } } catch {}
 }
 // Réparation : migrer les données enregistrées sous la clé erronée "Crèche"
 // (créée quand la liste des crèches était vide) vers la première vraie crèche
@@ -3041,11 +3047,12 @@ let CRECHES = CRECHES_DATA.map(c => c.nom);
 let CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
 
 function sauverCreches() {
-  localStorage.setItem('koala_creches', JSON.stringify(CRECHES_DATA));
+  localStorage.setItem('orevy_creches', JSON.stringify(CRECHES_DATA));
   CRECHES = CRECHES_DATA.map(c => c.nom);
   CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
-}
-const CAT_ICONS = { 'Sensoriel':'👂','Manipulation':'🤲','Construction':'🧱','Motricité':'🏃','Imitation':'🎭','Expression artistique':'🎨','Mobilier':'🪑','Puériculture':'🍼','Bureautique':'💻','Rangement':'🗂' };
+  // Sync Supabase (async, silencieux)
+  sbUpsertParametre('orevy_creches', CRECHES_DATA).catch(e => console.warn('[Params] sync creches:', e));
+}const CAT_ICONS = { 'Sensoriel':'👂','Manipulation':'🤲','Construction':'🧱','Motricité':'🏃','Imitation':'🎭','Expression artistique':'🎨','Mobilier':'🪑','Puériculture':'🍼','Bureautique':'💻','Rangement':'🗂' };
 
 let ARTICLES = [
   { id:1, nom:'Puzzles encastrement 4 pièces', ref:'MAT-001', cat:'Sensoriel', creche:'Brunet', stock:8, min:3, prix:12.50, fourn:'Nathan Pédagogique', notes:'Bois certifié FSC. Âge : 12-36 mois.' },
@@ -4497,7 +4504,7 @@ function renderFamillesKPI() {
   const total = enfants.length;
   const berceaux = getBerceaux(crecheId);
   const placesB = berceaux.reduce((s,b) => s + (parseInt(b.places)||0), 0);
-  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   const option = prefs.optionEncadrement || 'NM8M';
   const { prosMin, nm, m } = calcTauxEncadrement(enfants, option);
   const psu  = enfants.filter(e => e.contrat_caf === 'PSU').length;
@@ -4661,7 +4668,7 @@ function renderFamillesFinancement() {
   const hPAJE = paje.reduce((s,e) => s + (parseInt(e.heures)||0), 0);
 
   // Option encadrement configurable
-  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   const option = prefs.optionEncadrement || 'NM8M';
 
   el.innerHTML = `
@@ -4734,9 +4741,9 @@ function renderFamillesFinancement() {
 }
 
 function saveOptionEncadrement(val) {
-  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   prefs.optionEncadrement = val;
-  localStorage.setItem('koala_prefs', JSON.stringify(prefs));
+  localStorage.setItem('orevy_prefs', JSON.stringify(prefs));
   renderFamillesKPI();
   renderFamillesFinancement();
 }
@@ -4935,7 +4942,7 @@ function renderDashboardFamillesTile() {
   const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
   const nm = enfants.filter(e => e.type === 'NM').length;
   const m  = enfants.filter(e => e.type === 'M').length;
-  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   const { prosMin } = calcTauxEncadrement(enfants, prefs.optionEncadrement || 'NM8M');
   el.querySelector('.fam-nm').textContent  = nm;
   el.querySelector('.fam-m').textContent   = m;
@@ -6957,7 +6964,7 @@ function renderParametres() {
   if (!list) return;
 
   // Charger les valeurs sauvegardées
-  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   const accent = prefs.accent || '#6366F1';
   const nomInput = document.getElementById('param-nom-reseau');
   const seuilInput = document.getElementById('param-seuil-stock');
@@ -7010,12 +7017,11 @@ function setAccentColor(color) {
 }
 
 function sauverPersonnalisation() {
-  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   const nom = document.getElementById('param-nom-reseau').value.trim();
   const color = document.getElementById('param-color-custom').value;
   if (nom) {
     prefs.nomReseau = nom;
-    // Mettre à jour le sous-titre sidebar
     const subtitle = document.querySelector('.sidebar-logo span');
     if (subtitle) subtitle.textContent = nom;
   }
@@ -7023,25 +7029,62 @@ function sauverPersonnalisation() {
     prefs.accent = color;
     document.documentElement.style.setProperty('--accent', color);
   }
-  localStorage.setItem('koala_prefs', JSON.stringify(prefs));
+  localStorage.setItem('orevy_prefs', JSON.stringify(prefs));
+  sbUpsertParametre('orevy_prefs', prefs).catch(e => console.warn('[Params] sync prefs:', e));
   showNotif('✅ Personnalisation enregistrée');
 }
 
 function sauverAlertes() {
-  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   prefs.seuilStock = parseInt(document.getElementById('param-seuil-stock').value) || 2;
   prefs.seuilPeremption = parseInt(document.getElementById('param-seuil-peremption').value) || 30;
-  localStorage.setItem('koala_prefs', JSON.stringify(prefs));
+  localStorage.setItem('orevy_prefs', JSON.stringify(prefs));
+  sbUpsertParametre('orevy_prefs', prefs).catch(e => console.warn('[Params] sync prefs:', e));
   showNotif('✅ Alertes enregistrées');
 }
 
 function appliquerPrefs() {
-  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   if (prefs.accent) document.documentElement.style.setProperty('--accent', prefs.accent);
   if (prefs.nomReseau) {
     const subtitle = document.querySelector('.sidebar-logo span');
     if (subtitle) subtitle.textContent = prefs.nomReseau;
   }
+}
+
+async function sbUpsertParametre(cle, valeur) {
+  const url = `${SUPA_RH_URL}/rest/v1/parametres`;
+  const body = JSON.stringify({ cle, valeur, updated_at: new Date().toISOString() });
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { ...SUPA_RH_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+    body
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(`${res.status} ${t}`); }
+}
+
+async function chargerParamsSupabase() {
+  try {
+    const res = await fetch(`${SUPA_RH_URL}/rest/v1/parametres?cle=in.(orevy_creches,orevy_prefs)&select=cle,valeur`, {
+      headers: SUPA_RH_HEADERS
+    });
+    if (!res.ok) return;
+    const rows = await res.json();
+    rows.forEach(row => {
+      if (row.cle === 'orevy_creches' && Array.isArray(row.valeur) && row.valeur.length) {
+        CRECHES_DATA = row.valeur;
+        CRECHES = CRECHES_DATA.map(c => c.nom);
+        CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
+        try { localStorage.setItem('orevy_creches', JSON.stringify(CRECHES_DATA)); } catch {}
+        renderSidebarCreches();
+        renderParametres();
+      }
+      if (row.cle === 'orevy_prefs' && row.valeur) {
+        try { localStorage.setItem('orevy_prefs', JSON.stringify(row.valeur)); } catch {}
+        appliquerPrefs();
+      }
+    });
+  } catch(e) { console.warn('[Params] chargement Supabase:', e); }
 }
 // ── FIN PERSONNALISATION ──────────────────────────────────────────
 
@@ -7256,7 +7299,7 @@ async function renderDashboardDirectrice(dateStr) {
 
     // Enfants inscrits actifs
     const enfantsActifs = getFamilles(famCid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
-    const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
+    const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
     const { prosMin } = calcTauxEncadrement(enfantsActifs, prefs.optionEncadrement || 'NM8M');
 
     const rows = jours.map((j, i) => {
@@ -7828,6 +7871,8 @@ function startApp() {
   applyRoleAccess();
   // Afficher le hub d'accueil avant l'app
   showHub();
+  // Charger les paramètres depuis Supabase (async, met à jour l'UI si données plus récentes)
+  chargerParamsSupabase();
 }
 
 function showHub() {
@@ -11727,8 +11772,7 @@ function pePopulateCreches(selId) {
   const sel = document.getElementById(selId);
   if (!sel) return;
   const prev = sel.value;
-  sel.innerHTML = '<option value="">Toutes les structures</option>' +
-    (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+  sel.innerHTML = (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
   if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
 }
 
@@ -11787,7 +11831,7 @@ let ikRows = [];
 function ikGetConfig() {
   try {
     const s = JSON.parse(localStorage.getItem(IK_CFG_KEY)||'{}');
-    const _saved = localStorage.getItem('koala_creches');
+    const _saved = localStorage.getItem('orevy_creches');
     const creches = _saved ? JSON.parse(_saved).map(c=>c.nom) : (CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
     const dist = {};
     creches.forEach(c => dist[c] = s.dist&&s.dist[c]!==undefined ? s.dist[c] : 0);
@@ -12197,7 +12241,7 @@ function renderPlanningIK() {
   // Lire les crèches depuis localStorage ou fallback CRECHES_DEFAUT
   let _ikCreches = [];
   try {
-    const _saved = localStorage.getItem('koala_creches');
+    const _saved = localStorage.getItem('orevy_creches');
     _ikCreches = _saved ? JSON.parse(_saved).map(c=>c.nom) : (CRECHES_DEFAUT||[]).map(c=>c.nom);
   } catch(e) {
     _ikCreches = (CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
@@ -12935,14 +12979,9 @@ function exportPlanningPDF() {
   const fmtD     = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
   const endFri   = new Date(monday); endFri.setDate(monday.getDate()+4);
   const crecheId = document.getElementById('pe-creche')?.value || '';
-  const title    = `Planning ${crecheId ? '\u2014 ' + crecheId + ' \u2014 ' : ''}Semaine ${weekNum} \u00b7 ${fmtD(monday)} au ${fmtD(endFri)}`;
-  // Cibler le conteneur de l'onglet actif
+  const title    = `Planning ${crecheId ? '— ' + crecheId + ' — ' : ''}Semaine ${weekNum} · ${fmtD(monday)} au ${fmtD(endFri)}`;
+  // Cibler le conteneur de l'onglet actif (Gantt, Par salarié, Gantt visuel)
   const tab    = (typeof pePlanningTab !== 'undefined' && pePlanningTab) || 'gantt';
-  // Onglets coord et ik : pas d'export planning visuel pertinent
-  if (tab === 'coord' || tab === 'ik') {
-    showNotif('\u26a0 Export PDF disponible uniquement sur les vues Planning \u00e9quipe, Par salari\u00e9 et Gantt');
-    return;
-  }
   const srcId  = tab === 'hebdo' ? 'ph-grid' : tab === 'gantt2' ? 'pe-grid2' : 'pe-grid';
   const ganttEl = document.getElementById(srcId);
   if (!ganttEl) return;
@@ -12959,14 +12998,8 @@ function exportPlanningPDF() {
   cloneEl.id = 'pe-grid';
   const ganttHTML = cloneEl.outerHTML;
 
-  // Ouvrir via blob URL (non bloqué par les navigateurs modernes)
-  const legendHTML = tab === 'hebdo' ? '' : `<div class="legend">
-    <span style="background:#F0FDF4;color:#16A34A">&#10003; Conforme</span>
-    <span style="background:#FFFBEB;color:#D97706">! Limite</span>
-    <span style="background:#FEF2F2;color:#DC2626">&#10007; Non conforme</span>
-  </div>`;
-  const dateGen = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <title>${title}</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -12986,24 +13019,30 @@ function exportPlanningPDF() {
     }
   </style>
   </head><body>
-  <h1>&#128197; ${title}</h1>
-  <div class="sub">Genere le ${dateGen}</div>
+  <h1>📅 ${title}</h1>
+  <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
   ${ganttHTML}
-  ${legendHTML}
+  ${tab === 'hebdo' ? '' : `<div class="legend">
+    <span style="background:#F0FDF4;color:#16A34A">✓ Conforme</span>
+    <span style="background:#FFFBEB;color:#D97706">! Limite</span>
+    <span style="background:#FEF2F2;color:#DC2626">✗ Non conforme</span>
+  </div>`}
   <script>
     window.onload = function() {
-      var grid = document.getElementById('pe-grid');
-      if (!grid) { setTimeout(function(){ window.print(); }, 400); return; }
-      var LABEL_W = 120, START_H = 7, END_H = 20, TOTAL_MIN = (END_H - START_H) * 60;
-      var ganttW  = grid.offsetWidth - LABEL_W;
-      grid.querySelectorAll('[data-debut-min]').forEach(function(bar) {
-        var debut = parseInt(bar.dataset.debutMin);
-        var fin   = parseInt(bar.dataset.finMin);
-        var top   = parseInt(bar.dataset.top || 0);
-        var h     = parseInt(bar.dataset.h   || 36);
-        var bg    = bar.dataset.barColorBg     || '';
-        var border= bar.dataset.barColorBorder || '';
-        var text  = bar.dataset.barColorText   || '';
+      const grid = document.getElementById('pe-grid');
+      if (!grid) return;
+      const LABEL_W = 120, START_H = 7, END_H = 20, TOTAL_MIN = (END_H - START_H) * 60;
+      const ganttW  = grid.offsetWidth - LABEL_W;
+
+      // Reposition bars using data-* attrs
+      grid.querySelectorAll('[data-debut-min]').forEach(bar => {
+        const debut = parseInt(bar.dataset.debutMin);
+        const fin   = parseInt(bar.dataset.finMin);
+        const top   = parseInt(bar.dataset.top || 0);
+        const h     = parseInt(bar.dataset.h   || 36);
+        const bg    = bar.dataset.barColorBg     || '';
+        const border= bar.dataset.barColorBorder || '';
+        const text  = bar.dataset.barColorText   || '';
         bar.style.left     = (LABEL_W + (debut - START_H*60) / TOTAL_MIN * ganttW) + 'px';
         bar.style.width    = ((fin - debut) / TOTAL_MIN * ganttW) + 'px';
         bar.style.top      = top + 'px';
@@ -13011,50 +13050,46 @@ function exportPlanningPDF() {
         bar.style.position = 'absolute';
         if (bg)     bar.style.background   = bg;
         if (border) bar.style.borderColor  = border;
-        var lbl = bar.querySelector('div[style*="padding"]');
+        // fix text color on label inside bar
+        const lbl = bar.querySelector('div[style*="padding"]');
         if (lbl && text) lbl.style.color = text;
       });
-      grid.querySelectorAll('[data-pause-debut]').forEach(function(h) {
-        var pd = parseInt(h.dataset.pauseDebut);
-        var pf = parseInt(h.dataset.pauseFin);
-        var bd = parseInt(h.dataset.barDebut);
-        var bf = parseInt(h.dataset.barFin);
+
+      // Reposition pause hatch divs
+      grid.querySelectorAll('[data-pause-debut]').forEach(h => {
+        const pd = parseInt(h.dataset.pauseDebut);
+        const pf = parseInt(h.dataset.pauseFin);
+        const bd = parseInt(h.dataset.barDebut);
+        const bf = parseInt(h.dataset.barFin);
+        const barW = (bf - bd) / TOTAL_MIN * ganttW;
         h.style.position = 'absolute';
         h.style.left  = ((pd - bd) / (bf - bd) * 100).toFixed(3) + '%';
         h.style.width = ((pf - pd) / (bf - bd) * 100).toFixed(3) + '%';
       });
-      grid.querySelectorAll('[data-hour]').forEach(function(el) {
-        var hh = parseInt(el.dataset.hour);
-        el.style.left = (LABEL_W + (hh - START_H) / (END_H - START_H) * ganttW) + 'px';
+
+      // Reposition hour labels
+      grid.querySelectorAll('[data-hour]').forEach(el => {
+        const h = parseInt(el.dataset.hour);
+        el.style.left = (LABEL_W + (h - START_H) / (END_H - START_H) * ganttW) + 'px';
         el.style.transform = 'translateX(-50%)';
       });
-      grid.querySelectorAll('[style*="var(--red)"]').forEach(function(el) {
+
+      // Hide current-time red line in PDF
+      grid.querySelectorAll('[style*="var(--red)"]').forEach(el => {
         if (el.children.length <= 1 && el.style.width === '2px') el.style.display = 'none';
       });
-      setTimeout(function(){ window.print(); }, 600);
+
+      setTimeout(() => window.print(), 600);
     };
   <\/script>
-</body></html>`;
-  try {
-    var blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    var blobUrl = URL.createObjectURL(blob);
-    var w = window.open(blobUrl, '_blank');
-    if (!w) {
-      var ifrm = document.getElementById('_orevy_print_frame');
-      if (!ifrm) {
-        ifrm = document.createElement('iframe');
-        ifrm.id = '_orevy_print_frame';
-        ifrm.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1200px;height:800px;border:none;';
-        document.body.appendChild(ifrm);
-      }
-      ifrm.onload = function() { setTimeout(function(){ ifrm.contentWindow.print(); }, 600); };
-      ifrm.src = blobUrl;
-      showNotif('&#9888; Popup bloque - impression via fenetre principale');
-    }
-    setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 30000);
-  } catch(e) {
-    showNotif('&#9888; Erreur export PDF : ' + e.message);
-  }
+  
+
+
+
+
+
+</body></html>`);
+  w.document.close();
 }
 
 // Stub pour compatibilité Paramètres
