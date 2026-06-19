@@ -11322,22 +11322,28 @@ async function renderRhStats() {
     const d90 = new Date(); d90.setDate(d90.getDate() + 90);
     const d90str = d90.toISOString().split('T')[0];
     const crecheFiltre = (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all')
-      ? `&creche=eq.${encodeURIComponent(currentCreche)}`
-      : '';
+      ? currentCreche : '';
+    // table salaries : structure (id TEXT, data JSONB) — filtrage côté client
     const [salariesSupa, conges, recru, formations] = await Promise.all([
-      sbGet('salaries', `statut=eq.actif${crecheFiltre}&select=id`),
+      sbGet('salaries', 'select=id,data'),
       sbGet('conges', 'statut=eq.en_attente&select=id'),
       sbGet('recrutements', 'statut=eq.ouvert&select=id'),
       sbGet('formations_rh', `renouvellement=lte.${d90str}&renouvellement=gte.${today}&select=id`),
     ]);
-    // Priorité Supabase ; fallback localStorage si vide
-    let nbActifs = Array.isArray(salariesSupa) && salariesSupa.length > 0
-      ? salariesSupa.length
-      : (() => {
-          loadSalaries();
-          const all = SALARIES.filter(s => s.statut === 'actif');
-          return crecheFiltre ? all.filter(s => s.creche === currentCreche).length : all.length;
-        })();
+    // Filtrage actif + crèche côté client sur le JSONB
+    let nbActifs;
+    if (Array.isArray(salariesSupa) && salariesSupa.length > 0) {
+      nbActifs = salariesSupa.filter(r => {
+        const d = r.data || {};
+        if (d.statut !== 'actif') return false;
+        if (crecheFiltre && d.creche !== crecheFiltre) return false;
+        return true;
+      }).length;
+    } else {
+      loadSalaries();
+      const all = SALARIES.filter(s => s.statut === 'actif');
+      nbActifs = crecheFiltre ? all.filter(s => s.creche === crecheFiltre).length : all.length;
+    }
     set('rh-stat-employes',   nbActifs);
     set('rh-stat-conges',     Array.isArray(conges)     ? conges.length     : 0);
     set('rh-stat-recru',      Array.isArray(recru)      ? recru.length      : 0);
@@ -15212,6 +15218,26 @@ function loadSalaries() {
 }
 function saveSalaries() {
   localStorage.setItem('orevy_salaries', JSON.stringify(SALARIES));
+  // Sync Supabase : upsert chaque salarié individuellement
+  _syncSalariesToSupa().catch(e => console.warn('[Salaries] sync Supabase:', e));
+}
+async function _syncSalariesToSupa() {
+  if (!Array.isArray(SALARIES) || SALARIES.length === 0) return;
+  // La table salaries a la structure : id TEXT, data JSONB, updated_at
+  for (const s of SALARIES) {
+    const body = { id: s.id, data: s, updated_at: new Date().toISOString() };
+    try {
+      const res = await fetch(`${SUPA_RH_URL}/rest/v1/salaries`, {
+        method: 'POST',
+        headers: { ...SUPA_RH_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        console.warn('[Salaries] upsert erreur', res.status, t);
+      }
+    } catch(e) { console.warn('[Salaries] upsert fetch:', e); }
+  }
 }
 
 function renderSalaries() {
