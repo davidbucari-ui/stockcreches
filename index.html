@@ -10675,12 +10675,18 @@ async function sbGet(table, params='') {
 }
 
 async function sbInsert(table, data) {
+  const body = { ...data };
+  delete body.id; // ne jamais envoyer l'id sur une colonne identity/uuid auto
   const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}`, {
     method: 'POST',
-    headers: { ..._sbHeaders(table), 'Prefer': 'return=representation' },
-    body: JSON.stringify(data),
+    headers: { ..._sbHeaders(table), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+    body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`INSERT ${table} : ${r.status}`);
+  if (!r.ok) {
+    const errBody = await r.text().catch(() => '');
+    console.error(`INSERT ${table} ${r.status}:`, errBody);
+    throw new Error(`INSERT ${table} : ${r.status}`);
+  }
   return r.json();
 }
 
@@ -11430,6 +11436,7 @@ async function saveRhRecrutement() {
     candidat_nom:   (document.getElementById('rh-r-candidat-nom').value || '').trim(),
     candidat_email: (document.getElementById('rh-r-candidat-email').value || '').trim(),
     notes:          (document.getElementById('rh-r-notes').value || '').trim(),
+    creche_id:      (typeof currentCreche !== 'undefined' && currentCreche !== 'all') ? currentCreche : null,
   };
   try {
     rhEditingRecrutement ? await sbUpdate('recrutements', rhEditingRecrutement, data) : await sbInsert('recrutements', data);
@@ -11475,7 +11482,7 @@ async function saveRhContrat() {
   const date_debut = document.getElementById('rh-c-debut').value;
   if (!user_id || !poste || !date_debut) { alert('Collaborateur, poste et date de début requis.'); return; }
   const data = {
-    user_id: parseInt(user_id), poste,
+    user_id: user_id, poste,
     type:          document.getElementById('rh-c-type').value,
     date_debut,
     date_fin:      document.getElementById('rh-c-fin').value || null,
@@ -11526,7 +11533,7 @@ async function saveRhConge() {
   const date_fin   = document.getElementById('rh-g-fin').value;
   if (!user_id || !date_debut || !date_fin) { alert('Collaborateur et dates requis.'); return; }
   const data = {
-    user_id: parseInt(user_id),
+    user_id: user_id, // uuid TEXT — ne pas parser en entier
     type:     document.getElementById('rh-g-type').value,
     statut:   document.getElementById('rh-g-statut').value,
     date_debut, date_fin,
@@ -11575,7 +11582,7 @@ async function saveRhFormation() {
   const titre   = (document.getElementById('rh-f-titre').value || '').trim();
   if (!user_id || !titre) { alert('Collaborateur et titre requis.'); return; }
   const data = {
-    user_id: parseInt(user_id), titre,
+    user_id: user_id, titre,
     date:            document.getElementById('rh-f-date').value || null,
     renouvellement:  document.getElementById('rh-f-renouvellement').value || null,
     attestation_url: (document.getElementById('rh-f-attestation').value || '').trim(),
