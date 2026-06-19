@@ -8376,7 +8376,7 @@ function filterCreche(creche, el) {
   else if (currentPage === 'commandes') renderCommandes();
   else if (currentPage === 'historique') renderHistorique();
   else if (currentPage === 'planning') renderActiveTab();
-  else if (currentPage === 'rh') renderSalaries();
+  else if (currentPage === 'rh') { renderSalaries(); renderRhStats(); }
   else if (currentPage === 'dashboard') renderDashboard();
   // Sécurité : si page-dashboard est visible mais currentPage pas à jour
   else {
