@@ -11334,7 +11334,7 @@ async function changeAdminUserRole(id, currentRole, email) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || data.message || `Erreur ${res.status}`);
-    showBanner(`✅ Rôle mis à jour : ${labels[newRole]}`);
+    alert('✅ Rôle mis à jour : ' + labels[newRole]);
     await renderAdminUsers();
   } catch(e) {
     alert('Erreur : ' + e.message);
