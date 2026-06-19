@@ -3007,19 +3007,13 @@ const CRECHES_DEFAUT = [
 ];
 let CRECHES_DATA = [];
 try {
-  // Migration automatique koala_creches → orevy_creches
-  const oldSaved = localStorage.getItem('koala_creches');
-  if (oldSaved) {
-    try { localStorage.setItem('orevy_creches', oldSaved); } catch(e) {}
-    localStorage.removeItem('koala_creches');
-  }
-  const saved = localStorage.getItem('orevy_creches');
+  const saved = localStorage.getItem('koala_creches');
   CRECHES_DATA = saved ? JSON.parse(saved) : CRECHES_DEFAUT;
 } catch { CRECHES_DATA = CRECHES_DEFAUT; }
 // Réparation : si la liste est vide ou invalide, revenir à la liste par défaut
 if (!Array.isArray(CRECHES_DATA) || CRECHES_DATA.length === 0) {
   CRECHES_DATA = CRECHES_DEFAUT;
-  try { try { localStorage.setItem('orevy_creches', JSON.stringify(CRECHES_DATA)); } catch(e) { console.warn('[Orevy] localStorage plein — crèches non sauvegardées', e); } } catch {}
+  try { try { localStorage.setItem('koala_creches', JSON.stringify(CRECHES_DATA)); } catch(e) { console.warn('[Orevy] localStorage plein — crèches non sauvegardées', e); } } catch {}
 }
 // Réparation : migrer les données enregistrées sous la clé erronée "Crèche"
 // (créée quand la liste des crèches était vide) vers la première vraie crèche
@@ -3047,10 +3041,9 @@ let CRECHES = CRECHES_DATA.map(c => c.nom);
 let CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
 
 function sauverCreches() {
-  localStorage.setItem('orevy_creches', JSON.stringify(CRECHES_DATA));
+  localStorage.setItem('koala_creches', JSON.stringify(CRECHES_DATA));
   CRECHES = CRECHES_DATA.map(c => c.nom);
   CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
-  sbUpsertParametre('orevy_creches', CRECHES_DATA).catch(e => console.warn('[Params] sync creches:', e));
 }
 const CAT_ICONS = { 'Sensoriel':'👂','Manipulation':'🤲','Construction':'🧱','Motricité':'🏃','Imitation':'🎭','Expression artistique':'🎨','Mobilier':'🪑','Puériculture':'🍼','Bureautique':'💻','Rangement':'🗂' };
 
@@ -4504,7 +4497,7 @@ function renderFamillesKPI() {
   const total = enfants.length;
   const berceaux = getBerceaux(crecheId);
   const placesB = berceaux.reduce((s,b) => s + (parseInt(b.places)||0), 0);
-  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
   const option = prefs.optionEncadrement || 'NM8M';
   const { prosMin, nm, m } = calcTauxEncadrement(enfants, option);
   const psu  = enfants.filter(e => e.contrat_caf === 'PSU').length;
@@ -4668,7 +4661,7 @@ function renderFamillesFinancement() {
   const hPAJE = paje.reduce((s,e) => s + (parseInt(e.heures)||0), 0);
 
   // Option encadrement configurable
-  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
   const option = prefs.optionEncadrement || 'NM8M';
 
   el.innerHTML = `
@@ -4741,9 +4734,9 @@ function renderFamillesFinancement() {
 }
 
 function saveOptionEncadrement(val) {
-  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
   prefs.optionEncadrement = val;
-  localStorage.setItem('orevy_prefs', JSON.stringify(prefs));
+  localStorage.setItem('koala_prefs', JSON.stringify(prefs));
   renderFamillesKPI();
   renderFamillesFinancement();
 }
@@ -4942,7 +4935,7 @@ function renderDashboardFamillesTile() {
   const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
   const nm = enfants.filter(e => e.type === 'NM').length;
   const m  = enfants.filter(e => e.type === 'M').length;
-  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
   const { prosMin } = calcTauxEncadrement(enfants, prefs.optionEncadrement || 'NM8M');
   el.querySelector('.fam-nm').textContent  = nm;
   el.querySelector('.fam-m').textContent   = m;
@@ -6555,31 +6548,98 @@ async function renderBilan() {
   const records = rows.map(rowToTransRecord);
   const nbJours = records.length;
 
-  // Sommeil moyen
+  // Sommeil — analyse qualitative
   let totalSommeil = 0, joursAvecSommeil = 0;
+  const sommeilParJour = [];
   records.forEach(r => {
     const naps = r.sommeil || [];
     const min = naps.reduce((s,n) => s + (n.fin ? diffMinutes(n.debut,n.fin) : 0), 0);
-    if (min > 0) { totalSommeil += min; joursAvecSommeil++; }
+    if (min > 0) { totalSommeil += min; joursAvecSommeil++; sommeilParJour.push(min); }
   });
   const moyenneSommeil = joursAvecSommeil ? Math.round(totalSommeil / joursAvecSommeil) : 0;
+
+  function genCommentaireSommeil(records, joursAvecSommeil, moyenneMin, nbJours) {
+    if (nbJours === 0) return 'Aucune donnée de sommeil enregistrée sur cette période.';
+    const tauxPresence = joursAvecSommeil / nbJours;
+    const moy = moyenneMin;
+    const ageType = e.type;
+    // Durée attendue selon tranche d\'âge (en minutes)
+    const attenduMin = (ageType === '2.5-6' || ageType === '6-12') ? 90 : (ageType === '12-18' ? 80 : (ageType === '18-24' ? 75 : 60));
+    let commentaire = '';
+    if (tauxPresence < 0.3) {
+      commentaire = 'Le sommeil est peu documenté sur cette période, il est difficile de dégager une tendance.';
+    } else {
+      if (moy >= attenduMin + 20) {
+        commentaire = `${e.prenom} dort bien lors de ses siestes, avec une durée moyenne de ${formatDuree(moy)} par jour de présence.`;
+      } else if (moy >= attenduMin - 10) {
+        commentaire = `Le sommeil de ${e.prenom} est globalement satisfaisant, avec une durée moyenne de ${formatDuree(moy)} par jour.`;
+      } else if (moy > 0) {
+        commentaire = `Les siestes de ${e.prenom} sont relativement courtes (moyenne ${formatDuree(moy)}), ce qui mérite attention si cela se confirme dans le temps.`;
+      }
+      // Tendance récente (3 derniers jours vs début)
+      if (sommeilParJour.length >= 5) {
+        const debut = sommeilParJour.slice(0, Math.floor(sommeilParJour.length / 2));
+        const fin = sommeilParJour.slice(-Math.floor(sommeilParJour.length / 2));
+        const moyDebut = debut.reduce((a,b)=>a+b,0)/debut.length;
+        const moyFin = fin.reduce((a,b)=>a+b,0)/fin.length;
+        if (moyFin - moyDebut > 15) commentaire += ' On observe une amélioration progressive du sommeil sur la période.';
+        else if (moyDebut - moyFin > 15) commentaire += ' On note une légère diminution des durées de sommeil en fin de période.';
+      }
+    }
+    return commentaire || 'Données de sommeil insuffisantes pour établir un bilan.';
+  }
+  const commentaireSommeil = genCommentaireSommeil(records, joursAvecSommeil, moyenneSommeil, nbJours);
 
   // Changes totaux
   const changeCounts = {};
   CHANGE_TYPES.forEach(t => changeCounts[t.val] = 0);
   records.forEach(r => (r.changes||[]).forEach(c => { if (changeCounts[c.type] !== undefined) changeCounts[c.type]++; }));
 
-  // Repas — % "bien mangé"
+  // Repas — analyse qualitative (sans %)
   const profile = repasProfile(e.type);
   const champs = profile === 'nourrisson' ? ['puree','dessert','gouter'] : ['entree','plat','accompagnement','dessert','gouter'];
-  let totalRepas = 0, totalBien = 0;
+  let totalRepas = 0, totalBien = 0, totalPartiel = 0, totalRefus = 0;
+  // Détection de refus récurrents sur les derniers jours
+  const refusParJour = [];
   records.forEach(r => {
+    let refusJour = 0;
     champs.forEach(c => {
       const v = r.repas?.[c];
-      if (v) { totalRepas++; if (v === 'bien') totalBien++; }
+      if (v && v !== 'non_propose') {
+        totalRepas++;
+        if (v === 'bien') totalBien++;
+        else if (v === 'partiel') totalPartiel++;
+        else if (v === 'refus') { totalRefus++; refusJour++; }
+      }
     });
+    refusParJour.push(refusJour);
   });
-  const pctBien = totalRepas ? Math.round((totalBien/totalRepas)*100) : 0;
+
+  function genCommentaireRepas(totalRepas, totalBien, totalPartiel, totalRefus, nbJours, prenom) {
+    if (totalRepas === 0) return 'Aucune donnée repas enregistrée sur cette période.';
+    const rateBien = totalBien / totalRepas;
+    const rateRefus = totalRefus / totalRepas;
+    const ratePartiel = totalPartiel / totalRepas;
+    // Tendance refus sur fin de période
+    const recentRefus = refusParJour.slice(-5).reduce((a,b)=>a+b,0);
+    const earlyRefus  = refusParJour.slice(0,5).reduce((a,b)=>a+b,0);
+    let commentaire = '';
+    if (rateBien >= 0.75) {
+      commentaire = `${prenom} mange généralement bien ce qui lui est proposé, avec une bonne acceptation des repas sur l\'ensemble de la période.`;
+    } else if (rateBien >= 0.5) {
+      commentaire = `L\'appétit de ${prenom} est variable : il/elle mange bien dans la majorité des cas, mais avec quelques repas pris partiellement.`;
+    } else if (rateRefus >= 0.4) {
+      commentaire = `On observe des difficultés marquées lors des repas sur cette période : ${prenom} refuse ou accepte partiellement de nombreux plats proposés. Un point avec la famille serait utile.`;
+    } else {
+      commentaire = `${prenom} prend les repas de façon inégale, alternant bonnes prises et refus ponctuels selon les jours et les aliments.`;
+    }
+    // Signaler aggravation récente
+    if (nbJours >= 8 && recentRefus > earlyRefus + 2) {
+      commentaire += ' On note une tendance au refus plus fréquente sur les derniers jours de la période, à surveiller.';
+    }
+    return commentaire;
+  }
+  const commentaireRepas = genCommentaireRepas(totalRepas, totalBien, totalPartiel, totalRefus, nbJours, e.prenom);
 
   // Incidents et transmissions importantes
   const incidents = [];
@@ -6605,10 +6665,18 @@ async function renderBilan() {
       <div style="font-weight:700;font-size:15px;color:var(--ink);margin-bottom:2px">${transEsc(e.prenom)} ${transEsc(e.nom)} — ${tranche.label}</div>
       <div style="color:var(--ink3);margin-bottom:12px">Bilan du ${periodeLabels[periode]} · ${nbJours} jour(s) de transmission enregistré(s)</div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px">
-        <div class="trans-section"><div class="trans-section-title">Sommeil moyen / jour</div>${formatDuree(moyenneSommeil)}</div>
-        <div class="trans-section"><div class="trans-section-title">Repas « bien mangé »</div>${pctBien}%</div>
+      <div style="margin-bottom:14px">
         <div class="trans-section"><div class="trans-section-title">Changes totaux</div>${CHANGE_TYPES.map(t=>`${t.emoji} ${changeCounts[t.val]}`).join(' · ')}</div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-weight:700;margin-bottom:5px">🍽 Alimentation</div>
+        <div class="trans-section" style="font-size:12.5px;line-height:1.6;color:var(--ink2)">${transEsc(commentaireRepas)}</div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-weight:700;margin-bottom:5px">😴 Sommeil</div>
+        <div class="trans-section" style="font-size:12.5px;line-height:1.6;color:var(--ink2)">${transEsc(commentaireSommeil)}</div>
       </div>
 
       <div>
@@ -6964,7 +7032,7 @@ function renderParametres() {
   if (!list) return;
 
   // Charger les valeurs sauvegardées
-  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
   const accent = prefs.accent || '#6366F1';
   const nomInput = document.getElementById('param-nom-reseau');
   const seuilInput = document.getElementById('param-seuil-stock');
@@ -7017,11 +7085,12 @@ function setAccentColor(color) {
 }
 
 function sauverPersonnalisation() {
-  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
   const nom = document.getElementById('param-nom-reseau').value.trim();
   const color = document.getElementById('param-color-custom').value;
   if (nom) {
     prefs.nomReseau = nom;
+    // Mettre à jour le sous-titre sidebar
     const subtitle = document.querySelector('.sidebar-logo span');
     if (subtitle) subtitle.textContent = nom;
   }
@@ -7029,68 +7098,25 @@ function sauverPersonnalisation() {
     prefs.accent = color;
     document.documentElement.style.setProperty('--accent', color);
   }
-  localStorage.setItem('orevy_prefs', JSON.stringify(prefs));
-  sbUpsertParametre('orevy_prefs', prefs).catch(e => console.warn('[Params] sync prefs:', e));
+  localStorage.setItem('koala_prefs', JSON.stringify(prefs));
   showNotif('✅ Personnalisation enregistrée');
 }
 
 function sauverAlertes() {
-  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
   prefs.seuilStock = parseInt(document.getElementById('param-seuil-stock').value) || 2;
   prefs.seuilPeremption = parseInt(document.getElementById('param-seuil-peremption').value) || 30;
-  localStorage.setItem('orevy_prefs', JSON.stringify(prefs));
-  sbUpsertParametre('orevy_prefs', prefs).catch(e => console.warn('[Params] sync prefs:', e));
+  localStorage.setItem('koala_prefs', JSON.stringify(prefs));
   showNotif('✅ Alertes enregistrées');
 }
 
 function appliquerPrefs() {
-  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
   if (prefs.accent) document.documentElement.style.setProperty('--accent', prefs.accent);
   if (prefs.nomReseau) {
     const subtitle = document.querySelector('.sidebar-logo span');
     if (subtitle) subtitle.textContent = prefs.nomReseau;
   }
-}
-
-async function sbUpsertParametre(cle, valeur) {
-  const url = `${SUPA_RH_URL}/rest/v1/parametres`;
-  const body = JSON.stringify({ cle, valeur, updated_at: new Date().toISOString() });
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { ...SUPA_RH_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-    body
-  });
-  if (!res.ok) { const t = await res.text(); throw new Error(`${res.status} ${t}`); }
-}
-
-async function chargerParamsSupabase() {
-  try {
-    const res = await fetch(`${SUPA_RH_URL}/rest/v1/parametres?cle=in.(orevy_creches,orevy_prefs,orevy_coord_rotation_v2,orevy_coord_suivi_v2)&select=cle,valeur`, {
-      headers: SUPA_RH_HEADERS
-    });
-    if (!res.ok) return;
-    const rows = await res.json();
-    rows.forEach(row => {
-      if (row.cle === 'orevy_creches' && Array.isArray(row.valeur) && row.valeur.length) {
-        CRECHES_DATA = row.valeur;
-        CRECHES = CRECHES_DATA.map(c => c.nom);
-        CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
-        try { localStorage.setItem('orevy_creches', JSON.stringify(CRECHES_DATA)); } catch {}
-        renderSidebarCreches();
-        if (typeof renderParametres === 'function') renderParametres();
-      }
-      if (row.cle === 'orevy_prefs' && row.valeur) {
-        try { localStorage.setItem('orevy_prefs', JSON.stringify(row.valeur)); } catch {}
-        appliquerPrefs();
-      }
-      if (row.cle === 'orevy_coord_rotation_v2' && row.valeur) {
-        try { localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(row.valeur)); } catch {}
-      }
-      if (row.cle === 'orevy_coord_suivi_v2' && row.valeur) {
-        try { localStorage.setItem('orevy_coord_suivi_v2', JSON.stringify(row.valeur)); } catch {}
-      }
-    });
-  } catch(e) { console.warn('[Params] chargement Supabase:', e); }
 }
 // ── FIN PERSONNALISATION ──────────────────────────────────────────
 
@@ -7305,7 +7331,7 @@ async function renderDashboardDirectrice(dateStr) {
 
     // Enfants inscrits actifs
     const enfantsActifs = getFamilles(famCid).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
-    const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+    const prefs = JSON.parse(localStorage.getItem('koala_prefs') || '{}');
     const { prosMin } = calcTauxEncadrement(enfantsActifs, prefs.optionEncadrement || 'NM8M');
 
     const rows = jours.map((j, i) => {
@@ -7877,8 +7903,6 @@ function startApp() {
   applyRoleAccess();
   // Afficher le hub d'accueil avant l'app
   showHub();
-  // Charger params depuis Supabase (async — met à jour si plus récent)
-  chargerParamsSupabase();
 }
 
 function showHub() {
@@ -8376,7 +8400,7 @@ function filterCreche(creche, el) {
   else if (currentPage === 'commandes') renderCommandes();
   else if (currentPage === 'historique') renderHistorique();
   else if (currentPage === 'planning') renderActiveTab();
-  else if (currentPage === 'rh') { renderSalaries(); renderRhStats(); }
+  else if (currentPage === 'rh') renderSalaries();
   else if (currentPage === 'dashboard') renderDashboard();
   // Sécurité : si page-dashboard est visible mais currentPage pas à jour
   else {
@@ -10675,18 +10699,12 @@ async function sbGet(table, params='') {
 }
 
 async function sbInsert(table, data) {
-  const body = { ...data };
-  delete body.id; // ne jamais envoyer l'id sur une colonne identity/uuid auto
   const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}`, {
     method: 'POST',
-    headers: { ..._sbHeaders(table), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-    body: JSON.stringify(body),
+    headers: { ..._sbHeaders(table), 'Prefer': 'return=representation' },
+    body: JSON.stringify(data),
   });
-  if (!r.ok) {
-    const errBody = await r.text().catch(() => '');
-    console.error(`INSERT ${table} ${r.status}:`, errBody);
-    throw new Error(`INSERT ${table} : ${r.status}`);
-  }
+  if (!r.ok) throw new Error(`INSERT ${table} : ${r.status}`);
   return r.json();
 }
 
@@ -11327,30 +11345,14 @@ async function renderRhStats() {
     const today = new Date().toISOString().split('T')[0];
     const d90 = new Date(); d90.setDate(d90.getDate() + 90);
     const d90str = d90.toISOString().split('T')[0];
-    const crecheFiltre = (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all')
-      ? currentCreche : '';
-    // table salaries : structure (id TEXT, data JSONB) — filtrage côté client
-    const [salariesSupa, conges, recru, formations] = await Promise.all([
-      sbGet('salaries', 'select=id,data'),
+    const [users, conges, recru, formations] = await Promise.all([
+      sbGet('utilisateurs', 'actif=eq.true&role=neq.admin&select=id'),
       sbGet('conges', 'statut=eq.en_attente&select=id'),
       sbGet('recrutements', 'statut=eq.ouvert&select=id'),
       sbGet('formations_rh', `renouvellement=lte.${d90str}&renouvellement=gte.${today}&select=id`),
     ]);
-    // Filtrage actif + crèche côté client sur le JSONB
-    let nbActifs;
-    if (Array.isArray(salariesSupa) && salariesSupa.length > 0) {
-      nbActifs = salariesSupa.filter(r => {
-        const d = r.data || {};
-        if (d.statut !== 'actif') return false;
-        if (crecheFiltre && d.creche !== crecheFiltre) return false;
-        return true;
-      }).length;
-    } else {
-      loadSalaries();
-      const all = SALARIES.filter(s => s.statut === 'actif');
-      nbActifs = crecheFiltre ? all.filter(s => s.creche === crecheFiltre).length : all.length;
-    }
-    set('rh-stat-employes',   nbActifs);
+    loadSalaries();
+    set('rh-stat-employes', SALARIES.filter(s => s.statut === 'actif').length || (Array.isArray(users) ? users.length : 0));
     set('rh-stat-conges',     Array.isArray(conges)     ? conges.length     : 0);
     set('rh-stat-recru',      Array.isArray(recru)      ? recru.length      : 0);
     set('rh-stat-formations', Array.isArray(formations) ? formations.length : 0);
@@ -11387,23 +11389,16 @@ const RH_STATUT_CONGE  = { en_attente:'amber', approuve:'green', refuse:'red' };
 const RH_LABEL_CONGE   = { en_attente:'En attente', approuve:'Approuvé', refuse:'Refusé' };
 
 async function rhLoadUsers(selIds) {
-  return rhLoadSalaries(selIds);
-}
-async function rhLoadSalaries(selIds) {
   try {
-    const rows = await sbGet('salaries', 'select=id,data');
-    const salaries = (Array.isArray(rows) ? rows : [])
-      .map(r => ({ id: r.id, nom: ((r.data&&r.data.prenom||'') + ' ' + (r.data&&r.data.nom||'')).trim(), creche: r.data&&r.data.creche||'' }))
-      .filter(s => s.nom)
-      .sort((a,b) => a.nom.localeCompare(b.nom));
-    selIds.forEach(selId => {
-      const el = document.getElementById(selId);
+    const users = await sbGet('utilisateurs', 'actif=eq.true&order=email.asc&select=id,email');
+    selIds.forEach(id => {
+      const el = document.getElementById(id);
       if (!el) return;
       const cur = el.value;
-      el.innerHTML = '<option value="">— Choisir un salarié —</option>' +
-        salaries.map(s => `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>${s.nom}${s.creche ? ' · ' + s.creche : ''}</option>`).join('');
+      el.innerHTML = '<option value="">— Choisir un collaborateur —</option>' +
+        users.map(u => `<option value="${u.id}"${u.id == cur ? ' selected' : ''}>${u.email}</option>`).join('');
     });
-  } catch(e) { console.warn('[RH salaries select]', e.message); }
+  } catch(e) { console.warn('[RH users]', e.message); }
 }
 
 // ── Recrutement ──────────────────────────────────────────────────
@@ -11435,16 +11430,14 @@ async function renderRecrutements() {
 async function saveRhRecrutement() {
   const poste = (document.getElementById('rh-r-poste').value || '').trim();
   if (!poste) { alert('Le poste est requis.'); return; }
-  const STATUT_MAP_RECRU = { ouvert:'Ouvert', en_cours:'En cours', pourvu:'Pourvu', annule:'Annulé' };
   const data = {
     poste,
     type_contrat:   document.getElementById('rh-r-type').value,
-    statut:         STATUT_MAP_RECRU[document.getElementById('rh-r-statut').value] || document.getElementById('rh-r-statut').value,
+    statut:         document.getElementById('rh-r-statut').value,
     date_entretien: document.getElementById('rh-r-entretien').value || null,
     candidat_nom:   (document.getElementById('rh-r-candidat-nom').value || '').trim(),
     candidat_email: (document.getElementById('rh-r-candidat-email').value || '').trim(),
     notes:          (document.getElementById('rh-r-notes').value || '').trim(),
-    creche_id:      (typeof currentCreche !== 'undefined' && currentCreche !== 'all') ? currentCreche : null,
   };
   try {
     rhEditingRecrutement ? await sbUpdate('recrutements', rhEditingRecrutement, data) : await sbInsert('recrutements', data);
@@ -11460,16 +11453,16 @@ async function renderContrats() {
   if (!el) return;
   el.innerHTML = rhEmpty('Chargement…');
   try {
-    const [rows, salRows] = await Promise.all([
+    const [rows, users] = await Promise.all([
       sbGet('contrats', 'order=id.desc'),
-      sbGet('salaries', 'select=id,data'),
+      sbGet('utilisateurs', 'select=id,email'),
     ]);
-    const sMap = Object.fromEntries((salRows||[]).map(r => [r.id, ((r.data&&r.data.prenom||'') + ' ' + (r.data&&r.data.nom||'')).trim()]));
+    const uMap = Object.fromEntries(users.map(u => [u.id, u.email]));
     if (!rows.length) { el.innerHTML = rhEmpty('Aucun contrat enregistré.'); return; }
     el.innerHTML = rhTable(
       ['Collaborateur', 'Poste', 'Type', 'Début', 'Fin', 'H/sem', 'Actions'],
       rows.map(r => `<tr>
-        <td class="item-name">${sMap[r.salarie_id] || r.salarie_id || '—'}</td>
+        <td class="item-name">${uMap[r.user_id] || r.user_id}</td>
         <td>${r.poste}</td>
         <td>${rhBadge(r.type, RH_TYPE_COLOR[r.type] || 'gray')}</td>
         <td>${fmtDate(r.date_debut)}</td>
@@ -11485,13 +11478,13 @@ async function renderContrats() {
 }
 
 async function saveRhContrat() {
-  const salarie_id = document.getElementById('rh-c-user').value;
+  const user_id    = document.getElementById('rh-c-user').value;
   const poste      = (document.getElementById('rh-c-poste').value || '').trim();
   const date_debut = document.getElementById('rh-c-debut').value;
-  if (!salarie_id || !poste || !date_debut) { alert('Collaborateur, poste et date de début requis.'); return; }
+  if (!user_id || !poste || !date_debut) { alert('Collaborateur, poste et date de début requis.'); return; }
   const data = {
-    salarie_id, poste,
-    type:          ({'CDI':'CDI','CDD':'CDD','Alternance':'Extra','Stage':'Stage','Interim':'Extra'}[document.getElementById('rh-c-type').value] || document.getElementById('rh-c-type').value),
+    user_id: parseInt(user_id), poste,
+    type:          document.getElementById('rh-c-type').value,
     date_debut,
     date_fin:      document.getElementById('rh-c-fin').value || null,
     temps_travail: parseFloat(document.getElementById('rh-c-temps').value) || null,
@@ -11511,16 +11504,16 @@ async function renderConges() {
   if (!el) return;
   el.innerHTML = rhEmpty('Chargement…');
   try {
-    const [rows, salRows2] = await Promise.all([
+    const [rows, users] = await Promise.all([
       sbGet('conges', 'order=date_debut.desc'),
-      sbGet('salaries', 'select=id,data'),
+      sbGet('utilisateurs', 'select=id,email'),
     ]);
-    const sMap2 = Object.fromEntries((salRows2||[]).map(r => [r.id, ((r.data&&r.data.prenom||'') + ' ' + (r.data&&r.data.nom||'')).trim()]));
+    const uMap = Object.fromEntries(users.map(u => [u.id, u.email]));
     if (!rows.length) { el.innerHTML = rhEmpty('Aucun congé enregistré.'); return; }
     el.innerHTML = rhTable(
       ['Collaborateur', 'Type', 'Du', 'Au', 'Statut', 'Solde CP', 'Actions'],
       rows.map(r => `<tr>
-        <td class="item-name">${sMap2[r.salarie_id] || r.salarie_id || '—'}</td>
+        <td class="item-name">${uMap[r.user_id] || r.user_id}</td>
         <td>${r.type}</td>
         <td>${fmtDate(r.date_debut)}</td>
         <td>${fmtDate(r.date_fin)}</td>
@@ -11536,14 +11529,14 @@ async function renderConges() {
 }
 
 async function saveRhConge() {
-  const salarie_id = document.getElementById('rh-g-user').value;
+  const user_id    = document.getElementById('rh-g-user').value;
   const date_debut = document.getElementById('rh-g-debut').value;
   const date_fin   = document.getElementById('rh-g-fin').value;
-  if (!salarie_id || !date_debut || !date_fin) { alert('Collaborateur et dates requis.'); return; }
+  if (!user_id || !date_debut || !date_fin) { alert('Collaborateur et dates requis.'); return; }
   const data = {
-    salarie_id, // uuid TEXT — ne pas parser en entier
-    type:   ({'CP':'CP','RTT':'RTT','Maladie':'Maladie','Maternité':'Autre','Paternité':'Autre','Sans solde':'Autre','Autre':'Autre'}[document.getElementById('rh-g-type').value] || 'Autre'),
-    statut: ({'en_attente':'En attente','approuve':'Validé','refuse':'Refusé'}[document.getElementById('rh-g-statut').value] || 'En attente'),
+    user_id: parseInt(user_id),
+    type:     document.getElementById('rh-g-type').value,
+    statut:   document.getElementById('rh-g-statut').value,
     date_debut, date_fin,
     solde_cp: parseFloat(document.getElementById('rh-g-solde').value) || null,
   };
@@ -11561,16 +11554,16 @@ async function renderFormations() {
   if (!el) return;
   el.innerHTML = rhEmpty('Chargement…');
   try {
-    const [rows, salRows3] = await Promise.all([
+    const [rows, users] = await Promise.all([
       sbGet('formations_rh', 'order=date.desc'),
-      sbGet('salaries', 'select=id,data'),
+      sbGet('utilisateurs', 'select=id,email'),
     ]);
-    const sMap3 = Object.fromEntries((salRows3||[]).map(r => [r.id, ((r.data&&r.data.prenom||'') + ' ' + (r.data&&r.data.nom||'')).trim()]));
+    const uMap = Object.fromEntries(users.map(u => [u.id, u.email]));
     if (!rows.length) { el.innerHTML = rhEmpty('Aucune formation enregistrée.'); return; }
     el.innerHTML = rhTable(
       ['Collaborateur', 'Formation', 'Date', 'Obligatoire', 'Renouvellement', 'Attestation', 'Actions'],
       rows.map(r => `<tr>
-        <td class="item-name">${sMap3[r.salarie_id] || r.salarie_id || '—'}</td>
+        <td class="item-name">${uMap[r.user_id] || r.user_id}</td>
         <td>${r.titre}</td>
         <td>${fmtDate(r.date)}</td>
         <td>${r.obligatoire ? rhBadge('Obligatoire', 'red') : rhBadge('Facultative', 'gray')}</td>
@@ -11586,11 +11579,11 @@ async function renderFormations() {
 }
 
 async function saveRhFormation() {
-  const salarie_id = document.getElementById('rh-f-user').value;
-  const titre      = (document.getElementById('rh-f-titre').value || '').trim();
-  if (!salarie_id || !titre) { alert('Collaborateur et titre requis.'); return; }
+  const user_id = document.getElementById('rh-f-user').value;
+  const titre   = (document.getElementById('rh-f-titre').value || '').trim();
+  if (!user_id || !titre) { alert('Collaborateur et titre requis.'); return; }
   const data = {
-    salarie_id, titre,
+    user_id: parseInt(user_id), titre,
     date:            document.getElementById('rh-f-date').value || null,
     renouvellement:  document.getElementById('rh-f-renouvellement').value || null,
     attestation_url: (document.getElementById('rh-f-attestation').value || '').trim(),
@@ -11622,8 +11615,7 @@ async function openModalRh(type, id = null) {
         fill('rh-r-candidat-email', r.candidat_email); fill('rh-r-notes', r.notes);
         fill('rh-r-entretien', r.date_entretien ? r.date_entretien.slice(0,16) : '');
         document.getElementById('rh-r-type').value   = r.type_contrat || 'CDI';
-        const STATUT_RMAP = { 'Ouvert':'ouvert','En cours':'en_cours','Pourvu':'pourvu','Annulé':'annule' };
-        document.getElementById('rh-r-statut').value = STATUT_RMAP[r.statut] || r.statut || 'ouvert';
+        document.getElementById('rh-r-statut').value = r.statut       || 'ouvert';
       }
     }
     document.getElementById('modal-rh-recrutement').classList.add('open');
@@ -11637,7 +11629,7 @@ async function openModalRh(type, id = null) {
       const rows = await sbGet('contrats', `id=eq.${id}`).catch(() => []);
       if (rows[0]) {
         const r = rows[0];
-        document.getElementById('rh-c-user').value  = r.salarie_id  || '';
+        document.getElementById('rh-c-user').value  = r.user_id  || '';
         document.getElementById('rh-c-type').value  = r.type     || 'CDI';
         fill('rh-c-poste', r.poste); fill('rh-c-debut', r.date_debut);
         fill('rh-c-fin', r.date_fin); fill('rh-c-temps', r.temps_travail); fill('rh-c-notes', r.notes);
@@ -11655,11 +11647,9 @@ async function openModalRh(type, id = null) {
       const rows = await sbGet('conges', `id=eq.${id}`).catch(() => []);
       if (rows[0]) {
         const r = rows[0];
-        document.getElementById('rh-g-user').value   = r.salarie_id || '';
-        const CONGE_TYPE_RMAP = {'CP':'CP','RTT':'RTT','Maladie':'Maladie','Autre':'Autre'};
-        const CONGE_STAT_RMAP = {'En attente':'en_attente','Validé':'approuve','Refusé':'refuse'};
-        document.getElementById('rh-g-type').value   = CONGE_TYPE_RMAP[r.type]   || r.type   || 'CP';
-        document.getElementById('rh-g-statut').value = CONGE_STAT_RMAP[r.statut] || r.statut || 'en_attente';
+        document.getElementById('rh-g-user').value   = r.user_id || '';
+        document.getElementById('rh-g-type').value   = r.type    || 'CP';
+        document.getElementById('rh-g-statut').value = r.statut  || 'en_attente';
         fill('rh-g-debut', r.date_debut); fill('rh-g-fin', r.date_fin); fill('rh-g-solde', r.solde_cp);
       }
     }
@@ -11674,7 +11664,7 @@ async function openModalRh(type, id = null) {
       const rows = await sbGet('formations_rh', `id=eq.${id}`).catch(() => []);
       if (rows[0]) {
         const r = rows[0];
-        document.getElementById('rh-f-user').value = r.salarie_id || '';
+        document.getElementById('rh-f-user').value = r.user_id || '';
         document.getElementById('rh-f-obligatoire').checked = !!r.obligatoire;
         fill('rh-f-titre', r.titre); fill('rh-f-date', r.date);
         fill('rh-f-renouvellement', r.renouvellement); fill('rh-f-attestation', r.attestation_url);
@@ -11759,15 +11749,6 @@ function peGoWeek(dir) {
   if (dir === 0) { peWeekOffset = 0; peGanttDay = -1; }
   else { peWeekOffset += dir; peGanttDay = 0; }
   renderActiveTab();
-  // Synchroniser le sélecteur de période coordinateur sur le mois affiché
-  const mon = peGetMonday();
-  const val = mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0');
-  const sel = document.getElementById('coord-suivi-periode');
-  if (sel) {
-    // Si l'option existe, la sélectionner ; sinon ne rien faire
-    const opt = [...sel.options].find(o => o.value === val);
-    if (opt) sel.value = val;
-  }
 }
 
 // ── Source de données (localStorage) ──────────────────────────────
@@ -11880,7 +11861,7 @@ let ikRows = [];
 function ikGetConfig() {
   try {
     const s = JSON.parse(localStorage.getItem(IK_CFG_KEY)||'{}');
-    const _saved = localStorage.getItem('orevy_creches');
+    const _saved = localStorage.getItem('koala_creches');
     const creches = _saved ? JSON.parse(_saved).map(c=>c.nom) : (CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
     const dist = {};
     creches.forEach(c => dist[c] = s.dist&&s.dist[c]!==undefined ? s.dist[c] : 0);
@@ -12290,7 +12271,7 @@ function renderPlanningIK() {
   // Lire les crèches depuis localStorage ou fallback CRECHES_DEFAUT
   let _ikCreches = [];
   try {
-    const _saved = localStorage.getItem('orevy_creches');
+    const _saved = localStorage.getItem('koala_creches');
     _ikCreches = _saved ? JSON.parse(_saved).map(c=>c.nom) : (CRECHES_DEFAUT||[]).map(c=>c.nom);
   } catch(e) {
     _ikCreches = (CRECHES_DATA||CRECHES_DEFAUT||[]).map(c=>c.nom);
@@ -13023,9 +13004,6 @@ function deleteModalPE() {
 }
 
 function exportPlanningPDF() {
-  // Si on est sur l'onglet Coordinateur → export dédié
-  if (pePlanningTab === 'coord') { exportCoordPDF(); return; }
-  if (pePlanningTab === 'ik')    { showNotif('⚠ Export PDF non disponible pour les Frais IK'); return; }
   const monday   = peGetMonday();
   const weekNum  = getISOWeekNumber(monday);
   const fmtD     = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
@@ -13141,55 +13119,6 @@ function exportPlanningPDF() {
 
 
 </body></html>`);
-  w.document.close();
-}
-
-function exportCoordPDF() {
-  const monday  = peGetMonday();
-  const weekNum = getISOWeekNumber(monday);
-  const fmtD    = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-  const endFri  = new Date(monday); endFri.setDate(monday.getDate()+4);
-  const title   = `Planning Coordinateur EJE — S${weekNum} · ${fmtD(monday)} au ${fmtD(endFri)}`;
-
-  const srcEl = document.getElementById('coord-subtab-content');
-  if (!srcEl) { showNotif('⚠ Contenu coordinateur introuvable'); return; }
-
-  const root = getComputedStyle(document.documentElement);
-  const vars = ['--bg','--surface','--surface2','--border','--ink','--ink2','--ink3',
-    '--accent','--accent-lt','--green','--amber','--red','--red-lt','--green-lt',
-    '--amber-lt','--purple','--purple-lt','--radius'];
-  const cssVarBlock = vars.map(v => `${v}:${root.getPropertyValue(v).trim()}`).join(';');
-
-  const cloneEl = srcEl.cloneNode(true);
-  // Supprimer les boutons d'action dans le clone
-  cloneEl.querySelectorAll('button').forEach(b => b.remove());
-
-  const w = window.open('', '_blank');
-  if (!w) { showNotif('⚠ Popup bloquée — autorisez les popups pour ce site'); return; }
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>${title}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-    :root { ${cssVarBlock} }
-    body { font-family:'Instrument Sans',sans-serif; background:white; padding:24px 32px; font-size:13px; }
-    h1 { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--ink); margin-bottom:4px; }
-    .sub { font-size:11px; color:var(--ink3); margin-bottom:20px; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { border:1px solid var(--border); padding:6px 10px; text-align:left; font-size:12px; }
-    th { background:var(--surface2); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink3); }
-    button { display:none !important; }
-    @media print {
-      @page { size:A4 landscape; margin:0.8cm; }
-      body { padding:0; }
-    }
-  </style>
-  </head><body>
-  <h1>📅 ${title}</h1>
-  <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})} · Réseau Koalakids · 6 structures</div>
-  ${cloneEl.innerHTML}
-  <script>window.onload = () => window.print();<\/script>
-  </body></html>`);
   w.document.close();
 }
 
@@ -15297,26 +15226,6 @@ function loadSalaries() {
 }
 function saveSalaries() {
   localStorage.setItem('orevy_salaries', JSON.stringify(SALARIES));
-  // Sync Supabase : upsert chaque salarié individuellement
-  _syncSalariesToSupa().catch(e => console.warn('[Salaries] sync Supabase:', e));
-}
-async function _syncSalariesToSupa() {
-  if (!Array.isArray(SALARIES) || SALARIES.length === 0) return;
-  // La table salaries a la structure : id TEXT, data JSONB, updated_at
-  for (const s of SALARIES) {
-    const body = { id: s.id, data: s, updated_at: new Date().toISOString() };
-    try {
-      const res = await fetch(`${SUPA_RH_URL}/rest/v1/salaries`, {
-        method: 'POST',
-        headers: { ...SUPA_RH_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        console.warn('[Salaries] upsert erreur', res.status, t);
-      }
-    } catch(e) { console.warn('[Salaries] upsert fetch:', e); }
-  }
 }
 
 function renderSalaries() {
@@ -17676,10 +17585,7 @@ let _coordTab = 'rotation';
 function coordGetSuiviData() {
   try { return JSON.parse(localStorage.getItem(COORD_SUIVI_LS) || '{}'); } catch { return {}; }
 }
-function coordSetSuiviData(d) {
-  localStorage.setItem(COORD_SUIVI_LS, JSON.stringify(d));
-  sbUpsertParametre('orevy_coord_suivi_v2', d).catch(e => console.warn('[Params] sync suivi coord:', e));
-}
+function coordSetSuiviData(d) { localStorage.setItem(COORD_SUIVI_LS, JSON.stringify(d)); }
 
 function renderPlanningCoord() {
   const el = document.getElementById('pe-coord-content');
@@ -17731,13 +17637,12 @@ function renderPlanningCoord() {
 
 function _coordGetPeriodeOptions() {
   const now = new Date();
-  const currentVal = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   const months = [];
   for (let i = -1; i <= 3; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     const val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
     const lbl = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    months.push(`<option value="${val}"${val === currentVal ? ' selected' : ''}>${lbl.charAt(0).toUpperCase() + lbl.slice(1)}</option>`);
+    months.push(`<option value="${val}">${lbl.charAt(0).toUpperCase() + lbl.slice(1)}</option>`);
   }
   return months.join('');
 }
@@ -17781,10 +17686,7 @@ function _coordGetRotation() {
     }),
   }));
 }
-function _coordSaveRotation(data) {
-  localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(data));
-  sbUpsertParametre('orevy_coord_rotation_v2', data).catch(e => console.warn('[Params] sync rotation coord:', e));
-}
+function _coordSaveRotation(data) { localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(data)); }
 
 function _coordCellStyle(creche) {
   if (!creche || creche === '') return { bg:'var(--bg)', color:'var(--ink3)', border:'var(--border)' };
