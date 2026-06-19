@@ -3008,7 +3008,7 @@ const CRECHES_DEFAUT = [
 let CRECHES_DATA = [];
 try {
   // Migration automatique koala_creches → orevy_creches
-  const oldSaved = localStorage.getItem('orevy_creches');
+  const oldSaved = localStorage.getItem('koala_creches');
   if (oldSaved) {
     try { localStorage.setItem('orevy_creches', oldSaved); } catch(e) {}
     localStorage.removeItem('koala_creches');
@@ -3050,9 +3050,9 @@ function sauverCreches() {
   localStorage.setItem('orevy_creches', JSON.stringify(CRECHES_DATA));
   CRECHES = CRECHES_DATA.map(c => c.nom);
   CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
-  // Sync Supabase (async, silencieux)
   sbUpsertParametre('orevy_creches', CRECHES_DATA).catch(e => console.warn('[Params] sync creches:', e));
-}const CAT_ICONS = { 'Sensoriel':'👂','Manipulation':'🤲','Construction':'🧱','Motricité':'🏃','Imitation':'🎭','Expression artistique':'🎨','Mobilier':'🪑','Puériculture':'🍼','Bureautique':'💻','Rangement':'🗂' };
+}
+const CAT_ICONS = { 'Sensoriel':'👂','Manipulation':'🤲','Construction':'🧱','Motricité':'🏃','Imitation':'🎭','Expression artistique':'🎨','Mobilier':'🪑','Puériculture':'🍼','Bureautique':'💻','Rangement':'🗂' };
 
 let ARTICLES = [
   { id:1, nom:'Puzzles encastrement 4 pièces', ref:'MAT-001', cat:'Sensoriel', creche:'Brunet', stock:8, min:3, prix:12.50, fourn:'Nathan Pédagogique', notes:'Bois certifié FSC. Âge : 12-36 mois.' },
@@ -7077,7 +7077,7 @@ async function chargerParamsSupabase() {
         CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
         try { localStorage.setItem('orevy_creches', JSON.stringify(CRECHES_DATA)); } catch {}
         renderSidebarCreches();
-        renderParametres();
+        if (typeof renderParametres === 'function') renderParametres();
       }
       if (row.cle === 'orevy_prefs' && row.valeur) {
         try { localStorage.setItem('orevy_prefs', JSON.stringify(row.valeur)); } catch {}
@@ -7871,7 +7871,7 @@ function startApp() {
   applyRoleAccess();
   // Afficher le hub d'accueil avant l'app
   showHub();
-  // Charger les paramètres depuis Supabase (async, met à jour l'UI si données plus récentes)
+  // Charger params depuis Supabase (async — met à jour si plus récent)
   chargerParamsSupabase();
 }
 
@@ -11315,14 +11315,24 @@ async function renderRhStats() {
     const today = new Date().toISOString().split('T')[0];
     const d90 = new Date(); d90.setDate(d90.getDate() + 90);
     const d90str = d90.toISOString().split('T')[0];
-    const [users, conges, recru, formations] = await Promise.all([
-      sbGet('utilisateurs', 'actif=eq.true&role=neq.admin&select=id'),
+    const crecheFiltre = (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all')
+      ? `&creche=eq.${encodeURIComponent(currentCreche)}`
+      : '';
+    const [salariesSupa, conges, recru, formations] = await Promise.all([
+      sbGet('salaries', `statut=eq.actif${crecheFiltre}&select=id`),
       sbGet('conges', 'statut=eq.en_attente&select=id'),
       sbGet('recrutements', 'statut=eq.ouvert&select=id'),
       sbGet('formations_rh', `renouvellement=lte.${d90str}&renouvellement=gte.${today}&select=id`),
     ]);
-    loadSalaries();
-    set('rh-stat-employes', SALARIES.filter(s => s.statut === 'actif').length || (Array.isArray(users) ? users.length : 0));
+    // Priorité Supabase ; fallback localStorage si vide
+    let nbActifs = Array.isArray(salariesSupa) && salariesSupa.length > 0
+      ? salariesSupa.length
+      : (() => {
+          loadSalaries();
+          const all = SALARIES.filter(s => s.statut === 'actif');
+          return crecheFiltre ? all.filter(s => s.creche === currentCreche).length : all.length;
+        })();
+    set('rh-stat-employes',   nbActifs);
     set('rh-stat-conges',     Array.isArray(conges)     ? conges.length     : 0);
     set('rh-stat-recru',      Array.isArray(recru)      ? recru.length      : 0);
     set('rh-stat-formations', Array.isArray(formations) ? formations.length : 0);
