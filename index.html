@@ -17652,12 +17652,13 @@ function renderPlanningCoord() {
 
 function _coordGetPeriodeOptions() {
   const now = new Date();
+  const currentVal = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   const months = [];
   for (let i = -1; i <= 3; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     const val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
     const lbl = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    months.push(`<option value="${val}">${lbl.charAt(0).toUpperCase() + lbl.slice(1)}</option>`);
+    months.push(`<option value="${val}"${val === currentVal ? ' selected' : ''}>${lbl.charAt(0).toUpperCase() + lbl.slice(1)}</option>`);
   }
   return months.join('');
 }
