@@ -1670,6 +1670,7 @@ textarea { resize: vertical; min-height: 72px; }
           <button class="fiche-tab" data-tab="fi-factures"  onclick="switchFicheTab('fi-factures',this)"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Factures</button>
           <button class="fiche-tab" data-tab="fi-docs"      onclick="switchFicheTab('fi-docs',this)"      style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Documents</button>
           <button class="fiche-tab" data-tab="fi-sante"    onclick="switchFicheTab('fi-sante',this);loadVaccinsFiche()"    style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">💉 Santé</button>
+          <button class="fiche-tab" data-tab="fi-suivi" onclick="switchFicheTab('fi-suivi',this);loadSuiviPedago()" style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">📚 Suivi péda</button>
         </div>
 
         <!-- IDENTITÉ -->
@@ -1854,6 +1855,63 @@ textarea { resize: vertical; min-height: 72px; }
           <div style="padding:48px;text-align:center;color:var(--ink3)">
             <div style="font-size:40px;margin-bottom:12px">📄</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:6px">Documents</div>
+          </div>
+        </div>
+
+        <!-- SUIVI PÉDAGOGIQUE -->
+        <div id="fi-suivi" style="display:none">
+          <div style="display:flex;gap:0;border-bottom:1.5px solid var(--border);margin-bottom:18px;flex-wrap:wrap">
+            <button class="suivi-stab" onclick="switchSuiviTab('observations',this)" style="padding:8px 14px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer;white-space:nowrap">📝 Observations</button>
+            <button class="suivi-stab" onclick="switchSuiviTab('grille',this)" style="padding:8px 14px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;white-space:nowrap">🧩 Grille développement</button>
+            <button class="suivi-stab" onclick="switchSuiviTab('synthese',this)" style="padding:8px 14px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;white-space:nowrap">🎯 Synthèse EJE</button>
+            <button class="suivi-stab" onclick="switchSuiviTab('carnet',this)" style="padding:8px 14px;border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;white-space:nowrap">📖 Carnet PDF</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+            <label style="font-size:12px;color:var(--ink3)">Période :</label>
+            <select id="suivi-periode" onchange="loadSuiviPedago()" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--surface2)"></select>
+            <span id="suivi-statut-badge" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--surface2);color:var(--ink3)">Non commencé</span>
+          </div>
+          <div id="suivi-panel-observations" style="display:block">
+            <div style="font-size:12px;color:var(--ink3);margin-bottom:14px;line-height:1.6">Observations issues des transmissions du mois. Cochez ★ pour inclure dans le carnet parent.</div>
+            <div id="suivi-obs-list"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div>
+          </div>
+          <div id="suivi-panel-grille" style="display:none">
+            <div style="font-size:12px;color:var(--ink3);margin-bottom:14px;line-height:1.6">Items adaptés à la tranche d’âge. Les items grisés sont de la tranche suivante (émergence). Modifiez le texte avant de valider.</div>
+            <div id="suivi-grille-content"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div>
+          </div>
+          <div id="suivi-panel-synthese" style="display:none">
+            <div class="fiche-card">
+              <div class="fiche-card-title">Note EJE (confidentielle équipe)</div>
+              <textarea id="suivi-note-eje" rows="4" oninput="suiviSetDirty()" placeholder="Observations cliniques, points d’attention, orientations…" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)"></textarea>
+            </div>
+            <div class="fiche-card" style="margin-top:14px">
+              <div class="fiche-card-title">Préparation entretien famille</div>
+              <div class="fi-field">
+                <label style="font-size:12px;color:var(--ink3);display:block;margin-bottom:4px">Points forts à partager</label>
+                <textarea id="suivi-entretien-points" rows="3" oninput="suiviSetDirty()" placeholder="Ex : belle progression du langage, autonomie au repas…" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)"></textarea>
+              </div>
+              <div class="fi-field" style="margin-top:10px">
+                <label style="font-size:12px;color:var(--ink3);display:block;margin-bottom:4px">Axes de continuité maison / crèche</label>
+                <textarea id="suivi-entretien-continuite" rows="3" oninput="suiviSetDirty()" placeholder="Ex : nommer les images à la maison…" style="width:100%;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)"></textarea>
+              </div>
+              <div class="fi-field" style="margin-top:10px">
+                <label style="font-size:12px;color:var(--ink3);display:block;margin-bottom:4px">Date proposée pour l’entretien</label>
+                <input type="date" id="suivi-entretien-date" oninput="suiviSetDirty()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2)">
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+              <button onclick="saveSuiviPedago(false)" class="btn btn-secondary" style="font-size:13px">💾 Enregistrer brouillon</button>
+              <button onclick="saveSuiviPedago(true)" class="btn btn-primary" style="font-size:13px">✅ Valider et signer</button>
+            </div>
+          </div>
+          <div id="suivi-panel-carnet" style="display:none">
+            <div id="suivi-carnet-preview" style="border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px">
+              <div style="padding:32px;text-align:center;color:var(--ink3)">Chargement de l’aperçu…</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button onclick="exportSuiviPDF()" class="btn btn-primary" style="font-size:13px">⬇️ Télécharger le PDF</button>
+              <button onclick="sendSuiviEmail()" class="btn btn-secondary" style="font-size:13px">✉️ Envoyer aux parents</button>
+            </div>
           </div>
         </div>
 
@@ -5137,7 +5195,7 @@ function showFamillesFromFiche() {
 }
 
 function switchFicheTab(tabId, btn) {
-  ['fi-identite','fi-parents','fi-accueil','fi-notes','fi-planning','fi-factures','fi-docs','fi-sante'].forEach(id => {
+  ['fi-identite','fi-parents','fi-accueil','fi-notes','fi-planning','fi-factures','fi-docs','fi-sante','fi-suivi'].forEach(id => {
     const p = document.getElementById(id);
     if (p) p.style.display = 'none';
   });
@@ -10620,7 +10678,8 @@ const RH_TABLES = new Set([
   'formations_rh','documents_rh','stagiaires','planning','pointages','pointages_enfants',
   'enfants','berceaux','salaries','planning_semaines','parametres',
   'transmissions','menus',
-  'vaccins_ref','vaccinations_enfant'
+  'vaccins_ref','vaccinations_enfant',
+  'suivi_pedagogique'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -19413,6 +19472,354 @@ function pmiPrint() {
   w.document.close();
   setTimeout(() => w.print(), 500);
 }
+// ====================================================
+// MODULE SUIVI PÉDAGOGIQUE
+// ====================================================
+
+let SUIVI_DATA = null;
+let SUIVI_DIRTY = false;
+let SUIVI_ENFANT = null;
+
+const SUIVI_DOMAINES = {
+  motricite_globale : { emoji: '🤼', label: 'Motricité globale' },
+  motricite_fine    : { emoji: '✋', label: 'Motricité fine' },
+  langage           : { emoji: '💬', label: 'Langage' },
+  cognitif          : { emoji: '🧠', label: 'Cognitif' },
+  affectif_social   : { emoji: '💛', label: 'Socio-émotionnel' },
+  autonomie         : { emoji: '🌱', label: 'Autonomie' },
+};
+
+function suiviGetPeriode() {
+  const sel = document.getElementById('suivi-periode');
+  return sel ? sel.value : '';
+}
+
+function suiviSetDirty() { SUIVI_DIRTY = true; }
+
+function switchSuiviTab(stab, btn) {
+  ['observations','grille','synthese','carnet'].forEach(id => {
+    const p = document.getElementById('suivi-panel-' + id);
+    if (p) p.style.display = 'none';
+  });
+  document.querySelectorAll('.suivi-stab').forEach(b => {
+    b.style.color = 'var(--ink3)';
+    b.style.borderBottom = '2px solid transparent';
+    b.style.fontWeight = '600';
+  });
+  const panel = document.getElementById('suivi-panel-' + stab);
+  if (panel) panel.style.display = 'block';
+  if (btn) {
+    btn.style.color = 'var(--accent)';
+    btn.style.borderBottom = '2px solid var(--accent)';
+    btn.style.fontWeight = '700';
+  }
+  if (stab === 'grille') renderSuiviGrille();
+  if (stab === 'carnet') renderSuiviCarnetPreview();
+}
+
+function suiviInitPeriodes() {
+  const sel = document.getElementById('suivi-periode');
+  if (!sel) return;
+  const now = new Date();
+  const opts = [];
+  for (let i = 0; i <= 11; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    const lbl = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    opts.push('<option value="' + val + '">' + lbl + '</option>');
+  }
+  sel.innerHTML = opts.join('');
+}
+
+async function loadSuiviPedago() {
+  if (!ficheEnfant || !ficheEnfant.id) return;
+  SUIVI_ENFANT = ficheEnfant;
+  SUIVI_DIRTY = false;
+  suiviInitPeriodes();
+  const periode = suiviGetPeriode();
+  const creche  = ficheEnfant.creche || currentCreche || '';
+  const obsEl = document.getElementById('suivi-obs-list');
+  if (obsEl) obsEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3)">Chargement…</div>';
+  try {
+    const rows = await sbGet('suivi_pedagogique',
+      'creche=eq.'     + encodeURIComponent(creche) +
+      '&enfant_id=eq.' + encodeURIComponent(String(ficheEnfant.id)) +
+      '&periode=eq.'   + encodeURIComponent(periode));
+    SUIVI_DATA = (Array.isArray(rows) && rows.length) ? rows[0] : null;
+  } catch(e) { console.error('loadSuiviPedago', e); SUIVI_DATA = null; }
+  suiviUpdateBadge();
+  suiviPopulateSynthese();
+  const [year, month] = periode.split('-');
+  const dateStart = periode + '-01';
+  const lastDay   = new Date(parseInt(year), parseInt(month), 0).getDate();
+  const dateEnd   = periode + '-' + String(lastDay).padStart(2, '0');
+  let transRows = [];
+  try {
+    transRows = await sbGet('transmissions',
+      'creche=eq.'     + encodeURIComponent(creche) +
+      '&enfant_id=eq.' + encodeURIComponent(String(ficheEnfant.id)) +
+      '&date=gte.'     + dateStart +
+      '&date=lte.'     + dateEnd);
+    if (!Array.isArray(transRows)) transRows = [];
+  } catch(e) { console.error('loadSuiviPedago trans', e); transRows = []; }
+  renderSuiviObs(transRows);
+}
+
+function suiviUpdateBadge() {
+  const badge = document.getElementById('suivi-statut-badge');
+  if (!badge) return;
+  if (SUIVI_DATA && SUIVI_DATA.valide_par) {
+    badge.textContent = '✅ Validé · ' + (SUIVI_DATA.valide_par || '');
+    badge.style.background = 'var(--green-light)'; badge.style.color = '#2e7d32';
+  } else if (SUIVI_DATA) {
+    badge.textContent = '📝 Brouillon';
+    badge.style.background = '#fff3e0'; badge.style.color = '#b35a00';
+  } else {
+    badge.textContent = 'Non commencé';
+    badge.style.background = 'var(--surface2)'; badge.style.color = 'var(--ink3)';
+  }
+}
+
+function suiviPopulateSynthese() {
+  const d = SUIVI_DATA || {};
+  const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  setV('suivi-note-eje', d.note_eje);
+  setV('suivi-entretien-points', d.entretien_points_forts);
+  setV('suivi-entretien-continuite', d.entretien_continuite);
+  setV('suivi-entretien-date', d.entretien_date || '');
+}
+
+function renderSuiviObs(transRows) {
+  const el = document.getElementById('suivi-obs-list');
+  if (!el) return;
+  const allObs = [];
+  transRows.forEach(row => {
+    (Array.isArray(row.observations) ? row.observations : []).forEach(o => allObs.push({ ...o, date: row.date }));
+  });
+  const starredKeys = new Set(
+    ((SUIVI_DATA && Array.isArray(SUIVI_DATA.obs_selectionnees)) ? SUIVI_DATA.obs_selectionnees : [])
+      .map(o => o.date + '|' + o.heure + '|' + (o.texte || '').substring(0, 30))
+  );
+  if (!allObs.length) {
+    el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--ink3)">Aucune observation enregistrée pour ce mois.</div>';
+    return;
+  }
+  const byDomaine = {};
+  allObs.forEach(o => { const d = o.domaine || 'autre'; if (!byDomaine[d]) byDomaine[d] = []; byDomaine[d].push(o); });
+  let html = '';
+  Object.keys(byDomaine).forEach(domKey => {
+    const dom = SUIVI_DOMAINES[domKey] || { emoji: '📝', label: domKey };
+    html += '<div class="fiche-card" style="margin-bottom:12px"><div class="fiche-card-title">' + dom.emoji + ' ' + dom.label + '</div>';
+    byDomaine[domKey].forEach(o => {
+      const key = o.date + '|' + o.heure + '|' + (o.texte || '').substring(0, 30);
+      const isStar = starredKeys.has(key);
+      const dateStr = o.date ? new Date(o.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '';
+      const obsJson = JSON.stringify(o).replace(/"/g, '&quot;');
+      html += '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">' +
+        '<button onclick="suiviToggleStar(this)" data-obs="' + obsJson + '" style="background:none;border:none;cursor:pointer;font-size:16px;flex-shrink:0;padding:0;color:' + (isStar ? '#BA7517' : 'var(--ink3)') + '">' + (isStar ? '★' : '☆') + '</button>' +
+        '<div style="flex:1"><div style="font-size:13px;color:var(--ink);line-height:1.5">' + transEsc(o.texte || '') + '</div>' +
+        '<div style="font-size:11px;color:var(--ink3);margin-top:2px">' + dateStr + (o.heure ? ' · ' + o.heure : '') + (o.auteur ? ' · ' + o.auteur : '') + '</div></div></div>';
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function suiviToggleStar(btn) {
+  const isNow = btn.textContent.trim() === '☆';
+  btn.textContent = isNow ? '★' : '☆';
+  btn.style.color  = isNow ? '#BA7517' : 'var(--ink3)';
+  suiviSetDirty();
+}
+
+function suiviGetStarredObs() {
+  const starred = [];
+  document.querySelectorAll('#suivi-obs-list button[data-obs]').forEach(btn => {
+    if (btn.textContent.trim() === '★') {
+      try { starred.push(JSON.parse(btn.getAttribute('data-obs').replace(/&quot;/g, '"'))); } catch(e) {}
+    }
+  });
+  return starred;
+}
+
+function renderSuiviGrille() {
+  const el = document.getElementById('suivi-grille-content');
+  if (!el || !SUIVI_ENFANT) return;
+  const items = getGrilleItems(SUIVI_ENFANT.type || '18-24');
+  if (!items.length) { el.innerHTML = '<div style="color:var(--ink3)">Aucun item pour cette tranche.</div>'; return; }
+  const byDomaine = {};
+  items.forEach((it, idx) => { if (!byDomaine[it.domaine]) byDomaine[it.domaine] = []; byDomaine[it.domaine].push({ ...it, idx }); });
+  let html = '';
+  Object.keys(SUIVI_DOMAINES).filter(d => byDomaine[d]).forEach(d => {
+    const dom = SUIVI_DOMAINES[d];
+    html += '<div class="fiche-card" style="margin-bottom:12px"><div class="fiche-card-title">' + dom.emoji + ' ' + dom.label + '</div>';
+    byDomaine[d].forEach(it => {
+      const validated = SUIVI_DATA && SUIVI_DATA.domaines && Array.isArray(SUIVI_DATA.domaines[d]) && SUIVI_DATA.domaines[d].some(o => o.texte === it.texte);
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);' + (it.emergence ? 'opacity:.5' : '') + '">' +
+        '<button onclick="suiviValiderItem(this,\'' + d + '\')" data-texte="' + transEsc(it.texte) + '" style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);white-space:nowrap;background:' + (validated ? 'var(--green-light)' : 'var(--surface2)') + ';color:' + (validated ? '#2e7d32' : 'var(--ink3)') + '">' + (validated ? 'Observé ✓' : 'Valider') + '</button>' +
+        '<input type="text" value="' + transEsc(it.texte) + '" style="flex:1;font-size:13px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);font-family:inherit;color:var(--ink)">' +
+        '</div>';
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function suiviValiderItem(btn, domaine) {
+  const input = btn.nextElementSibling;
+  const texte = input ? input.value.trim() : btn.getAttribute('data-texte');
+  if (!texte) return;
+  if (!SUIVI_DATA) SUIVI_DATA = {};
+  if (!SUIVI_DATA.domaines) SUIVI_DATA.domaines = {};
+  if (!Array.isArray(SUIVI_DATA.domaines[domaine])) SUIVI_DATA.domaines[domaine] = [];
+  const already = SUIVI_DATA.domaines[domaine].some(o => o.texte === texte);
+  if (already) {
+    SUIVI_DATA.domaines[domaine] = SUIVI_DATA.domaines[domaine].filter(o => o.texte !== texte);
+    btn.textContent = 'Valider'; btn.style.background = 'var(--surface2)'; btn.style.color = 'var(--ink3)';
+  } else {
+    SUIVI_DATA.domaines[domaine].push({ texte, date: todayISO(), auteur: currentUser ? currentUser.email : '' });
+    btn.textContent = 'Observé ✓'; btn.style.background = 'var(--green-light)'; btn.style.color = '#2e7d32';
+  }
+  suiviSetDirty();
+}
+
+async function saveSuiviPedago(validate) {
+  if (!SUIVI_ENFANT || !SUIVI_ENFANT.id) return;
+  const creche  = SUIVI_ENFANT.creche || currentCreche || '';
+  const periode = suiviGetPeriode();
+  const payload = {
+    creche,
+    enfant_id              : SUIVI_ENFANT.id,
+    periode,
+    domaines               : (SUIVI_DATA && SUIVI_DATA.domaines) ? SUIVI_DATA.domaines : {},
+    note_eje               : document.getElementById('suivi-note-eje')?.value || '',
+    entretien_points_forts : document.getElementById('suivi-entretien-points')?.value || '',
+    entretien_continuite   : document.getElementById('suivi-entretien-continuite')?.value || '',
+    entretien_date         : document.getElementById('suivi-entretien-date')?.value || null,
+    obs_selectionnees      : suiviGetStarredObs(),
+    valide_par             : validate ? (currentUser ? currentUser.email : '') : (SUIVI_DATA ? SUIVI_DATA.valide_par || '' : ''),
+    valide_le              : validate ? new Date().toISOString() : (SUIVI_DATA ? SUIVI_DATA.valide_le || null : null),
+  };
+  try {
+    if (SUIVI_DATA && SUIVI_DATA.id) {
+      await sbUpdate('suivi_pedagogique', SUIVI_DATA.id, payload);
+      SUIVI_DATA = { ...SUIVI_DATA, ...payload };
+    } else {
+      const res = await sbInsert('suivi_pedagogique', payload);
+      if (Array.isArray(res) && res[0]) SUIVI_DATA = res[0];
+    }
+    SUIVI_DIRTY = false;
+    suiviUpdateBadge();
+    showNotif(validate ? '✅ Suivi validé et signé' : '💾 Brouillon sauvegardé');
+  } catch(e) { console.error('saveSuiviPedago', e); showNotif('⚠ Erreur sauvegarde suivi'); }
+}
+
+function renderSuiviCarnetPreview() {
+  const el = document.getElementById('suivi-carnet-preview');
+  if (!el || !SUIVI_ENFANT) return;
+  const enfant  = SUIVI_ENFANT;
+  const periode = suiviGetPeriode();
+  const [year, month] = periode.split('-');
+  const periodeLabel = new Date(parseInt(year), parseInt(month) - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const starred = suiviGetStarredObs();
+  const byD = {};
+  starred.forEach(o => { const d = o.domaine || 'autre'; if (!byD[d]) byD[d] = []; byD[d].push(o); });
+  const gv = (SUIVI_DATA && SUIVI_DATA.domaines) ? SUIVI_DATA.domaines : {};
+  Object.keys(gv).forEach(d => { if (!byD[d]) byD[d] = []; gv[d].forEach(it => { if (!byD[d].some(o => o.texte === it.texte)) byD[d].push(it); }); });
+  const hasDom = Object.keys(byD).some(d => byD[d].length > 0);
+  let domainesHtml = '';
+  if (hasDom) {
+    Object.keys(SUIVI_DOMAINES).filter(d => byD[d] && byD[d].length).forEach(d => {
+      const dom = SUIVI_DOMAINES[d];
+      domainesHtml += '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:8px">' + dom.emoji + ' ' + dom.label.toUpperCase() + '</div>';
+      byD[d].forEach(o => {
+        const dateStr = o.date ? new Date(o.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '';
+        domainesHtml += '<div style="font-size:13px;color:var(--ink);line-height:1.6;background:var(--surface2);padding:8px 12px;border-radius:8px;margin-bottom:6px">“' + transEsc(o.texte || '') + '”' + (dateStr ? ' <span style="font-size:11px;color:var(--ink3)">(' + dateStr + ')</span>' : '') + '</div>';
+      });
+      domainesHtml += '</div>';
+    });
+  } else {
+    domainesHtml = '<div style="color:var(--ink3);font-size:13px;padding:16px 0">Aucune observation sélectionnée. Cochez les ★ dans l\'onglet Observations.</div>';
+  }
+  const synthese = (SUIVI_DATA && SUIVI_DATA.entretien_points_forts) ?
+    '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)"><div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:8px">MOT DE L\'EJE</div><div style="font-size:13px;color:var(--ink2);line-height:1.7;font-style:italic">' + transEsc(SUIVI_DATA.entretien_points_forts) + '</div></div>' : '';
+  const valideBadge = (SUIVI_DATA && SUIVI_DATA.valide_par) ?
+    '<span style="background:var(--green-light);color:#2e7d32;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700">Validé par ' + transEsc(SUIVI_DATA.valide_par) + '</span>' : '';
+  el.innerHTML =
+    '<div style="background:var(--accent);color:#fff;padding:20px 24px">' +
+      '<div style="font-size:18px;font-weight:800;font-family:\'Syne\',sans-serif">' + transEsc(enfant.prenom || '') + ' ' + transEsc(enfant.nom || '') + ' — Carnet de suivi</div>' +
+      '<div style="font-size:12px;opacity:.75;margin-top:4px">' + transEsc(currentCreche || '') + ' · Koalakids · ' + periodeLabel + '</div>' +
+    '</div>' +
+    '<div style="padding:20px 24px;background:var(--surface)">' + domainesHtml + synthese +
+      '<div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--ink3)">' +
+        '<span>Document confidentiel — usage famille uniquement</span>' + valideBadge +
+      '</div></div>';
+}
+
+function exportSuiviPDF() {
+  if (typeof jspdf === 'undefined' || !jspdf.jsPDF) { showNotif('⚠ jsPDF non disponible'); return; }
+  const { jsPDF } = jspdf;
+  const enfant  = SUIVI_ENFANT || {};
+  const periode = suiviGetPeriode();
+  const [year, month] = periode.split('-');
+  const periodeLabel = new Date(parseInt(year), parseInt(month) - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, margin = 18;
+  let y = 0;
+  doc.setFillColor(61, 53, 128);
+  doc.rect(0, 0, W, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+  doc.text((enfant.prenom || '') + ' ' + (enfant.nom || '') + ' - Carnet de suivi', margin, 13);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  doc.text((currentCreche || '') + ' - Koalakids - ' + periodeLabel, margin, 22);
+  y = 38;
+  const starred = suiviGetStarredObs();
+  const byD = {};
+  starred.forEach(o => { const d = o.domaine || 'autre'; if (!byD[d]) byD[d] = []; byD[d].push(o); });
+  const gv = (SUIVI_DATA && SUIVI_DATA.domaines) ? SUIVI_DATA.domaines : {};
+  Object.keys(gv).forEach(d => { if (!byD[d]) byD[d] = []; gv[d].forEach(it => { if (!byD[d].some(o => o.texte === it.texte)) byD[d].push(it); }); });
+  doc.setTextColor(30, 30, 30);
+  Object.keys(SUIVI_DOMAINES).filter(d => byD[d] && byD[d].length).forEach(d => {
+    const dom = SUIVI_DOMAINES[d];
+    if (y > 260) { doc.addPage(); y = 18; }
+    doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(80, 70, 160);
+    doc.text(dom.label.toUpperCase(), margin, y); y += 6;
+    doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    byD[d].forEach(o => {
+      if (y > 270) { doc.addPage(); y = 18; }
+      doc.splitTextToSize('- ' + (o.texte || ''), W - margin * 2).forEach(line => { if (y > 270) { doc.addPage(); y = 18; } doc.text(line, margin, y); y += 5.5; });
+      y += 1;
+    });
+    y += 4;
+  });
+  if (SUIVI_DATA && SUIVI_DATA.entretien_points_forts) {
+    if (y > 240) { doc.addPage(); y = 18; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(80, 70, 160);
+    doc.text('MOT DE L EJE', margin, y); y += 6;
+    doc.setFont('helvetica', 'italic'); doc.setTextColor(60, 60, 60);
+    doc.splitTextToSize(SUIVI_DATA.entretien_points_forts, W - margin * 2).forEach(line => { if (y > 270) { doc.addPage(); y = 18; } doc.text(line, margin, y); y += 5.5; });
+  }
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+  doc.text('Document confidentiel - usage famille uniquement', margin, 287);
+  if (SUIVI_DATA && SUIVI_DATA.valide_par) doc.text('Valide par ' + SUIVI_DATA.valide_par, W - margin, 287, { align: 'right' });
+  doc.save('carnet_' + (enfant.prenom || 'enfant').toLowerCase() + '_' + periode + '.pdf');
+  showNotif('Carnet PDF telecharge');
+}
+
+function sendSuiviEmail() {
+  if (!SUIVI_ENFANT) return;
+  const email = (ficheEnfant && ficheEnfant.parents && ficheEnfant.parents[0]) ? ficheEnfant.parents[0].email || '' : '';
+  const periode = suiviGetPeriode();
+  const [year, month] = periode.split('-');
+  const periodeLabel = new Date(parseInt(year), parseInt(month) - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const subject = 'Carnet de suivi de ' + (SUIVI_ENFANT.prenom || '') + ' - ' + periodeLabel;
+  const body = 'Bonjour,\n\nVeuillez trouver ci-joint le carnet de suivi de ' + (SUIVI_ENFANT.prenom || '') + ' pour ' + periodeLabel + '.\n\nBien cordialement,\nL\'equipe ' + (currentCreche || '');
+  window.location.href = 'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  showNotif('Ouverture du client mail');
+}
+
 </script>
 
 
