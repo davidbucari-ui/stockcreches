@@ -11428,10 +11428,11 @@ async function renderRecrutements() {
 async function saveRhRecrutement() {
   const poste = (document.getElementById('rh-r-poste').value || '').trim();
   if (!poste) { alert('Le poste est requis.'); return; }
+  const STATUT_MAP_RECRU = { ouvert:'Ouvert', en_cours:'En cours', pourvu:'Pourvu', annule:'Annulé' };
   const data = {
     poste,
     type_contrat:   document.getElementById('rh-r-type').value,
-    statut:         document.getElementById('rh-r-statut').value,
+    statut:         STATUT_MAP_RECRU[document.getElementById('rh-r-statut').value] || document.getElementById('rh-r-statut').value,
     date_entretien: document.getElementById('rh-r-entretien').value || null,
     candidat_nom:   (document.getElementById('rh-r-candidat-nom').value || '').trim(),
     candidat_email: (document.getElementById('rh-r-candidat-email').value || '').trim(),
@@ -11483,7 +11484,7 @@ async function saveRhContrat() {
   if (!user_id || !poste || !date_debut) { alert('Collaborateur, poste et date de début requis.'); return; }
   const data = {
     user_id: user_id, poste,
-    type:          document.getElementById('rh-c-type').value,
+    type:          ({'CDI':'CDI','CDD':'CDD','Alternance':'Extra','Stage':'Stage','Interim':'Extra'}[document.getElementById('rh-c-type').value] || document.getElementById('rh-c-type').value),
     date_debut,
     date_fin:      document.getElementById('rh-c-fin').value || null,
     temps_travail: parseFloat(document.getElementById('rh-c-temps').value) || null,
@@ -11534,8 +11535,8 @@ async function saveRhConge() {
   if (!user_id || !date_debut || !date_fin) { alert('Collaborateur et dates requis.'); return; }
   const data = {
     user_id: user_id, // uuid TEXT — ne pas parser en entier
-    type:     document.getElementById('rh-g-type').value,
-    statut:   document.getElementById('rh-g-statut').value,
+    type:   ({'CP':'CP','RTT':'RTT','Maladie':'Maladie','Maternité':'Autre','Paternité':'Autre','Sans solde':'Autre','Autre':'Autre'}[document.getElementById('rh-g-type').value] || 'Autre'),
+    statut: ({'en_attente':'En attente','approuve':'Validé','refuse':'Refusé'}[document.getElementById('rh-g-statut').value] || 'En attente'),
     date_debut, date_fin,
     solde_cp: parseFloat(document.getElementById('rh-g-solde').value) || null,
   };
@@ -11614,7 +11615,8 @@ async function openModalRh(type, id = null) {
         fill('rh-r-candidat-email', r.candidat_email); fill('rh-r-notes', r.notes);
         fill('rh-r-entretien', r.date_entretien ? r.date_entretien.slice(0,16) : '');
         document.getElementById('rh-r-type').value   = r.type_contrat || 'CDI';
-        document.getElementById('rh-r-statut').value = r.statut       || 'ouvert';
+        const STATUT_RMAP = { 'Ouvert':'ouvert','En cours':'en_cours','Pourvu':'pourvu','Annulé':'annule' };
+        document.getElementById('rh-r-statut').value = STATUT_RMAP[r.statut] || r.statut || 'ouvert';
       }
     }
     document.getElementById('modal-rh-recrutement').classList.add('open');
@@ -11647,8 +11649,10 @@ async function openModalRh(type, id = null) {
       if (rows[0]) {
         const r = rows[0];
         document.getElementById('rh-g-user').value   = r.user_id || '';
-        document.getElementById('rh-g-type').value   = r.type    || 'CP';
-        document.getElementById('rh-g-statut').value = r.statut  || 'en_attente';
+        const CONGE_TYPE_RMAP = {'CP':'CP','RTT':'RTT','Maladie':'Maladie','Autre':'Autre'};
+        const CONGE_STAT_RMAP = {'En attente':'en_attente','Validé':'approuve','Refusé':'refuse'};
+        document.getElementById('rh-g-type').value   = CONGE_TYPE_RMAP[r.type]   || r.type   || 'CP';
+        document.getElementById('rh-g-statut').value = CONGE_STAT_RMAP[r.statut] || r.statut || 'en_attente';
         fill('rh-g-debut', r.date_debut); fill('rh-g-fin', r.date_fin); fill('rh-g-solde', r.solde_cp);
       }
     }
