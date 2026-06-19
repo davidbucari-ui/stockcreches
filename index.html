@@ -19537,8 +19537,14 @@ async function loadSuiviPedago() {
   if (!ficheEnfant || !ficheEnfant.id) return;
   SUIVI_ENFANT = ficheEnfant;
   SUIVI_DIRTY = false;
+  // Init périodes d'abord, puis lire la valeur sélectionnée
   suiviInitPeriodes();
-  const periode = suiviGetPeriode();
+  const sel = document.getElementById('suivi-periode');
+  // Si le select vient d'être rempli, sa valeur est déjà le mois courant (premier option)
+  const periode = (sel && sel.value) ? sel.value : (function() {
+    const n = new Date();
+    return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
+  })();
   const creche  = ficheEnfant.creche || currentCreche || '';
   const obsEl = document.getElementById('suivi-obs-list');
   if (obsEl) obsEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3)">Chargement…</div>';
@@ -19548,7 +19554,12 @@ async function loadSuiviPedago() {
       '&enfant_id=eq.' + encodeURIComponent(String(ficheEnfant.id)) +
       '&periode=eq.'   + encodeURIComponent(periode));
     SUIVI_DATA = (Array.isArray(rows) && rows.length) ? rows[0] : null;
-  } catch(e) { console.error('loadSuiviPedago', e); SUIVI_DATA = null; }
+  } catch(e) {
+    console.error('loadSuiviPedago suivi_pedagogique', e);
+    SUIVI_DATA = null;
+    const obsEl2 = document.getElementById('suivi-obs-list');
+    if (obsEl2) obsEl2.innerHTML = '<div style="padding:24px;background:#fff3e0;border-radius:8px;font-size:13px;color:#b35a00">⚠️ Table <strong>suivi_pedagogique</strong> introuvable dans Supabase RH. Créez-la via le SQL Editor du projet RH avant d\'utiliser ce module.</div>';
+  }
   suiviUpdateBadge();
   suiviPopulateSynthese();
   const [year, month] = periode.split('-');
