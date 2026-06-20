@@ -11454,7 +11454,9 @@ async function sbInsert(table, data) {
   if (!r.ok) {
     const errBody = await r.text().catch(() => '');
     console.error(`INSERT ${table} ${r.status}:`, errBody);
-    throw new Error(`INSERT ${table} : ${r.status}`);
+    const err = new Error(`INSERT ${table} : ${r.status}`);
+    err.status = r.status; err.body = errBody;
+    throw err;
   }
   return r.json();
 }
@@ -11468,7 +11470,9 @@ async function sbUpdate(table, id, data) {
   if (!r.ok) {
     const errBody = await r.text().catch(() => '');
     console.error(`UPDATE ${table} ${r.status}:`, errBody);
-    throw new Error(`UPDATE ${table} : ${r.status}`);
+    const err = new Error(`UPDATE ${table} : ${r.status}`);
+    err.status = r.status; err.body = errBody;
+    throw err;
   }
 }
 
@@ -11649,19 +11653,59 @@ async function deleteArticleDB(id) {
   catch(e) { console.error('[Supabase] Delete article :', e); }
 }
 
+// Détecte l'erreur PostgREST "colonne introuvable" (PGRST204) spécifiquement
+// pour 'photos' — typiquement parce que la migration SQL n'a pas encore été
+// exécutée sur ce projet Supabase au moment du déploiement.
+function _isMissingPhotosColumn(e) {
+  return !!(e && e.body && /photos/i.test(e.body) && /column/i.test(e.body));
+}
+
 async function saveCommandeDB(commande) {
   if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
   try {
     const rows = await sbInsert('commandes', commandeToRow(commande));
     if (rows && rows[0]) commande.id = rows[0].id;
     setSaved();
-  } catch(e) { console.error('[Supabase] Insert commande :', e); }
+  } catch(e) {
+    if (_isMissingPhotosColumn(e)) {
+      // Repli : on enregistre quand même la commande sans la colonne 'photos'
+      // plutôt que de perdre toute la sauvegarde — pense à exécuter la
+      // migration SQL (ALTER TABLE commandes ADD COLUMN photos jsonb...).
+      try {
+        const row = commandeToRow(commande);
+        delete row.photos;
+        const rows = await sbInsert('commandes', row);
+        if (rows && rows[0]) commande.id = rows[0].id;
+        setSaved();
+        console.warn('[Supabase] Commande créée SANS la colonne "photos" — exécute la migration SQL pour activer les photos de commande.');
+        return;
+      } catch(e2) { console.error('[Supabase] Insert commande (repli sans photos) :', e2); }
+    }
+    console.error('[Supabase] Insert commande :', e);
+  }
 }
 
 async function updateCommandeDB(commande) {
   if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
-  try { await sbUpdate('commandes', commande.id, commandeToRow(commande)); setSaved(); }
-  catch(e) { console.error('[Supabase] Update commande :', e); }
+  try {
+    await sbUpdate('commandes', commande.id, commandeToRow(commande));
+    setSaved();
+  } catch(e) {
+    if (_isMissingPhotosColumn(e)) {
+      // Repli : on met à jour quand même le statut/montant/articles sans la
+      // colonne 'photos' plutôt que de perdre toute la mise à jour (c'est ce
+      // qui faisait "revenir en cours" une commande pourtant marquée livrée).
+      try {
+        const row = commandeToRow(commande);
+        delete row.photos;
+        await sbUpdate('commandes', commande.id, row);
+        setSaved();
+        console.warn('[Supabase] Commande mise à jour SANS la colonne "photos" — exécute la migration SQL pour activer les photos de commande.');
+        return;
+      } catch(e2) { console.error('[Supabase] Update commande (repli sans photos) :', e2); }
+    }
+    console.error('[Supabase] Update commande :', e);
+  }
 }
 
 async function saveFournisseurDB(f) {
