@@ -7183,8 +7183,10 @@ async function chargerParamsSupabase() {
     });
     if (!res.ok) return;
     const rows = await res.json();
+    let crechesRecues = false;
     rows.forEach(row => {
       if (row.cle === 'orevy_creches' && Array.isArray(row.valeur) && row.valeur.length) {
+        crechesRecues = true;
         CRECHES_DATA = row.valeur;
         CRECHES = CRECHES_DATA.map(c => c.nom);
         CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
@@ -7203,7 +7205,50 @@ async function chargerParamsSupabase() {
         try { localStorage.setItem('orevy_coord_suivi_v2', JSON.stringify(row.valeur)); } catch {}
       }
     });
+    // ── Réparation : si Supabase n'a jamais reçu les noms de crèches,
+    // on les pousse depuis ce poste (source actuellement valable) afin
+    // que les autres appareils (tablette, etc.) ne retombent plus sur
+    // les noms par défaut "Crèche 1, Crèche 2…"
+    if (!crechesRecues && Array.isArray(CRECHES_DATA) && CRECHES_DATA.length &&
+        CRECHES_DATA.some((c, i) => !CRECHES_DEFAUT[i] || c.nom !== CRECHES_DEFAUT[i].nom)) {
+      sbUpsertParametre('orevy_creches', CRECHES_DATA).catch(e => console.warn('[Params] seed creches:', e));
+    }
   } catch(e) { console.warn('[Params] chargement Supabase:', e); }
+}
+
+// ── Synchronisation Salariés (pull) ──────────────────────────────────────
+// Jusqu'ici les salariés n'étaient sauvegardés que dans le localStorage du
+// poste qui les a créés/modifiés (push only). Un nouvel appareil (tablette…)
+// démarrait donc avec une liste vide. Cette fonction rapatrie les salariés
+// existants depuis Supabase au démarrage, sans écraser des fiches locales
+// pas encore synchronisées (ex : créées hors-ligne).
+async function chargerSalariesSupabase() {
+  try {
+    const rows = await sbGet('salaries', 'select=id,data,updated_at');
+    if (!Array.isArray(rows)) return;
+    let local = [];
+    try { local = JSON.parse(localStorage.getItem('orevy_salaries') || '[]'); } catch {}
+    if (rows.length === 0) {
+      // Rien côté serveur : si ce poste a déjà des salariés en local,
+      // on les pousse pour amorcer la synchro vers les autres appareils.
+      if (Array.isArray(local) && local.length) {
+        SALARIES = local;
+        if (typeof _syncSalariesToSupa === 'function') {
+          _syncSalariesToSupa().catch(e => console.warn('[Salaries] seed Supabase:', e));
+        }
+      }
+      return;
+    }
+    const distant = rows.map(r => r.data).filter(Boolean);
+    const distantIds = new Set(distant.map(s => s && s.id));
+    const localOnly = (Array.isArray(local) ? local : []).filter(s => s && s.id && !distantIds.has(s.id));
+    SALARIES = [...distant, ...localOnly];
+    localStorage.setItem('orevy_salaries', JSON.stringify(SALARIES));
+    if (localOnly.length && typeof _syncSalariesToSupa === 'function') {
+      _syncSalariesToSupa().catch(e => console.warn('[Salaries] sync localOnly:', e));
+    }
+    if (document.getElementById('rh-salaries-list') && typeof renderSalaries === 'function') renderSalaries();
+  } catch(e) { console.warn('[Salaries] chargement Supabase:', e); }
 }
 // ── FIN PERSONNALISATION ──────────────────────────────────────────
 
@@ -7992,6 +8037,8 @@ function startApp() {
   showHub();
   // Charger params depuis Supabase (async — met à jour si plus récent)
   chargerParamsSupabase();
+  // Charger salariés depuis Supabase (async — répare les nouveaux appareils)
+  chargerSalariesSupabase();
 }
 
 function showHub() {
