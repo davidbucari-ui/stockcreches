@@ -6195,6 +6195,7 @@ function renderRepasSection(e, rec) {
       ${repasSelectRow(e.id, 'gouter', '🍪 Goûter', repas.gouter)}`;
   } else {
     mealsHtml = `
+      ${repasSelectRow(e.id, 'puree', '🥣 Repas mixé / mouliné', repas.puree)}
       ${repasSelectRow(e.id, 'entree', '🥗 Entrée', repas.entree)}
       ${repasSelectRow(e.id, 'plat', '🍗 Protéines', repas.plat)}
       ${repasSelectRow(e.id, 'accompagnement', '🥕 Accompagnement', repas.accompagnement)}
@@ -6427,6 +6428,7 @@ function buildFicheJourHtml(enfantId) {
   } else {
     repasHtml = `
       ${repas.biberon?.pris ? `<div>🍼 Biberon : ${repas.biberon.qte ? repas.biberon.qte + ' ml' : 'pris'}</div>` : ''}
+      ${repas.puree ? `<div>🥣 Repas mixé / mouliné : ${repasLabelHtml(repas.puree)}</div>` : ''}
       <div>🥗 Entrée : ${repasLabelHtml(repas.entree)}</div>
       <div>🍗 Protéines : ${repasLabelHtml(repas.plat)}</div>
       <div>🥕 Accompagnement : ${repasLabelHtml(repas.accompagnement)}</div>
@@ -6538,6 +6540,7 @@ function envoyerFicheParent() {
       ]
     : [
         repas.biberon?.pris ? `Biberon: ${repas.biberon.qte ? repas.biberon.qte + ' ml' : 'pris'}` : '',
+        repas.puree ? `Repas mixé / mouliné: ${REPAS_OPTIONS.find(o=>o.val===repas.puree)?.label || 'non renseigné'}` : '',
         `Entrée: ${REPAS_OPTIONS.find(o=>o.val===repas.entree)?.label || 'non renseigné'}`,
         `Protéines: ${REPAS_OPTIONS.find(o=>o.val===repas.plat)?.label || 'non renseigné'}`,
         `Accompagnement: ${REPAS_OPTIONS.find(o=>o.val===repas.accompagnement)?.label || 'non renseigné'}`,
