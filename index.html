@@ -184,6 +184,27 @@ body {
 .nav-item.active { background: rgba(255,255,255,0.10); color: #fff; font-weight: 600; }
 .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
 
+/* ── GROUPES DE NAVIGATION REPLIABLES ── */
+.nav-grp-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; cursor: pointer;
+  color: rgba(255,255,255,0.55); font-size: 13.5px; font-weight: 400;
+  border: none; background: none; width: 100%; text-align: left;
+  transition: background 0.15s;
+}
+.nav-grp-head:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.nav-grp-head.open { color: #fff; font-weight: 600; }
+.nav-grp-head .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-grp-chev { margin-left: auto; font-size: 11px; color: rgba(255,255,255,0.35); transition: transform .18s; }
+.nav-grp-head.open .nav-grp-chev { transform: rotate(90deg); color: #fff; }
+.nav-grp-children { overflow: hidden; max-height: 0; transition: max-height .22s ease; }
+.nav-grp-children.open { max-height: 500px; }
+.nav-grp-children .nav-item { padding-left: 40px; font-size: 13px; }
+/* Mode sidebar rétracté (icônes seules) : pas d'accordéon, tout reste accessible */
+.app.sidebar-collapsed .nav-grp-head { display: none; }
+.app.sidebar-collapsed .nav-grp-children { max-height: none !important; overflow: visible; }
+.app.sidebar-collapsed .nav-grp-children .nav-item { padding-left: 0; }
+
 .sidebar-creches {
   margin-top: auto;
   padding: 16px 20px;
@@ -1012,36 +1033,64 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item active" data-roles="admin,directrice,auxiliaire,stagiaire,coordinateur" onclick="showPage('dashboard', this)" title="Tableau de bord">
     <span class="nav-icon">🏠</span> Tableau de bord
   </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('inventaire', this)" title="Stocks pédagogiques">
-    <span class="nav-icon">📦</span> Stocks pédagogiques
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('entretien', this)" title="Stocks entretien">
-    <span class="nav-icon">🧹</span> Stocks entretien
-  </button>
+
+  <div class="nav-grp">
+    <button class="nav-grp-head" data-group="inventaire" onclick="toggleNavGroup('inventaire')">
+      <span class="nav-icon">📦</span> Inventaire <span class="nav-grp-chev">›</span>
+    </button>
+    <div class="nav-grp-children" id="navgrp-inventaire">
+      <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('inventaire', this)" title="Stocks pédagogiques">
+        <span class="nav-icon">🧩</span> Stocks pédagogiques
+      </button>
+      <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('entretien', this)" title="Stocks entretien">
+        <span class="nav-icon">🧹</span> Stocks entretien
+      </button>
+      <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('commandes', this)" title="Commandes">
+        <span class="nav-icon">🛒</span> Commandes
+      </button>
+      <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('fournisseurs', this)" title="Fournisseurs">
+        <span class="nav-icon">🏭</span> Fournisseurs
+      </button>
+      <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('statistiques', this)" title="Statistiques">
+        <span class="nav-icon">📊</span> Statistiques
+        <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
+      </button>
+      <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('historique', this)" title="Historique">
+        <span class="nav-icon">🗂</span> Historique
+      </button>
+    </div>
+  </div>
+
+  <div class="nav-grp">
+    <button class="nav-grp-head" data-group="familles" onclick="toggleNavGroup('familles')">
+      <span class="nav-icon">🧒</span> Familles <span class="nav-grp-chev">›</span>
+    </button>
+    <div class="nav-grp-children" id="navgrp-familles">
+      <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('familles', this)" title="Familles">
+        <span class="nav-icon">👨‍👩‍👧</span> Familles
+      </button>
+      <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('transmissions', this)" title="Transmissions">
+        <span class="nav-icon">📝</span> Transmissions
+      </button>
+    </div>
+  </div>
+
+  <div class="nav-grp">
+    <button class="nav-grp-head" data-group="rh" onclick="toggleNavGroup('rh')">
+      <span class="nav-icon">👥</span> Ressources humaines <span class="nav-grp-chev">›</span>
+    </button>
+    <div class="nav-grp-children" id="navgrp-rh">
+      <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('rh', this)" title="Ressources humaines">
+        <span class="nav-icon">👤</span> Équipe
+      </button>
+      <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('planning', this)" title="Planning">
+        <span class="nav-icon">📅</span> Planning
+      </button>
+    </div>
+  </div>
+
   <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('univers', this)" title="Univers ludiques">
     <span class="nav-icon">🌟</span> Univers ludiques
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('familles', this)" title="Familles">
-    <span class="nav-icon">👨‍👩‍👧</span> Familles
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('transmissions', this)" title="Transmissions">
-    <span class="nav-icon">📝</span> Transmissions
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('planning', this)" title="Planning">
-    <span class="nav-icon">📅</span> Planning
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('rh', this)" title="Ressources humaines">
-    <span class="nav-icon">👥</span> Ressources humaines
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('fournisseurs', this)" title="Fournisseurs">
-    <span class="nav-icon">🏭</span> Fournisseurs
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('commandes', this)" title="Commandes">
-    <span class="nav-icon">🛒</span> Commandes
-  </button>
-  <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="showPage('statistiques', this)" title="Statistiques">
-    <span class="nav-icon">📊</span> Statistiques
-    <span id="nav-alert-badge" style="display:none;margin-left:auto;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center"></span>
   </button>
   <button class="nav-item" data-roles="admin,directrice,coordinateur" onclick="window.open('notice.html','_blank')" title="Notice d'utilisation">
     <span class="nav-icon">📖</span> Notice d'utilisation
@@ -8085,6 +8134,34 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── SIDEBAR RÉTRACTABLE ─────────────────────────────────────────────
+// ─── GROUPES DE NAVIGATION SIDEBAR (repliables) ────────────────────────────
+const NAV_GROUPS = {
+  inventaire: ['inventaire','entretien','commandes','fournisseurs','statistiques','historique'],
+  familles:   ['familles','transmissions'],
+  rh:         ['rh','planning'],
+};
+let openNavGroup = null;
+
+function toggleNavGroup(id) {
+  openNavGroup = (openNavGroup === id) ? null : id;
+  renderNavGroups();
+}
+
+function renderNavGroups() {
+  Object.keys(NAV_GROUPS).forEach(g => {
+    const head = document.querySelector('.nav-grp-head[data-group="' + g + '"]');
+    const children = document.getElementById('navgrp-' + g);
+    const isOpen = openNavGroup === g;
+    if (head) head.classList.toggle('open', isOpen);
+    if (children) children.classList.toggle('open', isOpen);
+  });
+}
+
+function autoOpenGroupForPage(page) {
+  const entry = Object.entries(NAV_GROUPS).find(([g, pages]) => pages.includes(page));
+  if (entry) { openNavGroup = entry[0]; renderNavGroups(); }
+}
+
 function toggleSidebar() {
   const app = document.querySelector('.app');
   if (!app) return;
@@ -9977,6 +10054,7 @@ document.addEventListener('webkitfullscreenchange', _syncFullscreenBtn);
 
 function showPage(page, btn) {
   currentPage = page;
+  autoOpenGroupForPage(page);
   ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
