@@ -8308,6 +8308,15 @@ function hideLoginScreen() {
   if (s) s.style.display = 'none';
 }
 
+function toggleLoginPasswordVisibility() {
+  const input = document.getElementById('login-password');
+  const btn = document.getElementById('login-password-toggle');
+  if (!input || !btn) return;
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? '👁' : '🙈';
+}
+
 async function loginUser() {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
@@ -15950,35 +15959,38 @@ function showImportResult(type, html) {
       <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#1C1917">Orevy</div>
       <div style="font-size:13px;color:#A8A29E;margin-top:4px">Stocks Pédagogiques</div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:14px">
+    <form id="login-form" autocomplete="on" onsubmit="event.preventDefault(); loginUser(); return false;" style="display:flex;flex-direction:column;gap:14px">
       <div>
         <label style="font-size:12px;font-weight:600;color:#44403C;display:block;margin-bottom:5px">Email</label>
-        <input type="email" id="login-email" placeholder="votre@email.com"
+        <input type="email" id="login-email" name="email" placeholder="votre@email.com"
           autocomplete="username"
           style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #E7E5E0;font-size:14px;outline:none;font-family:'Instrument Sans',sans-serif"
           onfocus="this.style.borderColor='#6366F1'" onblur="this.style.borderColor='#E7E5E0'"
-          onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+          onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('login-password').focus();}">
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:#44403C;display:block;margin-bottom:5px">Mot de passe</label>
-        <input type="password" id="login-password" placeholder="••••••••"
-          autocomplete="current-password"
-          style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid #E7E5E0;font-size:14px;outline:none;font-family:'Instrument Sans',sans-serif"
-          onfocus="this.style.borderColor='#6366F1'" onblur="this.style.borderColor='#E7E5E0'"
-          onkeydown="if(event.key==='Enter')loginUser()">
+        <div style="position:relative">
+          <input type="password" id="login-password" name="password" placeholder="••••••••"
+            autocomplete="current-password"
+            style="width:100%;padding:11px 40px 11px 14px;border-radius:10px;border:1.5px solid #E7E5E0;font-size:14px;outline:none;font-family:'Instrument Sans',sans-serif;box-sizing:border-box"
+            onfocus="this.style.borderColor='#6366F1'" onblur="this.style.borderColor='#E7E5E0'">
+          <button type="button" id="login-password-toggle" onclick="toggleLoginPasswordVisibility()" title="Afficher/masquer le mot de passe"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:4px 6px;color:#A8A29E;line-height:1">👁</button>
+        </div>
       </div>
       <div id="login-error" style="display:none;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 12px;font-size:13px;color:#DC2626"></div>
-      <button onclick="loginUser()" id="login-btn"
+      <button type="submit" id="login-btn"
         style="background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:opacity 0.15s"
         onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
         Se connecter
       </button>
       <div style="text-align:center">
-        <button onclick="motDePasseOublie()" style="background:none;border:none;color:#6366F1;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">
+        <button type="button" onclick="motDePasseOublie()" style="background:none;border:none;color:#6366F1;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">
           Mot de passe oublié ?
         </button>
       </div>
-    </div>
+    </form>
     <div style="text-align:center;margin-top:20px;font-size:12px;color:#A8A29E">
       Orevy · Accès réservé
     </div>
