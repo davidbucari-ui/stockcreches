@@ -6506,6 +6506,7 @@ N'invente jamais une information absente du document.`;
       const refreshed = await sbGet('menus', `creche=eq.${encodeURIComponent(creche)}&date=eq.${transDate}`);
       if (Array.isArray(refreshed) && refreshed[0]) TRANS_MENU = refreshed[0];
     } catch(_) {}
+    renderMenuBanner();
   }
 
   setStatus(`✅ ${ok} jour(s) importé(s)${ignored ? `, ${ignored} ignoré(s) (fériés/vides)` : ''} pour ${creche}`);
