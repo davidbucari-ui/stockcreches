@@ -1306,6 +1306,25 @@ textarea { resize: vertical; min-height: 72px; }
           <div id="planning-horaires-config"></div>
         </div>
 
+        <!-- SECTION 6 : Menus -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Menus</div>
+        <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:28px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px">
+          <div style="font-size:13px;color:var(--ink2);line-height:1.6">Importez le planning de menus transmis par votre prestataire (PDF ou photo). Le document peut couvrir un jour, une semaine ou plusieurs semaines — tous les jours détectés seront importés et enregistrés automatiquement pour la structure choisie.</div>
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:280px">
+            <label style="font-size:12px;font-weight:600;color:var(--ink2)">Structure concernée</label>
+            <select id="param-menu-creche"
+              style="padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;font-family:inherit;outline:none;background:var(--bg)"></select>
+          </div>
+          <div>
+            <input type="file" id="param-menu-import-file" accept="image/*,.pdf,application/pdf" style="display:none" onchange="handleParamMenuImportFile(event)">
+            <button onclick="document.getElementById('param-menu-import-file').click()"
+              style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+              📄 Importer un planning de menus (PDF/photo)
+            </button>
+          </div>
+          <div id="param-menu-import-status" style="font-size:12px;color:var(--ink3)"></div>
+        </div>
+
       </div>
     </div>
 
@@ -1930,7 +1949,7 @@ textarea { resize: vertical; min-height: 72px; }
           <select id="trans-creche-sel" onchange="renderTransmissions()"></select>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-secondary" onclick="openMenuModal()">🍽 Menu du jour</button>
+          <button class="btn btn-secondary" onclick="openMenuViewModal()">🍽 Menu du jour</button>
           <button class="btn btn-secondary" onclick="openDevReperesModal()">📚 Repères de développement</button>
         </div>
       </div>
@@ -2244,6 +2263,23 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-menu-view" onclick="closeModalClick(event,'modal-menu-view')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2>🍽 Menu du jour</h2>
+      <button class="modal-close" onclick="closeModal('modal-menu-view')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:14px" id="modal-menu-view-date-label"></div>
+      <div id="modal-menu-view-body" style="font-size:14px;color:var(--ink2)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-menu-view'); openMenuModal();">✏️ Modifier ce jour</button>
+      <button class="btn btn-primary" onclick="closeModal('modal-menu-view')">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-menu" onclick="closeModalClick(event,'modal-menu')">
   <div class="modal" style="max-width:560px">
     <div class="modal-header">
@@ -2252,11 +2288,7 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
     <div class="modal-body">
       <div style="font-size:12px;color:var(--ink3);margin-bottom:14px" id="modal-menu-date-label"></div>
-      <div style="margin-bottom:16px;padding:12px;background:var(--accent-lt);border-radius:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <input type="file" id="menu-import-file" accept="image/*,.pdf,application/pdf" style="display:none" onchange="handleMenuImportFile(event)">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('menu-import-file').click()">📄 Importer un planning de menus (PDF/photo)</button>
-        <span id="menu-import-status" style="font-size:12px;color:var(--ink3)">Le document peut couvrir un jour, une semaine ou plusieurs semaines — tous les jours détectés seront importés automatiquement.</span>
-      </div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:16px">💡 Pour importer un planning de menus en masse (PDF/photo), rendez-vous dans <strong>Paramètres → Menus</strong>.</div>
       <div class="fi-row">
         <div class="fi-field"><label>Entrée</label><input type="text" id="menu-entree" placeholder="Ex : Salade de tomates"></div>
         <div class="fi-field"><label>Plat protéiné</label><input type="text" id="menu-plat" placeholder="Ex : Filet de poisson"></div>
@@ -6345,6 +6377,37 @@ function renderMenuBanner() {
   </div>`;
 }
 
+function openMenuViewModal() {
+  const creche = getTransCreche();
+  if (!creche) { showNotif('⚠ Sélectionnez d\'abord une structure'); return; }
+
+  const dateLabel = document.getElementById('modal-menu-view-date-label');
+  const dateObj = transDate ? new Date(transDate) : new Date();
+  if (dateLabel) {
+    dateLabel.textContent = `${creche} — ${dateObj.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}`;
+  }
+
+  const body = document.getElementById('modal-menu-view-body');
+  const m = TRANS_MENU || {};
+  const rows = [
+    ['🥗 Entrée', m.entree],
+    ['🍗 Plat protéiné', m.plat],
+    ['🥕 Accompagnement', m.accompagnement],
+    ['🍮 Dessert', m.dessert],
+    ['🥣 Repas mixé / mouliné', m.mixe],
+    ['🍪 Goûter', m.gouter],
+  ].filter(r => r[1]);
+
+  if (body) {
+    body.innerHTML = rows.length
+      ? rows.map(r => `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3);font-size:13px;flex-shrink:0">${r[0]}</span><span style="font-weight:600;text-align:right">${transEsc(r[1])}</span></div>`).join('')
+      : `<div style="text-align:center;color:var(--ink3);padding:24px 0">Aucun menu renseigné pour ce jour.<br>Cliquez sur « Modifier ce jour » pour le compléter.</div>`;
+  }
+
+  const mm = document.getElementById('modal-menu-view');
+  if (mm) { mm.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+
 function openMenuModal() {
   const creche = getTransCreche();
   if (!creche) { showNotif('⚠ Sélectionnez d\'abord une structure'); return; }
@@ -6425,17 +6488,11 @@ async function upsertMenuJour(creche, date, m) {
   }
 }
 
-async function handleMenuImportFile(event) {
-  const file = event.target.files && event.target.files[0];
-  event.target.value = ''; // permet de réimporter le même fichier ensuite
-  if (!file) return;
-
-  const statusEl = document.getElementById('menu-import-status');
-  const setStatus = (msg, isError) => {
-    if (!statusEl) return;
-    statusEl.textContent = msg;
-    statusEl.style.color = isError ? 'var(--red)' : 'var(--ink3)';
-  };
+// Fonction réutilisable : importe un planning de menus (PDF/photo) pour une
+// crèche donnée. Utilisée depuis Paramètres (import en masse, plusieurs
+// semaines). setStatus(msg, isError) affiche la progression côté appelant.
+async function importMenusPourCreche(file, creche, setStatus) {
+  if (!creche) { setStatus('⚠ Sélectionnez une structure', true); return; }
 
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
   const maxBytes = 25 * 1024 * 1024; // marge de sécurité (limite API pour les docs)
@@ -6519,7 +6576,6 @@ N'invente jamais une information absente du document.`;
   }
 
   setStatus(`💾 Enregistrement de ${dates.length} jour(s)…`);
-  const creche = getTransCreche();
   let ok = 0, ignored = 0;
   for (const date of dates) {
     const m = menusParJour[date] || {};
@@ -6529,25 +6585,35 @@ N'invente jamais une information absente du document.`;
     if (success) ok++;
   }
 
-  // Mettre à jour les champs visibles si le jour actuellement affiché fait partie de l'import
-  if (transDate && menusParJour[transDate]) {
-    const m = menusParJour[transDate];
-    const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-    setV('menu-entree', m.entree);
-    setV('menu-plat', m.plat);
-    setV('menu-accompagnement', m.accompagnement);
-    setV('menu-dessert', m.dessert);
-    setV('menu-mixe', m.mixe);
-    setV('menu-gouter', m.gouter);
+  setStatus(`✅ ${ok} jour(s) importé(s)${ignored ? `, ${ignored} ignoré(s) (fériés/vides)` : ''} pour ${creche}${wasTruncated ? ' — ⚠ document tronqué, réimportez le reste séparément (ex: les dernières semaines)' : ''}`);
+  showNotif(`✅ ${ok} jour(s) de menu importés pour ${creche}`);
+
+  // Si on regarde justement cette crèche aujourd'hui dans Transmissions, rafraîchir l'affichage
+  if (typeof transDate !== 'undefined' && transDate && menusParJour[transDate] &&
+      typeof getTransCreche === 'function' && getTransCreche() === creche) {
     try {
       const refreshed = await sbGet('menus', `creche=eq.${encodeURIComponent(creche)}&date=eq.${transDate}`);
       if (Array.isArray(refreshed) && refreshed[0]) TRANS_MENU = refreshed[0];
+      if (typeof renderMenuBanner === 'function') renderMenuBanner();
     } catch(_) {}
-    renderMenuBanner();
   }
+}
 
-  setStatus(`✅ ${ok} jour(s) importé(s)${ignored ? `, ${ignored} ignoré(s) (fériés/vides)` : ''} pour ${creche}${wasTruncated ? ' — ⚠ document tronqué, réimportez le reste séparément (ex: les dernières semaines)' : ''}`);
-  showNotif(`✅ ${ok} jour(s) de menu importés pour ${creche}`);
+// Point d'entrée depuis Paramètres : import en masse pour la structure choisie
+async function handleParamMenuImportFile(event) {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = ''; // permet de réimporter le même fichier ensuite
+  if (!file) return;
+
+  const creche = document.getElementById('param-menu-creche')?.value;
+  const statusEl = document.getElementById('param-menu-import-status');
+  const setStatus = (msg, isError) => {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.color = isError ? 'var(--red)' : 'var(--ink3)';
+  };
+
+  await importMenusPourCreche(file, creche, setStatus);
 }
 
 async function saveMenu() {
@@ -7304,6 +7370,15 @@ function renderParametres() {
     colorsEl.innerHTML = palette.map(c =>
       `<div onclick="setAccentColor('${c}')" style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:${accent===c?'3px solid var(--ink)':'2px solid transparent'};transition:transform 0.15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform=''"></div>`
     ).join('');
+  }
+
+  // Sélecteur de structure pour l'import de menus
+  const menuCrecheSel = document.getElementById('param-menu-creche');
+  if (menuCrecheSel) {
+    menuCrecheSel.innerHTML = (CRECHES_DATA || []).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+    if (currentCreche && currentCreche !== 'all' && CRECHES_DATA.some(c => c.nom === currentCreche)) {
+      menuCrecheSel.value = currentCreche;
+    }
   }
 
   list.innerHTML = CRECHES_DATA.map((c, i) => {
