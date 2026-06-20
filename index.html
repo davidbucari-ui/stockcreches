@@ -1052,6 +1052,9 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item" data-roles="admin" onclick="showPage('admin', this)" title="Administration">
     <span class="nav-icon">🔐</span> Administration
   </button>
+  <button class="nav-item" id="nav-reglementaire" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="openHubDocs()" title="Réglementaire">
+    <span class="nav-icon">⚖️</span> Réglementaire
+  </button>
 
   <div class="sidebar-structure-block" style="padding:0 16px 16px">
     <select id="creche-select-sidebar" onchange="filterCrecheFromSelect(this.value)"
@@ -8467,6 +8470,9 @@ function showHub() {
     grSub.textContent = dateStr + ' \u00B7 ' + creche;
   }
 
+  // Appliquer l'état verrouillé/débloqué du module Réglementaire (hub + sidebar)
+  applyReglementaireEntitlement();
+
   // Charger KPIs légers depuis Supabase
   hubLoadKPIs(role);
 }
@@ -8474,6 +8480,55 @@ function showHub() {
 function hideHub() {
   const hub = document.getElementById('hub-screen');
   if (hub) hub.style.display = 'none';
+}
+
+// ─── ENTITLEMENT MODULE RÉGLEMENTAIRE (hub + sidebar) ──────────────────────
+function hasModuleReglementaire() {
+  // TODO : brancher sur la future table `souscriptions` Supabase.
+  // Pour l'instant, accès complet par défaut (compte Koalakids).
+  return true;
+}
+
+function applyReglementaireEntitlement() {
+  const entitled = hasModuleReglementaire();
+
+  // Tuile(s) du hub (admin / directrice / auxiliaire)
+  document.querySelectorAll('.hub-s-card.doc').forEach(card => {
+    if (entitled) { card.classList.remove('locked'); return; }
+    card.classList.add('locked');
+    card.onclick = openReglementaireUpsell;
+    const descEl = card.querySelector('.hub-s-desc');
+    const tagsEl = card.querySelector('.hub-s-tags');
+    const ctaEl  = card.querySelector('.hub-s-cta');
+    if (descEl) descEl.textContent = 'Protocoles et conformité réglementaire — module en option';
+    if (tagsEl) tagsEl.innerHTML = '<span class="hub-s-tag">🔒 Module en option</span>';
+    if (ctaEl)  ctaEl.textContent = '🔓 Débloquer →';
+    const iconEl = card.querySelector('.hub-s-icon');
+    if (iconEl && !iconEl.querySelector('.lock-pin')) {
+      const pin = document.createElement('div');
+      pin.className = 'lock-pin';
+      pin.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="2" y="4.3" width="6" height="4.5" rx="1" fill="#fff"/><path d="M3.3 4.3V3a1.7 1.7 0 013.4 0v1.3" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>';
+      iconEl.appendChild(pin);
+    }
+  });
+
+  // Onglet sidebar (position basse, à côté de Paramètres/Administration)
+  const navItem = document.getElementById('nav-reglementaire');
+  if (navItem) {
+    if (entitled) {
+      navItem.classList.remove('locked');
+      navItem.onclick = openHubDocs;
+      navItem.title = 'Réglementaire';
+    } else {
+      navItem.classList.add('locked');
+      navItem.onclick = openReglementaireUpsell;
+      navItem.title = 'Réglementaire — module en option';
+    }
+  }
+}
+
+function openReglementaireUpsell() {
+  showNotif('🔒 Module Réglementaire en option — contactez-nous pour le débloquer (contact@orevy.app)');
 }
 
 function enterStructures() {
@@ -15240,6 +15295,16 @@ function showImportResult(type, html) {
 .hub-s-card.doc .hub-s-tag{background:rgba(124,58,237,.15);color:#5B21B6}
 .hub-s-card.doc .hub-s-cta{color:#5B21B6;background:rgba(124,58,237,.12)}
 .hub-s-card.doc .hub-s-cta:hover{background:rgba(124,58,237,.22)}
+/* Doc card — état verrouillé (module Réglementaire non souscrit) */
+.hub-s-card.doc.locked{background:#F2F0EE;border:1.5px dashed rgba(124,58,237,0.35)}
+.hub-s-card.doc.locked .hub-s-icon{background:#C7C2C8}
+.hub-s-card.doc.locked .hub-s-tag{background:rgba(124,58,237,.1);color:#5B21B6}
+.hub-s-card.doc.locked .hub-s-cta{color:#fff;background:#7C3AED;box-shadow:0 2px 8px rgba(124,58,237,.3)}
+.hub-s-card.doc.locked .hub-s-cta:hover{background:#6D28D9}
+.lock-pin{position:absolute;bottom:-4px;right:-4px;width:20px;height:20px;border-radius:50%;background:#7C3AED;border:2px solid #F2F0EE;display:flex;align-items:center;justify-content:center}
+/* Onglet sidebar Réglementaire — état verrouillé */
+.nav-item.locked{opacity:.55}
+.nav-item.locked .nav-icon{filter:grayscale(1)}
 /* Modal documents */
 #hub-docs-modal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(28,25,23,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center}
 #hub-docs-modal.open{display:flex}
@@ -15312,7 +15377,7 @@ function showImportResult(type, html) {
   <!-- VUE ADMIN -->
   <div id="hub-v-admin" style="display:none">
     <div class="hub-s-section-lbl" style="margin-bottom:14px">Vos espaces</div>
-    <div class="hub-s-pillars-4">
+    <div class="hub-s-pillars">
       <div class="hub-s-card str" onclick="enterStructures()">
         <div class="hub-s-extbadge">↗</div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="#fff"/><rect x="12" y="2" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="2" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".4"/></svg></div>
@@ -15329,14 +15394,6 @@ function showImportResult(type, html) {
         <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span><span class="hub-s-tag">Attestations</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
-      <a class="hub-s-card sol" href="https://davidbucari-ui.github.io/orevy-solutions/" target="_blank">
-        <div class="hub-s-extbadge">↗</div>
-        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="#fff" stroke-width="1.5"/><path d="M8 11l2.5 2.5L14 8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="hub-s-name">Orevy Solutions</div>
-        <div class="hub-s-desc">Accompagnement &amp; conseil pédagogique</div>
-        <div class="hub-s-tags"><span class="hub-s-tag">Analyse pratique</span><span class="hub-s-tag">Conseil</span></div>
-        <div class="hub-s-cta">Accéder →</div>
-      </a>
       <div class="hub-s-card doc" onclick="openHubDocs()">
         <div class="hub-docs-badge-count" id="hub-docs-badge-admin"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
@@ -15345,6 +15402,9 @@ function showImportResult(type, html) {
         <div class="hub-s-tags"><span class="hub-s-tag">Protocoles</span><span class="hub-s-tag">Réglementation</span></div>
         <div class="hub-s-cta">Consulter →</div>
       </div>
+    </div>
+    <div style="margin:-10px 0 22px;font-size:11.5px">
+      <a href="https://orevy.app" target="_blank" style="color:#58504D;opacity:.55;text-decoration:none">Accompagnement &amp; conseil pédagogique — Orevy Solutions →</a>
     </div>
     <div class="hub-s-section-lbl">Vue réseau du jour</div>
     <div class="hub-s-kpis" id="hub-kpis-admin">
@@ -15362,7 +15422,7 @@ function showImportResult(type, html) {
   <!-- VUE DIRECTRICE -->
   <div id="hub-v-directrice" style="display:none">
     <div class="hub-s-section-lbl" style="margin-bottom:14px">Vos espaces</div>
-    <div class="hub-s-pillars-4">
+    <div class="hub-s-pillars">
       <div class="hub-s-card str" onclick="enterStructures()">
         <div class="hub-s-extbadge">↗</div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" fill="#fff"/><rect x="12" y="2" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="2" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".7"/><rect x="12" y="12" width="8" height="8" rx="2" fill="#fff" opacity=".4"/></svg></div>
@@ -15379,12 +15439,6 @@ function showImportResult(type, html) {
         <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
-      <div class="hub-s-card sol dis">
-        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="#fff" stroke-width="1.5"/><path d="M8 11l2.5 2.5L14 8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="hub-s-name">Orevy Solutions</div>
-        <div class="hub-s-desc">Accès réservé admin</div>
-        <div class="hub-s-tags"><span class="hub-s-tag">Non disponible</span></div>
-      </div>
       <div class="hub-s-card doc" onclick="openHubDocs()">
         <div class="hub-docs-badge-count" id="hub-docs-badge-dir"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
