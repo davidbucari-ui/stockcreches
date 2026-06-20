@@ -7167,7 +7167,8 @@ function appliquerPrefs() {
 
 async function sbUpsertParametre(cle, valeur) {
   const url = `${SUPA_RH_URL}/rest/v1/parametres`;
-  const body = JSON.stringify({ cle, valeur, updated_at: new Date().toISOString() });
+  // La table parametres a la même structure que salaries : id TEXT, data JSONB, updated_at
+  const body = JSON.stringify({ id: cle, data: valeur, updated_at: new Date().toISOString() });
   const res = await fetch(url, {
     method: 'POST',
     headers: { ...SUPA_RH_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
@@ -7178,31 +7179,32 @@ async function sbUpsertParametre(cle, valeur) {
 
 async function chargerParamsSupabase() {
   try {
-    const res = await fetch(`${SUPA_RH_URL}/rest/v1/parametres?cle=in.(orevy_creches,orevy_prefs,orevy_coord_rotation_v2,orevy_coord_suivi_v2)&select=cle,valeur`, {
+    // La table parametres a la structure id TEXT, data JSONB (comme salaries) — pas cle/valeur
+    const res = await fetch(`${SUPA_RH_URL}/rest/v1/parametres?id=in.(orevy_creches,orevy_prefs,orevy_coord_rotation_v2,orevy_coord_suivi_v2)&select=id,data`, {
       headers: SUPA_RH_HEADERS
     });
     if (!res.ok) return;
     const rows = await res.json();
     let crechesRecues = false;
     rows.forEach(row => {
-      if (row.cle === 'orevy_creches' && Array.isArray(row.valeur) && row.valeur.length) {
+      if (row.id === 'orevy_creches' && Array.isArray(row.data) && row.data.length) {
         crechesRecues = true;
-        CRECHES_DATA = row.valeur;
+        CRECHES_DATA = row.data;
         CRECHES = CRECHES_DATA.map(c => c.nom);
         CRECHE_COLORS = Object.fromEntries(CRECHES_DATA.map(c => [c.nom, c.color]));
         try { localStorage.setItem('orevy_creches', JSON.stringify(CRECHES_DATA)); } catch {}
         renderSidebarCreches();
         if (typeof renderParametres === 'function') renderParametres();
       }
-      if (row.cle === 'orevy_prefs' && row.valeur) {
-        try { localStorage.setItem('orevy_prefs', JSON.stringify(row.valeur)); } catch {}
+      if (row.id === 'orevy_prefs' && row.data) {
+        try { localStorage.setItem('orevy_prefs', JSON.stringify(row.data)); } catch {}
         appliquerPrefs();
       }
-      if (row.cle === 'orevy_coord_rotation_v2' && row.valeur) {
-        try { localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(row.valeur)); } catch {}
+      if (row.id === 'orevy_coord_rotation_v2' && row.data) {
+        try { localStorage.setItem('orevy_coord_rotation_v2', JSON.stringify(row.data)); } catch {}
       }
-      if (row.cle === 'orevy_coord_suivi_v2' && row.valeur) {
-        try { localStorage.setItem('orevy_coord_suivi_v2', JSON.stringify(row.valeur)); } catch {}
+      if (row.id === 'orevy_coord_suivi_v2' && row.data) {
+        try { localStorage.setItem('orevy_coord_suivi_v2', JSON.stringify(row.data)); } catch {}
       }
     });
     // ── Réparation : si Supabase n'a jamais reçu les noms de crèches,
