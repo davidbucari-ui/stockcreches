@@ -8952,13 +8952,17 @@ function renderCommandes() {
             <span>📄 ${c.bc}</span>
           </div>
           <div class="commande-items">
-            ${items.map(i => {
+            ${items.map((i, idx) => {
               // Parser le lien éventuel : "3× Nom (prix€) [https://...]"
               const urlMatch = i.match(/\[(.+?)\]$/);
               const lineUrl = urlMatch ? urlMatch[1] : null;
               const lineText = i.replace(/\s*\[.+?\]$/, '');
-              return `<div class="commande-item-row">
-                <span>${lineText}</span>
+              const linePhoto = c.photos && c.photos[idx] ? photoSrc(c.photos[idx]) : null;
+              return `<div class="commande-item-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <span style="display:flex;align-items:center;gap:8px">
+                  ${linePhoto ? `<img src="${linePhoto}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid var(--border);cursor:pointer" onclick="openFullscreenPhoto('${linePhoto}')" title="Voir la photo">` : ''}
+                  <span>${lineText}</span>
+                </span>
                 ${lineUrl ? `<a href="${lineUrl}" target="_blank" rel="noopener"
                    style="font-size:11px;color:var(--accent);text-decoration:none;white-space:nowrap">🔗 Voir</a>` : ''}
               </div>`;
@@ -9338,6 +9342,7 @@ async function saveCommande_db() {
   const montant = parseFloat(document.getElementById('c-montant').value) || 0;
   const bc = document.getElementById('c-bc').value.trim() || generateBC();
   const articles = getArticlesFromRows();
+  const photos = getPhotosFromRows();
 
   COMMANDES.push({
     id: Date.now(),
@@ -9349,12 +9354,14 @@ async function saveCommande_db() {
     articles: articles || '—',
     notes: document.getElementById('c-notes').value.trim(),
     url: '',
+    photos,
   });
 
   addHisto('commande', `Commande ${bc}`, 0, creche, 'Vous', `${fourn} — ${montant.toFixed(2)}€`);
   saveData();
   closeModal('modal-commande');
   if (!IS_LOCAL) saveCommandeDB(COMMANDES[COMMANDES.length-1]).catch(()=>{});
+  commandePhotos = {};
   renderCommandes();
   renderHistorique();
   renderStats();
@@ -9368,6 +9375,7 @@ async function markLivree(id) {
   if (!c) return;
 
   livraisonPhotos = {}; // réinitialise les photos de réception pour cette commande
+  if (c.photos) { Object.keys(c.photos).forEach(k => { livraisonPhotos[k] = c.photos[k]; }); } // reprend les photos prises à la commande
 
   // Parser les articles de la commande pour proposer la mise à jour des stocks
   const lignes = (c.articles || '').split('\n').filter(Boolean);
@@ -9392,7 +9400,9 @@ async function markLivree(id) {
 
   // Construire le modal de confirmation
   const lignesHtml = updates.map((u, i) => {
-    const photoExistante = u.article && u.article.photo;
+    const photoCommande = livraisonPhotos[i] ? photoSrc(livraisonPhotos[i]) : null;
+    const photoExistante = photoCommande || (u.article && u.article.photo) || null;
+    const labelPhoto = photoCommande ? '✅ Photo de la commande' : (photoExistante ? '✅ Photo existante' : '');
     return `
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;
                 padding:8px 0;border-bottom:1px solid var(--border)">
@@ -9410,7 +9420,7 @@ async function markLivree(id) {
             style="padding:4px 8px;border:none;border-radius:6px;background:var(--accent-lt);color:var(--accent);font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px">📸 Photo</button>
           <button type="button" onclick="document.getElementById('livraison-photo-input-${i}').click()"
             style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);font-family:inherit;font-size:11px;cursor:pointer;color:var(--ink2);display:flex;align-items:center;gap:4px">🗂 Importer</button>
-          <span id="livraison-photo-label-${i}" style="font-size:11px;color:var(--ink3)">${photoExistante ? '✅ Photo existante' : ''}</span>
+          <span id="livraison-photo-label-${i}" style="font-size:11px;color:var(--ink3)">${labelPhoto}</span>
         </div>
       </div>
       <div style="font-size:12px;color:var(--ink2)">Qté reçue :</div>
@@ -9441,13 +9451,28 @@ function handleLivraisonPhoto(event, i) {
   if (file.size > 5 * 1024 * 1024) { showNotif('⚠ Photo trop grande — max 5 Mo'); return; }
   if (!file.type.startsWith('image/')) { showNotif('⚠ Format non supporté — JPG, PNG ou WEBP'); return; }
   const reader = new FileReader();
-  reader.onload = e => {
-    livraisonPhotos[i] = { data: e.target.result, name: file.name };
+  reader.onload = async e => {
+    const dataUrl = e.target.result;
     const img = document.getElementById(`livraison-photo-preview-${i}`);
     const lbl = document.getElementById(`livraison-photo-label-${i}`);
-    if (img) { img.src = e.target.result; img.style.display = 'inline-block'; }
-    if (lbl) lbl.textContent = '✅ Photo ajoutée';
-    showNotif('📷 Photo ajoutée à l\'article');
+    livraisonPhotos[i] = { data: dataUrl, name: file.name };
+    if (img) { img.src = dataUrl; img.style.display = 'inline-block'; }
+    if (lbl) lbl.textContent = '⏳ Envoi...';
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) {
+      if (lbl) lbl.textContent = '✅ Photo ajoutée';
+      showNotif('📷 Photo ajoutée à l\'article');
+      return;
+    }
+    try {
+      const url = await uploadPhotoToStorage(dataUrl, file.name);
+      livraisonPhotos[i] = { url, name: file.name };
+      if (lbl) lbl.textContent = '✅ Photo ajoutée';
+      showNotif('📷 Photo envoyée');
+    } catch (err) {
+      console.error('[Storage] Upload photo réception :', err);
+      if (lbl) lbl.textContent = '⚠ Hors-ligne — sera renvoyée';
+      showNotif('⚠ Photo gardée en local (pas de connexion)');
+    }
   };
   reader.readAsDataURL(file);
 }
@@ -9505,7 +9530,7 @@ async function confirmerLivraison(id) {
         fourn: art.fourn || '',
         notes: '',
         url: art.url || '',
-        photo: photo ? photo.data : null,
+        photo: photo ? photoSrc(photo) : null,
         photoName: photo ? photo.name : null,
         date_achat: c.livraison || c.date || new Date().toISOString().split('T')[0],
         etat_override: null,
@@ -9518,7 +9543,7 @@ async function confirmerLivraison(id) {
       if (art.prix > 0 && article.prix === 0) article.prix = art.prix;
       if (art.url && !article.url) article.url = art.url;
       if (art.fourn && !article.fourn) article.fourn = art.fourn;
-      if (photo) { article.photo = photo.data; article.photoName = photo.name; } // photo prise à réception
+      if (photo) { article.photo = photoSrc(photo); article.photoName = photo.name; } // photo prise à réception
       // Mise à jour date d'achat → état repart à Neuf
       article.date_achat = c.livraison || c.date || new Date().toISOString().split('T')[0];
       article.etat_override = null;
@@ -9597,7 +9622,7 @@ function editCommande(id) {
     const container = document.getElementById('articles-rows');
     if (container) container.innerHTML = '';
     articleRowCount = 0;
-    lignes.forEach(ligne => {
+    lignes.forEach((ligne, li) => {
       const m    = ligne.match(/^[-•]?\s*(\d+)\s*[×xX]\s*(.+)/);
       const urlM = ligne.match(/\[(?!cat:)(.+?)\]$/);
       const pM   = ligne.match(/\((\d+[.,]?\d*)\s*€?\)/);
@@ -9612,7 +9637,8 @@ function editCommande(id) {
         .replace(/\s*\{.*?\}\s*/g,'')
         .replace(/\s*\[cat:[^\]]*\]\s*/g,'')
         .replace(/\s*\(.*?\)\s*$/,'').replace(/\s*\[.*?\]\s*$/,'').trim();
-      addArticleRow(qty, nom, prix, url, fourn, cat);
+      const photo = (c.photos && c.photos[li]) || null;
+      addArticleRow(qty, nom, prix, url, fourn, cat, photo);
     });
   }
 
@@ -9634,6 +9660,7 @@ function onUpdateCommande(id) {
   c.date     = document.getElementById('c-date')?.value || c.date;
   c.notes    = document.getElementById('c-notes')?.value.trim() || '';
   c.articles = getArticlesFromRows();
+  c.photos   = getPhotosFromRows();
   c.montant  = parseFloat(document.getElementById('c-montant')?.value) || c.montant;
   c.bc       = document.getElementById('c-bc')?.value.trim() || c.bc;
 
@@ -9641,6 +9668,7 @@ function onUpdateCommande(id) {
   saveData();
   closeModal('modal-commande');
   if (!IS_LOCAL) updateCommandeDB(c).catch(()=>{});
+  commandePhotos = {};
   renderCommandes();
   showNotif('✅ Commande mise à jour');
 }
@@ -10965,11 +10993,13 @@ function showNotif(msg) {
 // ─── LIGNES D'ARTICLES DANS FORMULAIRE COMMANDE ──────────────────────────
 
 let articleRowCount = 0;
+let commandePhotos = {}; // photos attachées aux lignes d'articles de la commande en cours de saisie
 
-function addArticleRow(qty='', nom='', prix='', url='', fourn='', cat='') {
+function addArticleRow(qty='', nom='', prix='', url='', fourn='', cat='', photo=null) {
   const idx = articleRowCount++;
   const container = document.getElementById('articles-rows');
   if (!container) return;
+  if (photo) commandePhotos[idx] = photo;
   const row = document.createElement('div');
   row.className = 'article-row';
   row.id = `article-row-${idx}`;
@@ -10984,7 +11014,18 @@ function addArticleRow(qty='', nom='', prix='', url='', fourn='', cat='') {
              style="border:none;border-bottom:1px solid var(--border);border-radius:0;flex:1;font-size:11px;color:var(--ink2)">
       <datalist id="fourn-list-${idx}">${FOURNISSEURS.map(f=>`<option value="${f.nom}">`).join('')}</datalist>
       <input type="url" id="row-url-${idx}" value="${url}" placeholder="https://..."
-             style="border:none;border-radius:0;flex:1;font-size:11px;color:var(--accent)">
+             style="border:none;border-bottom:1px solid var(--border);border-radius:0;flex:1;font-size:11px;color:var(--accent)">
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;flex-wrap:wrap">
+        <input type="file" id="row-photo-input-${idx}" accept="image/*" style="display:none" onchange="handleCommandePhoto(event, ${idx})">
+        <input type="file" id="row-photo-camera-${idx}" accept="image/*" capture="environment" style="display:none" onchange="handleCommandePhoto(event, ${idx})">
+        <img id="row-photo-preview-${idx}" src="${photo ? (photoSrc(photo)||'') : ''}"
+             style="display:${photo ? 'inline-block' : 'none'};width:26px;height:26px;border-radius:6px;object-fit:cover;border:1px solid var(--border)">
+        <button type="button" onclick="document.getElementById('row-photo-camera-${idx}').click()"
+          style="padding:3px 7px;border:none;border-radius:6px;background:var(--accent-lt);color:var(--accent);font-family:inherit;font-size:10px;cursor:pointer;display:flex;align-items:center;gap:3px">📸 Photo</button>
+        <button type="button" onclick="document.getElementById('row-photo-input-${idx}').click()"
+          style="padding:3px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);font-family:inherit;font-size:10px;cursor:pointer;color:var(--ink2);display:flex;align-items:center;gap:3px">🗂 Importer</button>
+        <span id="row-photo-label-${idx}" style="font-size:10px;color:var(--ink3)">${photo ? '✅ Photo' : ''}</span>
+      </div>
     </div>
     <select id="row-cat-${idx}" style="border:none;border-right:1px solid var(--border);border-radius:0;padding:4px 6px;font-size:11px;background:var(--surface);color:var(--ink)">
       <option value="">— Cat. —</option>
@@ -10998,9 +11039,42 @@ function addArticleRow(qty='', nom='', prix='', url='', fourn='', cat='') {
   calcCommandeTotal();
 }
 
+function handleCommandePhoto(event, idx) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showNotif('⚠ Photo trop grande — max 5 Mo'); return; }
+  if (!file.type.startsWith('image/')) { showNotif('⚠ Format non supporté — JPG, PNG ou WEBP'); return; }
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const dataUrl = e.target.result;
+    const img = document.getElementById(`row-photo-preview-${idx}`);
+    const lbl = document.getElementById(`row-photo-label-${idx}`);
+    // Aperçu immédiat (fonctionne même hors-ligne)
+    commandePhotos[idx] = { data: dataUrl, name: file.name };
+    if (img) { img.src = dataUrl; img.style.display = 'inline-block'; }
+    if (lbl) lbl.textContent = '⏳ Envoi...';
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) {
+      if (lbl) lbl.textContent = '✅ Photo';
+      showNotif('📷 Photo ajoutée à la ligne');
+      return;
+    }
+    try {
+      const url = await uploadPhotoToStorage(dataUrl, file.name);
+      commandePhotos[idx] = { url, name: file.name }; // remplace le base64 par l'URL (plus léger)
+      if (lbl) lbl.textContent = '✅ Photo';
+      showNotif('📷 Photo envoyée');
+    } catch (err) {
+      console.error('[Storage] Upload photo commande :', err);
+      if (lbl) lbl.textContent = '⚠ Hors-ligne — sera renvoyée';
+      showNotif('⚠ Photo gardée en local (pas de connexion)');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
 function removeArticleRow(idx) {
   const row = document.getElementById(`article-row-${idx}`);
-  if (row) { row.remove(); calcCommandeTotal(); }
+  if (row) { row.remove(); delete commandePhotos[idx]; calcCommandeTotal(); }
 }
 
 function calcCommandeTotal() {
@@ -11052,6 +11126,7 @@ function resetArticleRows() {
   const container = document.getElementById('articles-rows');
   if (container) container.innerHTML = '';
   articleRowCount = 0;
+  commandePhotos = {};
   addArticleRow(); // Toujours au moins une ligne vide
 }
 
@@ -11077,6 +11152,26 @@ function getArticlesFromRows() {
   });
   return lines.join('\n');
 }
+
+// Reconstitue l'objet photos { 0: {data,name}, 1: {...} } aligné sur le même
+// index que les lignes retournées par getArticlesFromRows() (la ligne i a la
+// photo photos[i], si elle existe).
+function getPhotosFromRows() {
+  const rows = document.querySelectorAll('.article-row');
+  const photos = {};
+  let lineIdx = 0;
+  rows.forEach(row => {
+    const idx = row.id.replace('article-row-', '');
+    const qty = document.getElementById(`row-qty-${idx}`)?.value?.trim();
+    const nom = document.getElementById(`row-nom-${idx}`)?.value?.trim();
+    if (nom && qty) {
+      if (commandePhotos[idx]) photos[lineIdx] = commandePhotos[idx];
+      lineIdx++;
+    }
+  });
+  return photos;
+}
+
 
 // ─── PHOTO UPLOAD ─────────────────────────────────────────────────────────
 
@@ -11218,6 +11313,34 @@ const RH_TABLES = new Set([
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
 function _sbHeaders(table) { return RH_TABLES.has(table) ? SUPA_RH_HEADERS : SUPA_HEADERS; }
+
+// ── Stockage des photos (Supabase Storage) ─────────────────────────────────
+// Au lieu d'enregistrer le base64 (plusieurs Mo) directement dans les lignes
+// de la table commandes, on envoie le fichier dans le bucket "commande-photos"
+// et on ne garde que l'URL publique en base — beaucoup plus léger, en
+// particulier pour le polling cloud qui interroge "commandes" toutes les 30s.
+const SUPA_STORAGE_BUCKET = 'commande-photos';
+
+async function uploadPhotoToStorage(dataUrl, filename) {
+  const blob = await (await fetch(dataUrl)).blob();
+  const ext  = ((filename || 'photo.jpg').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const res = await fetch(`${SUPA_URL}/storage/v1/object/${SUPA_STORAGE_BUCKET}/${path}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': blob.type || 'image/jpeg' },
+    body: blob,
+  });
+  if (!res.ok) throw new Error(`Upload photo : ${res.status}`);
+  return `${SUPA_URL}/storage/v1/object/public/${SUPA_STORAGE_BUCKET}/${path}`;
+}
+
+// Une "photo" en mémoire est { url, name } une fois envoyée au cloud, ou
+// { data, name } (base64) tant que l'envoi n'a pas encore réussi (mode local
+// ou hors-ligne) — photoSrc() renvoie la bonne source quel que soit le cas.
+function photoSrc(photo) {
+  if (!photo) return null;
+  return photo.url || photo.data || null;
+}
 
 // ── FIX : Supabase en mode dégradé si la clé ne fonctionne pas ──────────
 // L'app fonctionne avec les données d'exemple si Supabase est inaccessible
@@ -11404,13 +11527,14 @@ function commandeToRow(c) {
   return { fourn: c.fourn, creche: c.creche, date: c.date||null,
            livraison: c.livraison||null, montant: c.montant||0,
            bc: c.bc, status: c.status||'en-cours',
-           articles: c.articles||'', notes: c.notes||'', url: c.url||'' };
+           articles: c.articles||'', notes: c.notes||'', url: c.url||'',
+           photos: c.photos||{} };
 }
 function rowToCommande(r) {
   return { id: r.id, fourn: r.fourn, creche: r.creche, date: r.date,
            livraison: r.livraison, montant: parseFloat(r.montant)||0,
            bc: r.bc, status: r.status, articles: r.articles||'',
-           notes: r.notes||'', url: r.url||'' };
+           notes: r.notes||'', url: r.url||'', photos: r.photos||{} };
 }
 function fournisseurToRow(f) {
   // Ne jamais envoyer id dans le corps (colonne identity)
