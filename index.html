@@ -8488,14 +8488,18 @@ async function hubLoadKPIs(role) {
     const crecheFilter = (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all')
       ? currentCreche : null;
 
-    // Enfants présents aujourd'hui (pointages) — filtrés par crèche si sélectionnée
+    // Enfants présents aujourd'hui (pointages) — uniquement utile à la vue réseau (Admin/Stagiaire) :
+    // une directrice/auxiliaire voit déjà les enfants en vrai dans sa structure, ce chiffre ne leur
+    // apporte rien (et évite un appel Supabase superflu pour ces rôles).
     let enfants = '—';
-    try {
-      const params = 'select=id,creche_id&horodatage=gte.' + todayStr + 'T00:00:00&type=eq.arrivee'
-        + (crecheFilter ? '&creche_id=eq.' + encodeURIComponent(crecheFilter) : '');
-      const pts = await sbGet('pointages_enfants', params);
-      if (Array.isArray(pts)) enfants = pts.length;
-    } catch(e) { console.warn('[Hub KPI enfants]', e.message); }
+    if (role === 'admin' || role === 'stagiaire') {
+      try {
+        const params = 'select=id,creche_id&horodatage=gte.' + todayStr + 'T00:00:00&type=eq.arrivee'
+          + (crecheFilter ? '&creche_id=eq.' + encodeURIComponent(crecheFilter) : '');
+        const pts = await sbGet('pointages_enfants', params);
+        if (Array.isArray(pts)) enfants = pts.length;
+      } catch(e) { console.warn('[Hub KPI enfants]', e.message); }
+    }
 
     // Stocks bas — filtrés par crèche si sélectionnée, uniquement si token Stocks disponible
     let stocksBas = 0;
@@ -8527,24 +8531,16 @@ async function hubLoadKPIs(role) {
         alertsEl.innerHTML = chips.join('');
       }
     } else if (role === 'directrice') {
-      const elE = document.getElementById('hk-dir-enfants');
       const elA = document.getElementById('hk-dir-alertes');
-      if (elE) { elE.textContent = enfants; elE.style.color = '#3B6D11'; }
       if (elA) elA.textContent = stocksBas;
       const alertsEl = document.getElementById('hub-alerts-dir');
       if (alertsEl) {
         const chips = [];
         if (stocksBas > 0) chips.push(`<div class="hub-s-chip warn">⚠ ${stocksBas} stock${stocksBas>1?'s':''} bas</div>`);
         else chips.push('<div class="hub-s-chip ok">✓ Stocks OK</div>');
-        if (vaccLate > 0) chips.push(`<div class="hub-s-chip warn" style="background:#FBEAEA;color:#C0392B;border-color:#F0C8C3">⚠ ${vaccLate} vaccin${vaccLate>1?'s':''} en retard</div>`);
-        if (vaccSoon > 0) chips.push(`<div class="hub-s-chip warn">🔔 ${vaccSoon} rappel${vaccSoon>1?'s':''} ce mois</div>`);
-        if (!vaccLate && !vaccSoon) chips.push('<div class="hub-s-chip ok">✓ Vaccins à jour</div>');
         chips.push(`<div class="hub-s-chip ok">\u2713 Ratio à vérifier dans Structures</div>`);
         alertsEl.innerHTML = chips.join('');
       }
-    } else {
-      const elE = document.getElementById('hk-aux-enfants');
-      if (elE) { elE.textContent = enfants; }
     }
   } catch(e) { console.warn('[Hub KPIs]', e.message); }
 }
@@ -15379,7 +15375,6 @@ function showImportResult(type, html) {
     </div>
     <div class="hub-s-section-lbl">Ma crèche aujourd'hui</div>
     <div class="hub-s-kpis">
-      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Enfants présents</div><div class="hub-s-kpi-val" id="hk-dir-enfants">—</div><div class="hub-s-kpi-sub">sur inscrits</div></div>
       <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Équipe</div><div class="hub-s-kpi-val" id="hk-dir-equipe">—</div><div class="hub-s-kpi-sub">professionnels</div></div>
       <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Taux occupation</div><div class="hub-s-kpi-val" id="hk-dir-taux">—</div><div class="hub-s-kpi-sub">cible 85%</div></div>
       <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Alertes</div><div class="hub-s-kpi-val" id="hk-dir-alertes" style="color:#854F0B">—</div><div class="hub-s-kpi-sub">à vérifier</div></div>
@@ -15422,7 +15417,6 @@ function showImportResult(type, html) {
     <div class="hub-s-section-lbl">Ma journée</div>
     <div class="hub-s-journee">
       <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Mon planning</div><div class="hub-s-kpi-val" style="font-size:15px" id="hk-aux-horaire">—</div><div class="hub-s-kpi-sub" id="hk-aux-pause"></div></div>
-      <div class="hub-s-kpi"><div class="hub-s-kpi-lbl">Enfants présents</div><div class="hub-s-kpi-val" id="hk-aux-enfants" style="color:#3B6D11">—</div><div class="hub-s-kpi-sub">dans ma structure</div></div>
       <div class="hub-s-chip ok" style="align-self:center;flex:1">✓ Ratio conforme</div>
     </div>
   </div>
