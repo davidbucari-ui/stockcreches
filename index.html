@@ -1309,7 +1309,7 @@ textarea { resize: vertical; min-height: 72px; }
         <!-- SECTION 6 : Menus -->
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Menus</div>
         <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:28px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px">
-          <div style="font-size:13px;color:var(--ink2);line-height:1.6">Importez le planning de menus transmis par votre prestataire (PDF ou photo). Le document peut couvrir un jour, une semaine ou plusieurs semaines — tous les jours détectés seront importés et enregistrés automatiquement pour la structure choisie.</div>
+          <div style="font-size:13px;color:var(--ink2);line-height:1.6">Importez le planning de menus transmis par votre prestataire (PDF ou photo). Le document peut couvrir un jour, une semaine ou plusieurs semaines — tous les jours détectés seront importés et enregistrés automatiquement. Choisissez « Toutes les structures » si le même menu s'applique à tout le réseau (cas le plus courant avec un prestataire commun).</div>
           <div style="display:flex;flex-direction:column;gap:6px;max-width:280px">
             <label style="font-size:12px;font-weight:600;color:var(--ink2)">Structure concernée</label>
             <select id="param-menu-creche"
@@ -6531,6 +6531,8 @@ Réponds UNIQUEMENT en JSON valide, sans aucun texte avant ou après, avec une e
 
 Sois concis dans la formulation de chaque plat (reprends les libellés du document tels quels, sans les reformuler ni les allonger).
 
+IMPORTANT — fiabilité : si une partie du document est floue, illisible, coupée ou ambiguë, laisse le champ concerné en chaîne vide "" plutôt que de deviner ou d'inventer un plat plausible. Ne réutilise jamais un même plat (ex: un féculent ou légume générique) pour combler un champ que tu n'arrives pas à lire — une absence d'information doit rester vide, jamais remplacée par une supposition.
+
 N'invente jamais une information absente du document.`;
 
   setStatus('✨ Claude analyse le document (peut prendre un moment pour plusieurs semaines)…');
@@ -6575,24 +6577,30 @@ N'invente jamais une information absente du document.`;
     return;
   }
 
-  setStatus(`💾 Enregistrement de ${dates.length} jour(s)…`);
+  const cibleCreches = creche === '__all__' ? (CRECHES_DATA || []).map(c => c.nom) : [creche];
+  if (!cibleCreches.length) { setStatus('⚠ Aucune structure disponible', true); return; }
+  const cibleLabel = creche === '__all__' ? `toutes les structures (${cibleCreches.length})` : creche;
+
+  setStatus(`💾 Enregistrement de ${dates.length} jour(s) pour ${cibleLabel}${cibleCreches.length > 1 ? ' — cela peut prendre un moment' : ''}…`);
   let ok = 0, ignored = 0;
   for (const date of dates) {
     const m = menusParJour[date] || {};
     const hasContent = m.entree || m.plat || m.accompagnement || m.dessert || m.mixe || m.gouter;
     if (!hasContent) { ignored++; continue; }
-    const success = await upsertMenuJour(creche, date, m);
-    if (success) ok++;
+    for (const c of cibleCreches) {
+      const success = await upsertMenuJour(c, date, m);
+      if (success) ok++;
+    }
   }
 
-  setStatus(`✅ ${ok} jour(s) importé(s)${ignored ? `, ${ignored} ignoré(s) (fériés/vides)` : ''} pour ${creche}${wasTruncated ? ' — ⚠ document tronqué, réimportez le reste séparément (ex: les dernières semaines)' : ''}`);
-  showNotif(`✅ ${ok} jour(s) de menu importés pour ${creche}`);
+  setStatus(`✅ ${ok} entrée(s) importée(s)${ignored ? `, ${ignored} jour(s) ignoré(s) (fériés/vides)` : ''} pour ${cibleLabel}${wasTruncated ? ' — ⚠ document tronqué, réimportez le reste séparément (ex: les dernières semaines)' : ''}`);
+  showNotif(`✅ Menus importés pour ${cibleLabel}`);
 
-  // Si on regarde justement cette crèche aujourd'hui dans Transmissions, rafraîchir l'affichage
+  // Si on regarde justement une crèche concernée aujourd'hui dans Transmissions, rafraîchir l'affichage
   if (typeof transDate !== 'undefined' && transDate && menusParJour[transDate] &&
-      typeof getTransCreche === 'function' && getTransCreche() === creche) {
+      typeof getTransCreche === 'function' && cibleCreches.includes(getTransCreche())) {
     try {
-      const refreshed = await sbGet('menus', `creche=eq.${encodeURIComponent(creche)}&date=eq.${transDate}`);
+      const refreshed = await sbGet('menus', `creche=eq.${encodeURIComponent(getTransCreche())}&date=eq.${transDate}`);
       if (Array.isArray(refreshed) && refreshed[0]) TRANS_MENU = refreshed[0];
       if (typeof renderMenuBanner === 'function') renderMenuBanner();
     } catch(_) {}
@@ -7375,7 +7383,8 @@ function renderParametres() {
   // Sélecteur de structure pour l'import de menus
   const menuCrecheSel = document.getElementById('param-menu-creche');
   if (menuCrecheSel) {
-    menuCrecheSel.innerHTML = (CRECHES_DATA || []).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+    menuCrecheSel.innerHTML = '<option value="__all__">🏢 Toutes les structures</option>' +
+      (CRECHES_DATA || []).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
     if (currentCreche && currentCreche !== 'all' && CRECHES_DATA.some(c => c.nom === currentCreche)) {
       menuCrecheSel.value = currentCreche;
     }
