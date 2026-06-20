@@ -2253,8 +2253,8 @@ textarea { resize: vertical; min-height: 72px; }
       <div style="font-size:12px;color:var(--ink3);margin-bottom:14px" id="modal-menu-date-label"></div>
       <div style="margin-bottom:16px;padding:12px;background:var(--accent-lt);border-radius:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <input type="file" id="menu-import-file" accept="image/*,.pdf,application/pdf" style="display:none" onchange="handleMenuImportFile(event)">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('menu-import-file').click()">📄 Importer depuis un PDF/photo</button>
-        <span id="menu-import-status" style="font-size:12px;color:var(--ink3)">Le menu du prestataire sera analysé par IA pour pré-remplir les champs ci-dessous — à vérifier avant d'enregistrer.</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('menu-import-file').click()">📄 Importer un planning de menus (PDF/photo)</button>
+        <span id="menu-import-status" style="font-size:12px;color:var(--ink3)">Le document peut couvrir un jour, une semaine ou plusieurs semaines — tous les jours détectés seront importés automatiquement.</span>
       </div>
       <div class="fi-row">
         <div class="fi-field"><label>Entrée</label><input type="text" id="menu-entree" placeholder="Ex : Salade de tomates"></div>
@@ -6365,7 +6365,10 @@ function openMenuModal() {
   if (mm) { mm.classList.add('open'); document.body.style.overflow = 'hidden'; }
 }
 
-// ── Import menu depuis PDF/photo (IA) ──────────────────────────────
+// ── Import planning de menus depuis PDF/photo (IA) ─────────────────
+// Gère un document d'un seul jour, d'une semaine, ou de plusieurs semaines
+// d'un coup (ex : grille mensuelle du prestataire avec sections
+// "Repas Grands" 18 mois-3 ans et "Repas Bébés" 6-18 mois séparées).
 function readFileAsBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -6373,6 +6376,31 @@ function readFileAsBase64(file) {
     reader.onerror = () => reject(new Error('Lecture du fichier impossible'));
     reader.readAsDataURL(file);
   });
+}
+
+async function upsertMenuJour(creche, date, m) {
+  const row = {
+    creche, date,
+    entree: m.entree || '',
+    plat: m.plat || '',
+    accompagnement: m.accompagnement || '',
+    dessert: m.dessert || '',
+    mixe: m.mixe || '',
+    gouter: m.gouter || '',
+    source: 'prestataire',
+  };
+  try {
+    const existing = await sbGet('menus', `creche=eq.${encodeURIComponent(creche)}&date=eq.${date}`);
+    if (Array.isArray(existing) && existing[0] && existing[0].id) {
+      await sbUpdate('menus', existing[0].id, row);
+    } else {
+      await sbInsert('menus', row);
+    }
+    return true;
+  } catch (e) {
+    console.error('[Menu import] upsert', date, e);
+    return false;
+  }
 }
 
 async function handleMenuImportFile(event) {
@@ -6388,9 +6416,9 @@ async function handleMenuImportFile(event) {
   };
 
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
-  const maxBytes = 15 * 1024 * 1024; // marge de sécurité (limite API ~32 Mo pour les docs)
+  const maxBytes = 25 * 1024 * 1024; // marge de sécurité (limite API pour les docs)
   if (file.size > maxBytes) {
-    setStatus('⚠ Fichier trop volumineux (max ~15 Mo)', true);
+    setStatus('⚠ Fichier trop volumineux (max ~25 Mo)', true);
     return;
   }
 
@@ -6407,58 +6435,81 @@ async function handleMenuImportFile(event) {
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
     : { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } };
 
-  const dateObj = transDate ? new Date(transDate) : new Date();
-  const jourLabel = dateObj.toLocaleDateString('fr-FR', { weekday: 'long' });
-  const dateLabel = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const prompt = `Voici un planning de menus transmis par un prestataire de restauration pour une crèche. Le document peut couvrir un seul jour, une semaine, ou plusieurs semaines à la suite (chaque semaine a généralement un en-tête du type "Semaine n°X du DD/MM/YY au DD/MM/YY").
 
-  const prompt = `Voici un menu transmis par un prestataire de restauration pour une crèche.
+Pour CHAQUE jour de semaine (lundi à vendredi) présent dans le document, extrait le menu :
+- "entree", "plat", "accompagnement", "dessert" et "gouter" : utilise la section "Repas Grands" (18 mois à 3 ans) pour le repas de midi, et "Goûter Grands" pour le goûter.
+- "mixe" : utilise la section "Repas Bébés" (6-18 mois), qui ne contient généralement qu'un seul plat mixé/mouliné pour ce jour.
 
-Je dois récupérer uniquement le menu prévu pour le jour suivant : ${jourLabel} ${dateLabel}.
-Si le document couvre plusieurs jours (menu de la semaine), repère précisément la colonne ou la ligne correspondant à ce jour-là — ne mélange pas avec un autre jour.
+Ignore les étiquettes thématiques éventuelles superposées sur certains jours (ex : "MARDI GRAS", "VÉGÉTARIEN") — ce ne sont pas des plats, continue d'extraire les vrais aliments listés ce jour-là.
 
-Réponds UNIQUEMENT en JSON valide, sans aucun texte avant ou après, avec exactement ce format :
-{"entree":"...","plat":"...","accompagnement":"...","dessert":"...","mixe":"...","gouter":"..."}
+Si un jour est marqué "Férié" (crèche fermée), crée quand même une entrée pour cette date mais avec tous les champs en chaîne vide "".
 
-- "entree" : entrée du repas de midi
-- "plat" : plat protéiné (viande/poisson/œuf...)
-- "accompagnement" : légumes/féculents
-- "dessert" : dessert du midi
-- "mixe" : version mixée/moulinée du repas pour les plus petits, si elle est précisée séparément (sinon laisser vide)
-- "gouter" : goûter de l'après-midi
+Calcule la date exacte de chaque jour (format YYYY-MM-DD) à partir de l'en-tête de semaine ("du DD/MM/YY au DD/MM/YY") : lundi = première date de la semaine, mardi = +1 jour, etc.
 
-Si une information n'apparaît pas dans le document pour ce jour précis, laisse la valeur en chaîne vide "". N'invente jamais une information absente du document.`;
+Réponds UNIQUEMENT en JSON valide, sans aucun texte avant ou après, avec une entrée par date, exactement sous ce format :
+{"2026-02-16":{"entree":"...","plat":"...","accompagnement":"...","dessert":"...","mixe":"...","gouter":"..."},"2026-02-17":{...}}
 
-  setStatus('✨ Claude analyse le document…');
+N'invente jamais une information absente du document.`;
+
+  setStatus('✨ Claude analyse le document (peut prendre un moment pour plusieurs semaines)…');
+  let menusParJour;
   try {
     const response = await fetch('https://claude-proxy.david-bucari.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 600,
+        max_tokens: 6000,
         messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: prompt }] }]
       })
     });
     const data = await response.json();
     const texte = data?.content?.[0]?.text || '';
     if (!texte) throw new Error(data?.error?.message || 'Réponse vide de l\'IA');
-
     const clean = texte.replace(/```json|```/g, '').trim();
-    const menu = JSON.parse(clean);
-
-    const setV = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
-    setV('menu-entree', menu.entree);
-    setV('menu-plat', menu.plat);
-    setV('menu-accompagnement', menu.accompagnement);
-    setV('menu-dessert', menu.dessert);
-    setV('menu-mixe', menu.mixe);
-    setV('menu-gouter', menu.gouter);
-
-    setStatus('✅ Champs pré-remplis — vérifiez avant d\'enregistrer');
+    menusParJour = JSON.parse(clean);
   } catch (e) {
     console.error('[Menu import IA]', e);
     setStatus('⚠ Échec de l\'extraction : ' + e.message, true);
+    return;
   }
+
+  const dates = Object.keys(menusParJour || {}).sort();
+  if (!dates.length) {
+    setStatus('⚠ Aucun jour détecté dans le document', true);
+    return;
+  }
+
+  setStatus(`💾 Enregistrement de ${dates.length} jour(s)…`);
+  const creche = getTransCreche();
+  let ok = 0, ignored = 0;
+  for (const date of dates) {
+    const m = menusParJour[date] || {};
+    const hasContent = m.entree || m.plat || m.accompagnement || m.dessert || m.mixe || m.gouter;
+    if (!hasContent) { ignored++; continue; }
+    const success = await upsertMenuJour(creche, date, m);
+    if (success) ok++;
+  }
+
+  // Mettre à jour les champs visibles si le jour actuellement affiché fait partie de l'import
+  if (transDate && menusParJour[transDate]) {
+    const m = menusParJour[transDate];
+    const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    setV('menu-entree', m.entree);
+    setV('menu-plat', m.plat);
+    setV('menu-accompagnement', m.accompagnement);
+    setV('menu-dessert', m.dessert);
+    setV('menu-mixe', m.mixe);
+    setV('menu-gouter', m.gouter);
+    try {
+      const refreshed = await sbGet('menus', `creche=eq.${encodeURIComponent(creche)}&date=eq.${transDate}`);
+      if (Array.isArray(refreshed) && refreshed[0]) TRANS_MENU = refreshed[0];
+    } catch(_) {}
+  }
+
+  setStatus(`✅ ${ok} jour(s) importé(s)${ignored ? `, ${ignored} ignoré(s) (fériés/vides)` : ''} pour ${creche}`);
+  showNotif(`✅ ${ok} jour(s) de menu importés pour ${creche}`);
 }
 
 async function saveMenu() {
