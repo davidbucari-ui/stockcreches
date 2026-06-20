@@ -8827,6 +8827,46 @@ function closeModalClick(e, id) {
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => { m.classList.remove('open'); document.body.style.overflow = ''; }); });
 
+// ── Fix rendu plein écran ──────────────────────────────────────────────
+// Bug navigateur connu : en plein écran (Fullscreen API), l'effet de flou
+// (backdrop-filter) des fenêtres modales ne se repeint pas toujours
+// immédiatement à l'ouverture — elle reste invisible jusqu'à ce qu'un
+// reflow soit déclenché (ex: en quittant le plein écran). On force ce
+// reflow nous-mêmes dès qu'une modale s'ouvre pendant le plein écran,
+// pour toutes les modales actuelles et futures de l'app.
+(function() {
+  function forceModalRepaint(el) {
+    void el.offsetHeight; // force un reflow synchrone
+    el.style.opacity = '0.9999';
+    requestAnimationFrame(() => {
+      void el.offsetHeight;
+      el.style.opacity = '';
+    });
+  }
+  function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+  const modalRepaintObserver = new MutationObserver(mutations => {
+    if (!isFullscreen()) return;
+    mutations.forEach(mut => {
+      const el = mut.target;
+      if (el.classList && el.classList.contains('modal-overlay') && el.classList.contains('open')) {
+        forceModalRepaint(el);
+      }
+    });
+  });
+  function observeAllModals() {
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      modalRepaintObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', observeAllModals);
+  } else {
+    observeAllModals();
+  }
+})();
+
 // ─── SAVE ARTICLE ─────────────────────────────────────────────────────────
 async function saveArticle() {
   const nom = document.getElementById('f-nom').value.trim();
