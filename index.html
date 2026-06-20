@@ -5840,8 +5840,7 @@ let transSaveTimers = {};
 function getTransCreche() {
   const sel = document.getElementById('trans-creche-sel');
   if (sel && sel.value) return sel.value;
-  if (CRECHES_DATA && CRECHES_DATA.length) return CRECHES_DATA[0].nom;
-  return 'default';
+  return ''; // aucune structure sélectionnée — ne pas deviner
 }
 
 // ── Modèle de données ───────────────────────────────────────────
@@ -5948,12 +5947,19 @@ async function loadTransData() {
 }
 
 async function renderTransmissions() {
-  // Sélecteur crèche
+  // Sélecteur crèche — placeholder par défaut, pas de structure devinée
   const sel = document.getElementById('trans-creche-sel');
   if (sel && !sel.options.length) {
     const list = (CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom:'Crèche'}];
-    sel.innerHTML = list.map(c => `<option value="${transEsc(c.nom)}">${transEsc(c.nom)}</option>`).join('');
-    if (currentCreche && list.some(c => c.nom === currentCreche)) sel.value = currentCreche;
+    sel.innerHTML = '<option value="">— Sélectionner une structure —</option>' +
+      list.map(c => `<option value="${transEsc(c.nom)}">${transEsc(c.nom)}</option>`).join('');
+    // On ne pré-sélectionne que si le filtre global pointe sur UNE structure précise
+    // (pas "all" = Toutes les crèches, qui n'a pas d'équivalent ici)
+    if (currentCreche && currentCreche !== 'all' && list.some(c => c.nom === currentCreche)) {
+      sel.value = currentCreche;
+    } else {
+      sel.value = '';
+    }
   }
   // Date
   const dateEl = document.getElementById('trans-date');
@@ -5961,6 +5967,17 @@ async function renderTransmissions() {
   transDate = dateEl ? dateEl.value : todayISO();
 
   const listEl = document.getElementById('trans-list');
+  const menuBannerEl = document.getElementById('trans-menu-banner');
+
+  // Aucune structure choisie : on n'interroge pas Supabase, on invite au choix
+  if (!sel || !sel.value) {
+    if (menuBannerEl) menuBannerEl.innerHTML = '';
+    if (listEl) listEl.innerHTML = `<div style="padding:40px;text-align:center;color:var(--ink3)">
+      👆 Sélectionnez une structure pour afficher le cahier de transmissions
+    </div>`;
+    return;
+  }
+
   if (listEl) listEl.innerHTML = `<div style="padding:40px;text-align:center;color:var(--ink3)">Chargement…</div>`;
 
   await loadTransData();
@@ -6323,6 +6340,7 @@ function renderMenuBanner() {
 
 function openMenuModal() {
   const creche = getTransCreche();
+  if (!creche) { showNotif('⚠ Sélectionnez d\'abord une structure'); return; }
   const dateLabel = document.getElementById('modal-menu-date-label');
   if (dateLabel) dateLabel.textContent = `${creche} — ${new Date(transDate).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}`;
 
