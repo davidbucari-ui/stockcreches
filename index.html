@@ -12671,7 +12671,8 @@ function pePopulateCreches(selId) {
   const sel = document.getElementById(selId);
   if (!sel) return;
   const prev = sel.value;
-  sel.innerHTML = (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+  const placeholder = selId === 'pe-creche' ? '<option value="">— Sélectionner une structure —</option>' : '';
+  sel.innerHTML = placeholder + (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
   if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
 }
 
@@ -13269,6 +13270,12 @@ function renderPlanningIK() {
 function renderPlanningEquipe() {
   const grid = document.getElementById('pe-grid');
   if (!grid) return;
+  const crecheIdCheck = document.getElementById('pe-creche')?.value || '';
+  if (!crecheIdCheck) {
+    grid.innerHTML = '<div class="empty"><div class="icon">🏢</div><p>Sélectionnez une structure ci-dessus pour afficher le planning.</p></div>';
+    const lbl = document.getElementById('pe-week-label'); if (lbl) lbl.textContent = '';
+    return;
+  }
 
   const monday   = peGetMonday();
   const weekNum  = getISOWeekNumber(monday);
@@ -13387,6 +13394,12 @@ function renderPlanningEquipe() {
 function renderPlanningHebdo() {
   const grid = document.getElementById('ph-grid');
   if (!grid) return;
+  const crecheIdCheck = document.getElementById('pe-creche')?.value || '';
+  if (!crecheIdCheck) {
+    grid.innerHTML = '<div class="empty"><div class="icon">🏢</div><p>Sélectionnez une structure ci-dessus pour afficher le planning.</p></div>';
+    const lbl = document.getElementById('pe-week-label'); if (lbl) lbl.textContent = '';
+    return;
+  }
 
   const monday  = peGetMonday();
   const weekNum = getISOWeekNumber(monday);
@@ -13501,6 +13514,12 @@ function renderPlanningGantt() {
   if (!grid) return;
   grid.innerHTML = '';
   grid.removeAttribute('style');
+  const crecheIdCheck = document.getElementById('pe-creche')?.value || '';
+  if (!crecheIdCheck) {
+    grid.innerHTML = '<div class="empty"><div class="icon">🏢</div><p>Sélectionnez une structure ci-dessus pour afficher le planning.</p></div>';
+    const lbl = document.getElementById('pe-week-label'); if (lbl) lbl.textContent = '';
+    return;
+  }
 
   const monday   = peGetMonday();
   const weekNum  = getISOWeekNumber(monday);
@@ -13727,11 +13746,12 @@ let peModalHoraireIdx = null;
 let peModalJour = null;
 
 function openModalPE(horaireIdx, jour, id) {
+  const crecheId = document.getElementById('pe-creche')?.value || '';
+  if (!crecheId) { showNotif('⚠ Sélectionnez d\'abord une structure'); return; }
   peEditingId = id || null;
   peModalHoraireIdx = horaireIdx;
   peModalJour = jour;
 
-  const crecheId = document.getElementById('pe-creche')?.value || '';
   const week     = peGetWeek(crecheId);
   const horaires = getPlanningHoraires();
 
@@ -13876,11 +13896,12 @@ function exportPlanningPDF() {
   // Si on est sur l'onglet Coordinateur → export dédié
   if (pePlanningTab === 'coord') { exportCoordPDF(); return; }
   if (pePlanningTab === 'ik')    { showNotif('⚠ Export PDF non disponible pour les Frais IK'); return; }
+  const crecheId = document.getElementById('pe-creche')?.value || '';
+  if (!crecheId) { showNotif('⚠ Sélectionnez d\'abord une structure'); return; }
   const monday   = peGetMonday();
   const weekNum  = getISOWeekNumber(monday);
   const fmtD     = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
   const endFri   = new Date(monday); endFri.setDate(monday.getDate()+4);
-  const crecheId = document.getElementById('pe-creche')?.value || '';
   const title    = `Planning ${crecheId ? '— ' + crecheId + ' — ' : ''}Semaine ${weekNum} · ${fmtD(monday)} au ${fmtD(endFri)}`;
   // Cibler le conteneur de l'onglet actif (Gantt, Par salarié, Gantt visuel)
   const tab    = (typeof pePlanningTab !== 'undefined' && pePlanningTab) || 'gantt';
