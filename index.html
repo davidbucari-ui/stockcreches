@@ -9186,7 +9186,26 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.que
 // reflow soit déclenché (ex: en quittant le plein écran). On force ce
 // reflow nous-mêmes dès qu'une modale s'ouvre pendant le plein écran,
 // pour toutes les modales actuelles et futures de l'app.
+//
+// Second bug, plus grave : la plupart des modales (#modal-commande,
+// #modal-fournisseur, #modal-detail, etc.) sont déclarées dans le HTML
+// APRÈS la fermeture de <div class="app">. Or c'est .app qui devient
+// l'élément plein écran (toggleFullscreen). Le navigateur ne rend QUE le
+// sous-arbre de l'élément plein écran : tout ce qui est en dehors de .app
+// (donc presque toutes les modales) reste invisible quoi qu'il arrive,
+// même avec la classe .open — d'où le bouton "+ Nouvelle commande" qui
+// semblait ne rien faire en plein écran. On déplace une bonne fois pour
+// toutes ces modales à l'intérieur de .app (sans impact hors plein écran
+// car .modal-overlay est en position:fixed et .app n'a ni transform ni
+// filter, donc le positionnement reste relatif à la fenêtre).
 (function() {
+  function relocateModalsIntoApp() {
+    const app = document.querySelector('.app');
+    if (!app) return;
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      if (!app.contains(el)) app.appendChild(el);
+    });
+  }
   function forceModalRepaint(el) {
     void el.offsetHeight; // force un reflow synchrone
     el.style.opacity = '0.9999';
@@ -9208,6 +9227,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.que
     });
   });
   function observeAllModals() {
+    relocateModalsIntoApp();
     document.querySelectorAll('.modal-overlay').forEach(el => {
       modalRepaintObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
     });
@@ -9217,6 +9237,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.que
   } else {
     observeAllModals();
   }
+  // Au cas où une modale serait injectée dynamiquement plus tard
+  document.addEventListener('fullscreenchange', relocateModalsIntoApp);
+  document.addEventListener('webkitfullscreenchange', relocateModalsIntoApp);
 })();
 
 // ─── SAVE ARTICLE ─────────────────────────────────────────────────────────
@@ -9338,9 +9361,13 @@ async function saveCommande_db() {
   showNotif('🛒 Commande enregistrée');
 }
 
+let livraisonPhotos = {};
+
 async function markLivree(id) {
   const c = COMMANDES.find(x => x.id === id);
   if (!c) return;
+
+  livraisonPhotos = {}; // réinitialise les photos de réception pour cette commande
 
   // Parser les articles de la commande pour proposer la mise à jour des stocks
   const lignes = (c.articles || '').split('\n').filter(Boolean);
@@ -9364,7 +9391,9 @@ async function markLivree(id) {
   });
 
   // Construire le modal de confirmation
-  const lignesHtml = updates.map((u, i) => `
+  const lignesHtml = updates.map((u, i) => {
+    const photoExistante = u.article && u.article.photo;
+    return `
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;
                 padding:8px 0;border-bottom:1px solid var(--border)">
       <div>
@@ -9372,12 +9401,24 @@ async function markLivree(id) {
         ${u.article
           ? `<div style="font-size:11px;color:var(--green)">✅ Trouvé : ${u.article.nom} (stock actuel : ${u.article.stock})</div>`
           : `<div style="font-size:11px;color:var(--accent)">🆕 Sera créé automatiquement dans l'inventaire de ${c.creche}</div>`}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <input type="file" id="livraison-photo-input-${i}" accept="image/*" style="display:none" onchange="handleLivraisonPhoto(event, ${i})">
+          <input type="file" id="livraison-photo-camera-${i}" accept="image/*" capture="environment" style="display:none" onchange="handleLivraisonPhoto(event, ${i})">
+          <img id="livraison-photo-preview-${i}" src="${photoExistante || ''}"
+               style="display:${photoExistante ? 'inline-block' : 'none'};width:32px;height:32px;border-radius:6px;object-fit:cover;border:1px solid var(--border)">
+          <button type="button" onclick="document.getElementById('livraison-photo-camera-${i}').click()"
+            style="padding:4px 8px;border:none;border-radius:6px;background:var(--accent-lt);color:var(--accent);font-family:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px">📸 Photo</button>
+          <button type="button" onclick="document.getElementById('livraison-photo-input-${i}').click()"
+            style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);font-family:inherit;font-size:11px;cursor:pointer;color:var(--ink2);display:flex;align-items:center;gap:4px">🗂 Importer</button>
+          <span id="livraison-photo-label-${i}" style="font-size:11px;color:var(--ink3)">${photoExistante ? '✅ Photo existante' : ''}</span>
+        </div>
       </div>
       <div style="font-size:12px;color:var(--ink2)">Qté reçue :</div>
       <input type="number" id="livraison-qty-${i}" value="${u.qty}" min="0"
              style="width:60px;padding:4px 8px;border:1px solid var(--border);
                     border-radius:6px;font-family:inherit;font-size:13px;text-align:center">
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   document.getElementById('modal-detail').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -9392,6 +9433,23 @@ async function markLivree(id) {
     <button class="btn btn-secondary" onclick="closeModal('modal-detail')">Annuler</button>
     <button class="btn btn-primary" onclick="confirmerLivraison(${id})">✅ Confirmer la réception</button>
   `;
+}
+
+function handleLivraisonPhoto(event, i) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showNotif('⚠ Photo trop grande — max 5 Mo'); return; }
+  if (!file.type.startsWith('image/')) { showNotif('⚠ Format non supporté — JPG, PNG ou WEBP'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    livraisonPhotos[i] = { data: e.target.result, name: file.name };
+    const img = document.getElementById(`livraison-photo-preview-${i}`);
+    const lbl = document.getElementById(`livraison-photo-label-${i}`);
+    if (img) { img.src = e.target.result; img.style.display = 'inline-block'; }
+    if (lbl) lbl.textContent = '✅ Photo ajoutée';
+    showNotif('📷 Photo ajoutée à l\'article');
+  };
+  reader.readAsDataURL(file);
 }
 
 async function confirmerLivraison(id) {
@@ -9426,10 +9484,13 @@ async function confirmerLivraison(id) {
     const qty = input ? parseInt(input.value) || 0 : art.qty;
     if (qty <= 0) continue;
 
+    const photo = livraisonPhotos[i] || null;
+
     let article = ARTICLES.find(a =>
       a.creche === c.creche &&
       a.nom.toLowerCase().includes(art.nom.toLowerCase().substring(0, 10))
     );
+    let isNewArticle = false;
 
     if (!article) {
       article = {
@@ -9444,27 +9505,39 @@ async function confirmerLivraison(id) {
         fourn: art.fourn || '',
         notes: '',
         url: art.url || '',
-        photo: null,
+        photo: photo ? photo.data : null,
+        photoName: photo ? photo.name : null,
         date_achat: c.livraison || c.date || new Date().toISOString().split('T')[0],
         etat_override: null,
       };
       ARTICLES.push(article);
       created++;
+      isNewArticle = true;
     } else {
       article.stock += qty;
       if (art.prix > 0 && article.prix === 0) article.prix = art.prix;
       if (art.url && !article.url) article.url = art.url;
       if (art.fourn && !article.fourn) article.fourn = art.fourn;
+      if (photo) { article.photo = photo.data; article.photoName = photo.name; } // photo prise à réception
       // Mise à jour date d'achat → état repart à Neuf
       article.date_achat = c.livraison || c.date || new Date().toISOString().split('T')[0];
       article.etat_override = null;
       updated++;
     }
     addHisto('entrée', article.nom, qty, article.creche, 'Vous', `Réception ${c.bc}`);
+
+    // ── Synchronisation Supabase (était totalement absente → cause des commandes
+    // qui "revenaient en cours" puis disparaissaient après le polling cloud) ──
+    if (!IS_LOCAL) {
+      await saveArticleDB(article, isNewArticle).catch(()=>{});
+      await saveHistoDB(HISTORIQUE[0]).catch(()=>{});
+    }
   }
 
   c.status = 'livrees';
   saveData();
+  if (!IS_LOCAL) await updateCommandeDB(c).catch(()=>{});
+  livraisonPhotos = {};
   closeModal('modal-detail');
   renderActiveInvTable();
   renderCommandes();
@@ -9567,7 +9640,7 @@ function onUpdateCommande(id) {
   resetCommandeModal();
   saveData();
   closeModal('modal-commande');
-  if (!IS_LOCAL) saveCommandeDB(COMMANDES[COMMANDES.length-1]).catch(()=>{});
+  if (!IS_LOCAL) updateCommandeDB(c).catch(()=>{});
   renderCommandes();
   showNotif('✅ Commande mise à jour');
 }
@@ -11192,9 +11265,9 @@ async function syncFromCloud() {
         return fromCloud;
       }));
     }
-    if (Array.isArray(cmds))   COMMANDES.splice(0,    COMMANDES.length,    ...cmds.map(rowToCommande));
-    if (Array.isArray(fourns)) FOURNISSEURS.splice(0, FOURNISSEURS.length, ...fourns.map(rowToFournisseur));
-    if (Array.isArray(histos)) HISTORIQUE.splice(0,   HISTORIQUE.length,   ...histos.map(rowToHisto));
+    if (Array.isArray(cmds)   && cmds.length   > 0) COMMANDES.splice(0,    COMMANDES.length,    ...cmds.map(rowToCommande));
+    if (Array.isArray(fourns) && fourns.length > 0) FOURNISSEURS.splice(0, FOURNISSEURS.length, ...fourns.map(rowToFournisseur));
+    if (Array.isArray(histos) && histos.length > 0) HISTORIQUE.splice(0,   HISTORIQUE.length,   ...histos.map(rowToHisto));
     if (Array.isArray(univs)) {
       const mapped = univs.map(u => ({ ...u, desc: u.description || u.desc || '' }));
       UNIVERS.splice(0, UNIVERS.length, ...mapped);
