@@ -12872,10 +12872,10 @@ async function renderRecrutements() {
           ${r.statut === 'pourvu' ? (
             recrutementsAvecContrat.has(r.id)
               ? `<span class="badge badge-green" style="white-space:nowrap">✓ Contrat créé</span>`
-              : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement(${r.id})" title="Créer le contrat à partir de ce recrutement">📄 Contrat</button>`
+              : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement('${r.id}')" title="Créer le contrat à partir de ce recrutement">📄 Contrat</button>`
           ) : ''}
-          <button class="btn btn-secondary btn-sm" onclick="openModalRh('recrutement',${r.id})">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteRh('recrutements',${r.id},'recrutement')">🗑</button>
+          <button class="btn btn-secondary btn-sm" onclick="openModalRh('recrutement','${r.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRh('recrutements','${r.id}','recrutement')">🗑</button>
         </div></td>
       </tr>`)
     );
@@ -13012,8 +13012,8 @@ async function renderContrats() {
         <td>${fmtDate(r.date_fin)}</td>
         <td>${r.temps_travail || '—'}</td>
         <td><div class="action-btns">
-          <button class="btn btn-secondary btn-sm" onclick="openModalRh('contrat',${r.id})">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteRh('contrats',${r.id},'contrats')">🗑</button>
+          <button class="btn btn-secondary btn-sm" onclick="openModalRh('contrat','${r.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRh('contrats','${r.id}','contrats')">🗑</button>
         </div></td>
       </tr>`)
     );
@@ -13086,8 +13086,8 @@ async function renderConges() {
         <td>${rhBadge(RH_LABEL_CONGE[r.statut] || r.statut, RH_STATUT_CONGE[r.statut] || 'gray')}</td>
         <td>${r.solde_cp != null ? r.solde_cp + ' j' : '—'}</td>
         <td><div class="action-btns">
-          <button class="btn btn-secondary btn-sm" onclick="openModalRh('conge',${r.id})">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteRh('conges',${r.id},'conges')">🗑</button>
+          <button class="btn btn-secondary btn-sm" onclick="openModalRh('conge','${r.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRh('conges','${r.id}','conges')">🗑</button>
         </div></td>
       </tr>`)
     );
@@ -13136,8 +13136,8 @@ async function renderFormations() {
         <td style="color:${isExpiringSoon(r.renouvellement) ? 'var(--amber)' : 'inherit'}">${fmtDate(r.renouvellement)}</td>
         <td>${r.attestation_url ? `<a href="${r.attestation_url}" target="_blank" style="color:var(--accent);font-size:12px">📎 Voir</a>` : '—'}</td>
         <td><div class="action-btns">
-          <button class="btn btn-secondary btn-sm" onclick="openModalRh('formation',${r.id})">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteRh('formations_rh',${r.id},'formations')">🗑</button>
+          <button class="btn btn-secondary btn-sm" onclick="openModalRh('formation','${r.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRh('formations_rh','${r.id}','formations')">🗑</button>
         </div></td>
       </tr>`)
     );
