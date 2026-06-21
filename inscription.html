@@ -357,14 +357,14 @@
         </div>
         <div class="field">
           <label>Date de naissance <span class="req">*</span></label>
-          <input type="date" id="e-ddn">
+          <input type="date" id="e-ddn" onchange="calcTrancheAuto()">
         </div>
       </div>
       <div class="row">
         <div class="field">
-          <label>Tranche d'âge <span class="req">*</span></label>
-          <select id="e-tranche">
-            <option value="">— Sélectionner —</option>
+          <label>Tranche d'âge</label>
+          <select id="e-tranche" disabled style="background:var(--accent-lt);color:var(--ink2);cursor:not-allowed;font-weight:600">
+            <option value="">— Renseignez la date de naissance —</option>
             <option value="2.5-6">2½ – 6 mois</option>
             <option value="6-12">6 – 12 mois</option>
             <option value="12-18">12 – 18 mois</option>
@@ -372,6 +372,7 @@
             <option value="24-30">24 – 30 mois</option>
             <option value="30-36">30 – 36 mois</option>
           </select>
+          <span class="hint">Calculée automatiquement à partir de la date de naissance</span>
         </div>
         <div class="field">
           <label>Lieu de naissance</label>
@@ -389,24 +390,19 @@
           <span class="hint">Indiqué sur votre attestation CAF</span>
         </div>
         <div class="field">
-          <label>Type de contrat <span class="req">*</span></label>
-          <select id="e-contrat-caf">
-            <option value="PSU">PSU — Prestation de Service Unique</option>
-            <option value="PAJE">PAJE — Prestation d'Accueil du Jeune Enfant</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div class="field">
           <label>Quotient familial</label>
           <input type="number" id="e-qf" placeholder="Ex : 1240">
           <span class="hint">Revenu mensuel net / nombre de parts</span>
         </div>
+      </div>
+      <div class="row solo">
         <div class="field">
           <label>N° sécurité sociale (enfant)</label>
           <input type="text" id="e-nss" placeholder="15 chiffres">
         </div>
       </div>
+      <input type="hidden" id="e-contrat-caf" value="">
+      <div style="font-size:11px;color:var(--ink3);line-height:1.5;padding-top:2px">Le type de contrat (PSU / PAJE) sera déterminé par la crèche lors de la finalisation de l'inscription.</div>
     </div>
 
     <div class="card">
@@ -615,23 +611,7 @@
 
     <div class="card">
       <div class="card-title">Rythme d'accueil</div>
-      <div class="row">
-        <div class="field">
-          <label>Nombre de jours / semaine</label>
-          <select id="a-jours">
-            <option value="1">1 jour</option>
-            <option value="2">2 jours</option>
-            <option value="3">3 jours</option>
-            <option value="4">4 jours</option>
-            <option value="5" selected>5 jours</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Heures / semaine estimées</label>
-          <input type="number" id="a-heures" placeholder="Ex : 40" min="1" max="50">
-        </div>
-      </div>
-      <div style="margin-top:8px">
+      <div style="margin-bottom:16px">
         <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:10px">Jours de présence habituels</label>
         <div class="jours-grid" id="jours-grid">
           <button type="button" class="jour-btn" data-jour="0" onclick="toggleJour(this)">Lundi</button>
@@ -641,15 +621,32 @@
           <button type="button" class="jour-btn" data-jour="4" onclick="toggleJour(this)">Vendredi</button>
         </div>
       </div>
+      <div class="row">
+        <div class="field">
+          <label>Nombre de jours / semaine</label>
+          <input type="text" id="a-jours" value="0" disabled style="background:var(--accent-lt);color:var(--ink2);cursor:not-allowed;font-weight:700;text-align:center">
+          <span class="hint">Calculé automatiquement selon les jours cochés ci-dessus</span>
+        </div>
+        <div class="field">
+          <label>Heures / semaine estimées</label>
+          <input type="number" id="a-heures" placeholder="Ex : 40" min="1" max="50">
+        </div>
+      </div>
     </div>
 
     <div class="card">
       <div class="card-title">Horaires habituels</div>
-      <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Indiquez les horaires d'arrivée et de départ pour chaque jour sélectionné ci-dessus.</p>
-      <div id="horaires-par-jour">
-        <div style="color:var(--ink3);font-size:13px;padding:8px 0">Sélectionnez d'abord les jours de présence ci-dessus.</div>
+      <div class="row">
+        <div class="field">
+          <label>Heure d'arrivée habituelle</label>
+          <input type="time" id="a-heure-arrivee" value="08:00">
+        </div>
+        <div class="field">
+          <label>Heure de départ habituelle</label>
+          <input type="time" id="a-heure-depart" value="18:00">
+        </div>
       </div>
-      <div class="row solo" style="margin-top:14px">
+      <div class="row solo">
         <div class="field">
           <label>Informations complémentaires</label>
           <textarea id="a-notes" rows="3" placeholder="Besoins particuliers, contraintes horaires..."></textarea>
@@ -715,6 +712,32 @@ let currentStep = 1;
 let referentsData = [];
 let joursSelectionnes = [];
 
+// ── Tranche d'âge automatique (à partir de la date de naissance) ─────────
+const TRANCHES_BOUNDS = [
+  { val:'2.5-6',  min:2.5,  max:6  },
+  { val:'6-12',   min:6,    max:12 },
+  { val:'12-18',  min:12,   max:18 },
+  { val:'18-24',  min:18,   max:24 },
+  { val:'24-30',  min:24,   max:30 },
+  { val:'30-36',  min:30,   max:36 },
+];
+
+function calcTrancheAuto() {
+  const ddnVal = document.getElementById('e-ddn')?.value;
+  const sel = document.getElementById('e-tranche');
+  if (!sel) return;
+  if (!ddnVal) { sel.value = ''; return; }
+
+  const d = new Date(ddnVal), now = new Date();
+  let mois = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+  if (now.getDate() < d.getDate()) mois -= 1;
+  if (mois < 0) mois = 0;
+
+  let match = TRANCHES_BOUNDS.find(t => mois >= t.min && mois < t.max);
+  if (!match) match = mois < TRANCHES_BOUNDS[0].min ? TRANCHES_BOUNDS[0] : TRANCHES_BOUNDS[TRANCHES_BOUNDS.length - 1];
+  sel.value = match.val;
+}
+
 // ── Navigation ──────────────────────────────────────────
 function showStep(n) {
   // Cacher toutes les sections par inline style
@@ -753,7 +776,7 @@ function prevStep(from) {
 // ── Validation ──────────────────────────────────────────
 function validateStep(step) {
   const required = {
-    1: ['e-prenom', 'e-nom', 'e-ddn', 'e-tranche'],
+    1: ['e-prenom', 'e-nom', 'e-ddn'],
     2: ['p1-prenom', 'p1-nom', 'p1-tel'],
     3: [],
     4: [],
@@ -820,8 +843,6 @@ function renderReferentForms() {
 }
 
 // ── Jours ───────────────────────────────────────────────
-const JOURS_NOMS_INS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
-
 function toggleJour(btn) {
   btn.classList.toggle('selected');
   const j = parseInt(btn.dataset.jour);
@@ -830,66 +851,12 @@ function toggleJour(btn) {
   } else {
     joursSelectionnes = joursSelectionnes.filter(x => x !== j);
   }
-  renderHorairesInscription();
+  updateJoursCount();
 }
 
-function renderHorairesInscription() {
-  const el = document.getElementById('horaires-par-jour');
-  if (!el) return;
-  const sorted = [...joursSelectionnes].sort();
-  if (!sorted.length) {
-    el.innerHTML = '<div style="color:#8A8580;font-size:13px;padding:8px 0">Sélectionnez d\'abord les jours de présence ci-dessus.</div>';
-    return;
-  }
-  // Préserver les valeurs existantes
-  const prev = {};
-  sorted.forEach(j => {
-    const d = document.getElementById('ins-debut-'+j);
-    const f = document.getElementById('ins-fin-'+j);
-    if (d) prev[j] = { debut: d.value, fin: f ? f.value : '' };
-  });
-
-  const inpStyle = 'width:100%;padding:8px 10px;border:1px solid #E3DED7;border-radius:9px;font-size:14px;font-family:inherit;background:#F0EDE8;color:#1C1917';
-  el.innerHTML = `
-    <div style="display:grid;grid-template-columns:90px 1fr 1fr 70px;gap:10px;padding-bottom:6px;border-bottom:2px solid #E3DED7;margin-bottom:4px">
-      <div style="font-size:10px;font-weight:700;color:#8A8580;text-transform:uppercase">Jour</div>
-      <div style="font-size:10px;font-weight:700;color:#8A8580;text-transform:uppercase">Arrivée</div>
-      <div style="font-size:10px;font-weight:700;color:#8A8580;text-transform:uppercase">Départ</div>
-      <div style="font-size:10px;font-weight:700;color:#8A8580;text-transform:uppercase;text-align:center">Total</div>
-    </div>` +
-    sorted.map(j => {
-      const debut = prev[j]?.debut || '08:00';
-      const fin   = prev[j]?.fin   || '17:00';
-      return `<div style="display:grid;grid-template-columns:90px 1fr 1fr 70px;gap:10px;align-items:end;padding:8px 0;border-bottom:1px solid #E3DED7">
-        <div style="font-size:13px;font-weight:600;padding-bottom:4px">${JOURS_NOMS_INS[j]}</div>
-        <div><label style="font-size:10.5px;font-weight:700;color:#8A8580;text-transform:uppercase;display:block;margin-bottom:4px">Arrivée</label>
-          <input type="time" id="ins-debut-${j}" value="${debut}" oninput="updateTotalJour(${j})" style="${inpStyle}"></div>
-        <div><label style="font-size:10.5px;font-weight:700;color:#8A8580;text-transform:uppercase;display:block;margin-bottom:4px">Départ</label>
-          <input type="time" id="ins-fin-${j}" value="${fin}" oninput="updateTotalJour(${j})" style="${inpStyle}"></div>
-        <div style="text-align:center">
-          <div style="font-size:9px;font-weight:700;color:#8A8580;text-transform:uppercase;margin-bottom:4px">Total</div>
-          <div id="ins-total-${j}" style="font-size:15px;font-weight:800">—</div>
-        </div>
-      </div>`;
-    }).join('');
-
-  sorted.forEach(j => updateTotalJour(j));
-}
-
-function updateTotalJour(j) {
-  const debut = document.getElementById('ins-debut-'+j)?.value;
-  const fin   = document.getElementById('ins-fin-'+j)?.value;
-  const el    = document.getElementById('ins-total-'+j);
-  if (!el) return;
-  if (debut && fin) {
-    const [dh,dm] = debut.split(':').map(Number);
-    const [fh,fm] = fin.split(':').map(Number);
-    const mins = (fh*60+fm)-(dh*60+dm);
-    if (mins > 0) {
-      const h = Math.floor(mins/60), m = mins%60;
-      el.textContent = h+'h'+(m ? String(m).padStart(2,'0') : '');
-    } else { el.textContent = '—'; }
-  }
+function updateJoursCount() {
+  const el = document.getElementById('a-jours');
+  if (el) el.value = joursSelectionnes.length;
 }
 
 // ── Récap ───────────────────────────────────────────────
@@ -907,7 +874,6 @@ function buildRecap() {
         ['Prénom / Nom', v('e-prenom') + ' ' + v('e-nom')],
         ['Date de naissance', v('e-ddn') ? new Date(v('e-ddn')).toLocaleDateString('fr-FR') : '—'],
         ['Tranche d\'âge', TRANCHES[v('e-tranche')] || '—'],
-        ['Contrat CAF', v('e-contrat-caf')],
         ['N° allocataire CAF', v('e-num-caf') || '—'],
         ['Quotient familial', v('e-qf') || '—'],
         ['Allergies', v('e-allergies') || 'Aucune connue'],
@@ -976,15 +942,6 @@ function telecharger() {
       jours: parseInt(v('a-jours')) || 5,
       heures: parseInt(v('a-heures')) || 40,
       jours_presence: joursSelectionnes,
-      horaires_detail: (() => {
-        const h = {};
-        joursSelectionnes.forEach(j => {
-          const debut = document.getElementById('ins-debut-'+j)?.value;
-          const fin   = document.getElementById('ins-fin-'+j)?.value;
-          if (debut || fin) h[j] = { debut: debut||'', fin: fin||'' };
-        });
-        return h;
-      })(),
       notes_libres: v('a-notes'),
     },
     parent1: {
