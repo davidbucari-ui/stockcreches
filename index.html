@@ -1702,14 +1702,24 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <div id="fam-view-planning" style="display:none">
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button id="fam-planning-subtab-cartes" onclick="switchFamPlanningView('cartes')"
+              style="padding:7px 14px;border-radius:20px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🗂 Vue par jour</button>
+            <button id="fam-planning-subtab-gantt" onclick="switchFamPlanningView('gantt')"
+              style="padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--ink3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 Vue Gantt</button>
+          </div>
           <div id="fam-planning-grid"></div>
+          <div id="fam-planning-gantt-wrap" style="display:none">
+            <div id="fam-planning-gantt-pills" style="display:flex;gap:8px;margin-bottom:16px"></div>
+            <div id="fam-planning-gantt"></div>
+          </div>
         </div>
 
         <div id="fam-view-berceaux" style="display:none">
           <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
             <button class="btn btn-primary" onclick="openModalBerceau(null)">+ Ajouter un berceau</button>
           </div>
-          <div id="fam-berceaux-grid"></div>
+          <div id="fam-berceaux-grid"></div></div>
         </div>
 
         <div id="fam-view-financement" style="display:none">
@@ -4664,6 +4674,7 @@ function renderFamilles() {
   renderFamillesKPI();
   renderFamillesList();
   renderFamillesPlanningGlobal();
+  if (document.getElementById('fam-planning-gantt-wrap')?.style.display !== 'none') renderFamillesPlanningGantt();
   renderFamillesBerceaux();
   renderFamillesFinancement();
 }
@@ -4878,6 +4889,168 @@ function renderFamillesPlanningGlobal() {
     }).join('')}
   </div>
   <div style="font-size:11px;color:var(--ink3);margin-top:14px;line-height:1.5">Le nombre de pros minimum est calculé sur l'effectif simultané le plus chargé de la journée (et non le total d'enfants accueillis ce jour), selon l'option d'encadrement choisie dans les paramètres.</div>`;
+}
+
+// ── Vue Gantt enfants ─────────────────────────────────────────────
+let famGanttDay = -1; // -1 = jour courant (lundi si week-end)
+
+function switchFamPlanningView(view) {
+  const cartesBtn = document.getElementById('fam-planning-subtab-cartes');
+  const ganttBtn  = document.getElementById('fam-planning-subtab-gantt');
+  const cartesEl  = document.getElementById('fam-planning-grid');
+  const ganttEl   = document.getElementById('fam-planning-gantt-wrap');
+  const isCartes  = view === 'cartes';
+  if (cartesBtn) { cartesBtn.style.background = isCartes ? 'var(--accent)' : 'var(--surface2)'; cartesBtn.style.borderColor = isCartes ? 'var(--accent)' : 'var(--border)'; cartesBtn.style.color = isCartes ? '#fff' : 'var(--ink3)'; }
+  if (ganttBtn)  { ganttBtn.style.background  = !isCartes ? 'var(--accent)' : 'var(--surface2)'; ganttBtn.style.borderColor  = !isCartes ? 'var(--accent)' : 'var(--border)'; ganttBtn.style.color  = !isCartes ? '#fff' : 'var(--ink3)'; }
+  if (cartesEl) cartesEl.style.display = isCartes ? '' : 'none';
+  if (ganttEl)  ganttEl.style.display  = isCartes ? 'none' : '';
+  if (!isCartes) renderFamillesPlanningGantt();
+}
+
+function renderFamillesPlanningGantt() {
+  const pillsEl = document.getElementById('fam-planning-gantt-pills');
+  const grid = document.getElementById('fam-planning-gantt');
+  if (!grid) return;
+  const crecheId = getCrecheId();
+
+  if (crecheId === '__all__') {
+    if (pillsEl) pillsEl.innerHTML = '';
+    grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:40px;margin-bottom:12px">🏘</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Sélectionnez une crèche</div>
+    </div>`;
+    return;
+  }
+
+  const today = new Date();
+  if (famGanttDay === -1) {
+    const d = today.getDay();
+    famGanttDay = (d >= 1 && d <= 5) ? d - 1 : 0;
+  }
+
+  if (pillsEl) {
+    pillsEl.innerHTML = JOURS_NOMS.map((nom, i) => {
+      const isActive = famGanttDay === i;
+      return `<button onclick="famGanttDay=${i};renderFamillesPlanningGantt()"
+        style="padding:7px 14px;border-radius:20px;border:1.5px solid ${isActive ? 'var(--accent)' : 'var(--border)'};
+               background:${isActive ? 'var(--accent)' : 'var(--surface2)'};color:${isActive ? '#fff' : 'var(--ink)'};
+               font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s">${nom}</button>`;
+    }).join('');
+  }
+
+  const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const option = prefs.optionEncadrement || 'NM8M';
+
+  const presents = enfants
+    .filter(e => (e.jours_presence || []).includes(famGanttDay))
+    .map(e => {
+      const hd = (e.horaires_detail || {})[famGanttDay] || {};
+      return { e, nm: isNonMarcheur(e.type), debut: hd.debut || '08:00', fin: hd.fin || '17:00' };
+    })
+    .sort((a, b) => (a.debut || '').localeCompare(b.debut || ''));
+
+  if (!presents.length) {
+    grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:32px;margin-bottom:10px">📅</div>
+      <div style="font-weight:700;font-size:15px">Aucun enfant présent ce jour</div>
+    </div>`;
+    return;
+  }
+
+  const T_START = 7, T_END = 19, T_TOTAL = T_END - T_START;
+  const ROW_H = 44, LABEL_W = 150;
+  const startMin = T_START * 60, endMin = T_END * 60, totalMin = endMin - startMin;
+  const fmtHHMM = s => { if (!s) return null; const [h, m] = s.split(':').map(Number); return h * 60 + (m || 0); };
+
+  const hoursHeader = Array.from({ length: T_TOTAL + 1 }, (_, i) => {
+    const h = T_START + i;
+    const left = (i / T_TOTAL * 100).toFixed(3);
+    return `<div style="position:absolute;left:calc(${LABEL_W}px + ${left}% * ((100% - ${LABEL_W}px) / 100%));top:0;font-size:10px;font-weight:700;color:var(--ink3);padding-top:6px;transform:translateX(-50%)">${h}h</div>`;
+  }).join('');
+
+  const gridLines = Array.from({ length: T_TOTAL + 1 }, (_, i) => {
+    const leftPct = (i / T_TOTAL * 100).toFixed(3);
+    return `<div style="position:absolute;left:calc(${leftPct}% * ((100% - ${LABEL_W}px) / 100%));top:0;bottom:0;width:1px;background:var(--border)"></div>`;
+  }).join('');
+
+  const tauxH = 36;
+  const totalH = presents.length * ROW_H + 28 + tauxH;
+
+  const rows = presents.map((p, pi) => {
+    const top = 28 + pi * ROW_H;
+    const c = getTrancheColor(p.e.type);
+    const initials = ((p.e.prenom || '')[0] || '') + ((p.e.nom || '')[0] || '');
+    const debutMin = fmtHHMM(p.debut), finMin = fmtHHMM(p.fin);
+    const openFn = `(function(){var sel=document.getElementById('fam-creche-sel');if(sel)sel.value='${crecheId}';openFicheEnfant('${p.e.id}');})()`;
+
+    const labelEl = `<div onclick="${openFn}" style="position:absolute;left:0;top:${top}px;width:${LABEL_W}px;height:${ROW_H}px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--border);background:var(--surface2);z-index:3;cursor:pointer">
+      <div style="width:26px;height:26px;border-radius:50%;background:${c.bg};color:${c.text};font-family:'Syne',sans-serif;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials.toUpperCase()}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.e.prenom} ${p.e.nom}</div>
+    </div>`;
+
+    const rowBg = `<div style="position:absolute;left:${LABEL_W}px;top:${top}px;right:0;height:${ROW_H}px;background:${pi % 2 === 0 ? 'var(--surface2)' : 'var(--bg)'};border-bottom:1px solid var(--border)"></div>`;
+
+    let bar = '';
+    if (debutMin !== null && finMin !== null && finMin > debutMin) {
+      const clampedDebut = Math.max(debutMin, startMin), clampedFin = Math.min(finMin, endMin);
+      const leftPct  = ((clampedDebut - startMin) / totalMin * 100).toFixed(4);
+      const widthPct = ((clampedFin - clampedDebut) / totalMin * 100).toFixed(4);
+      const barTop = top + 7, barH = ROW_H - 14;
+      bar = `<div onclick="${openFn}"
+        style="position:absolute;
+               left:calc(${LABEL_W}px + ${leftPct}% * ((100% - ${LABEL_W}px) / 100%));
+               top:${barTop}px;
+               width:calc(${widthPct}% * ((100% - ${LABEL_W}px) / 100%));
+               height:${barH}px;
+               background:${c.bg};border:1.5px solid ${c.border};border-radius:8px;
+               display:flex;align-items:center;justify-content:center;overflow:hidden;
+               cursor:pointer;transition:opacity 0.15s"
+        onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+        <div style="color:${c.text};padding:0 8px;font-size:11px;font-weight:700;white-space:nowrap">${p.debut}–${p.fin}</div>
+      </div>`;
+    }
+    return labelEl + rowBg + bar;
+  }).join('');
+
+  // Ligne "pros requis" par tranche de 30 min, sur la base de l'effectif réel à ce créneau
+  const tauxTop = 28 + presents.length * ROW_H;
+  const slots = Array.from({ length: T_TOTAL * 2 }, (_, i) => {
+    const slotStart = startMin + i * 30, slotEnd = slotStart + 30;
+    let nm = 0, m = 0;
+    presents.forEach(p => {
+      const d = fmtHHMM(p.debut), f = fmtHHMM(p.fin);
+      if (d !== null && f !== null && slotStart >= d && slotEnd <= f) { if (p.nm) nm++; else m++; }
+    });
+    const total = nm + m;
+    const pros = total ? Math.max((option === '6') ? Math.ceil(total / 6) : (Math.ceil(nm / 5) + Math.ceil(m / 8)), 2) : 0;
+    return { total, pros };
+  });
+
+  const maxPros = Math.max(1, ...slots.map(s => s.pros));
+  const tauxCells = slots.map((s, i) => {
+    const leftPct  = (i * 30 / totalMin * 100).toFixed(4);
+    const widthPct = (30 / totalMin * 100).toFixed(4);
+    const color = s.total === 0 ? 'var(--ink3)' : (s.pros >= maxPros ? '#BE123C' : '#15803D');
+    return `<div style="position:absolute;left:${leftPct}%;width:${widthPct}%;top:0;text-align:center;font-size:10px;font-weight:700;color:${color}">${s.total > 0 ? s.pros : ''}</div>`;
+  }).join('');
+
+  const tauxRow = `<div style="position:absolute;left:0;top:${tauxTop}px;width:${LABEL_W}px;height:${tauxH}px;display:flex;align-items:center;padding:0 10px;border-top:2px solid var(--border);background:var(--surface2);z-index:3">
+      <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.03em">Pros requis</div>
+    </div>
+    <div style="position:absolute;left:${LABEL_W}px;top:${tauxTop}px;right:0;height:${tauxH}px;border-top:2px solid var(--border);background:var(--bg)">
+      <div style="position:relative;height:100%">${tauxCells}</div>
+    </div>`;
+
+  grid.innerHTML = `<div style="overflow-x:auto">
+    <div style="position:relative;min-width:760px;height:${totalH}px">
+      <div style="position:absolute;left:${LABEL_W}px;top:0;right:0;height:28px">${hoursHeader}</div>
+      <div style="position:absolute;left:${LABEL_W}px;top:28px;right:0;bottom:${tauxH}px">${gridLines}</div>
+      ${rows}
+      ${tauxRow}
+    </div>
+  </div>
+  <div style="font-size:11px;color:var(--ink3);margin-top:12px;line-height:1.5">Chaque barre représente la présence d'un enfant ce jour-là. La ligne « Pros requis » indique, créneau par créneau (30 min), le nombre de professionnels nécessaires selon l'effectif réellement présent à ce moment précis.</div>`;
 }
 
 // ── Berceaux entreprise ───────────────────────────────────────────
