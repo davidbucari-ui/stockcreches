@@ -8243,8 +8243,17 @@ async function renderDashboardDirectrice(dateStr) {
 
   const equipeEl = document.getElementById('dash-dir-equipe');
   if (equipeEl) {
-    loadSalaries();
-    const actifsTous = SALARIES.filter(s => s.statut === 'actif');
+    // SALARIES est déclaré avec `let` dans un bloc de script plus loin dans
+    // le document : tant que ce bloc n'a pas encore été exécuté (premier rendu
+    // pendant init()), y référer directement déclenche une ReferenceError
+    // (temporal dead zone), même via typeof. On encaisse silencieusement et
+    // on retente au prochain rendu (l'utilisateur change d'onglet, etc.).
+    let salariesActifs = [];
+    try {
+      loadSalaries();
+      salariesActifs = SALARIES.filter(s => s.statut === 'actif');
+    } catch(e) { /* SALARIES pas encore chargé — pas grave, prochain rendu OK */ }
+    const actifsTous = salariesActifs;
     if (currentCreche === 'all') {
       equipeEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">👥 Équipe</div>' +
         `<div style="text-align:center;padding:8px 0">
@@ -8368,10 +8377,13 @@ async function renderDashboardDirectrice(dateStr) {
       ? COMMANDES
       : COMMANDES.filter(c => c.creche === currentCreche)
     ).filter(c => c.status === 'en-cours').length;
-    const salActifs = (currentCreche === 'all'
-      ? SALARIES
-      : SALARIES.filter(s => s.creche === currentCreche)
-    ).filter(s => s.statut === 'actif').length;
+    let salActifs = 0;
+    try {
+      salActifs = (currentCreche === 'all'
+        ? SALARIES
+        : SALARIES.filter(s => s.creche === currentCreche)
+      ).filter(s => s.statut === 'actif').length;
+    } catch(e) { /* SALARIES pas encore chargé — pas grave, prochain rendu OK */ }
     statsEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">📈 Résumé</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
       '<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink2)">Valeur stock</span><span style="font-weight:700">'+articlesFiltered.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)+' €</span></div>' +
