@@ -12842,7 +12842,11 @@ async function renderRecrutements() {
   if (!el) return;
   el.innerHTML = rhEmpty('Chargement…');
   try {
-    const rows = await sbGet('recrutements', 'order=id.desc');
+    const [rows, contratRows] = await Promise.all([
+      sbGet('recrutements', 'order=id.desc'),
+      sbGet('contrats', 'select=id,recrutement_id').catch(() => []),
+    ]);
+    const recrutementsAvecContrat = new Set((contratRows||[]).filter(c => c.recrutement_id).map(c => c.recrutement_id));
     if (!rows.length) { el.innerHTML = rhEmpty('Aucun recrutement. Cliquez sur "+ Nouveau poste".'); return; }
     el.innerHTML = rhTable(
       ['Poste', 'Type', 'Statut', 'Candidat', 'Entretien', 'Actions'],
@@ -12853,12 +12857,100 @@ async function renderRecrutements() {
         <td><div>${r.candidat_nom || '—'}</div><div class="item-ref">${r.candidat_email || ''}</div></td>
         <td>${fmtDate(r.date_entretien)}</td>
         <td><div class="action-btns">
+          ${r.statut === 'pourvu' ? (
+            recrutementsAvecContrat.has(r.id)
+              ? `<span class="badge badge-green" style="white-space:nowrap">✓ Contrat créé</span>`
+              : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement(${r.id})" title="Créer le contrat à partir de ce recrutement">📄 Contrat</button>`
+          ) : ''}
           <button class="btn btn-secondary btn-sm" onclick="openModalRh('recrutement',${r.id})">✏️</button>
           <button class="btn btn-danger btn-sm" onclick="deleteRh('recrutements',${r.id},'recrutement')">🗑</button>
         </div></td>
       </tr>`)
     );
   } catch(e) { el.innerHTML = rhEmpty('Erreur : ' + e.message); }
+}
+
+// ── Pont Recrutement → Contrat → Fiche salarié ──────────────────────
+// Logique métier : un recrutement Pourvu peut générer un contrat (brouillon).
+// Le contrat ne fait naître une fiche salarié qu'au moment où il passe au
+// statut "Signé" — tant qu'il n'est pas signé, aucune fiche n'est créée.
+async function creerContratDepuisRecrutement(recrutementId) {
+  try {
+    const rows = await sbGet('recrutements', `id=eq.${recrutementId}`);
+    const r = rows[0];
+    if (!r) { showNotif('⚠ Recrutement introuvable'); return; }
+    if (!r.candidat_nom) { showNotif('⚠ Renseignez le nom du candidat dans la fiche recrutement avant de créer le contrat'); return; }
+    showRhTab('contrats', document.querySelector('[onclick*="showRhTab(\'contrats\'"]'));
+    rhEditingContrat = null;
+    document.getElementById('modal-rh-contrat-title').textContent = 'Nouveau contrat — ' + r.candidat_nom;
+    await rhLoadUsers(['rh-c-user']);
+    document.getElementById('rh-c-user').value = '';
+    document.getElementById('rh-c-poste').value = r.poste || '';
+    document.getElementById('rh-c-type').value = r.type_contrat || 'CDI';
+    document.getElementById('rh-c-debut').value = '';
+    document.getElementById('rh-c-fin').value = '';
+    document.getElementById('rh-c-temps').value = '';
+    document.getElementById('rh-c-notes').value = r.notes || '';
+    document.getElementById('rh-c-statut').value = 'brouillon';
+    document.getElementById('rh-c-signature').value = '';
+    document.getElementById('rh-c-candidat-nom').value = r.candidat_nom || '';
+    document.getElementById('rh-c-candidat-email').value = r.candidat_email || '';
+    document.getElementById('rh-c-recrutement-id').value = r.id;
+    _rhContratToggleSignature();
+    document.getElementById('modal-rh-contrat').classList.add('open');
+  } catch(e) { showNotif('⚠ ' + e.message); }
+}
+
+function _rhContratToggleSignature() {
+  const statutEl = document.getElementById('rh-c-statut');
+  const block = document.getElementById('rh-c-signature-block');
+  if (!statutEl || !block) return;
+  block.style.display = (statutEl.value === 'signe') ? '' : 'none';
+}
+
+// Création de la fiche salarié à partir d'un contrat signé sans collaborateur lié.
+// Découpage prénom/nom et rapprochement de fonction faits "au mieux" : la fiche
+// reste à compléter/corriger manuellement ensuite (date de naissance, diplôme...).
+async function creerSalarieDepuisContrat(c) {
+  const parts  = (c.candidat_nom || '').trim().split(/\s+/);
+  const prenom = parts.shift() || '';
+  const nom    = parts.join(' ') || (c.candidat_nom || '');
+
+  const FONCTIONS = ['Directeur / Directrice','Coordinateur / Coordinatrice EJE','Éducateur / Éducatrice de jeunes enfants','Auxiliaire de puériculture','CAP Accompagnant Éducatif Petite Enfance','Agent / Agente d\'entretien','Cuisinier / Cuisinière','Stagiaire','Autre'];
+  const posteLC = (c.poste || '').toLowerCase();
+  let fonction = FONCTIONS.find(f => posteLC.includes(f.split(' / ')[0].toLowerCase()))
+    || (posteLC.includes('eje') ? 'Éducateur / Éducatrice de jeunes enfants' : null)
+    || (posteLC.includes('aux') ? 'Auxiliaire de puériculture' : null)
+    || (posteLC.includes('cap') || posteLC.includes('aepe') ? 'CAP Accompagnant Éducatif Petite Enfance' : null)
+    || (posteLC.includes('coord') ? 'Coordinateur / Coordinatrice EJE' : null)
+    || (posteLC.includes('direct') ? 'Directeur / Directrice' : null)
+    || 'Autre';
+
+  loadSalaries();
+  const newId = 'sal_' + Date.now();
+  const s = {
+    id: newId,
+    prenom, nom,
+    email:      c.candidat_email || '',
+    fonction,
+    creche:     (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all') ? currentCreche : '',
+    volante:    false,
+    contrat:    c.type || 'CDI',
+    temps:      c.temps_travail || '',
+    entree:     c.date_debut || '',
+    fin:        c.date_fin || '',
+    statut:     'actif',
+    structuresCoordonnees: [],
+  };
+  SALARIES.push(s);
+  saveSalaries();
+
+  if (c.id) {
+    try { await sbUpdate('contrats', c.id, { salarie_id: newId }); }
+    catch(e) { console.warn('[Contrat→Salarié] lien:', e); }
+  }
+  showNotif(`✅ Fiche salarié créée pour ${prenom} ${nom} — à compléter`);
+  return newId;
 }
 
 async function saveRhRecrutement() {
@@ -12894,13 +12986,16 @@ async function renderContrats() {
       sbGet('salaries', 'select=id,data'),
     ]);
     const sMap = Object.fromEntries((salRows||[]).map(r => [r.id, ((r.data&&r.data.prenom||'') + ' ' + (r.data&&r.data.nom||'')).trim()]));
+    const RH_STATUT_CONTRAT = { brouillon:'gray', valide:'amber', signe:'green' };
+    const RH_LABEL_CONTRAT  = { brouillon:'Brouillon', valide:'Validé', signe:'Signé' };
     if (!rows.length) { el.innerHTML = rhEmpty('Aucun contrat enregistré.'); return; }
     el.innerHTML = rhTable(
-      ['Collaborateur', 'Poste', 'Type', 'Début', 'Fin', 'H/sem', 'Actions'],
+      ['Collaborateur', 'Poste', 'Type', 'Statut', 'Début', 'Fin', 'H/sem', 'Actions'],
       rows.map(r => `<tr>
-        <td class="item-name">${sMap[r.salarie_id] || r.salarie_id || '—'}</td>
+        <td class="item-name">${sMap[r.salarie_id] || r.candidat_nom || r.salarie_id || '—'}${!r.salarie_id && r.candidat_nom ? ' <span class="item-ref">(candidat)</span>' : ''}</td>
         <td>${r.poste}</td>
         <td>${rhBadge(r.type, RH_TYPE_COLOR[r.type] || 'gray')}</td>
+        <td>${rhBadge(RH_LABEL_CONTRAT[r.statut] || r.statut || 'Brouillon', RH_STATUT_CONTRAT[r.statut] || 'gray')}</td>
         <td>${fmtDate(r.date_debut)}</td>
         <td>${fmtDate(r.date_fin)}</td>
         <td>${r.temps_travail || '—'}</td>
@@ -12914,22 +13009,45 @@ async function renderContrats() {
 }
 
 async function saveRhContrat() {
-  const salarie_id = document.getElementById('rh-c-user').value;
-  const poste      = (document.getElementById('rh-c-poste').value || '').trim();
-  const date_debut = document.getElementById('rh-c-debut').value;
-  if (!salarie_id || !poste || !date_debut) { alert('Collaborateur, poste et date de début requis.'); return; }
+  const salarie_id  = document.getElementById('rh-c-user').value;
+  const candidatNom = (document.getElementById('rh-c-candidat-nom').value || '').trim();
+  const poste       = (document.getElementById('rh-c-poste').value || '').trim();
+  const date_debut  = document.getElementById('rh-c-debut').value;
+  const statut      = document.getElementById('rh-c-statut').value;
+  if (!poste || !date_debut) { alert('Poste et date de début requis.'); return; }
+  if (!salarie_id && !candidatNom) { alert('Sélectionnez un collaborateur existant ou renseignez le nom du candidat.'); return; }
+  if (statut === 'signe' && !document.getElementById('rh-c-signature').value) { alert('Indiquez la date de signature pour un contrat Signé.'); return; }
   const data = {
-    salarie_id, poste,
-    type:          ({'CDI':'CDI','CDD':'CDD','Alternance':'Extra','Stage':'Stage','Interim':'Extra'}[document.getElementById('rh-c-type').value] || document.getElementById('rh-c-type').value),
+    salarie_id:     salarie_id || null,
+    poste,
+    type:           ({'CDI':'CDI','CDD':'CDD','Alternance':'Extra','Stage':'Stage','Interim':'Extra'}[document.getElementById('rh-c-type').value] || document.getElementById('rh-c-type').value),
     date_debut,
-    date_fin:      document.getElementById('rh-c-fin').value || null,
-    temps_travail: parseFloat(document.getElementById('rh-c-temps').value) || null,
-    notes:         (document.getElementById('rh-c-notes').value || '').trim(),
+    date_fin:       document.getElementById('rh-c-fin').value || null,
+    temps_travail:  parseFloat(document.getElementById('rh-c-temps').value) || null,
+    notes:          (document.getElementById('rh-c-notes').value || '').trim(),
+    statut,
+    candidat_nom:   candidatNom || null,
+    candidat_email: (document.getElementById('rh-c-candidat-email').value || '').trim() || null,
+    recrutement_id: document.getElementById('rh-c-recrutement-id').value || null,
+    date_signature: document.getElementById('rh-c-signature').value || null,
   };
   try {
-    rhEditingContrat ? await sbUpdate('contrats', rhEditingContrat, data) : await sbInsert('contrats', data);
+    let contratId = rhEditingContrat;
+    if (contratId) {
+      await sbUpdate('contrats', contratId, data);
+    } else {
+      const inserted = await sbInsert('contrats', data);
+      contratId = Array.isArray(inserted) && inserted[0] ? inserted[0].id : null;
+    }
+    // La fiche salarié n'apparaît qu'à la signature, et seulement si aucun
+    // collaborateur existant n'était déjà sélectionné.
+    if (statut === 'signe' && !salarie_id && candidatNom) {
+      await creerSalarieDepuisContrat({ ...data, id: contratId });
+    }
     closeModal('modal-rh-contrat');
     renderContrats();
+    if (document.getElementById('rh-salaries-list')) renderSalaries();
+    if (document.getElementById('rh-recrutement-list')) renderRecrutements();
   } catch(e) { alert('Erreur : ' + e.message); }
 }
 
@@ -13061,7 +13179,9 @@ async function openModalRh(type, id = null) {
     document.getElementById('modal-rh-contrat-title').textContent = id ? 'Modifier le contrat' : 'Nouveau contrat';
     await rhLoadUsers(['rh-c-user']);
     fill('rh-c-poste',''); fill('rh-c-debut',''); fill('rh-c-fin',''); fill('rh-c-temps',''); fill('rh-c-notes','');
+    fill('rh-c-candidat-nom',''); fill('rh-c-candidat-email',''); fill('rh-c-recrutement-id',''); fill('rh-c-signature','');
     document.getElementById('rh-c-type').value = 'CDI';
+    document.getElementById('rh-c-statut').value = 'brouillon';
     if (id) {
       const rows = await sbGet('contrats', `id=eq.${id}`).catch(() => []);
       if (rows[0]) {
@@ -13070,8 +13190,12 @@ async function openModalRh(type, id = null) {
         document.getElementById('rh-c-type').value  = r.type     || 'CDI';
         fill('rh-c-poste', r.poste); fill('rh-c-debut', r.date_debut);
         fill('rh-c-fin', r.date_fin); fill('rh-c-temps', r.temps_travail); fill('rh-c-notes', r.notes);
+        fill('rh-c-candidat-nom', r.candidat_nom); fill('rh-c-candidat-email', r.candidat_email);
+        fill('rh-c-recrutement-id', r.recrutement_id); fill('rh-c-signature', r.date_signature);
+        document.getElementById('rh-c-statut').value = r.statut || 'brouillon';
       }
     }
+    _rhContratToggleSignature();
     document.getElementById('modal-rh-contrat').classList.add('open');
   } else if (type === 'conge') {
     rhEditingConge = id;
@@ -15071,9 +15195,18 @@ async function enregistrerPointage(type) {
     </div>
     <div class="modal-body">
       <div class="form-grid">
+        <input type="hidden" id="rh-c-recrutement-id" value="">
         <div class="form-group full">
-          <label>Collaborateur *</label>
+          <label>Collaborateur <span style="font-weight:400;color:var(--ink3);font-size:12px">— si une fiche salarié existe déjà</span></label>
           <select id="rh-c-user"><option value="">— Choisir —</option></select>
+        </div>
+        <div class="form-group">
+          <label>Candidat — Nom <span style="font-weight:400;color:var(--ink3);font-size:11px">(si pas encore de fiche)</span></label>
+          <input type="text" id="rh-c-candidat-nom" placeholder="Prénom Nom">
+        </div>
+        <div class="form-group">
+          <label>Candidat — Email</label>
+          <input type="email" id="rh-c-candidat-email" placeholder="email@exemple.fr">
         </div>
         <div class="form-group">
           <label>Poste *</label>
@@ -15098,6 +15231,21 @@ async function enregistrerPointage(type) {
         <div class="form-group">
           <label>Temps de travail (h/sem)</label>
           <input type="number" id="rh-c-temps" min="0" max="40" step="0.5" placeholder="35">
+        </div>
+        <div class="form-group">
+          <label>Statut du contrat</label>
+          <select id="rh-c-statut" onchange="_rhContratToggleSignature()">
+            <option value="brouillon">Brouillon</option>
+            <option value="valide">Validé</option>
+            <option value="signe">Signé</option>
+          </select>
+        </div>
+        <div class="form-group" id="rh-c-signature-block" style="display:none">
+          <label>Date de signature</label>
+          <input type="date" id="rh-c-signature">
+        </div>
+        <div class="form-group full" style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--ink3)">
+          ℹ️ La fiche salarié n'est créée automatiquement qu'à la signature du contrat (statut « Signé »), si aucun collaborateur existant n'a été sélectionné.
         </div>
         <div class="form-group full">
           <label>Notes</label>
@@ -16634,7 +16782,7 @@ function showImportResult(type, html) {
         </div>
         <div class="form-group">
           <label>Fonction</label>
-          <select id="sal-fonction">
+          <select id="sal-fonction" onchange="_salToggleCoordStructures()">
             <option>Directeur / Directrice</option>
             <option>Coordinateur / Coordinatrice EJE</option>
             <option>Éducateur / Éducatrice de jeunes enfants</option>
@@ -16649,6 +16797,10 @@ function showImportResult(type, html) {
         <div class="form-group">
           <label>Structure *</label>
           <select id="sal-creche"></select>
+        </div>
+        <div class="form-group full" id="sal-structures-coord-block" style="display:none">
+          <label>Structures coordonnées <span style="font-weight:400;color:var(--ink3);font-size:12px">— périmètre de coordination réseau (distinct de la structure de rattachement ci-dessus)</span></label>
+          <div id="sal-structures-coord-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
         </div>
         <div class="form-group full">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
@@ -16859,11 +17011,22 @@ function _salPopulateCreche() {
     CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
 }
 
-function _salPopulateCreche() {
-  const sel = document.getElementById('sal-creche');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Choisir —</option>' +
-    CRECHES.map(c => `<option value="${c}">${c}</option>`).join('');
+function _salPopulateCoordStructures(selected) {
+  const wrap = document.getElementById('sal-structures-coord-list');
+  if (!wrap) return;
+  const sel = selected || [];
+  wrap.innerHTML = CRECHES_DATA.map(c => `
+    <label style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;background:var(--bg)">
+      <input type="checkbox" class="sal-coord-cb" value="${c.nom}" style="width:auto;margin:0" ${sel.includes(c.nom) ? 'checked' : ''}>
+      ${c.nom}
+    </label>`).join('');
+}
+
+function _salToggleCoordStructures() {
+  const fonctionEl = document.getElementById('sal-fonction');
+  const block = document.getElementById('sal-structures-coord-block');
+  if (!fonctionEl || !block) return;
+  block.style.display = (fonctionEl.value === 'Coordinateur / Coordinatrice EJE') ? '' : 'none';
 }
 
 function openModalSalarie() {
@@ -16877,7 +17040,10 @@ function openModalSalarie() {
   document.getElementById('sal-statut').value = 'actif';
   document.getElementById('sal-volante').checked = false;
   document.getElementById('sal-psc1').value   = '';
+  document.getElementById('sal-fonction').selectedIndex = 0;
   _salPopulateCreche();
+  _salPopulateCoordStructures([]);
+  _salToggleCoordStructures();
   // Pré-sélection de la structure courante (frictionless)
   if (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all') {
     const cSel = document.getElementById('sal-creche');
@@ -16916,6 +17082,8 @@ function editSalarie(id) {
   _salPopulateCreche();
   document.getElementById('sal-creche').value = s.creche || '';
   document.getElementById('sal-volante').checked = !!s.volante;
+  _salPopulateCoordStructures(s.structuresCoordonnees || []);
+  _salToggleCoordStructures();
   document.getElementById('modal-salarie').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -16947,6 +17115,7 @@ function saveSalarie() {
     psc1Date:   document.getElementById('sal-psc1-date').value,
     formations: document.getElementById('sal-formations').value.trim(),
     notes:      document.getElementById('sal-notes').value.trim(),
+    structuresCoordonnees: Array.from(document.querySelectorAll('.sal-coord-cb:checked')).map(cb => cb.value),
   };
   loadSalaries();
   if (salEditingId) {
@@ -19524,8 +19693,8 @@ function _coordHtmlMissions() {
       <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent)">6</div>
     </div>
     <div style="background:var(--amber-lt);border:1.5px solid #FDE68A;border-radius:10px;padding:10px 16px;font-size:12px;flex:2;min-width:200px">
-      <div style="font-size:11px;font-weight:700;color:#B45309;margin-bottom:3px">⚠ Décret 2025-304 — sept. 2026</div>
-      <div style="font-size:12px;color:#B45309;line-height:1.5">Direction : 0,5 ETP min. par structure. Max 2 structures par coordinateur.</div>
+      <div style="font-size:11px;font-weight:700;color:#B45309;margin-bottom:3px">⚠ Décret 2025-304 — sept. 2026 (fonction Direction, distincte de la Coordination)</div>
+      <div style="font-size:12px;color:#B45309;line-height:1.5">Chaque structure doit avoir un·e <strong>Directeur/trice</strong> à 0,5 ETP min., limité·e à 2 structures max. La fonction de <strong>Coordinateur(trice) réseau</strong> est un poste distinct, non soumis à cette limite réglementaire.</div>
     </div>
   </div>
   <div style="border:1px solid var(--border);border-radius:10px;padding:0 16px;background:var(--surface2);box-shadow:var(--shadow)">${rows}</div>`;
