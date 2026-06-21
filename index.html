@@ -1674,6 +1674,7 @@ textarea { resize: vertical; min-height: 72px; }
         <!-- Tabs -->
         <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">
           <button id="fam-tab-liste" onclick="switchFamTab('liste')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer">📋 Liste enfants</button>
+          <button id="fam-tab-planning" onclick="switchFamTab('planning')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">📅 Planning enfants</button>
           <button id="fam-tab-berceaux" onclick="switchFamTab('berceaux')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">🏢 Berceaux entreprise</button>
           <button id="fam-tab-financement" onclick="switchFamTab('financement')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">💶 Financement</button>
         </div>
@@ -1698,6 +1699,10 @@ textarea { resize: vertical; min-height: 72px; }
             </select>
           </div>
           <div id="fam-list-grid"></div>
+        </div>
+
+        <div id="fam-view-planning" style="display:none">
+          <div id="fam-planning-grid"></div>
         </div>
 
         <div id="fam-view-berceaux" style="display:none">
@@ -4658,6 +4663,7 @@ function renderFamilles() {
   if (addBtn) addBtn.disabled = getCrecheId() === '__all__';
   renderFamillesKPI();
   renderFamillesList();
+  renderFamillesPlanningGlobal();
   renderFamillesBerceaux();
   renderFamillesFinancement();
 }
@@ -4774,6 +4780,104 @@ function renderFamillesList() {
       </div>`;
     }).join('')}
   </div>`;
+}
+
+// ── Planning enfants global ──────────────────────────────────────
+// Vue combinée par jour : qui est présent et à quelles horaires (registre),
+// + effectif maximum simultané et nombre de pros nécessaires à ce pic
+// (taux d'encadrement), calculé par balayage des horaires de chaque enfant
+// présent ce jour-là — pas seulement un décompte brut, pour refléter le vrai
+// besoin en encadrement à l'heure la plus chargée de la journée.
+function calcPicJournee(presents, option) {
+  // presents: [{ nm:boolean, debut:'08:00', fin:'17:00' }]
+  const events = [];
+  presents.forEach(p => {
+    if (!p.debut || !p.fin) return;
+    const [dh, dm] = p.debut.split(':').map(Number);
+    const [fh, fm] = p.fin.split(':').map(Number);
+    const start = dh * 60 + dm, end = fh * 60 + fm;
+    if (end <= start) return;
+    events.push({ t: start, arrivee: true,  nm: p.nm });
+    events.push({ t: end,   arrivee: false, nm: p.nm });
+  });
+  // À horaire égal, traiter les arrivées avant les départs (effectif max prudent)
+  events.sort((a, b) => a.t - b.t || (b.arrivee - a.arrivee));
+
+  let nm = 0, m = 0, peakTotal = 0, peakPros = 0, peakMin = null;
+  events.forEach(ev => {
+    if (ev.nm) nm += ev.arrivee ? 1 : -1; else m += ev.arrivee ? 1 : -1;
+    const total = nm + m;
+    if (total <= 0) return;
+    let pros = (option === '6') ? Math.ceil(total / 6) : (Math.ceil(nm / 5) + Math.ceil(m / 8));
+    pros = Math.max(pros, 2);
+    if (pros > peakPros || (pros === peakPros && total > peakTotal)) {
+      peakPros = pros; peakTotal = total; peakMin = ev.t;
+    }
+  });
+  return { peakTotal, peakPros, peakMin };
+}
+
+function renderFamillesPlanningGlobal() {
+  const el = document.getElementById('fam-planning-grid');
+  if (!el) return;
+  const crecheId = getCrecheId();
+
+  if (crecheId === '__all__') {
+    el.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:40px;margin-bottom:12px">🏘</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Sélectionnez une crèche</div>
+      <div style="font-size:13px">Le planning enfants se consulte structure par structure.</div>
+    </div>`;
+    return;
+  }
+
+  const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const option = prefs.optionEncadrement || 'NM8M';
+
+  if (!enfants.length) {
+    el.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:40px;margin-bottom:12px">📅</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucun enfant enregistré</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+    ${JOURS_NOMS.map((nom, j) => {
+      const presents = enfants
+        .filter(e => (e.jours_presence || []).includes(j))
+        .map(e => {
+          const hd = (e.horaires_detail || {})[j] || {};
+          return { e, nm: isNonMarcheur(e.type), debut: hd.debut || '08:00', fin: hd.fin || '17:00' };
+        })
+        .sort((a, b) => (a.debut || '').localeCompare(b.debut || ''));
+
+      const { peakTotal, peakPros } = calcPicJournee(presents.map(p => ({ nm: p.nm, debut: p.debut, fin: p.fin })), option);
+
+      return `<div class="fiche-card" style="margin:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-weight:800;font-size:14px;font-family:'Syne',sans-serif">${nom}</div>
+          ${presents.length ? `<span style="font-size:11px;font-weight:700;background:var(--accent-lt,#EFF6FF);color:var(--accent);padding:3px 9px;border-radius:10px;white-space:nowrap">${peakPros} pro${peakPros>1?'s':''} min</span>` : ''}
+        </div>
+        ${!presents.length ? `<div style="font-size:12px;color:var(--ink3);padding:12px 0;text-align:center">Aucun enfant</div>` : `
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:10px">${presents.length} enfant${presents.length>1?'s':''} · pic ${peakTotal} simultané${peakTotal>1?'s':''}</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${presents.map(p => {
+              const tc = getTrancheColor(p.e.type);
+              return `<div onclick="(function(){var sel=document.getElementById('fam-creche-sel');if(sel)sel.value='${crecheId}';openFicheEnfant('${p.e.id}');})()"
+                style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:var(--bg);cursor:pointer"
+                onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--bg)'">
+                <span style="width:8px;height:8px;border-radius:50%;background:${tc.text};flex-shrink:0"></span>
+                <span style="font-size:12.5px;font-weight:600;color:var(--ink);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.e.prenom} ${p.e.nom}</span>
+                <span style="font-size:11px;color:var(--ink3);white-space:nowrap">${p.debut}–${p.fin}</span>
+              </div>`;
+            }).join('')}
+          </div>`}
+      </div>`;
+    }).join('')}
+  </div>
+  <div style="font-size:11px;color:var(--ink3);margin-top:14px;line-height:1.5">Le nombre de pros minimum est calculé sur l'effectif simultané le plus chargé de la journée (et non le total d'enfants accueillis ce jour), selon l'option d'encadrement choisie dans les paramètres.</div>`;
 }
 
 // ── Berceaux entreprise ───────────────────────────────────────────
@@ -4917,7 +5021,7 @@ function saveOptionEncadrement(val) {
 
 // ── Tabs familles ─────────────────────────────────────────────────
 function switchFamTab(tab) {
-  ['liste','berceaux','financement'].forEach(t => {
+  ['liste','planning','berceaux','financement'].forEach(t => {
     const btn  = document.getElementById('fam-tab-' + t);
     const view = document.getElementById('fam-view-' + t);
     if (btn)  { btn.style.color = tab===t ? 'var(--accent)' : 'var(--ink3)'; btn.style.borderBottom = tab===t ? '2px solid var(--accent)' : '2px solid transparent'; btn.style.fontWeight = tab===t ? '700' : '600'; }
