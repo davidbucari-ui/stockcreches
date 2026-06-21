@@ -11712,12 +11712,22 @@ async function sbGet(table, params='') {
   return r.json();
 }
 
+// Tables dont l'id est généré côté client (chaîne texte, ex: "fam_1718999999999")
+// et qui doit donc impérativement être conservé à l'insertion — à l'inverse des
+// tables à id auto-généré par Postgres (identity/serial : articles, commandes,
+// fournisseurs, historique...) pour lesquelles l'id ne doit jamais être envoyé.
+// Sans cette distinction, sbInsert supprimait l'id pour TOUTES les tables, et
+// Postgres rejetait l'insert avec une erreur 23502 ("null value in column id")
+// pour enfants/berceaux dès que le body JSON était correctement formé.
+const CLIENT_ID_TABLES = new Set(['enfants', 'berceaux']);
+
 async function sbInsert(table, data) {
   // data peut être un objet unique OU un tableau (insert multiple) : dans ce
   // dernier cas, { ...data } casse tout (transforme le tableau en objet à
   // clés numériques "0","1",... -> body JSON invalide -> 400 chez PostgREST).
   // C'est la cause de l'erreur "Sync familles : INSERT enfants : 400".
-  const stripId = (row) => { const c = { ...row }; delete c.id; return c; };
+  const keepId = CLIENT_ID_TABLES.has(table);
+  const stripId = (row) => { if (keepId) return row; const c = { ...row }; delete c.id; return c; };
   const body = Array.isArray(data) ? data.map(stripId) : stripId(data);
   const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}`, {
     method: 'POST',
