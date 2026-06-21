@@ -1896,10 +1896,7 @@ textarea { resize: vertical; min-height: 72px; }
 
         <!-- PLANNING -->
         <div id="fi-planning" style="display:none">
-          <div style="padding:48px;text-align:center;color:var(--ink3)">
-            <div style="font-size:40px;margin-bottom:12px">📅</div>
-            <div style="font-weight:700;font-size:15px;margin-bottom:6px">Lié au module Planning</div>
-          </div>
+          <div id="fi-planning-content"></div>
         </div>
 
         <!-- FACTURES -->
@@ -2311,6 +2308,28 @@ textarea { resize: vertical; min-height: 72px; }
       <button class="btn btn-danger btn-sm" id="modal-famille-delete" style="display:none;margin-right:auto" onclick="deleteFamille()">Supprimer</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-famille')">Annuler</button>
       <button class="btn btn-primary" onclick="saveModalFamille()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-import-creche" onclick="closeModalClick(event,'modal-import-creche')">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <h2>📥 Affecter l'inscription</h2>
+      <button class="modal-close" onclick="closeModal('modal-import-creche')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--ink2);margin-bottom:14px;line-height:1.5">
+        Inscription de <strong id="import-creche-nom">—</strong>. Choisissez la crèche dans laquelle créer cette fiche (le filtre affiché actuellement n'est pas utilisé automatiquement, pour éviter toute erreur d'affectation).
+      </div>
+      <div class="form-group">
+        <label>Crèche d'inscription *</label>
+        <select id="import-creche-sel"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-import-creche')">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmerImportCreche()">Créer la fiche</button>
     </div>
   </div>
 </div>
@@ -5098,6 +5117,8 @@ function renderDashboardFamillesTile() {
 }
 
 // ── Import inscription JSON ──────────────────────────────────────────
+let pendingImportEnfant = null;
+
 function importerInscription(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -5107,8 +5128,6 @@ function importerInscription(event) {
       const data = JSON.parse(e.target.result);
       if (data._type !== 'orevy_inscription') { showNotif('⚠ Fichier non reconnu'); return; }
 
-      const crecheId = getCrecheId();
-      const enfants  = getFamilles(crecheId);
       const d = data.enfant || {};
       const p1 = data.parent1 || {};
       const p2 = data.parent2 || {};
@@ -5147,18 +5166,55 @@ function importerInscription(event) {
         referents: data.referents || [],
       };
 
-      enfants.push(enfant);
-      saveFamilles(enfants, crecheId);
       event.target.value = '';
-      renderFamilles();
-      showNotif('✅ Inscription importée — fiche créée pour ' + enfant.prenom + ' ' + enfant.nom);
-      setTimeout(() => openFicheEnfant(enfant.id), 600);
+      pendingImportEnfant = enfant;
+      ouvrirChoixCrecheImport(enfant);
     } catch(err) {
       showNotif('⚠ Erreur de lecture du fichier');
       console.error(err);
     }
   };
   reader.readAsText(file);
+}
+
+// Demande TOUJOURS explicitement la crèche d'affectation au moment de
+// l'import : on ne déduit jamais ce choix du filtre sidebar/liste Familles
+// (qui peut valoir '__all__' ou simplement être resté sur la mauvaise
+// crèche) — c'est la source d'erreur signalée : une fiche pouvait être créée
+// silencieusement dans la mauvaise structure, ou sous une crèche '__all__'
+// invalide qui corrompt la synchronisation cloud.
+function ouvrirChoixCrecheImport(enfant) {
+  const sel = document.getElementById('import-creche-sel');
+  const nomEl = document.getElementById('import-creche-nom');
+  if (nomEl) nomEl.textContent = (enfant.prenom || '') + ' ' + (enfant.nom || '');
+  if (sel) {
+    const list = (CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [];
+    const courante = getCrecheId();
+    sel.innerHTML = '<option value="">— Sélectionner —</option>' + list.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+    sel.value = (courante && courante !== '__all__') ? courante : '';
+  }
+  const m = document.getElementById('modal-import-creche');
+  if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+
+function confirmerImportCreche() {
+  const crecheChoisie = document.getElementById('import-creche-sel')?.value || '';
+  if (!crecheChoisie) { showNotif('⚠ Veuillez sélectionner la crèche d\'inscription'); return; }
+  if (!pendingImportEnfant) { closeModal('modal-import-creche'); return; }
+
+  const enfant  = pendingImportEnfant;
+  const enfants = getFamilles(crecheChoisie);
+  enfants.push(enfant);
+  saveFamilles(enfants, crecheChoisie);
+  closeModal('modal-import-creche');
+  pendingImportEnfant = null;
+
+  const famSel = document.getElementById('fam-creche-sel');
+  if (famSel) famSel.value = crecheChoisie;
+
+  renderFamilles();
+  showNotif('✅ Inscription importée — fiche créée pour ' + enfant.prenom + ' ' + enfant.nom);
+  setTimeout(() => openFicheEnfant(enfant.id), 600);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -5180,6 +5236,12 @@ function openFicheEnfant(id) {
   const enfants  = getFamilles(crecheId);
   const e = enfants.find(x => x.id === id);
   if (!e) return;
+
+  // La crèche réelle de l'enfant prévaut toujours sur le filtre sidebar/liste
+  // (qui peut valoir '__all__' en vue "Toutes les crèches") : sinon la fiche
+  // s'ouvre avec la mauvaise crèche présélectionnée, et l'enregistrement peut
+  // déplacer/corrompre l'enfant vers une crèche erronée.
+  const crecheReelle = e._creche || crecheId;
 
   ficheReferents = e.referents ? JSON.parse(JSON.stringify(e.referents)) : [];
 
@@ -5229,14 +5291,14 @@ function openFicheEnfant(id) {
   renderReferents();
 
   // Onglet Accueil
-  const berceaux = getBerceaux(crecheId);
+  const berceaux = getBerceaux(crecheReelle);
   const cEl = document.getElementById('fi-creche');
   if (cEl) {
-    const list = (CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom: crecheId}];
+    const list = (CRECHES_DATA && CRECHES_DATA.length) ? CRECHES_DATA : [{nom: crecheReelle}];
     cEl.innerHTML = list.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
-    cEl.value = crecheId;
+    cEl.value = crecheReelle;
   }
-  ficheEnfantCrecheId = crecheId;
+  ficheEnfantCrecheId = crecheReelle;
   const bEl = document.getElementById('fi-berceau');
   if (bEl) {
     bEl.innerHTML = '<option value="">Aucun</option>' + berceaux.map(b => `<option value="${b.id}">${b.entreprise} (${b.places}p)</option>`).join('');
@@ -5302,6 +5364,71 @@ function switchFicheTab(tabId, btn) {
     activeBtn.style.borderBottom = '2px solid var(--accent)';
     activeBtn.style.fontWeight = '700';
   }
+  if (tabId === 'fi-planning') renderFichePlanningEnfant();
+}
+
+// Génère le planning hebdomadaire de l'enfant à partir du rythme d'accueil
+// défini dans l'onglet Accueil (jours de présence + horaires par jour) :
+// remplace l'ancien renvoi statique "Lié au module Planning" qui n'affichait
+// rien d'utile. Lecture en direct du DOM (et non de la fiche enregistrée) afin
+// de refléter aussi les modifications pas encore sauvegardées.
+function renderFichePlanningEnfant() {
+  const cont = document.getElementById('fi-planning-content');
+  if (!cont) return;
+
+  const cbs = document.querySelectorAll('#fi-jours-presence input');
+  const selected = Array.from(cbs).filter(cb => cb.checked).map(cb => parseInt(cb.value));
+
+  if (!selected.length) {
+    cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
+      <div style="font-size:40px;margin-bottom:12px">📅</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px">Aucun rythme d'accueil défini</div>
+      <div style="font-size:12px;max-width:340px;margin:0 auto;line-height:1.5">Renseignez les jours de présence et horaires dans l'onglet <strong>Accueil</strong> pour générer automatiquement le planning de l'enfant.</div>
+    </div>`;
+    return;
+  }
+
+  let totalMin = 0;
+  const rows = JOURS_NOMS.map((nom, j) => {
+    const present = selected.includes(j);
+    if (!present) {
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);opacity:.55">
+        <span style="font-weight:700;font-size:13px">${nom}</span>
+        <span style="font-size:11.5px;color:var(--ink3);font-weight:600">Absent</span>
+      </div>`;
+    }
+    const debut = document.getElementById('fi-horaire-debut-' + j)?.value || '';
+    const fin   = document.getElementById('fi-horaire-fin-' + j)?.value || '';
+    let dureeStr = '—';
+    if (debut && fin) {
+      const [dh, dm] = debut.split(':').map(Number);
+      const [fh, fm] = fin.split(':').map(Number);
+      const mins = (fh * 60 + fm) - (dh * 60 + dm);
+      if (mins > 0) {
+        totalMin += mins;
+        const h = Math.floor(mins / 60), m = mins % 60;
+        dureeStr = h + 'h' + (m ? String(m).padStart(2, '0') : '');
+      }
+    }
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;border-radius:10px;background:#EFF6FF;border:1.5px solid var(--accent)">
+      <span style="font-weight:700;font-size:13px;min-width:80px">${nom}</span>
+      <span style="font-size:12.5px;color:var(--ink2);flex:1;text-align:center">${debut || '—'} – ${fin || '—'}</span>
+      <span style="font-size:12.5px;font-weight:800;color:var(--accent);min-width:48px;text-align:right">${dureeStr}</span>
+    </div>`;
+  }).join('<div style="height:8px"></div>');
+
+  const totH = Math.floor(totalMin / 60), totM = totalMin % 60;
+
+  cont.innerHTML = `
+    <div class="fiche-card">
+      <div class="fiche-card-title">Planning hebdomadaire — généré depuis le rythme d'accueil</div>
+      <div style="display:flex;flex-direction:column">${rows}</div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Total semaine</span>
+        <span style="font-size:19px;font-weight:800;font-family:'Syne',sans-serif">${totH}h${totM ? String(totM).padStart(2, '0') : ''}</span>
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--ink3);margin-top:10px;line-height:1.5">Ce planning reflète les jours et horaires définis dans l'onglet <strong>Accueil</strong>. Modifiez-les puis revenez sur cet onglet pour le mettre à jour.</div>`;
 }
 
 // ─── SUIVI VACCINATIONS ─────────────────────────────────────────────────────
@@ -5755,7 +5882,11 @@ function removeReferent(i) {
 }
 
 function saveFicheEnfant() {
-  const crecheId = getCrecheId();
+  // On utilise la crèche réelle mémorisée à l'ouverture de la fiche (et non
+  // getCrecheId(), qui peut valoir '__all__' si la liste Familles est filtrée
+  // sur "Toutes les crèches") : sinon l'enfant peut être faussement "transféré"
+  // vers une crèche '__all__' inexistante et corrompre les données.
+  const crecheId = ficheEnfantCrecheId || getCrecheId();
   const enfants  = getFamilles(crecheId);
   const idx = enfants.findIndex(e => e.id === ficheEnfantId);
   if (idx === -1) { showNotif('⚠ Enfant introuvable'); return; }
@@ -5845,7 +5976,7 @@ function saveFicheEnfant() {
 function deleteFicheEnfant() {
   if (!ficheEnfantId) return;
   if (!confirm('Supprimer définitivement cette fiche ?')) return;
-  const crecheId = getCrecheId();
+  const crecheId = ficheEnfantCrecheId || getCrecheId();
   const enfants  = getFamilles(crecheId).filter(e => e.id !== ficheEnfantId);
   saveFamilles(enfants, crecheId);
   showNotif('🗑 Fiche supprimée');
@@ -11582,8 +11713,12 @@ async function sbGet(table, params='') {
 }
 
 async function sbInsert(table, data) {
-  const body = { ...data };
-  delete body.id; // ne jamais envoyer l'id sur une colonne identity/uuid auto
+  // data peut être un objet unique OU un tableau (insert multiple) : dans ce
+  // dernier cas, { ...data } casse tout (transforme le tableau en objet à
+  // clés numériques "0","1",... -> body JSON invalide -> 400 chez PostgREST).
+  // C'est la cause de l'erreur "Sync familles : INSERT enfants : 400".
+  const stripId = (row) => { const c = { ...row }; delete c.id; return c; };
+  const body = Array.isArray(data) ? data.map(stripId) : stripId(data);
   const r = await fetch(`${_sbUrl(table)}/rest/v1/${table}`, {
     method: 'POST',
     headers: { ..._sbHeaders(table), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
