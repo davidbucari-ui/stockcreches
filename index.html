@@ -5110,6 +5110,10 @@ function renderFamillesFinancement() {
   const paje = enfants.filter(e => e.contrat_caf === 'PAJE');
   const hPSU  = psu.reduce((s,e)  => s + (parseInt(e.heures)||0), 0);
   const hPAJE = paje.reduce((s,e) => s + (parseInt(e.heures)||0), 0);
+  const isAll = crecheId === '__all__';
+  const rowOpenFn = e => isAll
+    ? `(function(){var sel=document.getElementById('fam-creche-sel');if(sel)sel.value='${e._creche||''}';openFicheEnfant('${e.id}');})()`
+    : `openFicheEnfant('${e.id}')`;
 
   // Option encadrement configurable
   const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
@@ -5159,10 +5163,10 @@ function renderFamillesFinancement() {
     <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
       <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#6D28D9">📋 Enfants PSU</div>
       <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Crèche</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
-      <tbody>${psu.map(e => `<tr>
+      <tbody>${psu.map(e => `<tr onclick="${rowOpenFn(e)}" style="cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
         <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
         <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
-        <td><span style="background:${e.type==='NM'?'#DBEAFE':'#DCFCE7'};color:${e.type==='NM'?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${e.type==='NM'?'NM':'Marcheur'}</span></td>
+        <td><span style="background:${isNonMarcheur(e.type)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e.type)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e.type)?'Non-marcheur':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
         <td>${e.berceau?`<span style="background:#FFE4E6;color:#BE123C;padding:2px 6px;border-radius:6px;font-size:11px">${e.berceau}</span>`:'—'}</td>
       </tr>`).join('')}</tbody></table></div>
@@ -5173,10 +5177,10 @@ function renderFamillesFinancement() {
     <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px">
       <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#B45309">📋 Enfants PAJE</div>
       <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Crèche</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
-      <tbody>${paje.map(e => `<tr>
+      <tbody>${paje.map(e => `<tr onclick="${rowOpenFn(e)}" style="cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
         <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
         <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
-        <td><span style="background:${e.type==='NM'?'#DBEAFE':'#DCFCE7'};color:${e.type==='NM'?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${e.type==='NM'?'NM':'Marcheur'}</span></td>
+        <td><span style="background:${isNonMarcheur(e.type)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e.type)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e.type)?'Non-marcheur':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
         <td>${e.berceau?`<span style="background:#FFE4E6;color:#BE123C;padding:2px 6px;border-radius:6px;font-size:11px">${e.berceau}</span>`:'—'}</td>
       </tr>`).join('')}</tbody></table></div>
@@ -5384,8 +5388,8 @@ function renderDashboardFamillesTile() {
   if (!el) return;
   const crecheId = currentCreche && currentCreche !== 'all' ? currentCreche : (CRECHES_DATA?.[0]?.nom || '');
   const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
-  const nm = enfants.filter(e => e.type === 'NM').length;
-  const m  = enfants.filter(e => e.type === 'M').length;
+  const nm = enfants.filter(e => isNonMarcheur(e.type)).length;
+  const m  = enfants.filter(e => !isNonMarcheur(e.type)).length;
   const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   const { prosMin } = calcTauxEncadrement(enfants, prefs.optionEncadrement || 'NM8M');
   el.querySelector('.fam-nm').textContent  = nm;
