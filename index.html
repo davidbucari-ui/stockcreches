@@ -1785,6 +1785,16 @@ textarea { resize: vertical; min-height: 72px; }
               </div>
             </div>
             <div class="fi-row">
+              <div class="fi-field">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink2)">
+                  <input type="checkbox" id="fi-marcheur" style="width:16px;height:16px;accent-color:var(--accent)">
+                  Enfant marcheur (ratio encadrement)
+                </label>
+                <span style="font-size:11px;color:var(--ink3);display:block;margin-top:3px">Non coché : estimé selon la tranche d'âge (moins de 18 mois)</span>
+              </div>
+              <div class="fi-field"></div>
+            </div>
+            <div class="fi-row">
               <div class="fi-field"><label>Date d'entrée</label><input id="fi-entree" type="date" onchange="calcHorairesTotaux()"></div>
               <div class="fi-field"><label>Date de sortie prévue</label><input id="fi-sortie" type="date" onchange="calcHorairesTotaux()"></div>
             </div>
@@ -4625,14 +4635,22 @@ function calcAgeEnfant(ddn) {
 
 // Ratio encadrement : < 18 mois = "NM" (1/5), >= 18 mois = "marcheur" (1/8)
 // Source : FAQ réglementation EAJE 19/02/2026
-function isNonMarcheur(type) {
+// Si l'enfant a un statut "marcheur" explicitement coché sur sa fiche (case
+// fi-marcheur), il prévaut sur le seuil d'âge — plus fidèle à la réalité
+// terrain (un enfant peut marcher avant ou après 18 mois). Tant que la case
+// n'a jamais été touchée pour cet enfant (champ absent), on retombe sur le
+// seuil d'âge, pour ne pas fausser le ratio de tous les enfants déjà saisis.
+function isNonMarcheur(e) {
+  const isObj = e && typeof e === 'object';
+  if (isObj && typeof e.marcheur === 'boolean') return !e.marcheur;
+  const type = isObj ? e.type : e; // compat : accepte aussi une tranche brute en string
   const t = getTranche(type);
   return t.max <= 18; // tranches 2½-6, 6-12, 12-18
 }
 
 function calcTauxEncadrement(enfants, option) {
-  const nm = enfants.filter(e => isNonMarcheur(e.type)).length;
-  const m  = enfants.filter(e => !isNonMarcheur(e.type)).length;
+  const nm = enfants.filter(e => isNonMarcheur(e)).length;
+  const m  = enfants.filter(e => !isNonMarcheur(e)).length;
   const total = nm + m;
   if (total === 0) return { prosMin: 0, nm, m, total };
   let prosMin;
@@ -4860,7 +4878,7 @@ function renderFamillesPlanningGlobal() {
         .filter(e => (e.jours_presence || []).includes(j))
         .map(e => {
           const hd = (e.horaires_detail || {})[j] || {};
-          return { e, nm: isNonMarcheur(e.type), debut: hd.debut || '08:00', fin: hd.fin || '17:00' };
+          return { e, nm: isNonMarcheur(e), debut: hd.debut || '08:00', fin: hd.fin || '17:00' };
         })
         .sort((a, b) => (a.debut || '').localeCompare(b.debut || ''));
 
@@ -4946,7 +4964,7 @@ function renderFamillesPlanningGantt() {
     .filter(e => (e.jours_presence || []).includes(famGanttDay))
     .map(e => {
       const hd = (e.horaires_detail || {})[famGanttDay] || {};
-      return { e, nm: isNonMarcheur(e.type), debut: hd.debut || '08:00', fin: hd.fin || '17:00' };
+      return { e, nm: isNonMarcheur(e), debut: hd.debut || '08:00', fin: hd.fin || '17:00' };
     })
     .sort((a, b) => (a.debut || '').localeCompare(b.debut || ''));
 
@@ -5166,7 +5184,7 @@ function renderFamillesFinancement() {
       <tbody>${psu.map(e => `<tr onclick="${rowOpenFn(e)}" style="cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
         <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
         <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
-        <td><span style="background:${isNonMarcheur(e.type)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e.type)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e.type)?'Non-marcheur':'Marcheur'}</span></td>
+        <td><span style="background:${isNonMarcheur(e)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e)?'Non-marcheur':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
         <td>${e.berceau?`<span style="background:#FFE4E6;color:#BE123C;padding:2px 6px;border-radius:6px;font-size:11px">${e.berceau}</span>`:'—'}</td>
       </tr>`).join('')}</tbody></table></div>
@@ -5180,7 +5198,7 @@ function renderFamillesFinancement() {
       <tbody>${paje.map(e => `<tr onclick="${rowOpenFn(e)}" style="cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
         <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
         <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
-        <td><span style="background:${isNonMarcheur(e.type)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e.type)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e.type)?'Non-marcheur':'Marcheur'}</span></td>
+        <td><span style="background:${isNonMarcheur(e)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e)?'Non-marcheur':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
         <td>${e.berceau?`<span style="background:#FFE4E6;color:#BE123C;padding:2px 6px;border-radius:6px;font-size:11px">${e.berceau}</span>`:'—'}</td>
       </tr>`).join('')}</tbody></table></div>
@@ -5388,8 +5406,8 @@ function renderDashboardFamillesTile() {
   if (!el) return;
   const crecheId = currentCreche && currentCreche !== 'all' ? currentCreche : (CRECHES_DATA?.[0]?.nom || '');
   const enfants = getFamilles(crecheId).filter(e => !e.sortie || new Date(e.sortie) >= new Date());
-  const nm = enfants.filter(e => isNonMarcheur(e.type)).length;
-  const m  = enfants.filter(e => !isNonMarcheur(e.type)).length;
+  const nm = enfants.filter(e => isNonMarcheur(e)).length;
+  const m  = enfants.filter(e => !isNonMarcheur(e)).length;
   const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   const { prosMin } = calcTauxEncadrement(enfants, prefs.optionEncadrement || 'NM8M');
   el.querySelector('.fam-nm').textContent  = nm;
@@ -5555,6 +5573,7 @@ function openFicheEnfant(id) {
   setV('fi-qf', e.qf); setV('fi-taux-caf', e.taux_caf);
   const typeEl = document.getElementById('fi-type'); if(typeEl) typeEl.value = e.type || '2.5-6';
   const cafEl  = document.getElementById('fi-contrat-caf'); if(cafEl) cafEl.value = e.contrat_caf || 'PSU';
+  const marcheurEl = document.getElementById('fi-marcheur'); if(marcheurEl) marcheurEl.checked = !isNonMarcheur(e);
 
   // Onglet Parents
   const p1 = e.parent1 || {};
@@ -6183,6 +6202,7 @@ function saveFicheEnfant() {
     ...enfants[idx],
     prenom: getV('fi-prenom'), nom: getV('fi-nom'), ddn: getV('fi-ddn'),
     type: getV('fi-type'), contrat_caf: getV('fi-contrat-caf'),
+    marcheur: !!document.getElementById('fi-marcheur')?.checked,
     entree: getV('fi-entree'), sortie: getV('fi-sortie'),
     num_caf: getV('fi-num-caf'), nss1: getV('fi-nss1'), nss2: getV('fi-nss2'),
     qf: getV('fi-qf'), taux_caf: getV('fi-taux-caf'),
