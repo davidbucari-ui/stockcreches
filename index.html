@@ -12999,10 +12999,10 @@ async function _rhGenererModeleContrat() {
   const aujourdhui = new Date().toLocaleDateString('fr-FR');
 
   // Génération PDF avec jsPDF
-  if (typeof jspdf === 'undefined' && typeof jsPDF === 'undefined') {
+  if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
     showNotif('⚠ jsPDF non disponible'); return;
   }
-  const { jsPDF } = window.jspdf || window;
+  const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
   const W = 210, M = 20, TW = W - 2*M;
   let y = 20;
@@ -15575,9 +15575,6 @@ async function enregistrerPointage(type) {
           </div>
         </div>
 
-        <div class="form-group full" style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--ink3)">
-          ℹ️ La fiche salarié est créée automatiquement à la signature (statut « Signé »), si aucun collaborateur existant n'est sélectionné.
-        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -15717,6 +15714,7 @@ async function enregistrerPointage(type) {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
 // ── IMPORT EXCEL ──────────────────────────────────────────────────────────
