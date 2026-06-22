@@ -12869,7 +12869,7 @@ async function renderRecrutements() {
         <td><div>${r.candidat_nom || '—'}</div><div class="item-ref">${r.candidat_email || ''}</div></td>
         <td>${fmtDate(r.date_entretien)}</td>
         <td><div class="action-btns">
-          ${r.statut === 'pourvu' ? (
+          ${(r.statut || '').toLowerCase() === 'pourvu' ? (
             recrutementsAvecContrat.has(r.id)
               ? `<span class="badge badge-green" style="white-space:nowrap">✓ Contrat créé</span>`
               : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement('${r.id}')" title="Créer le contrat à partir de ce recrutement">📄 Contrat</button>`
@@ -12892,9 +12892,32 @@ async function creerContratDepuisRecrutement(recrutementId) {
     const r = rows[0];
     if (!r) { showNotif('⚠ Recrutement introuvable'); return; }
     if (!r.candidat_nom) { showNotif('⚠ Renseignez le nom du candidat dans la fiche recrutement avant de créer le contrat'); return; }
-    showRhTab('contrats', document.querySelector('[onclick*="showRhTab(\'contrats\'"]'));
-    rhEditingContrat = null;
-    document.getElementById('modal-rh-contrat-title').textContent = 'Nouveau contrat — ' + r.candidat_nom;
+
+    // Créer le brouillon directement en BDD
+    const brouillon = {
+      salarie_id:     null,
+      poste:          r.poste || '',
+      type:           r.type_contrat || 'CDI',
+      date_debut:     null,
+      date_fin:       null,
+      temps_travail:  null,
+      notes:          r.notes || '',
+      statut:         'brouillon',
+      candidat_nom:   r.candidat_nom || null,
+      candidat_email: r.candidat_email || null,
+      recrutement_id: r.id,
+      date_signature: null,
+    };
+    const inserted = await sbInsert('contrats', brouillon);
+    const contratId = Array.isArray(inserted) && inserted[0] ? inserted[0].id : null;
+    showNotif('📄 Brouillon de contrat créé pour ' + r.candidat_nom);
+
+    // Rafraîchir la liste recrutements pour afficher le badge "✓ Contrat créé"
+    await renderRecrutements();
+
+    // Ouvrir le modal contrat pour compléter les infos
+    rhEditingContrat = contratId;
+    document.getElementById('modal-rh-contrat-title').textContent = 'Contrat — ' + r.candidat_nom;
     await rhLoadUsers(['rh-c-user']);
     document.getElementById('rh-c-user').value = '';
     document.getElementById('rh-c-poste').value = r.poste || '';
