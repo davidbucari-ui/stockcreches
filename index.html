@@ -12871,6 +12871,7 @@ async function renderRecrutements() {
         <td><div class="action-btns">
           ${r.cv_url ? `<a href="${r.cv_url}" target="_blank" class="btn btn-secondary btn-sm" title="CV">📄</a>` : ''}
           ${r.lettre_url ? `<a href="${r.lettre_url}" target="_blank" class="btn btn-secondary btn-sm" title="Lettre">✉️</a>` : ''}
+          ${r.diplome_url ? `<a href="${r.diplome_url}" target="_blank" class="btn btn-secondary btn-sm" title="Diplôme">📜</a>` : ''}
           ${r.honor_url ? `<a href="${r.honor_url}" target="_blank" class="btn btn-secondary btn-sm" title="Honorabilité">🛡</a>` : `<span class="badge" style="background:#fef2f2;color:#991b1b;font-size:10px" title="Attestation manquante">🛡!</span>`}
           ${(r.quiz_score !== null && r.quiz_score !== undefined) ? `<span class="badge badge-green" title="Quiz">🎯 ${Math.round((r.quiz_score/12)*100)}%</span>` : (r.quiz_token ? `<span class="badge" style="background:var(--surface2);color:var(--ink3);font-size:10px">⏳ Quiz</span>` : '')}
           ${(r.statut === 'Valide' || r.statut === 'valide' || r.statut === 'Validé') ? (
@@ -12900,7 +12901,7 @@ async function creerContratDepuisRecrutement(recrutementId) {
     const r = rows[0];
     if (!r) { showNotif('⚠ Recrutement introuvable'); return; }
     if (!r.candidat_nom) { showNotif('⚠ Renseignez le nom du candidat dans la fiche recrutement avant de créer le contrat'); return; }
-    window._recrutDossier = { cv_url: r.cv_url||null, lettre_url: r.lettre_url||null, honor_url: r.honor_url||null, quiz_score: r.quiz_score != null ? r.quiz_score : null, quiz_detail: r.quiz_detail||null };
+    window._recrutDossier = { cv_url: r.cv_url||null, lettre_url: r.lettre_url||null, diplome_url: r.diplome_url||null, honor_url: r.honor_url||null, quiz_score: (r.quiz_score != null ? r.quiz_score : null), quiz_detail: r.quiz_detail||null };
     showRhTab('contrats', document.querySelector('[onclick*="showRhTab(\'contrats\'"]'));
     rhEditingContrat = null;
     document.getElementById('modal-rh-contrat-title').textContent = 'Nouveau contrat — ' + r.candidat_nom;
@@ -12964,8 +12965,8 @@ async function creerSalarieDepuisContrat(c) {
     structuresCoordonnees: [],
   };
   if (window._recrutDossier) {
-    var d = window._recrutDossier;
-    ['cv_url','lettre_url','honor_url','quiz_score','quiz_detail'].forEach(function(k) { if (d[k] !== null && d[k] !== undefined) s[k] = d[k]; });
+    var _d = window._recrutDossier;
+    ['cv_url','lettre_url','diplome_url','honor_url','quiz_score','quiz_detail'].forEach(function(k) { if (_d[k] !== null && _d[k] !== undefined) s[k] = _d[k]; });
     window._recrutDossier = null;
   }
   SALARIES.push(s);
@@ -12979,7 +12980,7 @@ async function creerSalarieDepuisContrat(c) {
   return newId;
 }
 
-// ── Upload docs vers Supabase RH Storage ──────────────────────────
+// ── Upload docs RH Storage ─────────────────────────────────────────
 const SUPA_RH_DOCS_BUCKET = 'recrutement-docs';
 async function uploadDocRH(file, prefix) {
   const ext  = (file.name.split('.').pop() || 'pdf').toLowerCase();
@@ -12994,19 +12995,14 @@ async function uploadDocRH(file, prefix) {
   return SUPA_RH_URL + '/storage/v1/object/public/' + SUPA_RH_DOCS_BUCKET + '/' + path;
 }
 
-// Patch silencieux : tente d'envoyer des colonnes optionnelles, ignore si 400
+// Patch silencieux pour colonnes optionnelles (ignore 400 si colonne absente)
 async function sbUpdateSilent(table, id, data) {
   if (!id || !Object.keys(data).length) return;
   try {
     const r = await fetch(_sbUrl(table) + '/rest/v1/' + table + '?id=eq.' + id, {
-      method: 'PATCH',
-      headers: _sbHeaders(table),
-      body: JSON.stringify(data),
+      method: 'PATCH', headers: _sbHeaders(table), body: JSON.stringify(data),
     });
-    if (!r.ok) {
-      const msg = await r.text().catch(() => '');
-      console.warn('sbUpdateSilent ' + table + ' ' + r.status + ':', msg);
-    }
+    if (!r.ok) console.warn('sbUpdateSilent ' + table + ' ' + r.status + ':', await r.text().catch(function(){return '';}));
   } catch(e) { console.warn('sbUpdateSilent:', e); }
 }
 
@@ -13014,9 +13010,9 @@ async function saveRhRecrutement() {
   const poste = (document.getElementById('rh-r-poste').value || '').trim();
   if (!poste) { alert('Le poste est requis.'); return; }
   const STATUT_MAP_RECRU = { ouvert:'Ouvert', en_cours:'En cours', pourvu:'Pourvu', valide:'Valide', annule:'Annule' };
-  const rawStatut = document.getElementById('rh-r-statut').value;
-  const newStatut = STATUT_MAP_RECRU[rawStatut] || rawStatut;
-  // Colonnes garanties existantes en base
+  const rawStatut  = document.getElementById('rh-r-statut').value;
+  const newStatut  = STATUT_MAP_RECRU[rawStatut] || rawStatut;
+  // Colonnes stables — ne jamais inclure de colonnes optionnelles ici
   const data = {
     poste,
     type_contrat:   document.getElementById('rh-r-type').value,
@@ -13034,19 +13030,21 @@ async function saveRhRecrutement() {
       const row = await sbInsert('recrutements', data);
       savedId = row && row[0] ? row[0].id : null;
     }
-    // Upload docs + colonnes optionnelles (silencieux si colonnes absentes)
+    // Upload docs séparément via sbUpdateSilent (ne plante pas si colonnes absentes)
     if (savedId) {
-      const slug = (data.candidat_nom || 'candidat').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 20);
+      const slug = (data.candidat_nom || 'candidat').toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,20);
       const extra = {};
-      const cvFile  = document.getElementById('rh-r-cv-file')    && document.getElementById('rh-r-cv-file').files[0];
-      const lmFile  = document.getElementById('rh-r-lettre-file') && document.getElementById('rh-r-lettre-file').files[0];
-      const honFile = document.getElementById('rh-r-honor-file')  && document.getElementById('rh-r-honor-file').files[0];
-      if (cvFile)  try { extra.cv_url     = await uploadDocRH(cvFile,  slug + '/cv');            } catch(e) { console.warn('CV:',  e); }
-      if (lmFile)  try { extra.lettre_url = await uploadDocRH(lmFile,  slug + '/lettre');        } catch(e) { console.warn('LM:',  e); }
-      if (honFile) try { extra.honor_url  = await uploadDocRH(honFile, slug + '/honorabilite');  } catch(e) { console.warn('Hon:', e); }
+      const _f = function(id) { var el = document.getElementById(id); return el && el.files[0] ? el.files[0] : null; };
+      const cvFile  = _f('rh-r-cv-file');
+      const lmFile  = _f('rh-r-lettre-file');
+      const dipFile = _f('rh-r-diplome-file');
+      const honFile = _f('rh-r-honor-file');
+      if (cvFile)  try { extra.cv_url      = await uploadDocRH(cvFile,  slug + '/cv');            } catch(e) { console.warn('CV:', e); }
+      if (lmFile)  try { extra.lettre_url  = await uploadDocRH(lmFile,  slug + '/lettre');        } catch(e) { console.warn('LM:', e); }
+      if (dipFile) try { extra.diplome_url = await uploadDocRH(dipFile, slug + '/diplome');       } catch(e) { console.warn('Dip:', e); }
+      if (honFile) try { extra.honor_url   = await uploadDocRH(honFile, slug + '/honorabilite'); } catch(e) { console.warn('Hon:', e); }
       if (Object.keys(extra).length) await sbUpdateSilent('recrutements', savedId, extra);
     }
-    // Si Valide → proposer contrat
     if ((newStatut === 'Valide' || newStatut === 'Validé') && savedId) {
       closeModal('modal-rh-recrutement');
       renderRecrutements(); renderRhStats();
@@ -13071,7 +13069,7 @@ async function envoyerQuizCandidat() {
   const email = (document.getElementById('rh-r-candidat-email').value || '').trim();
   const nom   = (document.getElementById('rh-r-candidat-nom').value   || '').trim();
   const poste = (document.getElementById('rh-r-poste').value          || '').trim();
-  if (!email) { alert("Renseignez l'email du candidat avant d'envoyer le quiz."); return; }
+  if (!email) { alert("Renseignez l'email du candidat."); return; }
   let token = window._rhQuizToken;
   if (!token) {
     token = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
@@ -13081,7 +13079,7 @@ async function envoyerQuizCandidat() {
   const lien  = 'https://app.orevy.app/quiz.html?token=' + token;
   const sujet = encodeURIComponent('Quiz — Candidature ' + poste + ' — Koalakids');
   const nl    = '%0A';
-  const corps = 'Bonjour ' + encodeURIComponent(nom) + ',' + nl + nl + 'Dans le cadre de votre candidature au poste de ' + encodeURIComponent(poste) + ', nous vous invitons a completer un quiz de 12 questions sur notre projet educatif et pedagogique.' + nl + nl + 'Cela prend environ 10 minutes.' + nl + nl + encodeURIComponent(lien) + nl + nl + "Bonne chance ! L'equipe Koalakids";
+  const corps = 'Bonjour ' + encodeURIComponent(nom) + ',' + nl + nl + encodeURIComponent("Dans le cadre de votre candidature au poste de " + poste + ", nous vous invitons à compléter un quiz sur notre projet éducatif (12 questions, 10 min).") + nl + nl + encodeURIComponent(lien) + nl + nl + encodeURIComponent("Bonne chance ! L'équipe Koalakids");
   window.open('mailto:' + email + '?subject=' + sujet + '&body=' + corps);
   const statusEl = document.getElementById('rh-r-quiz-status');
   const copyBtn  = document.getElementById('rh-r-quiz-copy-btn');
@@ -13293,34 +13291,35 @@ async function openModalRh(type, id = null) {
         document.getElementById('rh-r-type').value   = r.type_contrat || 'CDI';
         const STATUT_RMAP = { 'Ouvert':'ouvert','En cours':'en_cours','Pourvu':'pourvu','Valide':'valide','Validé':'valide','Annulé':'annule' };
         document.getElementById('rh-r-statut').value = STATUT_RMAP[r.statut] || r.statut || 'ouvert';
-        const _lnk = function(id, url) { const el = document.getElementById(id); if (!el) return; if (url) { el.href = url; el.style.display = 'inline'; } else { el.style.display = 'none'; } };
-        _lnk('rh-r-cv-link',    r.cv_url);
-        _lnk('rh-r-lettre-link',r.lettre_url);
-        _lnk('rh-r-honor-link', r.honor_url);
-        window._rhQuizToken     = r.quiz_token || null;
+        const _lnk = function(elId, url) { const el = document.getElementById(elId); if (!el) return; if (url) { el.href = url; el.style.display = 'inline'; } else { el.style.display = 'none'; } };
+        _lnk('rh-r-cv-link',     r.cv_url);
+        _lnk('rh-r-lettre-link', r.lettre_url);
+        _lnk('rh-r-diplome-link',r.diplome_url);
+        _lnk('rh-r-honor-link',  r.honor_url);
+        window._rhQuizToken = r.quiz_token || null;
         window._rhRecrutementId = r.id;
-        const sEl = document.getElementById('rh-r-quiz-status');
+        const sEl  = document.getElementById('rh-r-quiz-status');
         const cBtn = document.getElementById('rh-r-quiz-copy-btn');
         const rEl  = document.getElementById('rh-r-quiz-result');
         if (r.quiz_token) {
-          if (sEl) sEl.textContent = 'Lien envoyé : https://app.orevy.app/quiz.html?token=' + r.quiz_token;
+          if (sEl)  sEl.textContent = 'Lien envoyé : https://app.orevy.app/quiz.html?token=' + r.quiz_token;
           if (cBtn) cBtn.style.display = 'inline-flex';
         } else {
-          if (sEl) sEl.textContent = 'Quiz non encore envoyé';
+          if (sEl)  sEl.textContent = 'Quiz non encore envoyé';
           if (cBtn) cBtn.style.display = 'none';
         }
         if (r.quiz_score !== null && r.quiz_score !== undefined && rEl) {
-          const pct = Math.round((r.quiz_score / 12) * 100);
-          const det = r.quiz_detail ? (typeof r.quiz_detail === 'string' ? JSON.parse(r.quiz_detail) : r.quiz_detail) : {};
-          const drows = Object.entries(det).map(function(kv) { return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--ink3)">' + kv[0] + '</span><span style="font-weight:500">' + kv[1] + '</span></div>'; }).join('');
-          rEl.innerHTML = '<div style="font-weight:500;margin-bottom:4px">Quiz : ' + pct + '% (' + r.quiz_score + '/12)</div>' + drows;
+          const pct  = Math.round((r.quiz_score / 12) * 100);
+          const det  = r.quiz_detail ? (typeof r.quiz_detail === 'string' ? JSON.parse(r.quiz_detail) : r.quiz_detail) : {};
+          const drow = Object.entries(det).map(function(kv) { return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--ink3)">' + kv[0] + '</span><span style="font-weight:500">' + kv[1] + '</span></div>'; }).join('');
+          rEl.innerHTML = '<div style="font-weight:500;margin-bottom:4px">Quiz : ' + pct + '% (' + r.quiz_score + '/12)</div>' + drow;
           rEl.style.display = 'block';
           if (sEl && r.quiz_completed_at) sEl.textContent = 'Quiz complété le ' + new Date(r.quiz_completed_at).toLocaleDateString('fr-FR');
         } else if (rEl) { rEl.style.display = 'none'; }
       }
     } else {
       window._rhQuizToken = null; window._rhRecrutementId = null;
-      ['rh-r-cv-link','rh-r-lettre-link','rh-r-honor-link'].forEach(function(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+      ['rh-r-cv-link','rh-r-lettre-link','rh-r-diplome-link','rh-r-honor-link'].forEach(function(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
       const sEl2 = document.getElementById('rh-r-quiz-status'); if (sEl2) sEl2.textContent = "Enregistrez d'abord le recrutement pour envoyer le quiz";
       const cBtn2 = document.getElementById('rh-r-quiz-copy-btn'); if (cBtn2) cBtn2.style.display = 'none';
       const rEl2 = document.getElementById('rh-r-quiz-result'); if (rEl2) rEl2.style.display = 'none';
@@ -15336,17 +15335,22 @@ async function enregistrerPointage(type) {
             <div>
               <label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">📄 CV (PDF)</label>
               <input type="file" id="rh-r-cv-file" accept=".pdf" style="width:100%;font-size:13px">
-              <a id="rh-r-cv-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px;display:none">→ Voir le CV existant</a>
+              <a id="rh-r-cv-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir le CV existant</a>
             </div>
             <div>
               <label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">✉️ Lettre de motivation (PDF)</label>
               <input type="file" id="rh-r-lettre-file" accept=".pdf" style="width:100%;font-size:13px">
-              <a id="rh-r-lettre-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px;display:none">→ Voir la lettre existante</a>
+              <a id="rh-r-lettre-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir la lettre existante</a>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">📜 Diplôme (PDF)</label>
+              <input type="file" id="rh-r-diplome-file" accept=".pdf" style="width:100%;font-size:13px">
+              <a id="rh-r-diplome-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir le diplôme existant</a>
             </div>
             <div>
               <label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">🛡 Attestation d'honorabilité (PDF) <span style="color:#dc2626;font-size:11px;font-weight:400">— obligatoire EAJE</span></label>
               <input type="file" id="rh-r-honor-file" accept=".pdf" style="width:100%;font-size:13px">
-              <a id="rh-r-honor-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px;display:none">→ Voir l'attestation existante</a>
+              <a id="rh-r-honor-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir l'attestation existante</a>
               <div style="font-size:11px;color:var(--ink3,#6b7280);margin-top:3px">Extrait FIJAISV — à renouveler tous les 3 ans.</div>
             </div>
           </div>
@@ -17038,13 +17042,6 @@ function showImportResult(type, html) {
           <label>Diplôme principal</label>
           <input type="text" id="sal-diplome" placeholder="Ex: DE Auxiliaire de puériculture">
         </div>
-        <div class="form-group full">
-          <label style="font-size:13px">📜 Copie du diplôme (PDF)</label>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <input type="file" id="sal-diplome-file" accept=".pdf" style="flex:1;min-width:0;font-size:13px">
-            <a id="sal-diplome-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none">→ Voir</a>
-          </div>
-        </div>
         <div class="form-group">
           <label>PSC1 / Premiers secours</label>
           <select id="sal-psc1">
@@ -17068,11 +17065,20 @@ function showImportResult(type, html) {
           <textarea id="sal-notes" rows="3" placeholder="Informations complémentaires..."></textarea>
         </div>
 
-        <!-- Dossier de recrutement -->
+        <!-- Diplôme upload -->
+        <div class="form-group full" style="margin-top:8px">
+          <label>📜 Copie du diplôme (PDF)</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <input type="file" id="sal-diplome-file" accept=".pdf" style="flex:1;min-width:0;font-size:13px">
+            <a id="sal-diplome-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none">→ Voir</a>
+          </div>
+        </div>
+
+        <!-- Dossier recrutement -->
         <div class="form-group full" style="margin-top:12px;border-top:1px solid var(--border,#e5e7eb);padding-top:14px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3,#6b7280);margin-bottom:8px">📂 Dossier de recrutement</div>
           <div id="sal-dossier-recrutement" style="display:grid;gap:8px">
-            <div style="font-size:13px;color:var(--ink3,#6b7280);font-style:italic">Aucun dossier lié</div>
+            <div style="font-size:13px;color:var(--ink3,#6b7280);font-style:italic">Aucun document lié</div>
           </div>
         </div>
 
@@ -17301,23 +17307,26 @@ function editSalarie(id) {
 }
 
 function _salPopulateDossier(s) {
-  const c = document.getElementById('sal-dossier-recrutement');
-  if (!c) return;
-  var items = [];
-  if (s.cv_url)     items.push('<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px">📄 CV</span><a href="' + s.cv_url + '" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75)">Voir →</a></div>');
-  if (s.lettre_url) items.push('<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px">✉️ Lettre</span><a href="' + s.lettre_url + '" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75)">Voir →</a></div>');
-  if (s.quiz_score !== undefined && s.quiz_score !== null) {
-    var pct = Math.round((s.quiz_score / 12) * 100);
-    var det = s.quiz_detail ? (typeof s.quiz_detail === 'string' ? JSON.parse(s.quiz_detail) : s.quiz_detail) : {};
-    var drows = Object.entries(det).map(function(kv) { return kv[0] + ' : ' + kv[1]; }).join(' · ');
-    items.push('<div><div style="font-size:13px;font-weight:500">🎯 Quiz projet éducatif — ' + pct + '% (' + s.quiz_score + '/12)</div><div style="font-size:11px;color:var(--ink3)">' + drows + '</div></div>');
+  var c = document.getElementById('sal-dossier-recrutement');
+  if (c) {
+    var items = [];
+    if (s.cv_url)      items.push('<div style="display:flex;align-items:center;gap:8px"><span>📄 CV</span><a href="' + s.cv_url + '" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75)">Voir →</a></div>');
+    if (s.lettre_url)  items.push('<div style="display:flex;align-items:center;gap:8px"><span>✉️ Lettre</span><a href="' + s.lettre_url + '" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75)">Voir →</a></div>');
+    if (s.diplome_url) items.push('<div style="display:flex;align-items:center;gap:8px"><span>📜 Diplôme</span><a href="' + s.diplome_url + '" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75)">Voir →</a></div>');
+    if (s.quiz_score !== undefined && s.quiz_score !== null) {
+      var pct = Math.round((s.quiz_score / 12) * 100);
+      var det = s.quiz_detail ? (typeof s.quiz_detail === 'string' ? JSON.parse(s.quiz_detail) : s.quiz_detail) : {};
+      var drow = Object.entries(det).map(function(kv) { return kv[0] + ' : ' + kv[1]; }).join(' · ');
+      items.push('<div><div style="font-size:13px;font-weight:500">🎯 Quiz projet éducatif — ' + pct + '% (' + s.quiz_score + '/12)</div><div style="font-size:11px;color:var(--ink3)">' + drow + '</div></div>');
+    }
+    c.innerHTML = items.length ? items.join('') : '<div style="font-size:13px;color:var(--ink3,#6b7280);font-style:italic">Aucun document lié</div>';
   }
-  c.innerHTML = items.length ? items.join('') : '<div style="font-size:13px;color:var(--ink3,#6b7280);font-style:italic">Aucun document de recrutement lié</div>';
-  var hl = document.getElementById('sal-honor-link'); var hd = document.getElementById('sal-honor-date');
-  if (hl) { if (s.honor_url) { hl.href = s.honor_url; hl.style.display = 'inline'; } else { hl.style.display = 'none'; } }
-  if (hd && s.honor_date) hd.value = s.honor_date;
   var dl = document.getElementById('sal-diplome-link');
   if (dl) { if (s.diplome_url) { dl.href = s.diplome_url; dl.style.display = 'inline'; } else { dl.style.display = 'none'; } }
+  var hl = document.getElementById('sal-honor-link');
+  if (hl) { if (s.honor_url) { hl.href = s.honor_url; hl.style.display = 'inline'; } else { hl.style.display = 'none'; } }
+  var hd = document.getElementById('sal-honor-date');
+  if (hd && s.honor_date) hd.value = s.honor_date;
 }
 
 function saveSalarie() {
@@ -17349,33 +17358,28 @@ function saveSalarie() {
     notes:      document.getElementById('sal-notes').value.trim(),
     structuresCoordonnees: Array.from(document.querySelectorAll('.sal-coord-cb:checked')).map(cb => cb.value),
   };
-  // Conserver les docs existants du dossier recrutement
+  // Conserver les docs existants
   if (salEditingId) {
-    var ex = SALARIES.find(function(x) { return x.id === salEditingId; });
-    if (ex) { ['cv_url','lettre_url','honor_url','honor_date','quiz_score','quiz_detail','diplome_url'].forEach(function(k) { if (ex[k] !== undefined) s[k] = ex[k]; }); }
+    var _ex = SALARIES.find(function(x) { return x.id === salEditingId; });
+    if (_ex) { ['cv_url','lettre_url','diplome_url','honor_url','honor_date','quiz_score','quiz_detail'].forEach(function(k) { if (_ex[k] !== undefined) s[k] = _ex[k]; }); }
   }
-  // Upload diplôme si nouveau fichier sélectionné
-  var diplomeFile = document.getElementById('sal-diplome-file') && document.getElementById('sal-diplome-file').files[0];
-  if (diplomeFile) {
-    var slug2 = ((s.prenom||'') + '_' + (s.nom||'')).toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,20);
-    uploadDocRH(diplomeFile, slug2 + '/diplome').then(function(url) {
-      var ex2 = SALARIES.find(function(x) { return x.id === s.id; });
-      if (ex2) { ex2.diplome_url = url; saveSalaries(); }
+  var _slug = ((s.prenom||'') + '_' + (s.nom||'')).toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,20);
+  var _dipFile = document.getElementById('sal-diplome-file') && document.getElementById('sal-diplome-file').files[0];
+  if (_dipFile) {
+    uploadDocRH(_dipFile, _slug + '/diplome').then(function(url) {
+      var _e = SALARIES.find(function(x) { return x.id === s.id; }); if (_e) { _e.diplome_url = url; saveSalaries(); }
       var dl = document.getElementById('sal-diplome-link'); if (dl) { dl.href = url; dl.style.display = 'inline'; }
       showNotif('Diplôme enregistré');
     }).catch(function(e) { console.warn('Diplome:', e); });
   }
-  // Upload honorabilité si nouveau fichier
-  var honorFile2 = document.getElementById('sal-honor-file') && document.getElementById('sal-honor-file').files[0];
-  var honorDate2 = document.getElementById('sal-honor-date') && document.getElementById('sal-honor-date').value;
-  if (honorDate2) s.honor_date = honorDate2;
-  if (honorFile2) {
-    var slug3 = ((s.prenom||'') + '_' + (s.nom||'')).toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,20);
-    uploadDocRH(honorFile2, slug3 + '/honorabilite').then(function(url) {
-      var ex3 = SALARIES.find(function(x) { return x.id === s.id; });
-      if (ex3) { ex3.honor_url = url; saveSalaries(); }
+  var _honFile = document.getElementById('sal-honor-file') && document.getElementById('sal-honor-file').files[0];
+  var _honDate = document.getElementById('sal-honor-date') && document.getElementById('sal-honor-date').value;
+  if (_honDate) s.honor_date = _honDate;
+  if (_honFile) {
+    uploadDocRH(_honFile, _slug + '/honorabilite').then(function(url) {
+      var _e = SALARIES.find(function(x) { return x.id === s.id; }); if (_e) { _e.honor_url = url; saveSalaries(); }
       var hl = document.getElementById('sal-honor-link'); if (hl) { hl.href = url; hl.style.display = 'inline'; }
-      showNotif('Attestation honorabilité enregistrée');
+      showNotif("Attestation d'honorabilité enregistrée");
     }).catch(function(e) { console.warn('Honor:', e); });
   }
   loadSalaries();
