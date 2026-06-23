@@ -9115,11 +9115,11 @@ async function hubLoadKPIs(role) {
     try {
       const tokenStocks = localStorage.getItem('sb_token_stocks');
       if (tokenStocks) {
-        const paramsArt = 'select=id,stock,stock_min,creche'
+        const paramsArt = 'select=id,stock,min,creche'
           + (crecheFilter ? '&creche=eq.' + encodeURIComponent(crecheFilter) : '');
 
         const arts = await sbGet('articles', paramsArt);
-        if (Array.isArray(arts)) stocksBas = arts.filter(a => a.stock !== null && a.stock_min !== null && a.stock <= a.stock_min).length;
+        if (Array.isArray(arts)) stocksBas = arts.filter(a => a.stock !== null && a.min !== null && a.stock <= a.min).length;
       }
     } catch(e) { console.warn('[Hub KPI stocks]', e.message); }
 
