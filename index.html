@@ -2158,6 +2158,7 @@ textarea { resize: vertical; min-height: 72px; }
       <div style="padding:16px 28px 0">
         <div class="tabs" id="rh-tabs">
           <button class="tab-btn active" onclick="showRhTab('recrutement',this)">🎯 Recrutement</button>
+          <button class="tab-btn" onclick="showRhTab('archives_recrut',this)">📦 Archives</button>
           <button class="tab-btn" onclick="showRhTab('contrats',this)">📄 Contrats</button>
           <button class="tab-btn" onclick="showRhTab('conges',this)">🌴 Congés</button>
           <button class="tab-btn" onclick="showRhTab('formations',this)">🎓 Formation</button>
@@ -2171,6 +2172,12 @@ textarea { resize: vertical; min-height: 72px; }
             <button class="btn btn-primary" onclick="openModalRh('recrutement')">+ Nouveau poste</button>
           </div>
           <div class="table-wrap"><div id="rh-recrutement-list"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div></div>
+        </div>
+        <div id="rh-tab-archives_recrut" style="display:none">
+          <div class="section-header" style="padding-top:20px">
+            <div class="section-title">📦 Archives recrutements</div>
+          </div>
+          <div class="table-wrap"><div id="rh-archives-recrut-list"><div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div></div></div>
         </div>
         <div id="rh-tab-contrats" style="display:none">
           <div class="section-header" style="padding-top:20px">
@@ -12741,7 +12748,7 @@ let rhEditingFormation = null;
 
 async function showRhPage() {
   renderRhStats();
-  const tabOrder = ['recrutement','contrats','conges','formations','salaries'];
+  const tabOrder = ['recrutement','archives_recrut','contrats','conges','formations','salaries'];
   const idx = tabOrder.indexOf(rhCurrentTab);
   const btn = document.querySelectorAll('#rh-tabs .tab-btn')[idx] || null;
   showRhTab(rhCurrentTab, btn);
@@ -12749,17 +12756,18 @@ async function showRhPage() {
 
 function showRhTab(tab, btn) {
   rhCurrentTab = tab;
-  ['recrutement','contrats','conges','formations','salaries'].forEach(t => {
+  ['recrutement','archives_recrut','contrats','conges','formations','salaries'].forEach(t => {
     const el = document.getElementById(`rh-tab-${t}`);
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
   document.querySelectorAll('#rh-tabs .tab-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  if (tab === 'recrutement') renderRecrutements();
-  if (tab === 'contrats')    renderContrats();
-  if (tab === 'conges')      renderConges();
-  if (tab === 'formations')  renderFormations();
-  if (tab === 'salaries')    renderSalaries();
+  if (tab === 'recrutement')    renderRecrutements();
+  if (tab === 'archives_recrut') renderArchivesRecrutements();
+  if (tab === 'contrats')       renderContrats();
+  if (tab === 'conges')         renderConges();
+  if (tab === 'formations')     renderFormations();
+  if (tab === 'salaries')       renderSalaries();
 }
 
 async function renderRhStats() {
@@ -12859,10 +12867,11 @@ async function renderRecrutements() {
       sbGet('contrats', 'select=id,recrutement_id').catch(() => []),
     ]);
     const recrutementsAvecContrat = new Set((contratRows||[]).filter(c => c.recrutement_id).map(c => c.recrutement_id));
-    if (!rows.length) { el.innerHTML = rhEmpty('Aucun recrutement. Cliquez sur "+ Nouveau poste".'); return; }
+    const rowsActifs = rows.filter(function(r) { return r.statut !== 'Archivé'; });
+    if (!rowsActifs.length) { el.innerHTML = rhEmpty('Aucun recrutement en cours.'); return; }
     el.innerHTML = rhTable(
       ['Poste', 'Type', 'Statut', 'Candidat', 'Entretien', 'Actions'],
-      rows.map(r => `<tr>
+      rowsActifs.map(r => `<tr>
         <td><div class="item-name">${r.poste}</div></td>
         <td>${rhBadge(r.type_contrat, RH_TYPE_COLOR[r.type_contrat] || 'gray')}</td>
         <td>${rhBadge(RH_LABEL_RECRU[r.statut] || r.statut, RH_STATUT_RECRU[r.statut] || 'gray')}</td>
@@ -12874,11 +12883,7 @@ async function renderRecrutements() {
           ${r.diplome_url ? `<a href="${r.diplome_url}" target="_blank" class="btn btn-secondary btn-sm" title="Diplôme">📜</a>` : ''}
           ${r.honor_url ? `<a href="${r.honor_url}" target="_blank" class="btn btn-secondary btn-sm" title="Honorabilité">🛡</a>` : `<span class="badge" style="background:#fef2f2;color:#991b1b;font-size:10px" title="Attestation manquante">🛡!</span>`}
           ${(r.quiz_score !== null && r.quiz_score !== undefined) ? `<span class="badge badge-green" title="Quiz">🎯 ${Math.round((r.quiz_score/12)*100)}%</span>` : (r.quiz_token ? `<span class="badge" style="background:var(--surface2);color:var(--ink3);font-size:10px">⏳ Quiz</span>` : '')}
-          ${(r.statut === 'Validé' || r.statut === 'valide') ? (
-            recrutementsAvecContrat.has(r.id)
-              ? `<span class="badge badge-green">✓ Contrat créé</span>`
-              : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement('${r.id}')">📝 Contrat</button>`
-          ) : (r.statut === 'Pourvu' || r.statut === 'pourvu') ? (
+          ${(r.statut === 'Validé' || r.statut === 'valide' || r.statut === 'Pourvu' || r.statut === 'pourvu') ? (
             recrutementsAvecContrat.has(r.id)
               ? `<span class="badge badge-green">✓ Contrat créé</span>`
               : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement('${r.id}')">📝 Contrat</button>`
@@ -12920,6 +12925,8 @@ async function creerContratDepuisRecrutement(recrutementId) {
     document.getElementById('rh-c-recrutement-id').value = r.id;
     _rhContratToggleSignature();
     document.getElementById('modal-rh-contrat').classList.add('open');
+    // Archiver le recrutement dès que le contrat est créé
+    window._recrutementAArchiver = recrutementId;
   } catch(e) { showNotif('⚠ ' + e.message); }
 }
 
@@ -13001,18 +13008,62 @@ async function sbUpdateSilent(table, id, data) {
     const r = await fetch(_sbUrl(table) + '/rest/v1/' + table + '?id=eq.' + id, {
       method: 'PATCH', headers: _sbHeaders(table), body: JSON.stringify(data),
     });
-    if (!r.ok) console.warn('sbUpdateSilent ' + table + ' ' + r.status + ':', await r.text().catch(function(){return '';}));
+    if (!r.ok) console.warn('sbUpdateSilent ' + table + ' ' + r.status);
   } catch(e) { console.warn('sbUpdateSilent:', e); }
+}
+
+// ── Archivage recrutement ──────────────────────────────────────────
+async function archiverRecrutement(recrutementId) {
+  await sbUpdateSilent('recrutements', recrutementId, { statut: 'Archivé', archived_at: new Date().toISOString() });
+  showNotif('📦 Recrutement archivé');
+  renderRecrutements();
+  if (document.getElementById('rh-tab-archives_recrut') && document.getElementById('rh-tab-archives_recrut').style.display !== 'none') {
+    renderArchivesRecrutements();
+  }
+}
+
+async function renderArchivesRecrutements() {
+  const el = document.getElementById('rh-archives-recrut-list');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3)">Chargement…</div>';
+  try {
+    const rows = await sbGet('recrutements', 'statut=eq.Archivé&order=id.desc').catch(() => []);
+    if (!rows.length) {
+      el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--ink3)">Aucun recrutement archivé.</div>';
+      return;
+    }
+    el.innerHTML = rhTable(
+      ['Candidat', 'Poste', 'Type', 'Documents', 'Quiz', 'Archivé le'],
+      rows.map(function(r) {
+        const docs = [
+          r.cv_url      ? '<a href="' + r.cv_url      + '" target="_blank" class="btn btn-secondary btn-sm" title="CV">📄</a>' : '',
+          r.lettre_url  ? '<a href="' + r.lettre_url  + '" target="_blank" class="btn btn-secondary btn-sm" title="Lettre">✉️</a>' : '',
+          r.diplome_url ? '<a href="' + r.diplome_url + '" target="_blank" class="btn btn-secondary btn-sm" title="Diplôme">📜</a>' : '',
+          r.honor_url   ? '<a href="' + r.honor_url   + '" target="_blank" class="btn btn-secondary btn-sm" title="Honorabilité">🛡</a>' : '',
+        ].filter(Boolean).join('');
+        const quiz = (r.quiz_score !== null && r.quiz_score !== undefined)
+          ? '<span class="badge badge-green">🎯 ' + Math.round((r.quiz_score/12)*100) + '%</span>'
+          : '<span style="color:var(--ink3);font-size:12px">—</span>';
+        const archiveDate = r.archived_at ? new Date(r.archived_at).toLocaleDateString('fr-FR') : '—';
+        return '<tr>' +
+          '<td><div class="item-name">' + (r.candidat_nom||'—') + '</div><div class="item-ref">' + (r.candidat_email||'') + '</div></td>' +
+          '<td>' + (r.poste||'—') + '</td>' +
+          '<td>' + rhBadge(r.type_contrat, RH_TYPE_COLOR[r.type_contrat]||'gray') + '</td>' +
+          '<td><div class="action-btns">' + (docs||'<span style="color:var(--ink3);font-size:12px">—</span>') + '</div></td>' +
+          '<td>' + quiz + '</td>' +
+          '<td style="font-size:12px;color:var(--ink3)">' + archiveDate + '</td>' +
+          '</tr>';
+      })
+    );
+  } catch(e) { el.innerHTML = '<div style="padding:24px;color:var(--red)">Erreur : ' + e.message + '</div>'; }
 }
 
 async function saveRhRecrutement() {
   const poste = (document.getElementById('rh-r-poste').value || '').trim();
   if (!poste) { alert('Le poste est requis.'); return; }
-  // Valeurs exactes attendues par la CHECK constraint Supabase
   const STATUT_MAP_RECRU = { ouvert:'Ouvert', en_cours:'En cours', pourvu:'Pourvu', valide:'Validé', annule:'Annulé' };
   const rawStatut = document.getElementById('rh-r-statut').value;
   const newStatut = STATUT_MAP_RECRU[rawStatut] || rawStatut;
-  // Colonnes stables uniquement — pas de creche_id ni colonnes optionnelles
   const data = {
     poste,
     type_contrat:   document.getElementById('rh-r-type').value,
@@ -13038,17 +13089,17 @@ async function saveRhRecrutement() {
       const lmFile  = _f('rh-r-lettre-file');
       const dipFile = _f('rh-r-diplome-file');
       const honFile = _f('rh-r-honor-file');
-      if (cvFile)  try { extra.cv_url      = await uploadDocRH(cvFile,  slug + '/cv');            } catch(e) { console.warn('CV:', e); }
-      if (lmFile)  try { extra.lettre_url  = await uploadDocRH(lmFile,  slug + '/lettre');        } catch(e) { console.warn('LM:', e); }
-      if (dipFile) try { extra.diplome_url = await uploadDocRH(dipFile, slug + '/diplome');       } catch(e) { console.warn('Dip:', e); }
-      if (honFile) try { extra.honor_url   = await uploadDocRH(honFile, slug + '/honorabilite'); } catch(e) { console.warn('Hon:', e); }
+      if (cvFile)  try { extra.cv_url      = await uploadDocRH(cvFile,  slug+'/cv');            } catch(e) { console.warn('CV:',e); }
+      if (lmFile)  try { extra.lettre_url  = await uploadDocRH(lmFile,  slug+'/lettre');        } catch(e) { console.warn('LM:',e); }
+      if (dipFile) try { extra.diplome_url = await uploadDocRH(dipFile, slug+'/diplome');       } catch(e) { console.warn('Dip:',e); }
+      if (honFile) try { extra.honor_url   = await uploadDocRH(honFile, slug+'/honorabilite'); } catch(e) { console.warn('Hon:',e); }
       if (Object.keys(extra).length) await sbUpdateSilent('recrutements', savedId, extra);
     }
     if (newStatut === 'Validé' && savedId) {
       closeModal('modal-rh-recrutement');
       renderRecrutements(); renderRhStats();
       setTimeout(function() {
-        if (confirm('Recrutement validé pour ' + (data.candidat_nom || 'ce candidat') + '. Créer le contrat maintenant ?')) {
+        if (confirm('Recrutement validé pour ' + (data.candidat_nom||'ce candidat') + '. Créer le contrat maintenant ?')) {
           creerContratDepuisRecrutement(savedId);
         }
       }, 300);
@@ -13166,6 +13217,13 @@ async function saveRhContrat() {
     closeModal('modal-rh-contrat');
     renderContrats();
     if (document.getElementById('rh-salaries-list')) renderSalaries();
+    // Archiver le recrutement lié si marqué
+    if (window._recrutementAArchiver) {
+      try {
+        await archiverRecrutement(window._recrutementAArchiver);
+        window._recrutementAArchiver = null;
+      } catch(e) { console.warn('Archivage recrutement:', e); }
+    }
     if (document.getElementById('rh-recrutement-list')) renderRecrutements();
   } catch(e) { alert('Erreur : ' + e.message); }
 }
@@ -13301,10 +13359,10 @@ async function openModalRh(type, id = null) {
         const cBtn = document.getElementById('rh-r-quiz-copy-btn');
         const rEl  = document.getElementById('rh-r-quiz-result');
         if (r.quiz_token) {
-          if (sEl)  sEl.textContent = 'Lien envoyé : https://app.orevy.app/quiz.html?token=' + r.quiz_token;
+          if (sEl) sEl.textContent = 'Lien envoyé : https://app.orevy.app/quiz.html?token=' + r.quiz_token;
           if (cBtn) cBtn.style.display = 'inline-flex';
         } else {
-          if (sEl)  sEl.textContent = 'Quiz non encore envoyé';
+          if (sEl) sEl.textContent = 'Quiz non encore envoyé';
           if (cBtn) cBtn.style.display = 'none';
         }
         if (r.quiz_score !== null && r.quiz_score !== undefined && rEl) {
