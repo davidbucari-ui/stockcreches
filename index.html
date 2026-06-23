@@ -12869,11 +12869,14 @@ async function renderRecrutements() {
         <td><div>${r.candidat_nom || '—'}</div><div class="item-ref">${r.candidat_email || ''}</div></td>
         <td>${fmtDate(r.date_entretien)}</td>
         <td><div class="action-btns">
-          ${(r.statut || '').toLowerCase() === 'pourvu' ? (
+          ${r.statut === 'pourvu' ? (
             recrutementsAvecContrat.has(r.id)
               ? `<span class="badge badge-green" style="white-space:nowrap">✓ Contrat créé</span>`
               : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement('${r.id}')" title="Créer le contrat à partir de ce recrutement">📄 Contrat</button>`
           ) : ''}
+          ${r.cv_url ? `<a href="${r.cv_url}" target="_blank" class="btn btn-secondary btn-sm" title="Voir le CV">📄 CV</a>` : ''}
+          ${r.lettre_url ? `<a href="${r.lettre_url}" target="_blank" class="btn btn-secondary btn-sm" title="Lettre de motivation">✉️ LM</a>` : ''}
+          ${(r.quiz_score !== null && r.quiz_score !== undefined) ? `<span class="btn btn-secondary btn-sm" style="cursor:default" title="Score quiz projet éducatif">🎯 ${Math.round((r.quiz_score/12)*100)}%</span>` : ''}
           <button class="btn btn-secondary btn-sm" onclick="openModalRh('recrutement','${r.id}')">✏️</button>
           <button class="btn btn-danger btn-sm" onclick="deleteRh('recrutements','${r.id}','recrutement')">🗑</button>
         </div></td>
@@ -12892,32 +12895,9 @@ async function creerContratDepuisRecrutement(recrutementId) {
     const r = rows[0];
     if (!r) { showNotif('⚠ Recrutement introuvable'); return; }
     if (!r.candidat_nom) { showNotif('⚠ Renseignez le nom du candidat dans la fiche recrutement avant de créer le contrat'); return; }
-
-    // Créer le brouillon directement en BDD
-    const brouillon = {
-      salarie_id:     null,
-      poste:          r.poste || '',
-      type:           r.type_contrat || 'CDI',
-      date_debut:     null,
-      date_fin:       null,
-      temps_travail:  null,
-      notes:          r.notes || '',
-      statut:         'brouillon',
-      candidat_nom:   r.candidat_nom || null,
-      candidat_email: r.candidat_email || null,
-      recrutement_id: r.id,
-      date_signature: null,
-    };
-    const inserted = await sbInsert('contrats', brouillon);
-    const contratId = Array.isArray(inserted) && inserted[0] ? inserted[0].id : null;
-    showNotif('📄 Brouillon de contrat créé pour ' + r.candidat_nom);
-
-    // Rafraîchir la liste recrutements pour afficher le badge "✓ Contrat créé"
-    await renderRecrutements();
-
-    // Ouvrir le modal contrat pour compléter les infos
-    rhEditingContrat = contratId;
-    document.getElementById('modal-rh-contrat-title').textContent = 'Contrat — ' + r.candidat_nom;
+    showRhTab('contrats', document.querySelector('[onclick*="showRhTab(\'contrats\'"]'));
+    rhEditingContrat = null;
+    document.getElementById('modal-rh-contrat-title').textContent = 'Nouveau contrat — ' + r.candidat_nom;
     await rhLoadUsers(['rh-c-user']);
     document.getElementById('rh-c-user').value = '';
     document.getElementById('rh-c-poste').value = r.poste || '';
@@ -12941,229 +12921,6 @@ function _rhContratToggleSignature() {
   const block = document.getElementById('rh-c-signature-block');
   if (!statutEl || !block) return;
   block.style.display = (statutEl.value === 'signe') ? '' : 'none';
-}
-
-function _rhContratToggleMode() {
-  const mode = document.querySelector('input[name="rh-c-mode"]:checked')?.value || 'nouveau';
-  const blocCand  = document.getElementById('rh-c-bloc-candidat');
-  const blocExist = document.getElementById('rh-c-bloc-existant');
-  if (blocCand)  blocCand.style.display  = (mode === 'nouveau')  ? 'grid' : 'none';
-  if (blocExist) blocExist.style.display = (mode === 'existant') ? ''     : 'none';
-}
-
-function _rhContratToggleCDD() {
-  const type = document.getElementById('rh-c-type')?.value || 'CDI';
-  const label = document.getElementById('rh-c-fin-label');
-  if (label) label.textContent = (type === 'CDD' || type === 'Stage' || type === 'Interim') ? '(obligatoire)' : '(optionnel)';
-}
-
-function _rhContratPopulateCreche(preselect) {
-  const sel = document.getElementById('rh-c-creche');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Choisir une structure —</option>' +
-    (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
-  if (preselect && [...sel.options].some(o => o.value === preselect)) sel.value = preselect;
-}
-
-function _rhRecrutementPopulateCreche(preselect) {
-  const sel = document.getElementById('rh-r-creche');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Choisir une structure —</option>' +
-    (CRECHES_DATA||[]).map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
-  if (preselect) sel.value = preselect;
-  else if (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== '__all__') sel.value = currentCreche;
-}
-
-// Génération modèle de contrat PDF petite enfance
-async function _rhGenererModeleContrat() {
-  const mode       = document.querySelector('input[name="rh-c-mode"]:checked')?.value || 'nouveau';
-  const nom        = mode === 'nouveau'
-    ? (document.getElementById('rh-c-candidat-nom')?.value || '').trim()
-    : document.getElementById('rh-c-user')?.options[document.getElementById('rh-c-user')?.selectedIndex]?.text || '';
-  const poste      = (document.getElementById('rh-c-poste')?.value || '').trim();
-  const type       = document.getElementById('rh-c-type')?.value || 'CDI';
-  const debut      = document.getElementById('rh-c-debut')?.value || '';
-  const fin        = document.getElementById('rh-c-fin')?.value || '';
-  const temps      = document.getElementById('rh-c-temps')?.value || '35';
-  const salaire    = document.getElementById('rh-c-salaire')?.value || '';
-  const creche     = document.getElementById('rh-c-creche')?.value || '';
-  const notes      = (document.getElementById('rh-c-notes')?.value || '').trim();
-
-  if (!nom || !poste || !debut) {
-    showNotif('⚠ Renseignez au minimum : nom, poste et date de début pour générer le modèle');
-    return;
-  }
-
-  const debutFmt = debut ? new Date(debut).toLocaleDateString('fr-FR') : '___________';
-  const finFmt   = fin   ? new Date(fin).toLocaleDateString('fr-FR')   : '___________';
-  const aujourdhui = new Date().toLocaleDateString('fr-FR');
-
-  // Génération PDF avec jsPDF
-  if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
-    showNotif('⚠ jsPDF non disponible'); return;
-  }
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-  const W = 210, M = 20, TW = W - 2*M;
-  let y = 20;
-
-  const title = (t, size=14, bold=true) => {
-    doc.setFont('helvetica', bold ? 'bold' : 'normal');
-    doc.setFontSize(size);
-    doc.text(t, W/2, y, { align:'center' });
-    y += size * 0.5 + 4;
-  };
-  const para = (t, size=10, indent=0) => {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(size);
-    const lines = doc.splitTextToSize(t, TW - indent);
-    doc.text(lines, M + indent, y);
-    y += lines.length * (size * 0.4 + 1) + 3;
-  };
-  const section = (t) => {
-    y += 4;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setFillColor(240, 240, 240);
-    doc.rect(M, y-5, TW, 8, 'F');
-    doc.text(t, M+3, y);
-    y += 7;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-  };
-  const field = (label, val) => {
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-    doc.text(label + ' : ', M+4, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(val || '___________________________', M + 4 + doc.getTextWidth(label + ' : '), y);
-    y += 6;
-  };
-  const newPage = () => { doc.addPage(); y = 20; };
-
-  // ── EN-TÊTE ──
-  doc.setFillColor(60, 100, 180);
-  doc.rect(0, 0, W, 35, 'F');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(18);
-  doc.text('CONTRAT DE TRAVAIL', W/2, 16, { align:'center' });
-  doc.setFontSize(13);
-  doc.text(type === 'CDI' ? 'à Durée Indéterminée (CDI)' : type === 'CDD' ? 'à Durée Déterminée (CDD)' : type, W/2, 26, { align:'center' });
-  doc.setTextColor(0,0,0);
-  y = 45;
-
-  // ── PARTIES ──
-  section(`ARTICLE 1 — PARTIES AU CONTRAT`);
-  para(`Entre les soussignés :`);
-  para(`L'employeur : ${creche || '[Nom de la structure]'}, micro-crèche régie par les dispositions du Code de l'action sociale et des familles, dont le siège social est situé à ___________________________, représentée par ___________________________, agissant en qualité de gestionnaire,`, 10, 4);
-  y += 2;
-  para(`Et le(la) salarié(e) : M./Mme ${nom}, demeurant ___________________________, de nationalité française, numéro de sécurité sociale : ___________________________.`, 10, 4);
-
-  // ── ENGAGEMENT ──
-  section(`ARTICLE 2 — OBJET DU CONTRAT`);
-  if (type === 'CDI') {
-    para(`Le présent contrat est conclu pour une durée indéterminée conformément aux dispositions des articles L.1221-1 et suivants du Code du travail.`);
-  } else if (type === 'CDD') {
-    para(`Le présent contrat est conclu pour une durée déterminée conformément aux dispositions des articles L.1242-1 et suivants du Code du travail, pour le motif suivant : [accroissement temporaire d'activité / remplacement de M./Mme ___________ absent(e)].`);
-    para(`Date de fin : ${finFmt}.`, 10, 4);
-  } else if (type === 'Alternance') {
-    para(`Le présent contrat d'apprentissage est conclu conformément aux articles L.6221-1 et suivants du Code du travail.`);
-  } else if (type === 'Stage') {
-    para(`La présente convention de stage est conclue conformément à la loi n°2014-788 du 10 juillet 2014 tendant au développement, à l'encadrement des stages et à l'amélioration du statut des stagiaires.`);
-  }
-
-  // ── PRISE DE FONCTION ──
-  section(`ARTICLE 3 — PRISE DE FONCTION`);
-  field('Date de prise de fonction', debutFmt);
-  if (type !== 'CDI') field('Date de fin prévue', finFmt);
-  para(`Le contrat est soumis à une période d'essai de ${type === 'CDI' ? '2 mois renouvelable une fois (art. L.1221-19 C. trav.)' : '1 semaine (CDD ≤ 6 mois) ou 1 mois (CDD > 6 mois)'}.`, 10, 4);
-
-  // ── FONCTION ──
-  section(`ARTICLE 4 — FONCTION ET CLASSIFICATION`);
-  field('Poste', poste);
-  para(`Le(la) salarié(e) exercera ses fonctions au sein de la structure ${creche || '[Structure]'}, conformément au projet d'établissement et au règlement intérieur en vigueur.`, 10, 4);
-  para(`Classification conventionnelle applicable : Convention Collective Nationale ALISFA (IDCC 1261) — Groupe ___ / Coefficient ___. En l'absence d'accord de branche applicable, les dispositions du Code du travail s'appliquent à titre supplétif.`, 10, 4);
-
-  // ── TEMPS DE TRAVAIL ──
-  section('ARTICLE 5 — DURÉE DU TRAVAIL');
-  field('Temps de travail hebdomadaire', temps + ' heures');
-  para(`La durée du travail est fixée à ${temps} heures par semaine. La répartition des horaires sera communiquée par planning mensuel, conformément aux nécessités du service et dans le respect des dispositions légales relatives au temps de travail (art. L.3121-1 et s. C. trav.).`, 10, 4);
-  if (parseFloat(temps) < 35) {
-    para(`Le présent contrat est conclu à temps partiel. Un avenant écrit sera nécessaire pour toute modification de la durée ou de la répartition du travail (art. L.3123-6 C. trav.).`, 10, 4);
-  }
-
-  // ── RÉMUNÉRATION ──
-  if (y > 240) newPage();
-  section(`ARTICLE 6 — RÉMUNÉRATION`);
-  field('Salaire brut mensuel de base', salaire ? salaire + ' €' : '___________ € (≥ SMIC en vigueur)');
-  para(`La rémunération sera versée mensuellement par virement bancaire, au plus tard le dernier jour ouvré du mois. Elle inclut l'indemnité de congés payés calculée sur la base de 10 % de la rémunération brute totale (pour les CDD) ou par acquisition de 2,5 jours ouvrables par mois travaillé (pour les CDI).`, 10, 4);
-  if (type === 'Stage') {
-    para(`Gratification de stage : conformément à l'article L.124-6 du Code de l'éducation, une gratification minimale est due pour tout stage d'une durée supérieure à 2 mois consécutifs (taux horaire minimal légal en vigueur).`, 10, 4);
-  }
-
-  // ── OBLIGATIONS ──
-  if (y > 220) newPage();
-  section(`ARTICLE 7 — OBLIGATIONS DES PARTIES`);
-  para(`Le(la) salarié(e) s'engage à :`, 10);
-  para(`• Respecter scrupuleusement les normes d'encadrement fixées par le Décret n°2021-1131 du 30 août 2021 relatif aux établissements d'accueil du jeune enfant (modifié par Décret 2025-304).`, 10, 6);
-  para(`• Assurer la continuité d'accueil et la sécurité affective et physique des enfants de 2 mois ½ à 3 ans confiés à la structure.`, 10, 6);
-  para(`• Maintenir le secret professionnel et la discrétion sur toutes informations concernant les familles et les enfants (art. L.226-13 C. pén.).`, 10, 6);
-  para(`• Se soumettre aux visites médicales obligatoires (médecine du travail) et aux formations réglementaires en vigueur.`, 10, 6);
-  para(`• Respecter le projet pédagogique, le règlement intérieur et les procédures qualité de la structure.`, 10, 6);
-
-  // ── CONGÉS ──
-  if (y > 240) newPage();
-  section(`ARTICLE 8 — CONGÉS PAYÉS`);
-  para(`Le(la) salarié(e) bénéficiera de 25 jours ouvrés (ou 30 jours ouvrables) de congés payés annuels, conformément aux dispositions légales et conventionnelles. Les dates de congés seront fixées en accord avec la direction, en tenant compte des nécessités de service liées à l'accueil des jeunes enfants.`, 10, 4);
-
-  // ── PROTECTION ENFANTS ──
-  section("ARTICLE 9 — PROTECTION DE L'ENFANCE");
-  para(`Conformément à l'article L.133-6 du Code de l'action sociale et des familles, le présent contrat est subordonné à la présentation d'un extrait de casier judiciaire (bulletin n°3) vierge et à l'absence de condamnation incompatible avec l'exercice d'une activité auprès de mineurs.`, 10, 4);
-  para(`Le(la) salarié(e) est tenu(e) de signaler immédiatement à la direction tout fait ou situation susceptible de constituer un danger pour un enfant, conformément aux articles L.226-2-1 et L.226-3 du CASF.`, 10, 4);
-
-  // ── RUPTURE ──
-  if (y > 240) newPage();
-  section(`ARTICLE 10 — RUPTURE DU CONTRAT`);
-  if (type === 'CDI') {
-    para(`Le présent contrat pourra être rompu :
-• Par démission du(de la) salarié(e), avec respect d'un préavis dont la durée est fixée selon la classification conventionnelle (généralement 1 à 3 mois).
-• Par licenciement dans le respect des procédures légales (art. L.1232-1 et s. C. trav.).
-• Par rupture conventionnelle homologuée (art. L.1237-11 et s. C. trav.).`, 10, 4);
-  } else {
-    para(`Le contrat prend fin de plein droit à la date prévue. Il ne peut être rompu avant terme que dans les cas limitativement prévus par la loi (faute grave, force majeure, inaptitude, accord des parties, embauche en CDI).`, 10, 4);
-  }
-
-  // ── DROIT APPLICABLE ──
-  section(`ARTICLE 11 — DROIT APPLICABLE ET LITIGES`);
-  para(`Le présent contrat est soumis au droit français. Tout litige relatif à son interprétation ou à son exécution relèvera de la compétence du Conseil de Prud'hommes du ressort du lieu de travail.`, 10, 4);
-  if (notes) { section(`ARTICLE 12 — DISPOSITIONS PARTICULIÈRES`); para(notes, 10, 4); }
-
-  // ── SIGNATURES ──
-  if (y > 230) newPage();
-  y += 10;
-  doc.setFont('helvetica','bold'); doc.setFontSize(11);
-  doc.text('Fait en double exemplaire à ___________________________, le ' + aujourdhui, M, y); y += 14;
-  doc.setFontSize(10);
-  doc.text("Pour l'employeur :", M, y);
-  doc.text("Le(la) salarié(e) :", W/2 + 10, y); y += 5;
-  doc.setFont('helvetica','normal');
-  doc.text('(Nom, qualité, signature et cachet)', M, y);
-  doc.text('(Signature précédée de la mention', W/2 + 10, y); y += 4;
-  doc.text('("Lu et approuvé")', W/2 + 10, y); y += 20;
-  doc.rect(M, y, 70, 25);
-  doc.rect(W/2 + 10, y, 70, 25);
-
-  // ── PIED DE PAGE ──
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,150,150);
-    doc.text('Modèle généré par Orevy — à adapter selon la CCN applicable et à valider par un conseil juridique — Page ' + i + '/' + pageCount, W/2, 292, { align:'center' });
-    doc.setTextColor(0,0,0);
-  }
-
-  const fname = `contrat_${type}_${nom.replace(/\s+/g,'_')}_${debut || 'brouillon'}.pdf`;
-  doc.save(fname);
-  showNotif('📄 Modèle de contrat généré : ' + fname);
 }
 
 // Création de la fiche salarié à partir d'un contrat signé sans collaborateur lié.
@@ -13211,6 +12968,128 @@ async function creerSalarieDepuisContrat(c) {
   return newId;
 }
 
+
+// ── Quiz recrutement — projet éducatif & pédagogique ─────────────────────
+const QUIZ_RECRUT_QUESTIONS = [
+  { axe:"Posture professionnelle", q:"Un enfant de 18 mois s'oppose au change. Quelle posture adoptez-vous en priorité ?", opts:["Maintenir le change rapidement pour ne pas perturber le groupe","Verbaliser ce que vous allez faire, respecter son rythme et proposer un choix simple","Demander à une collègue de le tenir pour aller plus vite","Attendre qu'il se calme seul"], ans:1, fb:"Verbaliser l'acte de soin et offrir un micro-pouvoir de décision soutient l'agentivité de l'enfant — cœur du projet éducatif." },
+  { axe:"Relation familles", q:"Un parent arrive en retard tous les soirs et semble stressé. Comment abordez-vous la situation ?", opts:["Lui rappeler le règlement dès l'entrée","Ne rien dire pour ne pas aggraver sa journée","Proposer un temps d'échange informel bienveillant sans jugement","Signaler le retard à la direction immédiatement"], ans:2, fb:"La juste distance passe par l'accueil inconditionnel. L'échange informel bienveillant est la porte d'entrée, le règlement vient si nécessaire en second temps." },
+  { axe:"Développement de l'enfant", q:"Un bébé de 8 mois pleure dès qu'une auxiliaire s'approche. Ce comportement indique :", opts:["Un trouble de l'attachement à signaler","Le développement normal de l'angoisse du 8e mois","Un manque de stimulations sensorielles","Une fatigue liée au sommeil"], ans:1, fb:"L'angoisse du 8e mois marque l'acquisition de la permanence de l'objet — signe de bon développement psychoaffectif." },
+  { axe:"QVT & travail en équipe", q:"Lors d'une réunion, une collègue dit qu'elle ne supporte plus un enfant agité. Que faites-vous ?", opts:["Ignorer, c'est une expression passagère","Rassurer sans approfondir","Accueillir sa parole, proposer l'APP et relayer à la direction si besoin","Rappeler que les pros ne doivent pas avoir de préférence"], ans:2, fb:"L'APP est l'espace prévu pour traiter ces situations. Accueillir sans juger et orienter protège le professionnel et l'enfant." },
+  { axe:"Pédagogie & aménagement", q:"L'espace des 12-24 mois génère des conflits (morsures, arrachages). Votre première action :", opts:["Augmenter la surveillance directe","Réduire le nombre d'enfants","Observer et analyser l'aménagement spatial avant toute autre mesure","Renforcer les règles de vie"], ans:2, fb:"Les comportements dits agressifs à cet âge répondent souvent à un environnement inadapté. On agit sur le cadre avant d'agir sur le comportement." },
+  { axe:"Réglementation", q:"Depuis le décret 2025-304, le projet d'établissement comprend combien de volets obligatoires ?", opts:["2 volets","3 volets","4 volets dont un nouveau volet qualité d'accueil","5 volets"], ans:2, fb:"Le décret 2025-304 ajoute un 4e volet : projet qualité d'accueil, aligné sur le RNQAJE de la HAS." },
+  { axe:"Observation & transmissions", q:"Que notez-vous en priorité dans le bilan de fin de journée d'un enfant de 2 ans ?", opts:["Nombre exact de cuillères mangées et durée de sieste","Les comportements inhabituels, découvertes, émotions, interactions marquantes","Les incidents entre enfants uniquement","Les absences des parents aux transmissions"], ans:1, fb:"Les transmissions de qualité racontent l'enfant dans sa journée : ce qu'il a découvert, initié, ressenti — pas seulement les données biologiques." },
+  { axe:"Accueil & adaptation", q:"Un enfant de 10 mois refuse de s'endormir sans son doudou oublié. Vous :", opts:["Le laissez pleurer, il finira par s'endormir","Appelez les parents pour qu'ils l'apportent","Proposez un objet de transition de remplacement et informez les parents","Mettez l'enfant dans un espace calme séparé"], ans:2, fb:"L'objet transitionnel représente le lien d'attachement. Un substitut sensoriel peut aider — sans dramatiser ni culpabiliser les parents." },
+  { axe:"Protection de l'enfance", q:"Vous observez des hématomes suspects et répétés sur un enfant de 14 mois. La première étape :", opts:["En parler discrètement aux parents","Consigner vos observations précisément et en référer à la direction","Appeler le 119 directement","Attendre de voir si cela se reproduit"], ans:1, fb:"La procédure commence par la documentation rigoureuse et la remontée interne. C'est la direction qui déclenche si nécessaire l'IP ou le signalement." },
+  { axe:"Réglementation", q:"À partir du 1er septembre 2026, une même personne peut assurer la direction de :", opts:["Autant de structures que souhaité","3 micro-crèches maximum","2 micro-crèches maximum à 0,5 ETP chacune","1 seule micro-crèche à temps plein"], ans:2, fb:"Le décret 2025-304 impose 0,5 ETP minimum par structure et limite à 2 structures par directeur." },
+  { axe:"Posture professionnelle", q:"Un parent conteste devant vous la façon dont son enfant a été consolé par votre collègue. Vous :", opts:["Prenez la défense de votre collègue immédiatement","Donnez raison au parent pour éviter le conflit","Reconnaissez son ressenti, restez neutre et orientez vers la direction","Expliquez que votre collègue a toujours de bons résultats"], ans:2, fb:"Accueillir le parent sans trancher, préserver la relation de confiance et orienter vers un espace de dialogue adapté." },
+  { axe:"QVT & management", q:"Une professionnelle est régulièrement épuisée le vendredi — le planning est inégalement réparti. Votre action prioritaire :", opts:["La remplacer sur les tâches lourdes sans modifier le planning","Alerter la direction sur la répartition et proposer une révision collective","Demander à l'équipe de s'organiser entre elles","Attendre qu'elle en parle elle-même"], ans:1, fb:"Une répartition inégale est une cause fréquente d'épuisement. L'identifier et le remonter — pas juste gérer en solo — est le rôle du coordinateur EJE." }
+];
+
+let _quizROpen = false;
+
+function openQuizRecrutement() {
+  if (_quizROpen) return;
+  _quizROpen = true;
+  const overlay = document.createElement('div');
+  overlay.id = 'quiz-recrut-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:var(--surface1,#fff);border-radius:12px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;position:relative">
+      <button onclick="closeQuizRecrutement()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink2)">✕</button>
+      <h3 style="font-size:16px;font-weight:500;margin-bottom:4px">🎯 Quiz — Projet éducatif & pédagogique</h3>
+      <p style="font-size:12px;color:var(--ink3);margin-bottom:16px">12 questions · Passé par le candidat lors de l'entretien</p>
+      <div id="qr-progress-bar" style="height:4px;background:var(--border);border-radius:2px;margin-bottom:16px"><div id="qr-prog" style="height:100%;background:#1D9E75;border-radius:2px;width:8%;transition:width .3s"></div></div>
+      <div id="qr-counter" style="font-size:12px;color:var(--ink3);margin-bottom:12px">Question 1 sur 12</div>
+      <div id="qr-body"></div>
+      <div id="qr-result" style="display:none"></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  let cur=0, score=0, answered=new Array(QUIZ_RECRUT_QUESTIONS.length).fill(null);
+  const letters = ['A','B','C','D'];
+
+  function renderQ() {
+    const q = QUIZ_RECRUT_QUESTIONS[cur];
+    document.getElementById('qr-prog').style.width = Math.min(Math.round(((cur)/12)*100)+8,100)+'%';
+    document.getElementById('qr-counter').textContent = `Question ${cur+1} sur 12`;
+    const sel = answered[cur];
+    document.getElementById('qr-body').innerHTML = `
+      <div style="font-size:11px;font-weight:500;color:#3C3489;background:#EEEDFE;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:10px">${q.axe}</div>
+      <p style="font-size:15px;margin-bottom:14px;line-height:1.6">${q.q}</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${q.opts.map((o,i)=>{
+          let bg='', border='0.5px solid var(--border)', color='var(--ink1)';
+          if(sel!==null){
+            if(i===q.ans){bg='#E1F5EE';border='1px solid #1D9E75';color='#085041';}
+            else if(i===sel){bg='#FCEBEB';border='1px solid #E24B4A';color='#791F1F';}
+          }
+          return `<button onclick="pickQ(${i})" ${sel!==null?'disabled':''} style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:${border};border-radius:8px;cursor:${sel!==null?'default':'pointer'};background:${bg};color:${color};text-align:left;width:100%;font-size:14px">
+            <span style="min-width:22px;height:22px;border-radius:50%;border:0.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500">${letters[i]}</span>
+            <span>${o}</span>
+          </button>`;
+        }).join('')}
+      </div>
+      ${sel!==null?`<div style="margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13px;line-height:1.6;background:${sel===q.ans?'#E1F5EE':'#FCEBEB'};color:${sel===q.ans?'#085041':'#791F1F'}">${sel===q.ans?'✓':'✗'} ${q.fb}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:14px">
+        ${cur>0?`<button onclick="goPrev()" style="padding:7px 16px;border:0.5px solid var(--border);border-radius:8px;background:none;cursor:pointer;font-size:13px">← Précédent</button>`:''}
+        ${sel!==null&&cur<11?`<button onclick="goNext()" style="padding:7px 16px;border:none;border-radius:8px;background:#1D9E75;color:#fff;cursor:pointer;font-size:13px;margin-left:auto">Suivant →</button>`:''}
+        ${sel!==null&&cur===11?`<button onclick="showResult()" style="padding:7px 16px;border:none;border-radius:8px;background:#1D9E75;color:#fff;cursor:pointer;font-size:13px;margin-left:auto">Voir les résultats →</button>`:''}
+      </div>`;
+  }
+
+  window.pickQ = function(i) {
+    if (answered[cur]!==null) return;
+    answered[cur]=i;
+    if(i===QUIZ_RECRUT_QUESTIONS[cur].ans) score++;
+    renderQ();
+  };
+  window.goNext = function(){ cur=Math.min(11,cur+1); renderQ(); };
+  window.goPrev = function(){ cur=Math.max(0,cur-1); renderQ(); };
+  window.showResult = function(){
+    document.getElementById('qr-body').style.display='none';
+    document.getElementById('qr-counter').style.display='none';
+    document.getElementById('qr-progress-bar').style.display='none';
+    const pct=Math.round((score/12)*100);
+    const mention = pct>=85?'Excellente maîtrise du projet éducatif':pct>=65?'Bonne connaissance — points à approfondir':'Axes importants à retravailler';
+    const axes={};
+    QUIZ_RECRUT_QUESTIONS.forEach((q,i)=>{
+      if(!axes[q.axe]) axes[q.axe]={ok:0,total:0};
+      axes[q.axe].total++;
+      if(answered[i]===q.ans) axes[q.axe].ok++;
+    });
+    const axeRows=Object.entries(axes).map(([a,v])=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:0.5px solid var(--border)"><span style="color:var(--ink3)">${a}</span><span style="font-weight:500;color:${v.ok===v.total?'#0F6E56':v.ok===0?'#A32D2D':'var(--ink1)'}">${v.ok}/${v.total}</span></div>`).join('');
+    const detail={};
+    Object.entries(axes).forEach(([a,v])=>{ detail[a]=`${v.ok}/${v.total}`; });
+    document.getElementById('qr-result').style.display='block';
+    document.getElementById('qr-result').innerHTML=`
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:36px;font-weight:500;color:#1D9E75">${pct}%</div>
+        <div style="font-size:13px;color:var(--ink3)">${score}/12 — ${mention}</div>
+      </div>
+      <div style="margin-bottom:16px">${axeRows}</div>
+      <button onclick="saveQuizRecrutement(${score},'${JSON.stringify(detail).replace(/'/g,"\\'")}' )" style="width:100%;padding:10px;border:none;border-radius:8px;background:#1D9E75;color:#fff;cursor:pointer;font-size:14px;font-weight:500">💾 Enregistrer ces résultats dans le recrutement</button>`;
+  };
+
+  renderQ();
+}
+
+window.saveQuizRecrutement = function(score, detailStr) {
+  window._rhQuizScore = score;
+  try { window._rhQuizDetail = JSON.parse(detailStr); } catch(e) { window._rhQuizDetail = {}; }
+  const pct = Math.round((score/12)*100);
+  const qd = document.getElementById('rh-r-quiz-display');
+  if (qd) {
+    const axeRows = Object.entries(window._rhQuizDetail).map(([a,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--ink3)">${a}</span><span style="font-weight:500">${v}</span></div>`).join('');
+    qd.innerHTML = `<div style="font-size:15px;font-weight:500;margin-bottom:6px">${pct}% — ${score}/12 bonnes réponses</div>${axeRows}`;
+  }
+  closeQuizRecrutement();
+};
+
+function closeQuizRecrutement() {
+  _quizROpen = false;
+  const el = document.getElementById('quiz-recrut-overlay');
+  if (el) el.remove();
+}
+
 async function saveRhRecrutement() {
   const poste = (document.getElementById('rh-r-poste').value || '').trim();
   if (!poste) { alert('Le poste est requis.'); return; }
@@ -13223,10 +13102,24 @@ async function saveRhRecrutement() {
     candidat_nom:   (document.getElementById('rh-r-candidat-nom').value || '').trim(),
     candidat_email: (document.getElementById('rh-r-candidat-email').value || '').trim(),
     notes:          (document.getElementById('rh-r-notes').value || '').trim(),
-    creche_id:      document.getElementById('rh-r-creche')?.value || ((typeof currentCreche !== 'undefined' && currentCreche !== '__all__' && currentCreche !== 'all') ? currentCreche : null),
+    creche_id:      (typeof currentCreche !== 'undefined' && currentCreche !== 'all') ? currentCreche : null,
   };
+  if (window._rhQuizScore !== undefined) data.quiz_score = window._rhQuizScore;
+  if (window._rhQuizDetail !== undefined) data.quiz_detail = window._rhQuizDetail;
   try {
+    const prefix = (data.candidat_nom || 'candidat').replace(/\s+/g,'_').toLowerCase();
+    const cvFile = document.getElementById('rh-r-cv-file').files[0];
+    if (cvFile) {
+      try { data.cv_url = await uploadDocRecrutement(cvFile, prefix + '/cv'); }
+      catch(e) { console.warn('Upload CV:', e); }
+    }
+    const lmFile = document.getElementById('rh-r-lettre-file').files[0];
+    if (lmFile) {
+      try { data.lettre_url = await uploadDocRecrutement(lmFile, prefix + '/lettre'); }
+      catch(e) { console.warn('Upload lettre:', e); }
+    }
     rhEditingRecrutement ? await sbUpdate('recrutements', rhEditingRecrutement, data) : await sbInsert('recrutements', data);
+    window._rhQuizScore = undefined; window._rhQuizDetail = undefined;
     closeModal('modal-rh-recrutement');
     renderRecrutements(); renderRhStats();
   } catch(e) { alert('Erreur : ' + e.message); }
@@ -13267,9 +13160,8 @@ async function renderContrats() {
 }
 
 async function saveRhContrat() {
-  const mode = document.querySelector('input[name="rh-c-mode"]:checked')?.value || 'nouveau';
-  const salarie_id  = (mode === 'existant') ? document.getElementById('rh-c-user').value : '';
-  const candidatNom = (mode === 'nouveau') ? (document.getElementById('rh-c-candidat-nom').value || '').trim() : '';
+  const salarie_id  = document.getElementById('rh-c-user').value;
+  const candidatNom = (document.getElementById('rh-c-candidat-nom').value || '').trim();
   const poste       = (document.getElementById('rh-c-poste').value || '').trim();
   const date_debut  = document.getElementById('rh-c-debut').value;
   const statut      = document.getElementById('rh-c-statut').value;
@@ -13279,7 +13171,7 @@ async function saveRhContrat() {
   const data = {
     salarie_id:     salarie_id || null,
     poste,
-    type:           document.getElementById('rh-c-type').value,
+    type:           ({'CDI':'CDI','CDD':'CDD','Alternance':'Extra','Stage':'Stage','Interim':'Extra'}[document.getElementById('rh-c-type').value] || document.getElementById('rh-c-type').value),
     date_debut,
     date_fin:       document.getElementById('rh-c-fin').value || null,
     temps_travail:  parseFloat(document.getElementById('rh-c-temps').value) || null,
@@ -13289,8 +13181,6 @@ async function saveRhContrat() {
     candidat_email: (document.getElementById('rh-c-candidat-email').value || '').trim() || null,
     recrutement_id: document.getElementById('rh-c-recrutement-id').value || null,
     date_signature: document.getElementById('rh-c-signature').value || null,
-    creche_id:      document.getElementById('rh-c-creche')?.value || null,
-    salaire_brut:   parseFloat(document.getElementById('rh-c-salaire')?.value) || null,
   };
   try {
     let contratId = rhEditingContrat;
@@ -13422,7 +13312,6 @@ async function openModalRh(type, id = null) {
     fill('rh-r-candidat-email',''); fill('rh-r-notes','');
     document.getElementById('rh-r-type').value = 'CDI';
     document.getElementById('rh-r-statut').value = 'ouvert';
-    _rhRecrutementPopulateCreche();
     if (id) {
       const rows = await sbGet('recrutements', `id=eq.${id}`).catch(() => []);
       if (rows[0]) {
@@ -13433,8 +13322,38 @@ async function openModalRh(type, id = null) {
         document.getElementById('rh-r-type').value   = r.type_contrat || 'CDI';
         const STATUT_RMAP = { 'Ouvert':'ouvert','En cours':'en_cours','Pourvu':'pourvu','Annulé':'annule' };
         document.getElementById('rh-r-statut').value = STATUT_RMAP[r.statut] || r.statut || 'ouvert';
-        _rhRecrutementPopulateCreche(r.creche_id);
+        // CV / lettre links
+        const cvLink = document.getElementById('rh-r-cv-link');
+        if (cvLink) cvLink.innerHTML = r.cv_url ? `<a href="${r.cv_url}" target="_blank" style="color:var(--accent)">📄 Voir le CV</a>` : '';
+        const lmLink = document.getElementById('rh-r-lettre-link');
+        if (lmLink) lmLink.innerHTML = r.lettre_url ? `<a href="${r.lettre_url}" target="_blank" style="color:var(--accent)">✉️ Voir la lettre</a>` : '';
+        // Quiz
+        const qs = document.getElementById('rh-r-quiz-section');
+        if (qs) qs.style.display = 'block';
+        if (r.quiz_score !== undefined && r.quiz_score !== null) {
+          const qd = document.getElementById('rh-r-quiz-display');
+          if (qd) {
+            const pct = Math.round((r.quiz_score / 12) * 100);
+            const detail = r.quiz_detail ? JSON.parse(typeof r.quiz_detail === 'string' ? r.quiz_detail : JSON.stringify(r.quiz_detail)) : {};
+            const axeRows = Object.entries(detail).map(([a,v]) => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--ink3)">${a}</span><span style="font-weight:500">${v}</span></div>`).join('');
+            qd.innerHTML = `<div style="font-size:15px;font-weight:500;margin-bottom:6px">${pct}% — ${r.quiz_score}/12 bonnes réponses</div>${axeRows}`;
+          }
+          window._rhQuizScore = r.quiz_score;
+          window._rhQuizDetail = r.quiz_detail;
+        } else {
+          window._rhQuizScore = undefined; window._rhQuizDetail = undefined;
+          const qd = document.getElementById('rh-r-quiz-display');
+          if (qd) qd.innerHTML = 'Quiz non encore passé';
+        }
       }
+    } else {
+      const qs = document.getElementById('rh-r-quiz-section');
+      if (qs) qs.style.display = 'block';
+      const cvLink = document.getElementById('rh-r-cv-link');
+      if (cvLink) cvLink.innerHTML = '';
+      const lmLink = document.getElementById('rh-r-lettre-link');
+      if (lmLink) lmLink.innerHTML = '';
+      window._rhQuizScore = undefined; window._rhQuizDetail = undefined;
     }
     document.getElementById('modal-rh-recrutement').classList.add('open');
   } else if (type === 'contrat') {
@@ -13443,37 +13362,22 @@ async function openModalRh(type, id = null) {
     await rhLoadUsers(['rh-c-user']);
     fill('rh-c-poste',''); fill('rh-c-debut',''); fill('rh-c-fin',''); fill('rh-c-temps',''); fill('rh-c-notes','');
     fill('rh-c-candidat-nom',''); fill('rh-c-candidat-email',''); fill('rh-c-recrutement-id',''); fill('rh-c-signature','');
-    fill('rh-c-salaire','');
     document.getElementById('rh-c-type').value = 'CDI';
     document.getElementById('rh-c-statut').value = 'brouillon';
-    const modeNouveau = document.getElementById('rh-c-mode-nouveau');
-    if (modeNouveau) { modeNouveau.checked = true; }
-    const modeExist = document.getElementById('rh-c-mode-existant');
-    if (modeExist) modeExist.disabled = false;
-    _rhContratToggleMode();
-    _rhContratPopulateCreche(
-      (typeof currentCreche !== 'undefined' && currentCreche !== '__all__') ? currentCreche : ''
-    );
     if (id) {
       const rows = await sbGet('contrats', `id=eq.${id}`).catch(() => []);
       if (rows[0]) {
         const r = rows[0];
-        if (r.salarie_id) {
-          if (modeExist) { modeExist.checked = true; _rhContratToggleMode(); }
-          document.getElementById('rh-c-user').value = r.salarie_id;
-        }
-        document.getElementById('rh-c-type').value = r.type || 'CDI';
+        document.getElementById('rh-c-user').value  = r.salarie_id  || '';
+        document.getElementById('rh-c-type').value  = r.type     || 'CDI';
         fill('rh-c-poste', r.poste); fill('rh-c-debut', r.date_debut);
         fill('rh-c-fin', r.date_fin); fill('rh-c-temps', r.temps_travail); fill('rh-c-notes', r.notes);
         fill('rh-c-candidat-nom', r.candidat_nom); fill('rh-c-candidat-email', r.candidat_email);
         fill('rh-c-recrutement-id', r.recrutement_id); fill('rh-c-signature', r.date_signature);
-        fill('rh-c-salaire', r.salaire_brut);
         document.getElementById('rh-c-statut').value = r.statut || 'brouillon';
-        _rhContratPopulateCreche(r.creche_id);
       }
     }
     _rhContratToggleSignature();
-    _rhContratToggleCDD();
     document.getElementById('modal-rh-contrat').classList.add('open');
   } else if (type === 'conge') {
     rhEditingConge = id;
@@ -15421,12 +15325,6 @@ async function enregistrerPointage(type) {
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group full">
-          <label>Structure concernée *</label>
-          <select id="rh-r-creche">
-            <option value="">— Choisir une structure —</option>
-          </select>
-        </div>
         <div class="form-group">
           <label>Poste *</label>
           <input type="text" id="rh-r-poste" placeholder="Ex : Auxiliaire de puériculture">
@@ -15462,6 +15360,27 @@ async function enregistrerPointage(type) {
           <label>Notes</label>
           <textarea id="rh-r-notes" rows="3" placeholder="Notes sur le recrutement…"></textarea>
         </div>
+        <div class="form-group full">
+          <label>📄 CV (PDF)</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <input type="file" id="rh-r-cv-file" accept=".pdf" style="flex:1;min-width:0">
+            <span id="rh-r-cv-link" style="font-size:12px"></span>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label>✉️ Lettre de motivation (PDF)</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <input type="file" id="rh-r-lettre-file" accept=".pdf" style="flex:1;min-width:0">
+            <span id="rh-r-lettre-link" style="font-size:12px"></span>
+          </div>
+        </div>
+        <div class="form-group full" id="rh-r-quiz-section" style="display:none">
+          <label style="margin-bottom:8px;display:block">🎯 Quiz projet éducatif — résultats</label>
+          <div id="rh-r-quiz-display" style="background:var(--surface2,#f5f5f5);border-radius:8px;padding:12px;font-size:13px;color:var(--ink2)">
+            Quiz non encore passé
+          </div>
+          <button class="btn btn-secondary" style="margin-top:8px;font-size:13px" onclick="openQuizRecrutement()">▶ Lancer le quiz candidat</button>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -15472,60 +15391,33 @@ async function enregistrerPointage(type) {
 </div>
 
 <div class="modal-overlay" id="modal-rh-contrat" onclick="closeModalClick(event,'modal-rh-contrat')">
-  <div class="modal" style="max-width:640px">
+  <div class="modal" style="max-width:560px">
     <div class="modal-header">
       <h2 id="modal-rh-contrat-title">Nouveau contrat</h2>
       <button class="modal-close" onclick="closeModal('modal-rh-contrat')">✕</button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="rh-c-recrutement-id" value="">
-
-      <!-- Mode : nouveau candidat ou collaborateur existant -->
-      <div style="display:flex;gap:12px;margin-bottom:18px;padding:12px 14px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border)">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13px">
-          <input type="radio" name="rh-c-mode" id="rh-c-mode-nouveau" value="nouveau" checked onchange="_rhContratToggleMode()">
-          👤 Nouveau candidat externe
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13px">
-          <input type="radio" name="rh-c-mode" id="rh-c-mode-existant" value="existant" onchange="_rhContratToggleMode()">
-          🔗 Collaborateur existant (avenant / renouvellement)
-        </label>
-      </div>
-
       <div class="form-grid">
-        <!-- Bloc candidat externe -->
-        <div id="rh-c-bloc-candidat" class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="form-group">
-            <label>Nom du candidat *</label>
-            <input type="text" id="rh-c-candidat-nom" placeholder="Prénom Nom">
-          </div>
-          <div class="form-group">
-            <label>Email du candidat</label>
-            <input type="email" id="rh-c-candidat-email" placeholder="email@exemple.fr">
-          </div>
-        </div>
-
-        <!-- Bloc collaborateur existant -->
-        <div id="rh-c-bloc-existant" class="form-group full" style="display:none">
-          <label>Collaborateur *</label>
-          <select id="rh-c-user"><option value="">— Choisir un salarié —</option></select>
-        </div>
-
-        <!-- Structure -->
+        <input type="hidden" id="rh-c-recrutement-id" value="">
         <div class="form-group full">
-          <label>Structure *</label>
-          <select id="rh-c-creche">
-            <option value="">— Choisir une structure —</option>
-          </select>
+          <label>Collaborateur <span style="font-weight:400;color:var(--ink3);font-size:12px">— si une fiche salarié existe déjà</span></label>
+          <select id="rh-c-user"><option value="">— Choisir —</option></select>
         </div>
-
+        <div class="form-group">
+          <label>Candidat — Nom <span style="font-weight:400;color:var(--ink3);font-size:11px">(si pas encore de fiche)</span></label>
+          <input type="text" id="rh-c-candidat-nom" placeholder="Prénom Nom">
+        </div>
+        <div class="form-group">
+          <label>Candidat — Email</label>
+          <input type="email" id="rh-c-candidat-email" placeholder="email@exemple.fr">
+        </div>
         <div class="form-group">
           <label>Poste *</label>
           <input type="text" id="rh-c-poste" placeholder="Intitulé du poste">
         </div>
         <div class="form-group">
           <label>Type de contrat</label>
-          <select id="rh-c-type" onchange="_rhContratToggleCDD()">
+          <select id="rh-c-type">
             <option value="CDI">CDI</option><option value="CDD">CDD</option>
             <option value="Alternance">Alternance</option><option value="Stage">Stage</option>
             <option value="Interim">Intérim</option>
@@ -15535,17 +15427,13 @@ async function enregistrerPointage(type) {
           <label>Date de début *</label>
           <input type="date" id="rh-c-debut">
         </div>
-        <div class="form-group" id="rh-c-fin-block">
-          <label>Date de fin <span id="rh-c-fin-label" style="font-weight:400;color:var(--ink3);font-size:11px">(CDD obligatoire)</span></label>
+        <div class="form-group">
+          <label>Date de fin</label>
           <input type="date" id="rh-c-fin">
         </div>
         <div class="form-group">
           <label>Temps de travail (h/sem)</label>
           <input type="number" id="rh-c-temps" min="0" max="40" step="0.5" placeholder="35">
-        </div>
-        <div class="form-group">
-          <label>Salaire brut mensuel (€)</label>
-          <input type="number" id="rh-c-salaire" min="0" step="10" placeholder="ex: 1800">
         </div>
         <div class="form-group">
           <label>Statut du contrat</label>
@@ -15559,22 +15447,13 @@ async function enregistrerPointage(type) {
           <label>Date de signature</label>
           <input type="date" id="rh-c-signature">
         </div>
+        <div class="form-group full" style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--ink3)">
+          ℹ️ La fiche salarié n'est créée automatiquement qu'à la signature du contrat (statut « Signé »), si aucun collaborateur existant n'a été sélectionné.
+        </div>
         <div class="form-group full">
-          <label>Notes internes</label>
-          <textarea id="rh-c-notes" rows="2" placeholder="Éléments spécifiques à ce contrat…"></textarea>
+          <label>Notes</label>
+          <textarea id="rh-c-notes" rows="2"></textarea>
         </div>
-
-        <!-- Modèle de contrat -->
-        <div class="form-group full" style="border-top:1.5px solid var(--border);padding-top:14px;margin-top:4px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <label style="margin:0">📄 Modèle de contrat</label>
-            <button class="btn btn-secondary btn-sm" onclick="_rhGenererModeleContrat()" title="Générer un modèle pré-rempli">⬇ Générer PDF</button>
-          </div>
-          <div style="font-size:11px;color:var(--ink3);line-height:1.5">
-            Génère un modèle de contrat de travail conforme droit du travail petite enfance (CCN ALISFA / PACT-ARIM / Éclat), pré-rempli avec les informations saisies ci-dessus. À compléter et faire signer.
-          </div>
-        </div>
-
       </div>
     </div>
     <div class="modal-footer">
@@ -15714,7 +15593,6 @@ async function enregistrerPointage(type) {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
 // ── IMPORT EXCEL ──────────────────────────────────────────────────────────
