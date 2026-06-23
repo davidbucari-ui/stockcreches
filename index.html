@@ -17414,6 +17414,7 @@ function _salPopulateDossier(s) {
     if (s.cv_url)      items.push('<div style="display:flex;align-items:center;gap:8px"><span>📄 CV</span><a href="' + s.cv_url + '" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75)">Voir →</a></div>');
     if (s.lettre_url)  items.push('<div style="display:flex;align-items:center;gap:8px"><span>✉️ Lettre</span><a href="' + s.lettre_url + '" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75)">Voir →</a></div>');
     if (s.diplome_url) items.push('<div style="display:flex;align-items:center;gap:8px"><span>📜 Diplôme</span><a href="' + s.diplome_url + '" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75)">Voir →</a></div>');
+    if (s.honor_url)   items.push('<div style="display:flex;align-items:center;gap:8px"><span>🛡 Honorabilité</span><a href="' + s.honor_url + '" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75)">Voir →</a></div>');
     if (s.quiz_score !== undefined && s.quiz_score !== null) {
       var pct = Math.round((s.quiz_score / 12) * 100);
       var det = s.quiz_detail ? (typeof s.quiz_detail === 'string' ? JSON.parse(s.quiz_detail) : s.quiz_detail) : {};
