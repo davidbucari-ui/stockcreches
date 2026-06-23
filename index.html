@@ -8231,25 +8231,33 @@ async function renderDashboardDirectrice(dateStr) {
 
   const kpiEl = document.getElementById('dash-dir-kpis');
   if (kpiEl) kpiEl.innerHTML = `
-    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
+    <div onclick="showPage('familles', document.querySelector('.nav-item[onclick*=familles]'))" style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.10)'" onmouseout="this.style.boxShadow=''">
       <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Enfants présents</div>
       <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif;color:var(--green)">${enfantsPresents}</div>
+      <div style="font-size:10px;color:var(--accent);margin-top:4px">Voir les familles →</div>
     </div>
-    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
+    <div onclick="showPage('inventaire', document.querySelector('.nav-item[onclick*=inventaire]'))" style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.10)'" onmouseout="this.style.boxShadow=''">
       <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Articles en stock</div>
       <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif">${articlesFiltered.length}</div>
+      <div style="font-size:10px;color:var(--accent);margin-top:4px">Voir l'inventaire →</div>
     </div>
-    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);${low.length>0?'border-left:3px solid var(--red)':''}">
+    <div onclick="showPage('inventaire', document.querySelector('.nav-item[onclick*=inventaire]'))" style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s;${low.length>0?'border-left:3px solid var(--red)':''}" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.10)'" onmouseout="this.style.boxShadow=''">
       <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Alertes stock</div>
       <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif;color:${low.length>0?'var(--red)':'var(--ink)'}">${low.length + exp.length}</div>
+      <div style="font-size:10px;color:${low.length>0?'var(--red)':'var(--accent)'};margin-top:4px">${low.length>0?'Voir les alertes →':'Tout est OK ✓'}</div>
     </div>
-    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border)">
+    <div onclick="showPage('statistiques', document.querySelector('.nav-item[onclick*=statistiques]'))" style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.10)'" onmouseout="this.style.boxShadow=''">
       <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Valeur stock</div>
       <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif">${articlesFiltered.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)} €</div>
+      <div style="font-size:10px;color:var(--accent);margin-top:4px">Voir les stats →</div>
     </div>`;
 
   const equipeEl = document.getElementById('dash-dir-equipe');
   if (equipeEl) {
+    equipeEl.style.cursor = 'pointer';
+    equipeEl.onclick = () => showPage('rh', document.querySelector('.nav-item[onclick*=rh]'));
+    equipeEl.onmouseover = () => equipeEl.style.boxShadow = '0 2px 8px rgba(0,0,0,.10)';
+    equipeEl.onmouseout = () => equipeEl.style.boxShadow = '';
     // SALARIES est déclaré avec `let` dans un bloc de script plus loin dans
     // le document : tant que ce bloc n'a pas encore été exécuté (premier rendu
     // pendant init()), y référer directement déclenche une ReferenceError
@@ -8287,6 +8295,10 @@ async function renderDashboardDirectrice(dateStr) {
 
   const alertesEl = document.getElementById('dash-dir-alertes');
   if (alertesEl) {
+    alertesEl.style.cursor = 'pointer';
+    alertesEl.onclick = () => showPage('inventaire', document.querySelector('.nav-item[onclick*=inventaire]'));
+    alertesEl.onmouseover = () => alertesEl.style.boxShadow = '0 2px 8px rgba(0,0,0,.10)';
+    alertesEl.onmouseout = () => alertesEl.style.boxShadow = '';
     const allAlerts = [
       ...low.map(a => ({ icon:'🔴', msg: 'Stock bas — '+a.nom, sub: a.creche+' : '+a.stock+'/'+a.min })),
       ...exp.map(a => ({ icon:'⏰', msg: 'Péremption — '+a.nom, sub: formatExpiry(a.expiry) }))
@@ -8380,6 +8392,10 @@ async function renderDashboardDirectrice(dateStr) {
 
   const statsEl = document.getElementById('dash-dir-stats');
   if (statsEl) {
+    statsEl.style.cursor = 'pointer';
+    statsEl.onclick = () => showPage('statistiques', document.querySelector('.nav-item[onclick*=statistiques]'));
+    statsEl.onmouseover = () => statsEl.style.boxShadow = '0 2px 8px rgba(0,0,0,.10)';
+    statsEl.onmouseout = () => statsEl.style.boxShadow = '';
     const commEnCours = (currentCreche === 'all'
       ? COMMANDES
       : COMMANDES.filter(c => c.creche === currentCreche)
@@ -8399,7 +8415,17 @@ async function renderDashboardDirectrice(dateStr) {
       '</div>';
   }
 
-  renderDashDirMenus(); // chargement indépendant, ne bloque pas le reste du tableau de bord
+  // Rendre le bloc menus cliquable vers Transmissions
+  renderDashDirMenus().then ? renderDashDirMenus() : renderDashDirMenus();
+  setTimeout(() => {
+    const menusEl = document.getElementById('dash-dir-menus');
+    if (menusEl) {
+      menusEl.style.cursor = 'pointer';
+      menusEl.onclick = () => showPage('transmissions', document.querySelector('.nav-item[onclick*=transmissions]'));
+      menusEl.onmouseover = () => menusEl.style.boxShadow = '0 2px 8px rgba(0,0,0,.10)';
+      menusEl.onmouseout = () => menusEl.style.boxShadow = '';
+    }
+  }, 500);
 }
 
 async function renderDashboardAuxiliaire(dateStr) {
