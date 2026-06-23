@@ -12874,7 +12874,7 @@ async function renderRecrutements() {
           ${r.diplome_url ? `<a href="${r.diplome_url}" target="_blank" class="btn btn-secondary btn-sm" title="Diplôme">📜</a>` : ''}
           ${r.honor_url ? `<a href="${r.honor_url}" target="_blank" class="btn btn-secondary btn-sm" title="Honorabilité">🛡</a>` : `<span class="badge" style="background:#fef2f2;color:#991b1b;font-size:10px" title="Attestation manquante">🛡!</span>`}
           ${(r.quiz_score !== null && r.quiz_score !== undefined) ? `<span class="badge badge-green" title="Quiz">🎯 ${Math.round((r.quiz_score/12)*100)}%</span>` : (r.quiz_token ? `<span class="badge" style="background:var(--surface2);color:var(--ink3);font-size:10px">⏳ Quiz</span>` : '')}
-          ${(r.statut === 'Valide' || r.statut === 'valide' || r.statut === 'Validé') ? (
+          ${(r.statut === 'Validé' || r.statut === 'valide') ? (
             recrutementsAvecContrat.has(r.id)
               ? `<span class="badge badge-green">✓ Contrat créé</span>`
               : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement('${r.id}')">📝 Contrat</button>`
@@ -12995,7 +12995,6 @@ async function uploadDocRH(file, prefix) {
   return SUPA_RH_URL + '/storage/v1/object/public/' + SUPA_RH_DOCS_BUCKET + '/' + path;
 }
 
-// Patch silencieux pour colonnes optionnelles (ignore 400 si colonne absente)
 async function sbUpdateSilent(table, id, data) {
   if (!id || !Object.keys(data).length) return;
   try {
@@ -13009,10 +13008,11 @@ async function sbUpdateSilent(table, id, data) {
 async function saveRhRecrutement() {
   const poste = (document.getElementById('rh-r-poste').value || '').trim();
   if (!poste) { alert('Le poste est requis.'); return; }
-  const STATUT_MAP_RECRU = { ouvert:'Ouvert', en_cours:'En cours', pourvu:'Pourvu', valide:'Valide', annule:'Annule' };
-  const rawStatut  = document.getElementById('rh-r-statut').value;
-  const newStatut  = STATUT_MAP_RECRU[rawStatut] || rawStatut;
-  // Colonnes stables — ne jamais inclure de colonnes optionnelles ici
+  // Valeurs exactes attendues par la CHECK constraint Supabase
+  const STATUT_MAP_RECRU = { ouvert:'Ouvert', en_cours:'En cours', pourvu:'Pourvu', valide:'Validé', annule:'Annulé' };
+  const rawStatut = document.getElementById('rh-r-statut').value;
+  const newStatut = STATUT_MAP_RECRU[rawStatut] || rawStatut;
+  // Colonnes stables uniquement — pas de creche_id ni colonnes optionnelles
   const data = {
     poste,
     type_contrat:   document.getElementById('rh-r-type').value,
@@ -13030,11 +13030,10 @@ async function saveRhRecrutement() {
       const row = await sbInsert('recrutements', data);
       savedId = row && row[0] ? row[0].id : null;
     }
-    // Upload docs séparément via sbUpdateSilent (ne plante pas si colonnes absentes)
     if (savedId) {
       const slug = (data.candidat_nom || 'candidat').toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,20);
       const extra = {};
-      const _f = function(id) { var el = document.getElementById(id); return el && el.files[0] ? el.files[0] : null; };
+      const _f = function(id) { var el = document.getElementById(id); return el && el.files && el.files[0] ? el.files[0] : null; };
       const cvFile  = _f('rh-r-cv-file');
       const lmFile  = _f('rh-r-lettre-file');
       const dipFile = _f('rh-r-diplome-file');
@@ -13045,7 +13044,7 @@ async function saveRhRecrutement() {
       if (honFile) try { extra.honor_url   = await uploadDocRH(honFile, slug + '/honorabilite'); } catch(e) { console.warn('Hon:', e); }
       if (Object.keys(extra).length) await sbUpdateSilent('recrutements', savedId, extra);
     }
-    if ((newStatut === 'Valide' || newStatut === 'Validé') && savedId) {
+    if (newStatut === 'Validé' && savedId) {
       closeModal('modal-rh-recrutement');
       renderRecrutements(); renderRhStats();
       setTimeout(function() {
@@ -13079,7 +13078,7 @@ async function envoyerQuizCandidat() {
   const lien  = 'https://app.orevy.app/quiz.html?token=' + token;
   const sujet = encodeURIComponent('Quiz — Candidature ' + poste + ' — Koalakids');
   const nl    = '%0A';
-  const corps = 'Bonjour ' + encodeURIComponent(nom) + ',' + nl + nl + encodeURIComponent("Dans le cadre de votre candidature au poste de " + poste + ", nous vous invitons à compléter un quiz sur notre projet éducatif (12 questions, 10 min).") + nl + nl + encodeURIComponent(lien) + nl + nl + encodeURIComponent("Bonne chance ! L'équipe Koalakids");
+  const corps = 'Bonjour ' + encodeURIComponent(nom) + ',' + nl + nl + encodeURIComponent('Dans le cadre de votre candidature au poste de ' + poste + ', nous vous invitons à compléter un quiz sur notre projet éducatif (12 questions, 10 min).') + nl + nl + encodeURIComponent(lien) + nl + nl + encodeURIComponent("Bonne chance ! L'équipe Koalakids");
   window.open('mailto:' + email + '?subject=' + sujet + '&body=' + corps);
   const statusEl = document.getElementById('rh-r-quiz-status');
   const copyBtn  = document.getElementById('rh-r-quiz-copy-btn');
@@ -13289,7 +13288,7 @@ async function openModalRh(type, id = null) {
         fill('rh-r-candidat-email', r.candidat_email); fill('rh-r-notes', r.notes);
         fill('rh-r-entretien', r.date_entretien ? r.date_entretien.slice(0,16) : '');
         document.getElementById('rh-r-type').value   = r.type_contrat || 'CDI';
-        const STATUT_RMAP = { 'Ouvert':'ouvert','En cours':'en_cours','Pourvu':'pourvu','Valide':'valide','Validé':'valide','Annulé':'annule' };
+        const STATUT_RMAP = { 'Ouvert':'ouvert','En cours':'en_cours','Pourvu':'pourvu','Validé':'valide','Annulé':'annule' };
         document.getElementById('rh-r-statut').value = STATUT_RMAP[r.statut] || r.statut || 'ouvert';
         const _lnk = function(elId, url) { const el = document.getElementById(elId); if (!el) return; if (url) { el.href = url; el.style.display = 'inline'; } else { el.style.display = 'none'; } };
         _lnk('rh-r-cv-link',     r.cv_url);
@@ -15332,27 +15331,19 @@ async function enregistrerPointage(type) {
         <div class="form-group full" style="border-top:1px solid var(--border,#e5e7eb);padding-top:14px;margin-top:4px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3,#6b7280);margin-bottom:10px">Documents candidat</div>
           <div style="display:grid;gap:10px">
-            <div>
-              <label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">📄 CV (PDF)</label>
+            <div><label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">📄 CV (PDF)</label>
               <input type="file" id="rh-r-cv-file" accept=".pdf" style="width:100%;font-size:13px">
-              <a id="rh-r-cv-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir le CV existant</a>
-            </div>
-            <div>
-              <label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">✉️ Lettre de motivation (PDF)</label>
+              <a id="rh-r-cv-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir existant</a></div>
+            <div><label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">✉️ Lettre de motivation (PDF)</label>
               <input type="file" id="rh-r-lettre-file" accept=".pdf" style="width:100%;font-size:13px">
-              <a id="rh-r-lettre-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir la lettre existante</a>
-            </div>
-            <div>
-              <label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">📜 Diplôme (PDF)</label>
+              <a id="rh-r-lettre-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir existant</a></div>
+            <div><label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">📜 Diplôme (PDF)</label>
               <input type="file" id="rh-r-diplome-file" accept=".pdf" style="width:100%;font-size:13px">
-              <a id="rh-r-diplome-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir le diplôme existant</a>
-            </div>
-            <div>
-              <label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">🛡 Attestation d'honorabilité (PDF) <span style="color:#dc2626;font-size:11px;font-weight:400">— obligatoire EAJE</span></label>
+              <a id="rh-r-diplome-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir existant</a></div>
+            <div><label style="font-size:13px;font-weight:500;margin-bottom:4px;display:block">🛡 Attestation d'honorabilité (PDF) <span style="color:#dc2626;font-size:11px;font-weight:400">— obligatoire EAJE</span></label>
               <input type="file" id="rh-r-honor-file" accept=".pdf" style="width:100%;font-size:13px">
-              <a id="rh-r-honor-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir l'attestation existante</a>
-              <div style="font-size:11px;color:var(--ink3,#6b7280);margin-top:3px">Extrait FIJAISV — à renouveler tous les 3 ans.</div>
-            </div>
+              <a id="rh-r-honor-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none;margin-top:3px">→ Voir existant</a>
+              <div style="font-size:11px;color:var(--ink3,#6b7280);margin-top:3px">Extrait FIJAISV — à renouveler tous les 3 ans.</div></div>
           </div>
         </div>
         <div class="form-group full" style="border-top:1px solid var(--border,#e5e7eb);padding-top:14px;margin-top:4px">
@@ -17064,8 +17055,6 @@ function showImportResult(type, html) {
           <label>Notes internes</label>
           <textarea id="sal-notes" rows="3" placeholder="Informations complémentaires..."></textarea>
         </div>
-
-        <!-- Diplôme upload -->
         <div class="form-group full" style="margin-top:8px">
           <label>📜 Copie du diplôme (PDF)</label>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -17073,18 +17062,14 @@ function showImportResult(type, html) {
             <a id="sal-diplome-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none">→ Voir</a>
           </div>
         </div>
-
-        <!-- Dossier recrutement -->
         <div class="form-group full" style="margin-top:12px;border-top:1px solid var(--border,#e5e7eb);padding-top:14px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3,#6b7280);margin-bottom:8px">📂 Dossier de recrutement</div>
           <div id="sal-dossier-recrutement" style="display:grid;gap:8px">
             <div style="font-size:13px;color:var(--ink3,#6b7280);font-style:italic">Aucun document lié</div>
           </div>
         </div>
-
-        <!-- Honorabilité -->
         <div class="form-group full" style="margin-top:12px;border-top:1px solid var(--border,#e5e7eb);padding-top:14px">
-          <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block">🛡 Attestation d'honorabilité (PDF) <span style="color:#dc2626;font-size:11px;font-weight:400">— obligatoire EAJE</span></label>
+          <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block">🛡 Attestation d'honorabilité <span style="color:#dc2626;font-size:11px;font-weight:400">— obligatoire EAJE</span></label>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <input type="file" id="sal-honor-file" accept=".pdf" style="flex:1;min-width:0;font-size:13px">
             <a id="sal-honor-link" href="#" target="_blank" style="font-size:12px;color:var(--accent,#1D9E75);display:none">→ Voir</a>
@@ -17317,7 +17302,7 @@ function _salPopulateDossier(s) {
       var pct = Math.round((s.quiz_score / 12) * 100);
       var det = s.quiz_detail ? (typeof s.quiz_detail === 'string' ? JSON.parse(s.quiz_detail) : s.quiz_detail) : {};
       var drow = Object.entries(det).map(function(kv) { return kv[0] + ' : ' + kv[1]; }).join(' · ');
-      items.push('<div><div style="font-size:13px;font-weight:500">🎯 Quiz projet éducatif — ' + pct + '% (' + s.quiz_score + '/12)</div><div style="font-size:11px;color:var(--ink3)">' + drow + '</div></div>');
+      items.push('<div><div style="font-size:13px;font-weight:500">🎯 Quiz — ' + pct + '% (' + s.quiz_score + '/12)</div><div style="font-size:11px;color:var(--ink3)">' + drow + '</div></div>');
     }
     c.innerHTML = items.length ? items.join('') : '<div style="font-size:13px;color:var(--ink3,#6b7280);font-style:italic">Aucun document lié</div>';
   }
@@ -17358,7 +17343,6 @@ function saveSalarie() {
     notes:      document.getElementById('sal-notes').value.trim(),
     structuresCoordonnees: Array.from(document.querySelectorAll('.sal-coord-cb:checked')).map(cb => cb.value),
   };
-  // Conserver les docs existants
   if (salEditingId) {
     var _ex = SALARIES.find(function(x) { return x.id === salEditingId; });
     if (_ex) { ['cv_url','lettre_url','diplome_url','honor_url','honor_date','quiz_score','quiz_detail'].forEach(function(k) { if (_ex[k] !== undefined) s[k] = _ex[k]; }); }
