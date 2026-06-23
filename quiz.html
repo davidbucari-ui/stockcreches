@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Projet éducatif — Koalakids</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1D9E75;--green-light:#E1F5EE;--green-dark:#085041;
+  --red-light:#FCEBEB;--red-dark:#791F1F;
+  --purple-light:#EEEDFE;--purple-dark:#3C3489;
+  --border:#e5e7eb;--ink1:#111827;--ink2:#374151;--ink3:#6b7280;
+  --surface:#f9fafb;--white:#fff;
+  --radius:10px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--surface);color:var(--ink1);min-height:100vh}
+
+/* Header */
+.header{background:var(--white);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:12px}
+.logo{font-size:20px;font-weight:700;color:var(--green);letter-spacing:-0.5px}
+.logo span{color:var(--ink3);font-weight:400;font-size:14px;margin-left:4px}
+
+/* Container */
+.container{max-width:620px;margin:0 auto;padding:24px 16px 60px}
+
+/* Cards */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px}
+.card h2{font-size:18px;font-weight:600;color:var(--ink1);margin-bottom:6px}
+.card p{font-size:14px;color:var(--ink3);line-height:1.6}
+
+/* Progress */
+.progress-wrap{margin-bottom:20px}
+.progress-meta{display:flex;justify-content:space-between;font-size:13px;color:var(--ink3);margin-bottom:6px}
+.progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width .35s ease}
+
+/* Axe badge */
+.axe-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--purple-light);color:var(--purple-dark);margin-bottom:12px;text-transform:uppercase;letter-spacing:.3px}
+
+/* Question text */
+.q-text{font-size:16px;line-height:1.65;color:var(--ink1);margin-bottom:18px;font-weight:500}
+
+/* Options */
+.options{display:flex;flex-direction:column;gap:9px;margin-bottom:16px}
+.opt{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius);cursor:pointer;background:transparent;text-align:left;width:100%;font-size:14px;color:var(--ink2);line-height:1.5;transition:border-color .15s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--green);background:var(--green-light)}
+.opt:disabled{cursor:default}
+.opt.correct{border-color:var(--green);background:var(--green-light);color:var(--green-dark)}
+.opt.wrong{border-color:#E24B4A;background:var(--red-light);color:var(--red-dark)}
+.opt-letter{min-width:26px;height:26px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;margin-top:1px}
+
+/* Feedback */
+.feedback{padding:12px 14px;border-radius:var(--radius);font-size:13px;line-height:1.6;margin-bottom:16px;display:none}
+.feedback.show{display:block}
+.feedback.ok{background:var(--green-light);color:var(--green-dark);border:1px solid #5DCAA5}
+.feedback.ko{background:var(--red-light);color:var(--red-dark);border:1px solid #F09595}
+.feedback-icon{font-weight:700;margin-right:4px}
+
+/* Nav */
+.nav{display:flex;gap:10px;align-items:center}
+.btn{padding:10px 20px;border:1.5px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;font-size:14px;font-weight:500;color:var(--ink1);transition:background .15s}
+.btn:hover{background:var(--surface)}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green-dark)}
+.btn-sm{padding:7px 14px;font-size:13px}
+
+/* Form */
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--ink2);margin-bottom:5px}
+.form-group input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;color:var(--ink1);background:var(--white)}
+.form-group input:focus{outline:none;border-color:var(--green)}
+
+/* Score card */
+.score-hero{text-align:center;padding:20px 0}
+.score-num{font-size:52px;font-weight:700;color:var(--green);line-height:1}
+.score-sub{font-size:15px;color:var(--ink3);margin-top:6px}
+.score-mention{font-size:14px;font-weight:500;color:var(--ink2);margin-top:8px;padding:8px 16px;background:var(--green-light);color:var(--green-dark);border-radius:20px;display:inline-block}
+.score-axes{margin-top:20px}
+.score-axe-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.score-axe-row:last-child{border-bottom:none}
+.axe-name{color:var(--ink3)}
+.axe-score{font-weight:600}
+.axe-score.full{color:var(--green-dark)}
+.axe-score.zero{color:#A32D2D}
+.confetti{font-size:32px;margin-bottom:8px}
+
+/* States */
+.state{text-align:center;padding:48px 24px}
+.state-icon{font-size:48px;margin-bottom:12px}
+.state h3{font-size:18px;font-weight:600;margin-bottom:8px}
+.state p{font-size:14px;color:var(--ink3);line-height:1.6}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Orevy <span>par Koalakids</span></div>
+</div>
+
+<div class="container">
+  <div id="app"></div>
+</div>
+
+<script>
+const SUPA_RH_URL = 'https://gokfxejoffzttzvdkoll.supabase.co';
+const SUPA_RH_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTY0NDQsImV4cCI6MjA5NTg5MjQ0NH0.2oghhJNpqeh-zLUjHE0iAJLK_eJX40_ZRuQTaQFGzhw';
+const HEADERS = { 'Content-Type':'application/json', 'apikey': SUPA_RH_KEY, 'Authorization':'Bearer ' + SUPA_RH_KEY };
+
+const QUESTIONS = [
+  { axe:"Posture professionnelle",
+    q:"Un enfant de 18 mois s'oppose systématiquement au moment du change. Quelle posture adoptez-vous en priorité ?",
+    opts:["Maintenir le change rapidement pour ne pas perturber le groupe","Verbaliser ce que vous allez faire, respecter son rythme et proposer un choix simple","Demander à une collègue de le tenir pour aller plus vite","Attendre qu'il se calme seul avant d'intervenir"],
+    ans:1, fb:"Verbaliser l'acte de soin et offrir un micro-pouvoir de décision soutient l'agentivité de l'enfant — cœur du projet éducatif : l'enfant acteur, pas objet de soin." },
+  { axe:"Relation familles",
+    q:"Un parent arrive en retard tous les soirs et semble stressé. Comment abordez-vous la situation ?",
+    opts:["Lui rappeler le règlement de fonctionnement dès l'entrée","Ne rien dire pour ne pas aggraver sa journée","Créer un moment calme pour lui proposer un échange informel sans jugement","Signaler le retard systématique à la direction immédiatement"],
+    ans:2, fb:"La juste distance avec les familles passe par l'accueil inconditionnel. L'échange informel bienveillant est la porte d'entrée — le règlement vient si nécessaire en second temps." },
+  { axe:"Développement de l'enfant",
+    q:"Un bébé de 8 mois pleure dès qu'une auxiliaire s'approche de lui. Ce comportement indique plutôt :",
+    opts:["Un trouble de l'attachement à signaler","Le développement normal de l'angoisse du 8e mois","Un manque de stimulations sensorielles","Une fatigue liée au sommeil insuffisant"],
+    ans:1, fb:"L'angoisse du 8e mois marque l'acquisition de la permanence de l'objet — signe de bon développement psychoaffectif. Le bébé différencie désormais les visages connus des inconnus." },
+  { axe:"QVT et travail en équipe",
+    q:"Lors d'une réunion d'équipe, une collègue dit qu'elle ne supporte plus un enfant particulièrement agité. Que faites-vous ?",
+    opts:["Ignorer, c'est une simple expression de frustration passagère","Rassurer sans approfondir pour ne pas bloquer la réunion","Accueillir sa parole, proposer d'en parler en APP et relayer à la direction si besoin","Rappeler que les professionnels ne doivent pas avoir de préférence"],
+    ans:2, fb:"Cette parole est un signal d'épuisement à prendre au sérieux. L'APP (Analyse des Pratiques Professionnelles) est l'espace prévu pour traiter ces situations. Accueillir sans juger et orienter protège à la fois le professionnel et l'enfant." },
+  { axe:"Pédagogie et aménagement",
+    q:"L'espace de vie des 12-24 mois est souvent source de conflits (morsures, arrachages). Quelle est votre première action ?",
+    opts:["Augmenter le temps de surveillance directe","Réduire le nombre d'enfants accueillis simultanément","Observer et analyser l'aménagement spatial avant toute autre mesure","Renforcer les règles de vie et les temps de regroupement"],
+    ans:2, fb:"Les comportements dits agressifs à cet âge répondent souvent à un environnement inadapté : espace saturé, peu de matière à explorer, zones de tension. On agit sur le cadre avant d'agir sur le comportement." },
+  { axe:"Réglementation",
+    q:"Depuis le décret 2025-304, le projet d'établissement d'une micro-crèche comprend combien de volets obligatoires ?",
+    opts:["2 volets (éducatif et pédagogique)","3 volets (éducatif, pédagogique, social)","4 volets dont un nouveau volet qualité d'accueil (RNQAJE)","5 volets dont un volet sécurité incendie"],
+    ans:2, fb:"Le décret 2025-304 ajoute un 4e volet : le projet qualité d'accueil, aligné sur le Référentiel National de la Qualité d'Accueil du Jeune Enfant (RNQAJE) publié par la HAS." },
+  { axe:"Observation et transmissions",
+    q:"Que notez-vous en priorité dans le bilan de fin de journée d'un enfant de 2 ans ?",
+    opts:["Le nombre exact de cuillères mangées et la durée de sieste en minutes","Les comportements inhabituels, les découvertes, les émotions traversées, les interactions marquantes","Les incidents survenus entre enfants uniquement","Les absences des parents aux transmissions"],
+    ans:1, fb:"Les transmissions de qualité racontent l'enfant dans sa journée : ce qu'il a découvert, initié, ressenti. C'est ce que les parents ont besoin d'entendre — et ce qui valorise l'expertise professionnelle de l'équipe." },
+  { axe:"Accueil et adaptation",
+    q:"Un enfant de 10 mois refuse de s'endormir sans son doudou, que les parents ont oublié. Vous :",
+    opts:["Laissez-le pleurer quelques minutes, il finira par s'endormir","Appelez les parents pour qu'ils l'apportent","Proposez un objet de transition de remplacement et tenez les parents informés","Mettez l'enfant dans un espace calme séparé du groupe"],
+    ans:2, fb:"L'objet transitionnel représente le lien d'attachement à la figure parentale. Un substitut sensoriel (tissu doux, musique connue) peut aider — sans dramatiser ni culpabiliser les parents." },
+  { axe:"Protection de l'enfance",
+    q:"Vous observez des hématomes suspects et répétés sur un enfant de 14 mois. Quelle est la première étape ?",
+    opts:["En parler discrètement aux parents à la prochaine occasion","Consigner vos observations de manière précise (lieu, forme, date) et en référer à la direction","Appeler le 119 directement sans en informer la direction","Attendre de voir si cela se reproduit avant d'agir"],
+    ans:1, fb:"La procédure commence par la documentation rigoureuse et la remontée interne. C'est la direction qui déclenche si nécessaire une IP ou un signalement au Procureur. Agir seul ou trop vite peut compromettre la procédure." },
+  { axe:"Réglementation",
+    q:"À partir du 1er septembre 2026, une même personne peut assurer la direction de combien de micro-crèches au maximum ?",
+    opts:["Autant que le gestionnaire le souhaite","3 micro-crèches maximum","2 micro-crèches maximum à 0,5 ETP chacune","1 seule micro-crèche, à temps plein obligatoire"],
+    ans:2, fb:"Le décret 2025-304 impose 0,5 ETP minimum de direction par structure et limite à 2 structures par directeur — pour garantir un pilotage pédagogique effectif." },
+  { axe:"Posture professionnelle",
+    q:"Un parent conteste devant vous la façon dont son enfant a été consolé par votre collègue. Vous :",
+    opts:["Prenez la défense de votre collègue immédiatement","Donnez raison au parent pour éviter le conflit","Reconnaissez son ressenti, restez neutre sur les faits et orientez vers la direction","Expliquez que votre collègue a toujours eu de bons résultats"],
+    ans:2, fb:"Accueillir le parent sans trancher sur-le-champ, préserver la relation de confiance et orienter vers un espace de dialogue adapté (entretien direction) — la solidarité d'équipe ne signifie pas validation automatique." },
+  { axe:"QVT et management",
+    q:"Une professionnelle est régulièrement épuisée le vendredi — le planning des demi-journées est inégalement réparti. Votre action prioritaire :",
+    opts:["La remplacer sur les tâches les plus lourdes sans modifier le planning","Alerter la direction sur la répartition du planning et proposer une révision collective","Demander à l'équipe de s'organiser entre elles sans remonter","Attendre que la professionnelle en parle elle-même"],
+    ans:1, fb:"Une répartition inégale des contraintes est une cause fréquente d'épuisement. L'identifier et le remonter — pas juste gérer en solo — est le rôle du coordinateur EJE." }
+];
+
+const LETTERS = ['A','B','C','D'];
+const app = document.getElementById('app');
+const params = new URLSearchParams(location.search);
+const TOKEN = params.get('token');
+
+let state = 'loading'; // loading | invalid | already_done | identify | quiz | submitting | done
+let candidatNom = '';
+let candidatEmail = '';
+let recrutementInfo = {};
+let current = 0;
+let answered = new Array(QUESTIONS.length).fill(null);
+let score = 0;
+
+async function init() {
+  if (!TOKEN) { setState('invalid'); return; }
+  try {
+    // Vérifier token dans recrutements
+    const res = await fetch(`${SUPA_RH_URL}/rest/v1/recrutements?quiz_token=eq.${TOKEN}&select=id,poste,candidat_nom,candidat_email,quiz_score`, { headers: HEADERS });
+    const rows = await res.json();
+    if (!rows || !rows.length) { setState('invalid'); return; }
+    recrutementInfo = rows[0];
+
+    // Vérifier si quiz déjà fait
+    if (recrutementInfo.quiz_score !== null && recrutementInfo.quiz_score !== undefined) {
+      setState('already_done'); return;
+    }
+    // Vérifier dans quiz_resultats aussi
+    const res2 = await fetch(`${SUPA_RH_URL}/rest/v1/quiz_resultats?token=eq.${TOKEN}&select=id`, { headers: HEADERS });
+    const rows2 = await res2.json();
+    if (rows2 && rows2.length) { setState('already_done'); return; }
+
+    candidatNom = recrutementInfo.candidat_nom || '';
+    candidatEmail = recrutementInfo.candidat_email || '';
+    setState('identify');
+  } catch(e) {
+    setState('invalid');
+  }
+}
+
+function setState(s) {
+  state = s;
+  render();
+}
+
+function render() {
+  if (state === 'loading') {
+    app.innerHTML = `<div class="card"><div class="state"><div class="spinner"></div><h3>Chargement…</h3><p>Vérification de votre invitation…</p></div></div>`;
+    return;
+  }
+  if (state === 'invalid') {
+    app.innerHTML = `<div class="card"><div class="state"><div class="state-icon">🔗</div><h3>Lien invalide ou expiré</h3><p>Ce lien de quiz ne correspond à aucune candidature active.<br>Contactez l'équipe Koalakids si vous pensez qu'il s'agit d'une erreur.</p></div></div>`;
+    return;
+  }
+  if (state === 'already_done') {
+    app.innerHTML = `<div class="card"><div class="state"><div class="state-icon">✅</div><h3>Quiz déjà complété</h3><p>Vous avez déjà répondu à ce quiz. Vos résultats ont bien été transmis à l'équipe Koalakids.<br><br>Nous vous recontacterons prochainement.</p></div></div>`;
+    return;
+  }
+  if (state === 'identify') {
+    app.innerHTML = `
+      <div class="card">
+        <h2 style="margin-bottom:6px">Quiz — Projet éducatif &amp; pédagogique</h2>
+        <p style="margin-bottom:20px">Poste : <strong>${recrutementInfo.poste || 'Non précisé'}</strong> · 12 questions · environ 10 min</p>
+        <div class="form-group">
+          <label>Votre prénom et nom</label>
+          <input type="text" id="id-nom" value="${candidatNom}" placeholder="Marie Dupont" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label>Votre email</label>
+          <input type="email" id="id-email" value="${candidatEmail}" placeholder="marie@exemple.fr" autocomplete="email">
+        </div>
+        <p style="font-size:12px;color:var(--ink3);margin-bottom:20px;line-height:1.6">Ce quiz évalue votre connaissance du projet éducatif et pédagogique des micro-crèches Koalakids. Il n'y a pas de mauvaise volonté — répondez instinctivement.</p>
+        <button class="btn btn-primary" onclick="startQuiz()">Commencer le quiz →</button>
+      </div>`;
+    return;
+  }
+  if (state === 'quiz') {
+    renderQuestion();
+    return;
+  }
+  if (state === 'submitting') {
+    app.innerHTML = `<div class="card"><div class="state"><div class="spinner"></div><h3>Enregistrement…</h3><p>Vos résultats sont en cours de transmission.</p></div></div>`;
+    return;
+  }
+  if (state === 'done') {
+    renderScore();
+    return;
+  }
+}
+
+function startQuiz() {
+  const nom   = document.getElementById('id-nom').value.trim();
+  const email = document.getElementById('id-email').value.trim();
+  if (!nom || !email) { alert('Merci de renseigner votre nom et votre email.'); return; }
+  candidatNom   = nom;
+  candidatEmail = email;
+  current = 0;
+  answered.fill(null);
+  score = 0;
+  setState('quiz');
+}
+
+function renderQuestion() {
+  const q = QUESTIONS[current];
+  const sel = answered[current];
+  const pct = Math.min(Math.round((current / QUESTIONS.length) * 100) + 8, 100);
+
+  app.innerHTML = `
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span>Question ${current + 1} sur ${QUESTIONS.length}</span>
+        <span>${pct}%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="card">
+      <div class="axe-badge">${q.axe}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="options">
+        ${q.opts.map((o, i) => {
+          let cls = 'opt';
+          if (sel !== null) {
+            if (i === q.ans) cls += ' correct';
+            else if (i === sel) cls += ' wrong';
+          }
+          return `<button class="${cls}" onclick="pick(${i})" ${sel !== null ? 'disabled' : ''}>
+            <span class="opt-letter">${LETTERS[i]}</span>
+            <span>${o}</span>
+          </button>`;
+        }).join('')}
+      </div>
+      ${sel !== null ? `
+        <div class="feedback show ${sel === q.ans ? 'ok' : 'ko'}">
+          <span class="feedback-icon">${sel === q.ans ? '✓' : '✗'}</span>${q.fb}
+        </div>` : ''}
+      <div class="nav">
+        ${current > 0 ? `<button class="btn btn-sm" onclick="go(-1)">← Précédent</button>` : ''}
+        ${sel !== null && current < QUESTIONS.length - 1
+          ? `<button class="btn btn-primary btn-sm" onclick="go(1)" style="margin-left:auto">Suivant →</button>`
+          : ''}
+        ${sel !== null && current === QUESTIONS.length - 1
+          ? `<button class="btn btn-primary btn-sm" onclick="submitQuiz()" style="margin-left:auto">Terminer et envoyer ✓</button>`
+          : ''}
+      </div>
+    </div>`;
+}
+
+function pick(i) {
+  if (answered[current] !== null) return;
+  answered[current] = i;
+  if (i === QUESTIONS[current].ans) score++;
+  renderQuestion();
+}
+
+function go(d) {
+  current = Math.max(0, Math.min(QUESTIONS.length - 1, current + d));
+  renderQuestion();
+}
+
+async function submitQuiz() {
+  setState('submitting');
+  const axes = {};
+  QUESTIONS.forEach((q, i) => {
+    if (!axes[q.axe]) axes[q.axe] = { ok: 0, total: 0 };
+    axes[q.axe].total++;
+    if (answered[i] === q.ans) axes[q.axe].ok++;
+  });
+  const detail = {};
+  Object.entries(axes).forEach(([a, v]) => { detail[a] = `${v.ok}/${v.total}`; });
+
+  try {
+    // Insérer dans quiz_resultats
+    const body = {
+      token: TOKEN,
+      recrutement_id: recrutementInfo.id,
+      candidat_nom: candidatNom,
+      candidat_email: candidatEmail,
+      score,
+      quiz_detail: detail,
+    };
+    const r1 = await fetch(`${SUPA_RH_URL}/rest/v1/quiz_resultats`, {
+      method: 'POST',
+      headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+      body: JSON.stringify(body),
+    });
+    // Mettre à jour recrutements
+    await fetch(`${SUPA_RH_URL}/rest/v1/recrutements?id=eq.${recrutementInfo.id}`, {
+      method: 'PATCH',
+      headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ quiz_score: score, quiz_detail: detail, quiz_completed_at: new Date().toISOString() }),
+    });
+    setState('done');
+  } catch(e) {
+    alert("Erreur lors de l'envoi. Vérifiez votre connexion et réessayez.");
+    setState('quiz');
+  }
+}
+
+function renderScore() {
+  const pct = Math.round((score / QUESTIONS.length) * 100);
+  let mention = '';
+  if (pct >= 85) mention = 'Excellente maîtrise du projet éducatif';
+  else if (pct >= 65) mention = 'Bonne connaissance — quelques points à approfondir';
+  else mention = 'Des axes importants à explorer ensemble';
+
+  const axes = {};
+  QUESTIONS.forEach((q, i) => {
+    if (!axes[q.axe]) axes[q.axe] = { ok: 0, total: 0 };
+    axes[q.axe].total++;
+    if (answered[i] === q.ans) axes[q.axe].ok++;
+  });
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="score-hero">
+        <div class="confetti">${pct >= 80 ? '🎉' : pct >= 60 ? '👍' : '💡'}</div>
+        <div class="score-num">${pct}<span style="font-size:28px">%</span></div>
+        <div class="score-sub">${score} bonnes réponses sur ${QUESTIONS.length}</div>
+        <div class="score-mention">${mention}</div>
+      </div>
+      <div class="score-axes">
+        <p style="font-size:13px;font-weight:500;color:var(--ink2);margin-bottom:10px">Résultats par axe</p>
+        ${Object.entries(axes).map(([a, v]) => `
+          <div class="score-axe-row">
+            <span class="axe-name">${a}</span>
+            <span class="axe-score ${v.ok === v.total ? 'full' : v.ok === 0 ? 'zero' : ''}">${v.ok}/${v.total}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="card" style="text-align:center;padding:20px">
+      <p style="font-size:14px;color:var(--ink3);line-height:1.7">Vos résultats ont été transmis à l'équipe Koalakids.<br>Nous vous recontacterons prochainement pour la suite de votre candidature.</p>
+      <p style="font-size:13px;color:var(--ink3);margin-top:12px">Merci, <strong>${candidatNom}</strong> !</p>
+    </div>`;
+}
+
+init();
+</script>
+</body>
+</html>
