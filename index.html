@@ -12874,9 +12874,9 @@ async function renderRecrutements() {
               ? `<span class="badge badge-green" style="white-space:nowrap">✓ Contrat créé</span>`
               : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement('${r.id}')" title="Créer le contrat à partir de ce recrutement">📄 Contrat</button>`
           ) : ''}
-          ${r.cv_url ? `<a href="${r.cv_url}" target="_blank" class="btn btn-secondary btn-sm" title="Voir le CV">📄 CV</a>` : ''}
-          ${r.lettre_url ? `<a href="${r.lettre_url}" target="_blank" class="btn btn-secondary btn-sm" title="Lettre de motivation">✉️ LM</a>` : ''}
-          ${(r.quiz_score !== null && r.quiz_score !== undefined) ? `<span class="btn btn-secondary btn-sm" style="cursor:default" title="Score quiz projet éducatif">🎯 ${Math.round((r.quiz_score/12)*100)}%</span>` : ''}
+          ${r.cv_url ? `<a href="${r.cv_url}" target="_blank" class="btn btn-secondary btn-sm" title="CV">📄</a>` : ''}
+          ${r.lettre_url ? `<a href="${r.lettre_url}" target="_blank" class="btn btn-secondary btn-sm" title="Lettre">✉️</a>` : ''}
+          ${(r.quiz_score !== null && r.quiz_score !== undefined) ? `<span class="badge badge-green" title="Score quiz projet éducatif">🎯 ${Math.round((r.quiz_score/12)*100)}%</span>` : (r.quiz_token ? `<span class="badge" style="background:var(--surface2);color:var(--ink3)" title="Quiz envoyé, en attente">⏳ Quiz</span>` : '')}
           <button class="btn btn-secondary btn-sm" onclick="openModalRh('recrutement','${r.id}')">✏️</button>
           <button class="btn btn-danger btn-sm" onclick="deleteRh('recrutements','${r.id}','recrutement')">🗑</button>
         </div></td>
@@ -12968,126 +12968,19 @@ async function creerSalarieDepuisContrat(c) {
   return newId;
 }
 
-
-// ── Quiz recrutement — projet éducatif & pédagogique ─────────────────────
-const QUIZ_RECRUT_QUESTIONS = [
-  { axe:"Posture professionnelle", q:"Un enfant de 18 mois s'oppose au change. Quelle posture adoptez-vous en priorité ?", opts:["Maintenir le change rapidement pour ne pas perturber le groupe","Verbaliser ce que vous allez faire, respecter son rythme et proposer un choix simple","Demander à une collègue de le tenir pour aller plus vite","Attendre qu'il se calme seul"], ans:1, fb:"Verbaliser l'acte de soin et offrir un micro-pouvoir de décision soutient l'agentivité de l'enfant — cœur du projet éducatif." },
-  { axe:"Relation familles", q:"Un parent arrive en retard tous les soirs et semble stressé. Comment abordez-vous la situation ?", opts:["Lui rappeler le règlement dès l'entrée","Ne rien dire pour ne pas aggraver sa journée","Proposer un temps d'échange informel bienveillant sans jugement","Signaler le retard à la direction immédiatement"], ans:2, fb:"La juste distance passe par l'accueil inconditionnel. L'échange informel bienveillant est la porte d'entrée, le règlement vient si nécessaire en second temps." },
-  { axe:"Développement de l'enfant", q:"Un bébé de 8 mois pleure dès qu'une auxiliaire s'approche. Ce comportement indique :", opts:["Un trouble de l'attachement à signaler","Le développement normal de l'angoisse du 8e mois","Un manque de stimulations sensorielles","Une fatigue liée au sommeil"], ans:1, fb:"L'angoisse du 8e mois marque l'acquisition de la permanence de l'objet — signe de bon développement psychoaffectif." },
-  { axe:"QVT & travail en équipe", q:"Lors d'une réunion, une collègue dit qu'elle ne supporte plus un enfant agité. Que faites-vous ?", opts:["Ignorer, c'est une expression passagère","Rassurer sans approfondir","Accueillir sa parole, proposer l'APP et relayer à la direction si besoin","Rappeler que les pros ne doivent pas avoir de préférence"], ans:2, fb:"L'APP est l'espace prévu pour traiter ces situations. Accueillir sans juger et orienter protège le professionnel et l'enfant." },
-  { axe:"Pédagogie & aménagement", q:"L'espace des 12-24 mois génère des conflits (morsures, arrachages). Votre première action :", opts:["Augmenter la surveillance directe","Réduire le nombre d'enfants","Observer et analyser l'aménagement spatial avant toute autre mesure","Renforcer les règles de vie"], ans:2, fb:"Les comportements dits agressifs à cet âge répondent souvent à un environnement inadapté. On agit sur le cadre avant d'agir sur le comportement." },
-  { axe:"Réglementation", q:"Depuis le décret 2025-304, le projet d'établissement comprend combien de volets obligatoires ?", opts:["2 volets","3 volets","4 volets dont un nouveau volet qualité d'accueil","5 volets"], ans:2, fb:"Le décret 2025-304 ajoute un 4e volet : projet qualité d'accueil, aligné sur le RNQAJE de la HAS." },
-  { axe:"Observation & transmissions", q:"Que notez-vous en priorité dans le bilan de fin de journée d'un enfant de 2 ans ?", opts:["Nombre exact de cuillères mangées et durée de sieste","Les comportements inhabituels, découvertes, émotions, interactions marquantes","Les incidents entre enfants uniquement","Les absences des parents aux transmissions"], ans:1, fb:"Les transmissions de qualité racontent l'enfant dans sa journée : ce qu'il a découvert, initié, ressenti — pas seulement les données biologiques." },
-  { axe:"Accueil & adaptation", q:"Un enfant de 10 mois refuse de s'endormir sans son doudou oublié. Vous :", opts:["Le laissez pleurer, il finira par s'endormir","Appelez les parents pour qu'ils l'apportent","Proposez un objet de transition de remplacement et informez les parents","Mettez l'enfant dans un espace calme séparé"], ans:2, fb:"L'objet transitionnel représente le lien d'attachement. Un substitut sensoriel peut aider — sans dramatiser ni culpabiliser les parents." },
-  { axe:"Protection de l'enfance", q:"Vous observez des hématomes suspects et répétés sur un enfant de 14 mois. La première étape :", opts:["En parler discrètement aux parents","Consigner vos observations précisément et en référer à la direction","Appeler le 119 directement","Attendre de voir si cela se reproduit"], ans:1, fb:"La procédure commence par la documentation rigoureuse et la remontée interne. C'est la direction qui déclenche si nécessaire l'IP ou le signalement." },
-  { axe:"Réglementation", q:"À partir du 1er septembre 2026, une même personne peut assurer la direction de :", opts:["Autant de structures que souhaité","3 micro-crèches maximum","2 micro-crèches maximum à 0,5 ETP chacune","1 seule micro-crèche à temps plein"], ans:2, fb:"Le décret 2025-304 impose 0,5 ETP minimum par structure et limite à 2 structures par directeur." },
-  { axe:"Posture professionnelle", q:"Un parent conteste devant vous la façon dont son enfant a été consolé par votre collègue. Vous :", opts:["Prenez la défense de votre collègue immédiatement","Donnez raison au parent pour éviter le conflit","Reconnaissez son ressenti, restez neutre et orientez vers la direction","Expliquez que votre collègue a toujours de bons résultats"], ans:2, fb:"Accueillir le parent sans trancher, préserver la relation de confiance et orienter vers un espace de dialogue adapté." },
-  { axe:"QVT & management", q:"Une professionnelle est régulièrement épuisée le vendredi — le planning est inégalement réparti. Votre action prioritaire :", opts:["La remplacer sur les tâches lourdes sans modifier le planning","Alerter la direction sur la répartition et proposer une révision collective","Demander à l'équipe de s'organiser entre elles","Attendre qu'elle en parle elle-même"], ans:1, fb:"Une répartition inégale est une cause fréquente d'épuisement. L'identifier et le remonter — pas juste gérer en solo — est le rôle du coordinateur EJE." }
-];
-
-let _quizROpen = false;
-
-function openQuizRecrutement() {
-  if (_quizROpen) return;
-  _quizROpen = true;
-  const overlay = document.createElement('div');
-  overlay.id = 'quiz-recrut-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  overlay.innerHTML = `
-    <div style="background:var(--surface1,#fff);border-radius:12px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;position:relative">
-      <button onclick="closeQuizRecrutement()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink2)">✕</button>
-      <h3 style="font-size:16px;font-weight:500;margin-bottom:4px">🎯 Quiz — Projet éducatif & pédagogique</h3>
-      <p style="font-size:12px;color:var(--ink3);margin-bottom:16px">12 questions · Passé par le candidat lors de l'entretien</p>
-      <div id="qr-progress-bar" style="height:4px;background:var(--border);border-radius:2px;margin-bottom:16px"><div id="qr-prog" style="height:100%;background:#1D9E75;border-radius:2px;width:8%;transition:width .3s"></div></div>
-      <div id="qr-counter" style="font-size:12px;color:var(--ink3);margin-bottom:12px">Question 1 sur 12</div>
-      <div id="qr-body"></div>
-      <div id="qr-result" style="display:none"></div>
-    </div>`;
-  document.body.appendChild(overlay);
-  let cur=0, score=0, answered=new Array(QUIZ_RECRUT_QUESTIONS.length).fill(null);
-  const letters = ['A','B','C','D'];
-
-  function renderQ() {
-    const q = QUIZ_RECRUT_QUESTIONS[cur];
-    document.getElementById('qr-prog').style.width = Math.min(Math.round(((cur)/12)*100)+8,100)+'%';
-    document.getElementById('qr-counter').textContent = `Question ${cur+1} sur 12`;
-    const sel = answered[cur];
-    document.getElementById('qr-body').innerHTML = `
-      <div style="font-size:11px;font-weight:500;color:#3C3489;background:#EEEDFE;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:10px">${q.axe}</div>
-      <p style="font-size:15px;margin-bottom:14px;line-height:1.6">${q.q}</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${q.opts.map((o,i)=>{
-          let bg='', border='0.5px solid var(--border)', color='var(--ink1)';
-          if(sel!==null){
-            if(i===q.ans){bg='#E1F5EE';border='1px solid #1D9E75';color='#085041';}
-            else if(i===sel){bg='#FCEBEB';border='1px solid #E24B4A';color='#791F1F';}
-          }
-          return `<button onclick="pickQ(${i})" ${sel!==null?'disabled':''} style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:${border};border-radius:8px;cursor:${sel!==null?'default':'pointer'};background:${bg};color:${color};text-align:left;width:100%;font-size:14px">
-            <span style="min-width:22px;height:22px;border-radius:50%;border:0.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500">${letters[i]}</span>
-            <span>${o}</span>
-          </button>`;
-        }).join('')}
-      </div>
-      ${sel!==null?`<div style="margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13px;line-height:1.6;background:${sel===q.ans?'#E1F5EE':'#FCEBEB'};color:${sel===q.ans?'#085041':'#791F1F'}">${sel===q.ans?'✓':'✗'} ${q.fb}</div>`:''}
-      <div style="display:flex;gap:8px;margin-top:14px">
-        ${cur>0?`<button onclick="goPrev()" style="padding:7px 16px;border:0.5px solid var(--border);border-radius:8px;background:none;cursor:pointer;font-size:13px">← Précédent</button>`:''}
-        ${sel!==null&&cur<11?`<button onclick="goNext()" style="padding:7px 16px;border:none;border-radius:8px;background:#1D9E75;color:#fff;cursor:pointer;font-size:13px;margin-left:auto">Suivant →</button>`:''}
-        ${sel!==null&&cur===11?`<button onclick="showResult()" style="padding:7px 16px;border:none;border-radius:8px;background:#1D9E75;color:#fff;cursor:pointer;font-size:13px;margin-left:auto">Voir les résultats →</button>`:''}
-      </div>`;
-  }
-
-  window.pickQ = function(i) {
-    if (answered[cur]!==null) return;
-    answered[cur]=i;
-    if(i===QUIZ_RECRUT_QUESTIONS[cur].ans) score++;
-    renderQ();
-  };
-  window.goNext = function(){ cur=Math.min(11,cur+1); renderQ(); };
-  window.goPrev = function(){ cur=Math.max(0,cur-1); renderQ(); };
-  window.showResult = function(){
-    document.getElementById('qr-body').style.display='none';
-    document.getElementById('qr-counter').style.display='none';
-    document.getElementById('qr-progress-bar').style.display='none';
-    const pct=Math.round((score/12)*100);
-    const mention = pct>=85?'Excellente maîtrise du projet éducatif':pct>=65?'Bonne connaissance — points à approfondir':'Axes importants à retravailler';
-    const axes={};
-    QUIZ_RECRUT_QUESTIONS.forEach((q,i)=>{
-      if(!axes[q.axe]) axes[q.axe]={ok:0,total:0};
-      axes[q.axe].total++;
-      if(answered[i]===q.ans) axes[q.axe].ok++;
-    });
-    const axeRows=Object.entries(axes).map(([a,v])=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:0.5px solid var(--border)"><span style="color:var(--ink3)">${a}</span><span style="font-weight:500;color:${v.ok===v.total?'#0F6E56':v.ok===0?'#A32D2D':'var(--ink1)'}">${v.ok}/${v.total}</span></div>`).join('');
-    const detail={};
-    Object.entries(axes).forEach(([a,v])=>{ detail[a]=`${v.ok}/${v.total}`; });
-    document.getElementById('qr-result').style.display='block';
-    document.getElementById('qr-result').innerHTML=`
-      <div style="text-align:center;margin-bottom:16px">
-        <div style="font-size:36px;font-weight:500;color:#1D9E75">${pct}%</div>
-        <div style="font-size:13px;color:var(--ink3)">${score}/12 — ${mention}</div>
-      </div>
-      <div style="margin-bottom:16px">${axeRows}</div>
-      <button onclick="saveQuizRecrutement(${score},'${JSON.stringify(detail).replace(/'/g,"\\'")}' )" style="width:100%;padding:10px;border:none;border-radius:8px;background:#1D9E75;color:#fff;cursor:pointer;font-size:14px;font-weight:500">💾 Enregistrer ces résultats dans le recrutement</button>`;
-  };
-
-  renderQ();
-}
-
-window.saveQuizRecrutement = function(score, detailStr) {
-  window._rhQuizScore = score;
-  try { window._rhQuizDetail = JSON.parse(detailStr); } catch(e) { window._rhQuizDetail = {}; }
-  const pct = Math.round((score/12)*100);
-  const qd = document.getElementById('rh-r-quiz-display');
-  if (qd) {
-    const axeRows = Object.entries(window._rhQuizDetail).map(([a,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--ink3)">${a}</span><span style="font-weight:500">${v}</span></div>`).join('');
-    qd.innerHTML = `<div style="font-size:15px;font-weight:500;margin-bottom:6px">${pct}% — ${score}/12 bonnes réponses</div>${axeRows}`;
-  }
-  closeQuizRecrutement();
-};
-
-function closeQuizRecrutement() {
-  _quizROpen = false;
-  const el = document.getElementById('quiz-recrut-overlay');
-  if (el) el.remove();
+// ── Upload documents recrutement vers Supabase RH Storage ──────────────
+const SUPA_RH_DOCS_BUCKET = 'recrutement-docs';
+async function uploadDocRH(file, prefix) {
+  const ext = (file.name.split('.').pop() || 'pdf').toLowerCase();
+  const path = `${prefix}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+  const authHeader = SUPA_RH_HEADERS['Authorization'] || ('Bearer ' + SUPA_RH_KEY);
+  const res = await fetch(`${SUPA_RH_URL}/storage/v1/object/${SUPA_RH_DOCS_BUCKET}/${path}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPA_RH_KEY, 'Authorization': authHeader, 'Content-Type': file.type || 'application/pdf' },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`Upload doc RH : ${res.status}`);
+  return `${SUPA_RH_URL}/storage/v1/object/public/${SUPA_RH_DOCS_BUCKET}/${path}`;
 }
 
 async function saveRhRecrutement() {
@@ -13104,25 +12997,75 @@ async function saveRhRecrutement() {
     notes:          (document.getElementById('rh-r-notes').value || '').trim(),
     creche_id:      (typeof currentCreche !== 'undefined' && currentCreche !== 'all') ? currentCreche : null,
   };
-  if (window._rhQuizScore !== undefined) data.quiz_score = window._rhQuizScore;
-  if (window._rhQuizDetail !== undefined) data.quiz_detail = window._rhQuizDetail;
   try {
-    const prefix = (data.candidat_nom || 'candidat').replace(/\s+/g,'_').toLowerCase();
-    const cvFile = document.getElementById('rh-r-cv-file').files[0];
-    if (cvFile) {
-      try { data.cv_url = await uploadDocRecrutement(cvFile, prefix + '/cv'); }
-      catch(e) { console.warn('Upload CV:', e); }
-    }
-    const lmFile = document.getElementById('rh-r-lettre-file').files[0];
-    if (lmFile) {
-      try { data.lettre_url = await uploadDocRecrutement(lmFile, prefix + '/lettre'); }
-      catch(e) { console.warn('Upload lettre:', e); }
-    }
+    const slug = (data.candidat_nom || 'candidat').toLowerCase().replace(/[^a-z0-9]/g,'_').slice(0,20);
+    const cvFile = document.getElementById('rh-r-cv-file') && document.getElementById('rh-r-cv-file').files[0];
+    if (cvFile) { try { data.cv_url = await uploadDocRH(cvFile, `${slug}/cv`); } catch(e) { console.warn('CV upload:', e); } }
+    const lmFile = document.getElementById('rh-r-lettre-file') && document.getElementById('rh-r-lettre-file').files[0];
+    if (lmFile) { try { data.lettre_url = await uploadDocRH(lmFile, `${slug}/lettre`); } catch(e) { console.warn('LM upload:', e); } }
     rhEditingRecrutement ? await sbUpdate('recrutements', rhEditingRecrutement, data) : await sbInsert('recrutements', data);
-    window._rhQuizScore = undefined; window._rhQuizDetail = undefined;
     closeModal('modal-rh-recrutement');
     renderRecrutements(); renderRhStats();
   } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+// ── Envoi quiz candidat ─────────────────────────────────────────────────────
+async function envoyerQuizCandidat() {
+  if (!rhEditingRecrutement) { showNotif("⚠ Enregistrez d'abord le recrutement."); return; }
+  const email = (document.getElementById('rh-r-candidat-email').value || '').trim();
+  const nom   = (document.getElementById('rh-r-candidat-nom').value || '').trim();
+  const poste = (document.getElementById('rh-r-poste').value || '').trim();
+  if (!email) { alert("Renseignez l'email du candidat avant d'envoyer le quiz."); return; }
+  let token = window._rhQuizToken;
+  if (!token) {
+    token = crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+    try {
+      await sbUpdate('recrutements', rhEditingRecrutement, { quiz_token: token });
+      window._rhQuizToken = token;
+    } catch(e) { alert('Erreur génération token : ' + e.message); return; }
+  }
+  const lien = `https://app.orevy.app/quiz.html?token=${token}`;
+  const sujet = encodeURIComponent(`Quiz — Candidature ${poste} — Koalakids`);
+  const corps = encodeURIComponent(`Bonjour ${nom},
+
+Dans le cadre de votre candidature au poste de ${poste}, nous vous invitons à compléter un quiz de 12 questions sur notre projet éducatif et pédagogique.
+
+Cela prend environ 10 minutes. Vos réponses nous permettront de mieux préparer votre entretien.
+
+👉 ${lien}
+
+Bonne chance !
+L'équipe Koalakids`);
+  window.open(`mailto:${email}?subject=${sujet}&body=${corps}`);
+  const statusEl = document.getElementById('rh-r-quiz-status');
+  const copyBtn  = document.getElementById('rh-r-quiz-copy-btn');
+  if (statusEl) statusEl.textContent = `Quiz envoyé — lien : ${lien}`;
+  if (copyBtn)  copyBtn.style.display = 'inline-flex';
+  showNotif("📧 Email quiz ouvert — pensez à l'envoyer");
+}
+
+function copierLienQuiz() {
+  if (!window._rhQuizToken) return;
+  const lien = `https://app.orevy.app/quiz.html?token=${window._rhQuizToken}`;
+  navigator.clipboard.writeText(lien).then(() => showNotif("🔗 Lien quiz copié")).catch(() => {
+    prompt('Copiez ce lien :', lien);
+  });
+}
+
+// ── Sync résultats quiz depuis quiz_resultats ───────────────────────────────
+async function syncQuizResultat(recrutementId, token) {
+  if (!token) return;
+  try {
+    const rows = await fetch(`${SUPA_RH_URL}/rest/v1/quiz_resultats?token=eq.${token}&limit=1`, { headers: SUPA_RH_HEADERS }).then(r => r.json());
+    if (!rows || !rows.length) return;
+    const q = rows[0];
+    await sbUpdate('recrutements', recrutementId, {
+      quiz_score: q.score,
+      quiz_detail: q.quiz_detail,
+      quiz_completed_at: q.completed_at,
+    });
+    return q;
+  } catch(e) { console.warn('syncQuizResultat:', e); }
 }
 
 // ── Contrats ─────────────────────────────────────────────────────
@@ -13322,38 +13265,47 @@ async function openModalRh(type, id = null) {
         document.getElementById('rh-r-type').value   = r.type_contrat || 'CDI';
         const STATUT_RMAP = { 'Ouvert':'ouvert','En cours':'en_cours','Pourvu':'pourvu','Annulé':'annule' };
         document.getElementById('rh-r-statut').value = STATUT_RMAP[r.statut] || r.statut || 'ouvert';
-        // CV / lettre links
+        // CV
         const cvLink = document.getElementById('rh-r-cv-link');
-        if (cvLink) cvLink.innerHTML = r.cv_url ? `<a href="${r.cv_url}" target="_blank" style="color:var(--accent)">📄 Voir le CV</a>` : '';
+        if (cvLink) { if (r.cv_url) { cvLink.href = r.cv_url; cvLink.style.display = 'inline'; } else { cvLink.style.display = 'none'; } }
+        // Lettre
         const lmLink = document.getElementById('rh-r-lettre-link');
-        if (lmLink) lmLink.innerHTML = r.lettre_url ? `<a href="${r.lettre_url}" target="_blank" style="color:var(--accent)">✉️ Voir la lettre</a>` : '';
-        // Quiz
-        const qs = document.getElementById('rh-r-quiz-section');
-        if (qs) qs.style.display = 'block';
-        if (r.quiz_score !== undefined && r.quiz_score !== null) {
-          const qd = document.getElementById('rh-r-quiz-display');
-          if (qd) {
-            const pct = Math.round((r.quiz_score / 12) * 100);
-            const detail = r.quiz_detail ? JSON.parse(typeof r.quiz_detail === 'string' ? r.quiz_detail : JSON.stringify(r.quiz_detail)) : {};
-            const axeRows = Object.entries(detail).map(([a,v]) => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--ink3)">${a}</span><span style="font-weight:500">${v}</span></div>`).join('');
-            qd.innerHTML = `<div style="font-size:15px;font-weight:500;margin-bottom:6px">${pct}% — ${r.quiz_score}/12 bonnes réponses</div>${axeRows}`;
-          }
-          window._rhQuizScore = r.quiz_score;
-          window._rhQuizDetail = r.quiz_detail;
+        if (lmLink) { if (r.lettre_url) { lmLink.href = r.lettre_url; lmLink.style.display = 'inline'; } else { lmLink.style.display = 'none'; } }
+        // Quiz token + résultats
+        window._rhQuizToken = r.quiz_token || null;
+        window._rhRecrutementId = r.id;
+        const sendBtn = document.getElementById('rh-r-quiz-send-btn');
+        const copyBtn = document.getElementById('rh-r-quiz-copy-btn');
+        const statusEl = document.getElementById('rh-r-quiz-status');
+        const resultEl = document.getElementById('rh-r-quiz-result');
+        if (r.quiz_token) {
+          const lien = `https://app.orevy.app/quiz.html?token=${r.quiz_token}`;
+          if (statusEl) statusEl.textContent = `Quiz envoyé — lien : ${lien}`;
+          if (copyBtn) copyBtn.style.display = 'inline-flex';
         } else {
-          window._rhQuizScore = undefined; window._rhQuizDetail = undefined;
-          const qd = document.getElementById('rh-r-quiz-display');
-          if (qd) qd.innerHTML = 'Quiz non encore passé';
+          if (statusEl) statusEl.textContent = 'Quiz non encore envoyé';
+          if (copyBtn) copyBtn.style.display = 'none';
+        }
+        if (r.quiz_score !== null && r.quiz_score !== undefined && resultEl) {
+          const pct = Math.round((r.quiz_score / 12) * 100);
+          const detail = r.quiz_detail ? (typeof r.quiz_detail === 'string' ? JSON.parse(r.quiz_detail) : r.quiz_detail) : {};
+          const rows = Object.entries(detail).map(([a,v]) => `<div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:var(--ink3,#6b7280)">${a}</span><span style="font-weight:500">${v}</span></div>`).join('');
+          resultEl.innerHTML = `<div style="font-size:15px;font-weight:500;margin-bottom:6px">🎯 ${pct}% — ${r.quiz_score}/12 bonnes réponses</div>${rows}`;
+          resultEl.style.display = 'block';
+          if (statusEl) statusEl.textContent = `Quiz complété le ${r.quiz_completed_at ? new Date(r.quiz_completed_at).toLocaleDateString('fr-FR') : '—'}`;
+        } else if (resultEl) {
+          resultEl.style.display = 'none';
         }
       }
     } else {
-      const qs = document.getElementById('rh-r-quiz-section');
-      if (qs) qs.style.display = 'block';
-      const cvLink = document.getElementById('rh-r-cv-link');
-      if (cvLink) cvLink.innerHTML = '';
-      const lmLink = document.getElementById('rh-r-lettre-link');
-      if (lmLink) lmLink.innerHTML = '';
-      window._rhQuizScore = undefined; window._rhQuizDetail = undefined;
+      // nouveau recrutement
+      window._rhQuizToken = null;
+      window._rhRecrutementId = null;
+      const cvLink = document.getElementById('rh-r-cv-link'); if (cvLink) cvLink.style.display = 'none';
+      const lmLink = document.getElementById('rh-r-lettre-link'); if (lmLink) lmLink.style.display = 'none';
+      const statusEl = document.getElementById('rh-r-quiz-status'); if (statusEl) statusEl.textContent = "Enregistrez d'abord le recrutement pour envoyer le quiz";
+      const copyBtn = document.getElementById('rh-r-quiz-copy-btn'); if (copyBtn) copyBtn.style.display = 'none';
+      const resultEl = document.getElementById('rh-r-quiz-result'); if (resultEl) resultEl.style.display = 'none';
     }
     document.getElementById('modal-rh-recrutement').classList.add('open');
   } else if (type === 'contrat') {
@@ -15364,22 +15316,24 @@ async function enregistrerPointage(type) {
           <label>📄 CV (PDF)</label>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <input type="file" id="rh-r-cv-file" accept=".pdf" style="flex:1;min-width:0">
-            <span id="rh-r-cv-link" style="font-size:12px"></span>
+            <a id="rh-r-cv-link" href="#" target="_blank" style="font-size:12px;display:none">Voir le CV existant</a>
           </div>
         </div>
         <div class="form-group full">
           <label>✉️ Lettre de motivation (PDF)</label>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <input type="file" id="rh-r-lettre-file" accept=".pdf" style="flex:1;min-width:0">
-            <span id="rh-r-lettre-link" style="font-size:12px"></span>
+            <a id="rh-r-lettre-link" href="#" target="_blank" style="font-size:12px;display:none">Voir la lettre existante</a>
           </div>
         </div>
-        <div class="form-group full" id="rh-r-quiz-section" style="display:none">
-          <label style="margin-bottom:8px;display:block">🎯 Quiz projet éducatif — résultats</label>
-          <div id="rh-r-quiz-display" style="background:var(--surface2,#f5f5f5);border-radius:8px;padding:12px;font-size:13px;color:var(--ink2)">
-            Quiz non encore passé
+        <div class="form-group full" style="border-top:1px solid var(--border,#e5e7eb);padding-top:12px;margin-top:4px">
+          <label style="margin-bottom:8px;display:block">🎯 Quiz projet éducatif — en ligne</label>
+          <div id="rh-r-quiz-status" style="font-size:13px;color:var(--ink3,#6b7280);margin-bottom:8px">Quiz non encore envoyé</div>
+          <div id="rh-r-quiz-result" style="display:none;background:var(--surface2,#f9fafb);border-radius:8px;padding:10px;font-size:13px;margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary" id="rh-r-quiz-send-btn" onclick="envoyerQuizCandidat()" style="font-size:13px">📧 Envoyer le quiz par email</button>
+            <button class="btn btn-secondary" id="rh-r-quiz-copy-btn" onclick="copierLienQuiz()" style="font-size:13px;display:none">🔗 Copier le lien</button>
           </div>
-          <button class="btn btn-secondary" style="margin-top:8px;font-size:13px" onclick="openQuizRecrutement()">▶ Lancer le quiz candidat</button>
         </div>
       </div>
     </div>
