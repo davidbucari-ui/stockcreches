@@ -12762,12 +12762,12 @@ function showRhTab(tab, btn) {
   });
   document.querySelectorAll('#rh-tabs .tab-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  if (tab === 'recrutement')    renderRecrutements();
+  if (tab === 'recrutement')     renderRecrutements();
   if (tab === 'archives_recrut') renderArchivesRecrutements();
-  if (tab === 'contrats')       renderContrats();
-  if (tab === 'conges')         renderConges();
-  if (tab === 'formations')     renderFormations();
-  if (tab === 'salaries')       renderSalaries();
+  if (tab === 'contrats')        renderContrats();
+  if (tab === 'conges')          renderConges();
+  if (tab === 'formations')      renderFormations();
+  if (tab === 'salaries')        renderSalaries();
 }
 
 async function renderRhStats() {
@@ -12830,8 +12830,8 @@ function isExpiringSoon(dateStr) {
 }
 
 const RH_TYPE_COLOR    = { CDI:'blue', CDD:'amber', Alternance:'purple', Stage:'green', Interim:'gray' };
-const RH_STATUT_RECRU  = { ouvert:'green', en_cours:'amber', pourvu:'blue', valide:'purple', annule:'gray' };
-const RH_LABEL_RECRU   = { ouvert:'Ouvert', en_cours:'En cours', pourvu:'Pourvu', valide:'Validé ✓', annule:'Annulé' };
+const RH_STATUT_RECRU  = { ouvert:'green', en_cours:'amber', pourvu:'blue', valide:'purple', annule:'gray', archive:'gray' };
+const RH_LABEL_RECRU   = { ouvert:'Ouvert', en_cours:'En cours', pourvu:'Pourvu', valide:'Validé ✓', annule:'Annulé', archive:'Archivé' };
 const RH_STATUT_CONGE  = { en_attente:'amber', approuve:'green', refuse:'red' };
 const RH_LABEL_CONGE   = { en_attente:'En attente', approuve:'Approuvé', refuse:'Refusé' };
 
@@ -12867,7 +12867,7 @@ async function renderRecrutements() {
       sbGet('contrats', 'select=id,recrutement_id').catch(() => []),
     ]);
     const recrutementsAvecContrat = new Set((contratRows||[]).filter(c => c.recrutement_id).map(c => c.recrutement_id));
-    const rowsActifs = rows.filter(function(r) { return r.statut !== 'Archivé'; });
+    const rowsActifs = rows.filter(r => r.statut !== 'Archivé');
     if (!rowsActifs.length) { el.innerHTML = rhEmpty('Aucun recrutement en cours.'); return; }
     el.innerHTML = rhTable(
       ['Poste', 'Type', 'Statut', 'Candidat', 'Entretien', 'Actions'],
@@ -12883,7 +12883,7 @@ async function renderRecrutements() {
           ${r.diplome_url ? `<a href="${r.diplome_url}" target="_blank" class="btn btn-secondary btn-sm" title="Diplôme">📜</a>` : ''}
           ${r.honor_url ? `<a href="${r.honor_url}" target="_blank" class="btn btn-secondary btn-sm" title="Honorabilité">🛡</a>` : `<span class="badge" style="background:#fef2f2;color:#991b1b;font-size:10px" title="Attestation manquante">🛡!</span>`}
           ${(r.quiz_score !== null && r.quiz_score !== undefined) ? `<span class="badge badge-green" title="Quiz">🎯 ${Math.round((r.quiz_score/12)*100)}%</span>` : (r.quiz_token ? `<span class="badge" style="background:var(--surface2);color:var(--ink3);font-size:10px">⏳ Quiz</span>` : '')}
-          ${(r.statut === 'Validé' || r.statut === 'valide' || r.statut === 'Pourvu' || r.statut === 'pourvu') ? (
+          ${(r.statut === 'Validé' || r.statut === 'Pourvu' || r.statut === 'pourvu') ? (
             recrutementsAvecContrat.has(r.id)
               ? `<span class="badge badge-green">✓ Contrat créé</span>`
               : `<button class="btn btn-primary btn-sm" onclick="creerContratDepuisRecrutement('${r.id}')">📝 Contrat</button>`
@@ -12906,7 +12906,8 @@ async function creerContratDepuisRecrutement(recrutementId) {
     const r = rows[0];
     if (!r) { showNotif('⚠ Recrutement introuvable'); return; }
     if (!r.candidat_nom) { showNotif('⚠ Renseignez le nom du candidat dans la fiche recrutement avant de créer le contrat'); return; }
-    window._recrutDossier = { cv_url: r.cv_url||null, lettre_url: r.lettre_url||null, diplome_url: r.diplome_url||null, honor_url: r.honor_url||null, quiz_score: (r.quiz_score != null ? r.quiz_score : null), quiz_detail: r.quiz_detail||null };
+    window._recrutDossier = { cv_url: r.cv_url||null, lettre_url: r.lettre_url||null, diplome_url: r.diplome_url||null, honor_url: r.honor_url||null, quiz_score: r.quiz_score ?? null, quiz_detail: r.quiz_detail||null };
+    window._recrutementAArchiver = recrutementId;
     showRhTab('contrats', document.querySelector('[onclick*="showRhTab(\'contrats\'"]'));
     rhEditingContrat = null;
     document.getElementById('modal-rh-contrat-title').textContent = 'Nouveau contrat — ' + r.candidat_nom;
@@ -12925,8 +12926,6 @@ async function creerContratDepuisRecrutement(recrutementId) {
     document.getElementById('rh-c-recrutement-id').value = r.id;
     _rhContratToggleSignature();
     document.getElementById('modal-rh-contrat').classList.add('open');
-    // Archiver le recrutement dès que le contrat est créé
-    window._recrutementAArchiver = recrutementId;
   } catch(e) { showNotif('⚠ ' + e.message); }
 }
 
@@ -13013,21 +13012,19 @@ async function sbUpdateSilent(table, id, data) {
 }
 
 // ── Archivage recrutement ──────────────────────────────────────────
-async function archiverRecrutement(recrutementId) {
-  await sbUpdateSilent('recrutements', recrutementId, { statut: 'Archivé', archived_at: new Date().toISOString() });
+async function archiverRecrutement(id) {
+  await sbUpdateSilent('recrutements', id, { statut: 'Archivé', archived_at: new Date().toISOString() });
   showNotif('📦 Recrutement archivé');
   renderRecrutements();
-  if (document.getElementById('rh-tab-archives_recrut') && document.getElementById('rh-tab-archives_recrut').style.display !== 'none') {
-    renderArchivesRecrutements();
-  }
 }
 
+// ── Archives : render + modal consultation ─────────────────────────
 async function renderArchivesRecrutements() {
   const el = document.getElementById('rh-archives-recrut-list');
   if (!el) return;
   el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3)">Chargement…</div>';
   try {
-    const rows = await sbGet('recrutements', 'statut=eq.Archivé&order=id.desc').catch(() => []);
+    const rows = await sbGet('recrutements', 'statut=eq.Archivé&order=archived_at.desc').catch(function() { return []; });
     if (!rows.length) {
       el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--ink3)">Aucun recrutement archivé.</div>';
       return;
@@ -13042,20 +13039,78 @@ async function renderArchivesRecrutements() {
           r.honor_url   ? '<a href="' + r.honor_url   + '" target="_blank" class="btn btn-secondary btn-sm" title="Honorabilité">🛡</a>' : '',
         ].filter(Boolean).join('');
         const quiz = (r.quiz_score !== null && r.quiz_score !== undefined)
-          ? '<span class="badge badge-green">🎯 ' + Math.round((r.quiz_score/12)*100) + '%</span>'
+          ? '<span class="badge badge-green">🎯 ' + Math.round((r.quiz_score / 12) * 100) + '%</span>'
           : '<span style="color:var(--ink3);font-size:12px">—</span>';
-        const archiveDate = r.archived_at ? new Date(r.archived_at).toLocaleDateString('fr-FR') : '—';
-        return '<tr>' +
-          '<td><div class="item-name">' + (r.candidat_nom||'—') + '</div><div class="item-ref">' + (r.candidat_email||'') + '</div></td>' +
-          '<td>' + (r.poste||'—') + '</td>' +
-          '<td>' + rhBadge(r.type_contrat, RH_TYPE_COLOR[r.type_contrat]||'gray') + '</td>' +
-          '<td><div class="action-btns">' + (docs||'<span style="color:var(--ink3);font-size:12px">—</span>') + '</div></td>' +
+        const archDate = r.archived_at ? new Date(r.archived_at).toLocaleDateString('fr-FR') : '—';
+        return '<tr style="cursor:pointer" onclick="ouvrirArchiveRecrutement(\''+r.id+'\')">' +
+          '<td><div class="item-name">' + (r.candidat_nom || '—') + '</div><div class="item-ref">' + (r.candidat_email || '') + '</div></td>' +
+          '<td>' + (r.poste || '—') + '</td>' +
+          '<td>' + rhBadge(r.type_contrat, RH_TYPE_COLOR[r.type_contrat] || 'gray') + '</td>' +
+          '<td onclick="event.stopPropagation()"><div class="action-btns">' + (docs || '<span style="color:var(--ink3);font-size:12px">—</span>') + '</div></td>' +
           '<td>' + quiz + '</td>' +
-          '<td style="font-size:12px;color:var(--ink3)">' + archiveDate + '</td>' +
+          '<td style="font-size:12px;color:var(--ink3)">' + archDate + '</td>' +
           '</tr>';
       })
     );
   } catch(e) { el.innerHTML = '<div style="padding:24px;color:var(--red)">Erreur : ' + e.message + '</div>'; }
+}
+
+async function ouvrirArchiveRecrutement(id) {
+  try {
+    const rows = await sbGet('recrutements', 'id=eq.' + id);
+    const r = rows[0]; if (!r) return;
+    const archDate = r.archived_at ? new Date(r.archived_at).toLocaleDateString('fr-FR') : '—';
+    const entretienDate = r.date_entretien ? new Date(r.date_entretien).toLocaleDateString('fr-FR') : '—';
+    const quiz = (r.quiz_score !== null && r.quiz_score !== undefined)
+      ? (() => {
+          const pct = Math.round((r.quiz_score / 12) * 100);
+          const det = r.quiz_detail ? (typeof r.quiz_detail === 'string' ? JSON.parse(r.quiz_detail) : r.quiz_detail) : {};
+          const drows = Object.entries(det).map(function(kv) {
+            return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border,#e5e7eb);font-size:13px"><span style="color:var(--ink3)">' + kv[0] + '</span><span style="font-weight:500">' + kv[1] + '</span></div>';
+          }).join('');
+          return '<div style="font-size:15px;font-weight:600;color:var(--green,#1D9E75);margin-bottom:8px">🎯 ' + pct + '% — ' + r.quiz_score + '/12</div>' + drows;
+        })()
+      : '<span style="color:var(--ink3);font-size:13px">Quiz non passé</span>';
+    const docRow = function(emoji, label, url) {
+      return url
+        ? '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border,#e5e7eb)">' +
+          '<span style="font-size:13px">' + emoji + ' ' + label + '</span>' +
+          '<a href="' + url + '" target="_blank" class="btn btn-secondary btn-sm">Ouvrir →</a></div>'
+        : '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border,#e5e7eb)">' +
+          '<span style="font-size:13px;color:var(--ink3)">' + emoji + ' ' + label + '</span>' +
+          '<span style="font-size:12px;color:var(--ink3)">—</span></div>';
+    };
+    const body = [
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">',
+      '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:4px">Candidat</div><div style="font-size:14px;font-weight:500">' + (r.candidat_nom || '—') + '</div><div style="font-size:12px;color:var(--ink3)">' + (r.candidat_email || '') + '</div></div>',
+      '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:4px">Poste</div><div style="font-size:14px;font-weight:500">' + (r.poste || '—') + '</div><div style="font-size:12px;color:var(--ink3)">' + (r.type_contrat || '') + '</div></div>',
+      '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:4px">Entretien</div><div style="font-size:13px">' + entretienDate + '</div></div>',
+      '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:4px">Archivé le</div><div style="font-size:13px">' + archDate + '</div></div>',
+      '</div>',
+      r.notes ? '<div style="background:var(--surface2,#f9fafb);border-radius:8px;padding:10px;font-size:13px;color:var(--ink2);margin-bottom:16px;line-height:1.6">' + r.notes + '</div>' : '',
+      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:8px">Documents</div>',
+      docRow('📄','CV',r.cv_url),
+      docRow('✉️','Lettre de motivation',r.lettre_url),
+      docRow('📜','Diplôme',r.diplome_url),
+      docRow('🛡',"Attestation d'honorabilit\u00e9",r.honor_url),
+      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:16px 0 8px">Quiz projet éducatif</div>',
+      quiz,
+    ].join('');
+    // Ouvrir dans modal générique ou overlay
+    let overlay = document.getElementById('modal-archive-recrut-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'modal-archive-recrut-overlay';
+      overlay.className = 'modal-overlay';
+      overlay.style.cssText = 'z-index:9000';
+      overlay.innerHTML = '<div class="modal" style="max-width:560px"><div class="modal-header"><h2 id="modal-archive-recrut-title">Dossier candidat</h2><button class="modal-close" onclick="document.getElementById(\'modal-archive-recrut-overlay\').classList.remove(\'open\')">✕</button></div><div class="modal-body" id="modal-archive-recrut-body"></div><div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById(\'modal-archive-recrut-overlay\').classList.remove(\'open\')">Fermer</button></div></div>';
+      overlay.onclick = function(e) { if (e.target === overlay) overlay.classList.remove('open'); };
+      document.body.appendChild(overlay);
+    }
+    document.getElementById('modal-archive-recrut-title').textContent = (r.candidat_nom || 'Candidat') + ' — ' + (r.poste || '');
+    document.getElementById('modal-archive-recrut-body').innerHTML = body;
+    overlay.classList.add('open');
+  } catch(e) { showNotif('⚠ ' + e.message); }
 }
 
 async function saveRhRecrutement() {
@@ -13217,12 +13272,8 @@ async function saveRhContrat() {
     closeModal('modal-rh-contrat');
     renderContrats();
     if (document.getElementById('rh-salaries-list')) renderSalaries();
-    // Archiver le recrutement lié si marqué
     if (window._recrutementAArchiver) {
-      try {
-        await archiverRecrutement(window._recrutementAArchiver);
-        window._recrutementAArchiver = null;
-      } catch(e) { console.warn('Archivage recrutement:', e); }
+      try { await archiverRecrutement(window._recrutementAArchiver); window._recrutementAArchiver = null; } catch(e) { console.warn('Archivage:', e); }
     }
     if (document.getElementById('rh-recrutement-list')) renderRecrutements();
   } catch(e) { alert('Erreur : ' + e.message); }
@@ -13359,7 +13410,7 @@ async function openModalRh(type, id = null) {
         const cBtn = document.getElementById('rh-r-quiz-copy-btn');
         const rEl  = document.getElementById('rh-r-quiz-result');
         if (r.quiz_token) {
-          if (sEl) sEl.textContent = 'Lien envoyé : https://app.orevy.app/quiz.html?token=' + r.quiz_token;
+          if (sEl) sEl.textContent = 'Lien : https://app.orevy.app/quiz.html?token=' + r.quiz_token;
           if (cBtn) cBtn.style.display = 'inline-flex';
         } else {
           if (sEl) sEl.textContent = 'Quiz non encore envoyé';
@@ -13371,7 +13422,7 @@ async function openModalRh(type, id = null) {
           const drow = Object.entries(det).map(function(kv) { return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--ink3)">' + kv[0] + '</span><span style="font-weight:500">' + kv[1] + '</span></div>'; }).join('');
           rEl.innerHTML = '<div style="font-weight:500;margin-bottom:4px">Quiz : ' + pct + '% (' + r.quiz_score + '/12)</div>' + drow;
           rEl.style.display = 'block';
-          if (sEl && r.quiz_completed_at) sEl.textContent = 'Quiz complété le ' + new Date(r.quiz_completed_at).toLocaleDateString('fr-FR');
+          if (sEl && r.quiz_completed_at) sEl.textContent = 'Complété le ' + new Date(r.quiz_completed_at).toLocaleDateString('fr-FR');
         } else if (rEl) { rEl.style.display = 'none'; }
       }
     } else {
