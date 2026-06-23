@@ -12986,18 +12986,25 @@ async function creerSalarieDepuisContrat(c) {
   return newId;
 }
 
-// ── Upload docs RH Storage ─────────────────────────────────────────
+// ── Upload docs RH Storage (via Cloudflare Worker service_role) ────
 const SUPA_RH_DOCS_BUCKET = 'recrutement-docs';
 async function uploadDocRH(file, prefix) {
   const ext  = (file.name.split('.').pop() || 'pdf').toLowerCase();
   const path = prefix + '/' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext;
-  const authH = SUPA_RH_HEADERS['Authorization'] || ('Bearer ' + SUPA_RH_KEY);
-  const res = await fetch(SUPA_RH_URL + '/storage/v1/object/' + SUPA_RH_DOCS_BUCKET + '/' + path, {
+  // Passage par le Worker Cloudflare qui utilise la service_role key
+  const res = await fetch('https://api.orevy.app/storage-upload', {
     method: 'POST',
-    headers: { 'apikey': SUPA_RH_KEY, 'Authorization': authH, 'Content-Type': file.type || 'application/pdf' },
+    headers: {
+      'x-storage-path': path,
+      'x-bucket': SUPA_RH_DOCS_BUCKET,
+      'Content-Type': file.type || 'application/pdf',
+    },
     body: file,
   });
-  if (!res.ok) throw new Error('Upload ' + res.status);
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error('Upload ' + res.status + ' ' + txt);
+  }
   return SUPA_RH_URL + '/storage/v1/object/public/' + SUPA_RH_DOCS_BUCKET + '/' + path;
 }
 
