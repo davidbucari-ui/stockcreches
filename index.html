@@ -5301,18 +5301,19 @@ async function inviterParentPortail() {
   const btn      = document.getElementById('btn-inviter-portail');
 
   if (!email) { showNotif("⚠ Veuillez saisir l'email du parent avant d'inviter."); return; }
-  if (!ficheEnfant || !ficheEnfant.id) { showNotif("⚠ Enregistrez d'abord la fiche enfant."); return; }
+  if (!ficheEnfantId) { showNotif("⚠ Enregistrez d'abord la fiche enfant."); return; }
 
   btn.disabled = true;
   statusEl.textContent = 'Envoi en cours…';
 
   try {
+    const crecheId = ficheEnfantCrecheId || (currentCreche !== '__all__' ? currentCreche : '');
     const res  = await fetch('https://api.orevy.app/portail-invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        enfant_id:     ficheEnfant.id,
-        creche_id:     currentCreche !== '__all__' ? currentCreche : (ficheEnfant.creche || ''),
+        enfant_id:     ficheEnfantId,
+        creche_id:     crecheId,
         email,
         enfant_prenom: enfantPrenom
       })
