@@ -1833,12 +1833,6 @@ textarea { resize: vertical; min-height: 72px; }
               <div class="fi-field"><label>N° sécurité sociale</label><input id="fi-p1-nss" type="text" placeholder="15 chiffres"></div>
               <div class="fi-field"><label>Profession</label><input id="fi-p1-profession" type="text"></div>
             </div>
-            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-              <button class="btn btn-secondary btn-sm" onclick="inviterParentPortail()" id="btn-inviter-portail" style="gap:6px;display:inline-flex;align-items:center">
-                🔗 Inviter sur le portail famille
-              </button>
-              <span id="portail-invite-status" style="font-size:12px;color:var(--ink3);margin-left:10px"></span>
-            </div>
           </div>
           <div class="fiche-card">
             <div class="fiche-card-title">Parent 2</div>
@@ -2396,20 +2390,37 @@ textarea { resize: vertical; min-height: 72px; }
       <button class="modal-close" onclick="closeModal('modal-menu')">✕</button>
     </div>
     <div class="modal-body">
-      <div style="font-size:12px;color:var(--ink3);margin-bottom:14px" id="modal-menu-date-label"></div>
-      <div style="font-size:12px;color:var(--ink3);margin-bottom:16px">💡 Pour importer un planning de menus en masse (PDF/photo), rendez-vous dans <strong>Paramètres → Menus</strong>.</div>
-      <div class="fi-row">
-        <div class="fi-field"><label>Entrée</label><input type="text" id="menu-entree" placeholder="Ex : Salade de tomates"></div>
-        <div class="fi-field"><label>Plat protéiné</label><input type="text" id="menu-plat" placeholder="Ex : Filet de poisson"></div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:10px" id="modal-menu-date-label"></div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:14px">💡 Pour importer un planning de menus en masse (PDF/photo), rendez-vous dans <strong>Paramètres → Menus</strong>.</div>
+
+      <!-- Section Bébés -->
+      <div style="margin-bottom:18px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#f59e0b;margin-bottom:10px;padding-bottom:4px;border-bottom:2px solid #f59e0b40">👶 Bébés · 6 – 18 mois</div>
+        <div class="fi-row">
+          <div class="fi-field" style="flex:2"><label>Repas mixé / mouliné</label><input type="text" id="menu-mixe" placeholder="Ex : Purée de courgettes, colin"></div>
+        </div>
+        <div class="fi-row">
+          <div class="fi-field"><label>Dessert</label><input type="text" id="menu-dessert-bebes" placeholder="Ex : Purée de fruits"></div>
+          <div class="fi-field"><label>Goûter</label><input type="text" id="menu-gouter-bebes" placeholder="Ex : Blédine vanille"></div>
+        </div>
       </div>
-      <div class="fi-row">
-        <div class="fi-field"><label>Accompagnement</label><input type="text" id="menu-accompagnement" placeholder="Ex : Purée de carottes"></div>
-        <div class="fi-field"><label>Dessert</label><input type="text" id="menu-dessert" placeholder="Ex : Compote pomme"></div>
+
+      <!-- Section Grands -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#10b981;margin-bottom:10px;padding-bottom:4px;border-bottom:2px solid #10b98140">🧒 Grands · 18 mois – 3 ans</div>
+        <div class="fi-row">
+          <div class="fi-field"><label>Entrée</label><input type="text" id="menu-entree" placeholder="Ex : Salade de tomates"></div>
+          <div class="fi-field"><label>Plat protéiné</label><input type="text" id="menu-plat" placeholder="Ex : Filet de poisson"></div>
+        </div>
+        <div class="fi-row">
+          <div class="fi-field"><label>Accompagnement</label><input type="text" id="menu-accompagnement" placeholder="Ex : Purée de carottes"></div>
+          <div class="fi-field"><label>Dessert</label><input type="text" id="menu-dessert" placeholder="Ex : Compote pomme"></div>
+        </div>
+        <div class="fi-row">
+          <div class="fi-field" style="flex:2"><label>Goûter</label><input type="text" id="menu-gouter" placeholder="Ex : Biscuit + compote"></div>
+        </div>
       </div>
-      <div class="fi-row">
-        <div class="fi-field"><label>Repas mixé / petits (si différent)</label><input type="text" id="menu-mixe" placeholder="Ex : Purée complète mixée"></div>
-        <div class="fi-field"><label>Goûter</label><input type="text" id="menu-gouter" placeholder="Ex : Compote + biscuit"></div>
-      </div>
+
       <div class="fi-row solo">
         <div class="fi-field"><label>Origine du menu</label>
           <select id="menu-source">
@@ -3685,7 +3696,7 @@ function buildScannerPage() {
 // Réception du code depuis la page scanner
 window.receiveScanCode = async function(code) {
   try { await processBarcode(code); }
-  catch(e) { showNotif("⚠ " + e.message); }
+  catch(e) { showNotif('⚠ ' + e.message); }
 };
 
 // Vérifier si un code a été scanné (fallback localStorage)
@@ -5292,53 +5303,6 @@ function openModalFamille(id) {
   else { showNotif('⚠ Erreur : modal non trouvé'); }
 }
 
-async function inviterParentPortail() {
-  const email  = (document.getElementById('fi-p1-email')  || {}).value || '';
-  const prenom = (document.getElementById('fi-p1-prenom') || {}).value || '';
-  const enfantPrenom = (document.getElementById('fi-prenom') || {}).value || 'votre enfant';
-
-  const statusEl = document.getElementById('portail-invite-status');
-  const btn      = document.getElementById('btn-inviter-portail');
-
-  if (!email) { showNotif("⚠ Veuillez saisir l'email du parent avant d'inviter."); return; }
-  if (!ficheEnfantId) { showNotif("⚠ Enregistrez d'abord la fiche enfant."); return; }
-
-  btn.disabled = true;
-  statusEl.textContent = 'Envoi en cours…';
-
-  try {
-    const crecheId = ficheEnfantCrecheId || (currentCreche !== '__all__' ? currentCreche : '');
-    const res  = await fetch('https://api.orevy.app/portail-invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        enfant_id:     ficheEnfantId,
-        creche_id:     crecheId,
-        email,
-        enfant_prenom: enfantPrenom
-      })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur');
-
-    // Afficher le lien cliquable dans l'app pour copier-coller
-    statusEl.innerHTML = `<span style="color:var(--green);font-weight:600">✓ Lien généré</span>
-      <br><span style="color:var(--ink2)">Copiez ce lien et envoyez-le au parent :</span>
-      <br><a href="${data.activation_url}" target="_blank" style="color:var(--accent);word-break:break-all;font-size:11px">${data.activation_url}</a>
-      <button onclick="navigator.clipboard.writeText('${data.activation_url}').then(()=>showNotif('✅ Lien copié'))"
-        style="margin-left:6px;padding:2px 8px;border:1px solid var(--accent);border-radius:4px;background:none;color:var(--accent);font-size:11px;cursor:pointer;font-family:inherit">
-        Copier
-      </button>`;
-    showNotif("✅ Lien généré — copiez-le pour l'envoyer au parent");
-  } catch (e) {
-    statusEl.textContent = '⚠ ' + e.message;
-    statusEl.style.color = 'var(--red)';
-    showNotif('⚠ ' + e.message);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
 function saveModalFamille() {
   const prenom = document.getElementById('fam-prenom').value.trim();
   const nom    = document.getElementById('fam-nom').value.trim();
@@ -6898,27 +6862,9 @@ function removeObs(enfantId, idx) {
 
 // ── Menu du jour ─────────────────────────────────────────────────
 function renderMenuBanner() {
+  // Bannière supprimée — le menu s'affiche via le bouton "Menu du jour"
   const el = document.getElementById('trans-menu-banner');
-  if (!el) return;
-  if (!TRANS_MENU || !(TRANS_MENU.entree || TRANS_MENU.plat || TRANS_MENU.puree || TRANS_MENU.mixe || TRANS_MENU.dessert || TRANS_MENU.gouter)) {
-    el.innerHTML = `<div class="trans-menu-box" style="background:var(--bg);color:var(--ink3)">
-      🍽 Aucun menu renseigné pour cette date — cliquez sur « Menu du jour » pour le compléter.
-    </div>`;
-    return;
-  }
-  const m = TRANS_MENU;
-  const sourceLabels = { prestataire:'Fourni par le prestataire', parents:'Apporté par les parents', creche:'Préparé par la crèche' };
-  const parts = [];
-  if (m.entree) parts.push(`Entrée : ${transEsc(m.entree)}`);
-  if (m.plat) parts.push(`Plat : ${transEsc(m.plat)}`);
-  if (m.accompagnement) parts.push(`Accompagnement : ${transEsc(m.accompagnement)}`);
-  if (m.dessert) parts.push(`Dessert : ${transEsc(m.dessert)}`);
-  if (m.mixe) parts.push(`Repas mixé : ${transEsc(m.mixe)}`);
-  if (m.gouter) parts.push(`Goûter : ${transEsc(m.gouter)}`);
-  el.innerHTML = `<div class="trans-menu-box">
-    <strong>🍽 Menu du jour</strong>${m.source ? ` <span style="opacity:.75">(${sourceLabels[m.source]||m.source})</span>` : ''}<br>
-    ${parts.join(' · ')}
-  </div>`;
+  if (el) el.innerHTML = '';
 }
 
 function openMenuViewModal() {
@@ -6928,24 +6874,53 @@ function openMenuViewModal() {
   const dateLabel = document.getElementById('modal-menu-view-date-label');
   const dateObj = transDate ? new Date(transDate) : new Date();
   if (dateLabel) {
-    dateLabel.textContent = `${creche} — ${dateObj.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}`;
+    const sourceLabels = { prestataire:'Fourni par le prestataire', parents:'Apporté par les parents', creche:'Préparé par la crèche' };
+    const src = TRANS_MENU && TRANS_MENU.source ? ` — ${sourceLabels[TRANS_MENU.source]||TRANS_MENU.source}` : '';
+    dateLabel.textContent = `${creche} — ${dateObj.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}${src}`;
   }
 
   const body = document.getElementById('modal-menu-view-body');
   const m = TRANS_MENU || {};
-  const rows = [
-    ['🥗 Entrée', m.entree],
-    ['🍗 Plat protéiné', m.plat],
-    ['🥕 Accompagnement', m.accompagnement],
-    ['🍮 Dessert', m.dessert],
-    ['🥣 Repas mixé / mouliné', m.mixe],
-    ['🍪 Goûter', m.gouter],
-  ].filter(r => r[1]);
+
+  const rowHtml = (emoji, label, val) => val
+    ? `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--ink3);font-size:12px;flex-shrink:0">${emoji} ${label}</span>
+        <span style="font-weight:600;text-align:right;font-size:13px">${transEsc(val)}</span>
+       </div>`
+    : '';
+
+  const sectionHtml = (titre, couleur, rows) => {
+    const content = rows.join('');
+    if (!content) return '';
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${couleur};margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid ${couleur}20">${titre}</div>
+      ${content}
+    </div>`;
+  };
+
+  const bebesRows = [
+    rowHtml('🍼', 'Repas mixé / mouliné', m.mixe),
+    rowHtml('🍮', 'Dessert', m.dessert_bebes || m.dessert || ''),
+    rowHtml('🍪', 'Goûter', m.gouter_bebes || m.gouter || ''),
+  ];
+
+  const grandsRows = [
+    rowHtml('🥗', 'Entrée', m.entree),
+    rowHtml('🍗', 'Plat protéiné', m.plat),
+    rowHtml('🥕', 'Accompagnement', m.accompagnement),
+    rowHtml('🍮', 'Dessert', m.dessert),
+    rowHtml('🍪', 'Goûter', m.gouter),
+  ];
 
   if (body) {
-    body.innerHTML = rows.length
-      ? rows.map(r => `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--ink3);font-size:13px;flex-shrink:0">${r[0]}</span><span style="font-weight:600;text-align:right">${transEsc(r[1])}</span></div>`).join('')
-      : `<div style="text-align:center;color:var(--ink3);padding:24px 0">Aucun menu renseigné pour ce jour.<br>Cliquez sur « Modifier ce jour » pour le compléter.</div>`;
+    const hasAny = m.entree || m.plat || m.accompagnement || m.dessert || m.mixe || m.gouter;
+    if (!hasAny) {
+      body.innerHTML = `<div style="text-align:center;color:var(--ink3);padding:24px 0">Aucun menu renseigné pour ce jour.<br>Cliquez sur « Modifier ce jour » pour le compléter.</div>`;
+    } else {
+      body.innerHTML =
+        sectionHtml('👶 Bébés · 6 – 18 mois', '#f59e0b', bebesRows) +
+        sectionHtml('🧒 Grands · 18 mois – 3 ans', '#10b981', grandsRows);
+    }
   }
 
   const mm = document.getElementById('modal-menu-view');
@@ -6960,11 +6935,15 @@ function openMenuModal() {
 
   const m = TRANS_MENU || {};
   const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  // Section bébés
+  setV('menu-mixe', m.mixe);
+  setV('menu-dessert-bebes', m.dessert_bebes || m.dessert || '');
+  setV('menu-gouter-bebes', m.gouter_bebes || m.gouter || '');
+  // Section grands
   setV('menu-entree', m.entree);
   setV('menu-plat', m.plat);
   setV('menu-accompagnement', m.accompagnement);
   setV('menu-dessert', m.dessert);
-  setV('menu-mixe', m.mixe);
   setV('menu-gouter', m.gouter);
   const srcEl = document.getElementById('menu-source');
   if (srcEl) srcEl.value = m.source || 'prestataire';
@@ -7016,6 +6995,8 @@ async function upsertMenuJour(creche, date, m) {
     dessert: m.dessert || '',
     mixe: m.mixe || '',
     gouter: m.gouter || '',
+    dessert_bebes: m.dessert_bebes || '',
+    gouter_bebes: m.gouter_bebes || '',
     source: 'prestataire',
   };
   try {
@@ -7179,6 +7160,8 @@ async function saveMenu() {
     dessert: getV('menu-dessert'),
     mixe: getV('menu-mixe'),
     gouter: getV('menu-gouter'),
+    dessert_bebes: getV('menu-dessert-bebes'),
+    gouter_bebes: getV('menu-gouter-bebes'),
     source: document.getElementById('menu-source')?.value || 'prestataire',
   };
   try {
