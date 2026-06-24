@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orevy — Espace famille</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #F0EDE8;
+  --surface:   #FAFAF8;
+  --surface2:  #FFFFFF;
+  --ink:       #1C1917;
+  --ink2:      #57534E;
+  --ink3:      #A8A29E;
+  --border:    #E7E5E0;
+  --accent:    #2563EB;
+  --accent-lt: #EFF6FF;
+  --green:     #16A34A;
+  --green-lt:  #F0FDF4;
+  --amber:     #D97706;
+  --amber-lt:  #FFFBEB;
+  --red:       #DC2626;
+  --red-lt:    #FEF2F2;
+  --purple:    #7C3AED;
+  --purple-lt: #F5F3FF;
+  --shadow:    0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+  --radius:    12px;
+  --radius-sm: 8px;
+}
+
+body {
+  font-family: 'Instrument Sans', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── ÉCRAN LOGIN / ACTIVATION ─────────────────────────────────────── */
+#screen-login, #screen-activation {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #1C1917, #292524, #1E1B4B);
+}
+
+.auth-card {
+  background: var(--surface2);
+  border-radius: 20px;
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+}
+
+.auth-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: var(--ink3);
+  margin-bottom: 32px;
+}
+
+.auth-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink2);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  transition: border-color .15s;
+}
+
+.form-group input:focus { border-color: var(--accent); }
+
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity .15s;
+}
+
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.auth-error {
+  background: var(--red-lt);
+  color: var(--red);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-top: 12px;
+  display: none;
+}
+
+.auth-success {
+  background: var(--green-lt);
+  color: var(--green);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-top: 12px;
+  display: none;
+}
+
+/* ── APP PORTAIL ──────────────────────────────────────────────────── */
+#screen-app { display: none; flex-direction: column; min-height: 100vh; }
+
+/* Header */
+.portal-header {
+  background: linear-gradient(135deg, #1C1917, #1E1B4B);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.portal-header-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.portal-header-logo span { color: #93C5FD; }
+
+.portal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.portal-enfant-badge {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+
+.btn-logout {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: 'Instrument Sans', sans-serif;
+  padding: 5px 8px;
+  border-radius: 6px;
+  transition: color .15s;
+}
+.btn-logout:hover { color: #fff; }
+
+/* Contenu principal */
+.portal-body {
+  flex: 1;
+  padding: 20px 16px 100px;
+  max-width: 680px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Carte enfant */
+.enfant-card {
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-radius: 16px;
+  padding: 20px;
+  color: #fff;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.enfant-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.enfant-info-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.enfant-info-sub {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+/* Navigation onglets */
+.portal-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+
+.portal-tab {
+  flex: 1;
+  padding: 9px 4px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink3);
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.portal-tab .tab-icon { font-size: 16px; }
+.portal-tab.active { background: var(--surface2); color: var(--accent); box-shadow: var(--shadow); }
+
+/* Sections */
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.card {
+  background: var(--surface2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink2);
+}
+
+.card-creche {
+  font-size: 11px;
+  color: var(--ink3);
+  background: var(--bg);
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.card-body { padding: 14px 16px; }
+
+/* Transmissions */
+.trans-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.trans-item {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.trans-item-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.trans-item-val {
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.trans-obs {
+  margin-top: 10px;
+  background: var(--accent-lt);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.5;
+}
+
+.trans-obs-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+/* Planning */
+.planning-week {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.planning-day {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+}
+
+.planning-day.present { background: var(--green-lt); }
+.planning-day.absent  { background: var(--red-lt); }
+
+.planning-day-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink3);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.planning-day.present .planning-day-name { color: var(--green); }
+.planning-day.absent  .planning-day-name { color: var(--red); }
+
+.planning-day-hours {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink2);
+}
+
+/* Documents */
+.doc-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .12s;
+}
+.doc-item:last-child { border-bottom: none; }
+.doc-item:hover { background: var(--bg); }
+
+.doc-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--purple-lt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.doc-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.doc-date {
+  font-size: 11px;
+  color: var(--ink3);
+  margin-top: 2px;
+}
+
+.doc-arrow {
+  margin-left: auto;
+  color: var(--ink3);
+  font-size: 16px;
+}
+
+/* Factures */
+.facture-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.facture-item:last-child { border-bottom: none; }
+
+.facture-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+.facture-badge.payee { background: var(--green-lt); color: var(--green); }
+.facture-badge.attente { background: var(--amber-lt); color: var(--amber); }
+
+.facture-mois {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.facture-montant {
+  margin-left: auto;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: 'Syne', sans-serif;
+}
+
+/* Microformations */
+.formation-card {
+  background: var(--surface2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: box-shadow .15s;
+  text-decoration: none;
+  color: inherit;
+}
+.formation-card:hover { box-shadow: var(--shadow-lg); }
+
+.formation-emoji {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--purple-lt), var(--accent-lt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.formation-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+
+.formation-sub {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.formation-arrow {
+  margin-left: auto;
+  color: var(--ink3);
+  flex-shrink: 0;
+}
+
+/* Pill état */
+.pill-empty {
+  text-align: center;
+  padding: 32px 20px;
+  color: var(--ink3);
+  font-size: 13px;
+}
+.pill-empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+/* Bottom nav (mobile) */
+.portal-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding: 8px 0 env(safe-area-inset-bottom, 8px);
+  z-index: 100;
+}
+
+/* Loader */
+.loader {
+  text-align: center;
+  padding: 40px;
+  color: var(--ink3);
+  font-size: 13px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Notif toast */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  transition: all .25s;
+  pointer-events: none;
+  z-index: 9999;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ── ÉCRAN ACTIVATION ────────────────────────────────────────────── -->
+<div id="screen-activation" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">Orevy <span style="font-weight:400;color:#A8A29E;font-size:15px">Espace famille</span></div>
+    <div class="auth-subtitle">Bienvenue ! Choisissez votre mot de passe pour accéder à l'espace de votre enfant.</div>
+    <div class="auth-title">Créer mon accès</div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="act-password" placeholder="Minimum 8 caractères">
+    </div>
+    <div class="form-group">
+      <label>Confirmer le mot de passe</label>
+      <input type="password" id="act-password2" placeholder="Répétez le mot de passe">
+    </div>
+    <button class="btn-primary" onclick="doActivation()">Créer mon accès</button>
+    <div class="auth-error" id="act-error"></div>
+    <div class="auth-success" id="act-success"></div>
+  </div>
+</div>
+
+<!-- ── ÉCRAN LOGIN ─────────────────────────────────────────────────── -->
+<div id="screen-login">
+  <div class="auth-card">
+    <div class="auth-logo">Orevy <span style="font-weight:400;color:#A8A29E;font-size:15px">Espace famille</span></div>
+    <div class="auth-subtitle">L'espace de suivi de votre enfant</div>
+    <div class="auth-title">Connexion</div>
+    <div class="form-group">
+      <label>Adresse email</label>
+      <input type="email" id="login-email" placeholder="votre@email.fr" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="btn-login" onclick="doLogin()">Se connecter</button>
+    <div class="auth-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── APP PORTAIL ─────────────────────────────────────────────────── -->
+<div id="screen-app">
+  <header class="portal-header">
+    <div class="portal-header-logo">Orevy <span>famille</span></div>
+    <div class="portal-header-right">
+      <div class="portal-enfant-badge" id="header-enfant-name">—</div>
+      <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </header>
+
+  <div class="portal-body">
+    <!-- Carte enfant -->
+    <div class="enfant-card" id="enfant-card" style="display:none">
+      <div class="enfant-avatar" id="enfant-avatar">👶</div>
+      <div>
+        <div class="enfant-info-name" id="enfant-name">—</div>
+        <div class="enfant-info-sub" id="enfant-sub">—</div>
+      </div>
+    </div>
+
+    <!-- Onglets -->
+    <div class="portal-tabs">
+      <button class="portal-tab active" onclick="switchTab('transmissions', this)">
+        <span class="tab-icon">📋</span>Transmissions
+      </button>
+      <button class="portal-tab" onclick="switchTab('planning', this)">
+        <span class="tab-icon">📅</span>Planning
+      </button>
+      <button class="portal-tab" onclick="switchTab('documents', this)">
+        <span class="tab-icon">📄</span>Documents
+      </button>
+      <button class="portal-tab" onclick="switchTab('factures', this)">
+        <span class="tab-icon">🧾</span>Factures
+      </button>
+      <button class="portal-tab" onclick="switchTab('formations', this)">
+        <span class="tab-icon">🎓</span>Pour vous
+      </button>
+    </div>
+
+    <!-- Contenu onglets -->
+    <div id="tab-transmissions">
+      <div class="section-title">Transmissions récentes</div>
+      <div id="trans-list"><div class="loader"><div class="spinner"></div>Chargement…</div></div>
+    </div>
+
+    <div id="tab-planning" style="display:none">
+      <div class="section-title">Planning de votre enfant</div>
+      <div id="planning-content"><div class="loader"><div class="spinner"></div>Chargement…</div></div>
+    </div>
+
+    <div id="tab-documents" style="display:none">
+      <div class="section-title">Documents</div>
+      <div class="card" id="docs-list"><div class="loader"><div class="spinner"></div>Chargement…</div></div>
+    </div>
+
+    <div id="tab-factures" style="display:none">
+      <div class="section-title">Factures</div>
+      <div class="card" id="factures-list"><div class="loader"><div class="spinner"></div>Chargement…</div></div>
+    </div>
+
+    <div id="tab-formations" style="display:none">
+      <div class="section-title">Microformations parents</div>
+      <p style="font-size:13px;color:var(--ink3);margin-bottom:16px">Des ressources courtes pour accompagner votre enfant au quotidien.</p>
+      <div id="formations-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WORKER = 'https://api.orevy.app';
+
+// ── SESSION ────────────────────────────────────────────────────────
+function getSession() {
+  try { return JSON.parse(localStorage.getItem('portail_session') || 'null'); } catch { return null; }
+}
+function setSession(data) { localStorage.setItem('portail_session', JSON.stringify(data)); }
+function clearSession() { localStorage.removeItem('portail_session'); }
+
+// ── TOAST ──────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('token');
+
+  if (token) {
+    // Lien d'activation
+    document.getElementById('screen-login').style.display     = 'none';
+    document.getElementById('screen-activation').style.display = 'flex';
+    window._activationToken = token;
+    return;
+  }
+
+  const session = getSession();
+  if (session && session.token) {
+    showApp(session);
+  }
+  // sinon → écran login déjà visible par défaut
+});
+
+// ── ACTIVATION ─────────────────────────────────────────────────────
+async function doActivation() {
+  const pwd  = document.getElementById('act-password').value.trim();
+  const pwd2 = document.getElementById('act-password2').value.trim();
+  const err  = document.getElementById('act-error');
+  const ok   = document.getElementById('act-success');
+
+  err.style.display = 'none';
+  ok.style.display  = 'none';
+
+  if (pwd.length < 8)      { err.textContent = 'Le mot de passe doit contenir au moins 8 caractères.'; err.style.display = 'block'; return; }
+  if (pwd !== pwd2)        { err.textContent = 'Les mots de passe ne correspondent pas.'; err.style.display = 'block'; return; }
+  if (!window._activationToken) { err.textContent = 'Lien invalide.'; err.style.display = 'block'; return; }
+
+  const btn = document.querySelector('#screen-activation .btn-primary');
+  btn.disabled = true; btn.textContent = 'Activation…';
+
+  try {
+    const res  = await fetch(`${WORKER}/portail-activation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: window._activationToken, password: pwd })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    ok.textContent  = 'Compte activé ! Vous pouvez maintenant vous connecter.';
+    ok.style.display = 'block';
+
+    // Rediriger vers login après 2s
+    setTimeout(() => {
+      window.history.replaceState({}, '', window.location.pathname);
+      document.getElementById('screen-activation').style.display = 'none';
+      document.getElementById('screen-login').style.display      = 'flex';
+      if (data.email) document.getElementById('login-email').value = data.email;
+    }, 2000);
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Créer mon accès';
+  }
+}
+
+// ── LOGIN ──────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pwd   = document.getElementById('login-password').value;
+  const err   = document.getElementById('login-error');
+  err.style.display = 'none';
+
+  if (!email || !pwd) { err.textContent = 'Veuillez remplir tous les champs.'; err.style.display = 'block'; return; }
+
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = 'Connexion…';
+
+  try {
+    const res  = await fetch(`${WORKER}/portail-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pwd })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    const session = { token: data.token, enfant_id: data.enfant_id, creche_id: data.creche_id };
+    setSession(session);
+    showApp(session);
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Se connecter';
+  }
+}
+
+// ── DÉCONNEXION ────────────────────────────────────────────────────
+function doLogout() {
+  clearSession();
+  document.getElementById('screen-app').style.display   = 'none';
+  document.getElementById('screen-login').style.display = 'flex';
+  document.getElementById('login-password').value = '';
+}
+
+// ── AFFICHER L'APP ─────────────────────────────────────────────────
+async function showApp(session) {
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('screen-app').style.display   = 'flex';
+
+  try {
+    const res  = await fetch(`${WORKER}/portail-data`, {
+      headers: { 'Authorization': `Bearer ${session.token}` }
+    });
+    if (res.status === 401) { doLogout(); return; }
+    const data = await res.json();
+    renderApp(data);
+  } catch (e) {
+    showToast('Erreur de chargement — ' + e.message);
+  }
+}
+
+// ── RENDU ──────────────────────────────────────────────────────────
+function renderApp(data) {
+  const enfant = data.enfant || {};
+  const prenom = (enfant.data && enfant.data.prenom) || enfant.prenom || '—';
+  const nom    = (enfant.data && enfant.data.nom)    || enfant.nom    || '';
+  const creche = (enfant.data && enfant.data.creche) || enfant.creche || '';
+  const ddn    = (enfant.data && enfant.data.ddn)    || enfant.ddn    || '';
+
+  // Carte enfant
+  document.getElementById('header-enfant-name').textContent = prenom;
+  document.getElementById('enfant-name').textContent        = `${prenom} ${nom}`;
+  document.getElementById('enfant-sub').textContent         = [creche, ddn ? 'Né(e) le ' + formatDate(ddn) : ''].filter(Boolean).join(' · ');
+  document.getElementById('enfant-avatar').textContent      = prenom ? prenom[0].toUpperCase() : '👶';
+  document.getElementById('enfant-card').style.display      = 'flex';
+
+  // Transmissions
+  renderTransmissions(data.transmissions || []);
+
+  // Planning
+  renderPlanning(enfant);
+
+  // Documents
+  renderDocuments(data.documents || []);
+
+  // Factures (données depuis enfant.data.factures si existant)
+  const factures = (enfant.data && enfant.data.factures) || enfant.factures || [];
+  renderFactures(factures);
+
+  // Microformations
+  renderFormations();
+}
+
+function renderTransmissions(list) {
+  const el = document.getElementById('trans-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="pill-empty"><div class="pill-empty-icon">📋</div>Aucune transmission pour le moment.</div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(t => {
+    const d = t.data || t;
+    const repas = [d.matin_repas_quantite && `Matin : ${d.matin_repas_quantite}`, d.midi_repas_quantite && `Midi : ${d.midi_repas_quantite}`].filter(Boolean).join(' · ') || '—';
+    const sieste = d.sieste_duree ? `${d.sieste_duree} min` : (d.sieste ? 'Oui' : '—');
+    const changes = d.changes_nb || d.nb_changes || '—';
+    const humeur  = d.humeur || '—';
+    const obs     = d.observations || d.obs || '';
+
+    return `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header">
+        <span class="card-date">${formatDate(t.date || d.date)}</span>
+        <span class="card-creche">${t.creche_id || d.creche || ''}</span>
+      </div>
+      <div class="card-body">
+        <div class="trans-grid">
+          <div class="trans-item">
+            <div class="trans-item-label">🍼 Repas</div>
+            <div class="trans-item-val">${repas}</div>
+          </div>
+          <div class="trans-item">
+            <div class="trans-item-label">😴 Sieste</div>
+            <div class="trans-item-val">${sieste}</div>
+          </div>
+          <div class="trans-item">
+            <div class="trans-item-label">🧷 Changes</div>
+            <div class="trans-item-val">${changes}</div>
+          </div>
+          <div class="trans-item">
+            <div class="trans-item-label">😊 Humeur</div>
+            <div class="trans-item-val">${humeur}</div>
+          </div>
+        </div>
+        ${obs ? `<div class="trans-obs"><div class="trans-obs-label">Observations de l'équipe</div>${obs}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPlanning(enfant) {
+  const el = document.getElementById('planning-content');
+  const d  = (enfant.data || enfant);
+  const jours = d.jours_presence || [];
+  const joursNoms = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'];
+  const joursCodes = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+
+  if (!jours.length && !d.heures) {
+    el.innerHTML = `<div class="pill-empty"><div class="pill-empty-icon">📅</div>Planning non disponible.</div>`;
+    return;
+  }
+
+  const weekHtml = `
+    <div class="card" style="padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:10px">Jours contractualisés</div>
+      <div class="planning-week">
+        ${joursNoms.map((nom, i) => {
+          const present = jours.includes(joursCodes[i]) || jours.includes(i+1) || jours.includes(String(i+1));
+          return `<div class="planning-day ${present ? 'present' : ''}">
+            <div class="planning-day-name">${nom}</div>
+            <div class="planning-day-hours">${present ? '✓' : '—'}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      ${d.heures ? `<div style="font-size:13px;color:var(--ink2);margin-top:10px">Volume horaire : <strong>${d.heures}h/semaine</strong></div>` : ''}
+      ${d.contrat_caf ? `<div style="font-size:12px;color:var(--ink3);margin-top:4px">Contrat ${d.contrat_caf}</div>` : ''}
+    </div>`;
+
+  el.innerHTML = weekHtml;
+}
+
+function renderDocuments(list) {
+  const el = document.getElementById('docs-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="pill-empty"><div class="pill-empty-icon">📄</div>Aucun document disponible.</div>`;
+    return;
+  }
+
+  const icons = { contrat: '📋', reglement: '📜', pai: '🏥', autorisation: '✍️', autre: '📄' };
+
+  el.innerHTML = list.map(doc => `
+    <div class="doc-item" onclick="${doc.url ? `window.open('${doc.url}','_blank')` : ''}">
+      <div class="doc-icon">${icons[doc.type] || '📄'}</div>
+      <div>
+        <div class="doc-name">${doc.nom}</div>
+        <div class="doc-date">${formatDate(doc.created_at)}</div>
+      </div>
+      ${doc.url ? `<div class="doc-arrow">↗</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderFactures(list) {
+  const el = document.getElementById('factures-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="pill-empty"><div class="pill-empty-icon">🧾</div>Aucune facture disponible.</div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(f => `
+    <div class="facture-item">
+      <div>
+        <div class="facture-mois">${f.mois || f.periode || '—'}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${f.nb_heures ? f.nb_heures + 'h' : ''}</div>
+      </div>
+      <span class="facture-badge ${f.statut === 'payée' || f.statut === 'payee' ? 'payee' : 'attente'}">
+        ${f.statut === 'payée' || f.statut === 'payee' ? 'Réglée' : 'À régler'}
+      </span>
+      <div class="facture-montant">${f.montant != null ? Number(f.montant).toFixed(2) + ' €' : '—'}</div>
+    </div>
+  `).join('');
+}
+
+function renderFormations() {
+  const el = document.getElementById('formations-list');
+  const formations = [
+    { emoji: '😴', titre: 'Le sommeil du jeune enfant', sous: '5 min · Toutes tranches d\'âge', url: 'https://davidbucari-ui.github.io/orevy-formations/' },
+    { emoji: '🍽️', titre: 'L\'alimentation en crèche', sous: '5 min · 6–36 mois', url: 'https://davidbucari-ui.github.io/orevy-formations/' },
+    { emoji: '💛', titre: 'Accompagner les émotions', sous: '5 min · 12–36 mois', url: 'https://davidbucari-ui.github.io/orevy-formations/' },
+    { emoji: '👋', titre: 'La séparation au quotidien', sous: '5 min · Dès 2½ mois', url: 'https://davidbucari-ui.github.io/orevy-formations/' },
+    { emoji: '🎮', titre: 'Le jeu libre, c\'est quoi ?', sous: '5 min · Toutes tranches d\'âge', url: 'https://davidbucari-ui.github.io/orevy-formations/' },
+  ];
+
+  el.innerHTML = formations.map(f => `
+    <a class="formation-card" href="${f.url}" target="_blank">
+      <div class="formation-emoji">${f.emoji}</div>
+      <div>
+        <div class="formation-title">${f.titre}</div>
+        <div class="formation-sub">${f.sous}</div>
+      </div>
+      <div class="formation-arrow">→</div>
+    </a>
+  `).join('');
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  ['transmissions','planning','documents','factures','formations'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.portal-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────
+function formatDate(str) {
+  if (!str) return '—';
+  try {
+    return new Date(str).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  } catch { return str; }
+}
+</script>
+</body>
+</html>
