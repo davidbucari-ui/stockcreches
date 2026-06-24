@@ -6899,7 +6899,7 @@ function openMenuViewModal() {
   };
 
   const bebesRows = [
-    rowHtml('🍼', 'Repas mixé / mouliné', m.mixe),
+    rowHtml('🍼', 'Repas mixé / mouliné', m.mixe_bebes || m.mixe || ''),
     rowHtml('🍮', 'Dessert', m.dessert_bebes || m.dessert || ''),
     rowHtml('🍪', 'Goûter', m.gouter_bebes || m.gouter || ''),
   ];
@@ -6993,7 +6993,7 @@ async function upsertMenuJour(creche, date, m) {
     plat: m.plat || '',
     accompagnement: m.accompagnement || '',
     dessert: m.dessert || '',
-    mixe: m.mixe || '',
+    mixe: m.mixe_bebes || m.mixe || '',   // IA renvoie mixe_bebes, saisie manuelle renvoie mixe
     gouter: m.gouter || '',
     dessert_bebes: m.dessert_bebes || '',
     gouter_bebes: m.gouter_bebes || '',
@@ -7110,7 +7110,7 @@ N'invente jamais une information absente du document.`;
   let ok = 0, ignored = 0;
   for (const date of dates) {
     const m = menusParJour[date] || {};
-    const hasContent = m.entree || m.plat || m.accompagnement || m.dessert || m.mixe || m.gouter;
+    const hasContent = m.entree || m.plat || m.accompagnement || m.dessert || m.mixe || m.mixe_bebes || m.gouter;
     if (!hasContent) { ignored++; continue; }
     for (const c of cibleCreches) {
       const success = await upsertMenuJour(c, date, m);
