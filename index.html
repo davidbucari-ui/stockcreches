@@ -5321,22 +5321,6 @@ async function inviterParentPortail() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur');
 
-    // Ouvrir le client mail avec le lien pré-rempli
-    const sujet = `Accès à l'espace famille Orevy — ${enfantPrenom}`;
-    const corps = `Bonjour ${prenom},
-
-Nous avons le plaisir de vous ouvrir l'accès à l'espace famille Orevy pour suivre le quotidien de ${enfantPrenom} (transmissions, planning, documents, factures).
-
-Cliquez sur le lien ci-dessous pour créer votre accès :
-${data.activation_url}
-
-Ce lien est valable une seule fois. Si vous avez des questions, n'hésitez pas à nous contacter.
-
-L'équipe de la crèche`;
-    window.location.href = 'mailto:' + encodeURIComponent(email)
-      + '?subject=' + encodeURIComponent(sujet)
-      + '&body='    + encodeURIComponent(corps);
-
     // Afficher le lien cliquable dans l'app pour copier-coller
     statusEl.innerHTML = `<span style="color:var(--green);font-weight:600">✓ Lien généré</span>
       <br><span style="color:var(--ink2)">Copiez ce lien et envoyez-le au parent :</span>
