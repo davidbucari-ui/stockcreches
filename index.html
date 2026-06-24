@@ -5242,14 +5242,14 @@ function renderFamillesFinancement() {
   if (tousIds.length) {
     loadPortailStatuts(tousIds).then(() => {
       // Re-render seulement si l'élément existe encore
-      if (document.getElementById('fam-financement-grid')) renderFamillesFinancement_inner(el, psu, paje, isAll, option, crecheId);
+      if (document.getElementById('fam-financement-grid')) renderFamillesFinancement_inner(el, psu, paje, hPSU, hPAJE, isAll, option, crecheId);
     });
   }
 
-  renderFamillesFinancement_inner(el, psu, paje, isAll, option, crecheId);
+  renderFamillesFinancement_inner(el, psu, paje, hPSU, hPAJE, isAll, option, crecheId);
 }
 
-function renderFamillesFinancement_inner(el, psu, paje, isAll, option, crecheId) {
+function renderFamillesFinancement_inner(el, psu, paje, hPSU, hPAJE, isAll, option, crecheId) {
   const rowOpenFn = e => isAll
     ? `(function(){var sel=document.getElementById('fam-creche-sel');if(sel)sel.value='${e._creche||''}';openFicheEnfant('${e.id}');})()`
     : `openFicheEnfant('${e.id}')`;
