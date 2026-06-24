@@ -7039,26 +7039,48 @@ async function importMenusPourCreche(file, creche, setStatus) {
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
     : { type: 'image', source: { type: 'base64', media_type: file.type || 'image/jpeg', data: base64 } };
 
-  const prompt = `Voici un planning de menus transmis par un prestataire de restauration pour une crèche. Le document peut couvrir un seul jour, une semaine, ou plusieurs semaines à la suite (chaque semaine a généralement un en-tête du type "Semaine n°X du DD/MM/YY au DD/MM/YY").
+  const prompt = `Tu dois lire et retranscrire EXACTEMENT le contenu d'un planning de menus de crèche fourni par un prestataire.
 
-Pour CHAQUE jour de semaine (lundi à vendredi) présent dans le document, extrait le menu :
-- "entree", "plat", "accompagnement", "dessert" et "gouter" : utilise la section "Repas Grands" (18 mois à 3 ans) pour le repas de midi, et "Goûter Grands" pour le goûter.
-- "mixe" : utilise la section "Repas Bébés" (6-18 mois), qui ne contient généralement qu'un seul plat mixé/mouliné pour ce jour.
+## Règle n°1 : TRANSCRIPTION STRICTE
+Copie les libellés du document MOT POUR MOT. N'interprète pas, ne reformule pas, n'améliore pas. Si le document dit "fish n chips", tu écris "fish n chips". Si le document dit "brie", tu écris "brie".
 
-Ignore les étiquettes thématiques éventuelles superposées sur certains jours (ex : "MARDI GRAS", "VÉGÉTARIEN") — ce ne sont pas des plats, continue d'extraire les vrais aliments listés ce jour-là.
+## Règle n°2 : JOURS FERMÉS = CHAMPS VIDES
+Si la colonne d'un jour contient : "Férié", "Lundi de Pentecôte", "Lundi de Pâques", ou tout autre nom de fête/congé à la place des plats → tous les champs = "". Ne pas inventer de menu.
+ATTENTION : si la colonne LUNDI contient uniquement "Lundi de Pentecôte" sans liste de plats en dessous → jour fermé, tous champs vides.
 
-Si un jour est marqué "Férié" (crèche fermée), crée quand même une entrée pour cette date mais avec tous les champs en chaîne vide "".
+## Structure du tableau à lire
+Le tableau a des colonnes LUNDI–VENDREDI et plusieurs sections en lignes :
 
-Calcule la date exacte de chaque jour (format YYYY-MM-DD) à partir de l'en-tête de semaine ("du DD/MM/YY au DD/MM/YY") : lundi = première date de la semaine, mardi = +1 jour, etc.
+### Section "Repas Bébés de 6 à 18 mois" (NE PAS confondre avec "moins de 6 mois")
+Chaque case contient 3–4 lignes séparées :
+- Ligne 1 : protéine (ex: "Volaille au jus", "Dos de colin poché")
+- Ligne 2 : légume/féculent (ex: "Purée de potiron")
+- Ligne 3 : fruit (ex: "Purée de fruit")
+Concatène avec " / " → champ "mixe_bebes" (ex: "Volaille au jus / Purée de potiron / Purée de fruit")
 
-Réponds UNIQUEMENT en JSON valide, sans aucun texte avant ou après, avec une entrée par date, exactement sous ce format :
-{"2026-02-16":{"entree":"...","plat":"...","accompagnement":"...","dessert":"...","mixe":"...","gouter":"..."},"2026-02-17":{...}}
+### Section "Goûter Bébés de 6 à 18 mois"
+1–2 lignes → champ "gouter_bebes" (ex: "Purée de fruit / Blédine vanille")
 
-Sois concis dans la formulation de chaque plat (reprends les libellés du document tels quels, sans les reformuler ni les allonger).
+### Section "Repas Grands de 18 mois à 3 ans"
+Chaque case contient 5 lignes :
+- Ligne 1 : entrée → "entree"
+- Ligne 2 : plat protéiné → "plat"
+- Ligne 3 : accompagnement → "accompagnement"
+- Ligne 4 : laitage → partie 1 de "dessert"
+- Ligne 5 : fruit → partie 2 de "dessert" (concatène avec " / " : ex "brie / Pomme")
 
-IMPORTANT — fiabilité : si une partie du document est floue, illisible, coupée ou ambiguë, laisse le champ concerné en chaîne vide "" plutôt que de deviner ou d'inventer un plat plausible. Ne réutilise jamais un même plat (ex: un féculent ou légume générique) pour combler un champ que tu n'arrives pas à lire — une absence d'information doit rester vide, jamais remplacée par une supposition.
+### Section "Goûter Grands de 18 mois à 3 ans"
+1–2 lignes → champ "gouter" (ex: "biscotte / st Moret / Compote")
 
-N'invente jamais une information absente du document.`;
+## Calcul des dates
+Depuis l'en-tête "du DD/MM au DD/MM" ou "du DD/MM/YY au DD/MM/YY" → format YYYY-MM-DD.
+Lundi = 1ère date, mardi = +1j, etc.
+
+## Format de réponse
+JSON valide uniquement, sans texte avant ni après :
+{"2026-05-26":{"mixe_bebes":"","gouter_bebes":"","entree":"","plat":"","accompagnement":"","dessert":"","gouter":""},"2026-05-27":{"mixe_bebes":"...","gouter_bebes":"...","entree":"...","plat":"...","accompagnement":"...","dessert":"...","gouter":"..."}}
+
+Si un champ est illisible ou absent → "". Jamais de supposition, jamais d'invention.`;
 
   setStatus('✨ Claude analyse le document (peut prendre un moment pour plusieurs semaines)…');
   let menusParJour;
