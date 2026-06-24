@@ -13137,7 +13137,7 @@ async function ouvrirArchiveRecrutement(id) {
       overlay.className = 'modal-overlay';
       overlay.style.cssText = 'z-index:9000';
       overlay.innerHTML = '<div class="modal" style="max-width:560px"><div class="modal-header"><h2 id="modal-archive-recrut-title">Dossier candidat</h2><button class="modal-close" onclick="document.getElementById(\'modal-archive-recrut-overlay\').classList.remove(\'open\')">✕</button></div><div class="modal-body" id="modal-archive-recrut-body"></div><div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById(\'modal-archive-recrut-overlay\').classList.remove(\'open\')">Fermer</button></div></div>';
-      overlay.onclick = function(e) { if (e.target === overlay) overlay.classList.remove('open'); };
+      // overlay.onclick supprimé — fermeture uniquement via bouton ✕
       document.body.appendChild(overlay);
     }
     document.getElementById('modal-archive-recrut-title').textContent = (r.candidat_nom || 'Candidat') + ' — ' + (r.poste || '');
