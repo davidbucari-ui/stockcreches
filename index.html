@@ -5143,6 +5143,85 @@ function renderFamillesBerceaux() {
 }
 
 // ── Financement ───────────────────────────────────────────────────
+// ── Portail famille : statut + invitation ───────────────────────
+// Cache en mémoire : enfant_id -> { statut: 'none'|'pending'|'active' }
+let _portailStatutCache = {};
+
+async function loadPortailStatuts(enfantIds) {
+  if (!enfantIds.length) return;
+  try {
+    const ids = enfantIds.map(id => `enfant_id=eq.${encodeURIComponent(id)}`).join(',');
+    // On passe par le Worker pour éviter d'exposer la service key
+    const res = await fetch(`https://api.orevy.app/portail-statuts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enfant_ids: enfantIds })
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    // data = [{ enfant_id, actif, token_activation }]
+    enfantIds.forEach(id => { _portailStatutCache[id] = 'none'; });
+    (data || []).forEach(row => {
+      _portailStatutCache[row.enfant_id] = row.actif ? 'active' : 'pending';
+    });
+  } catch(e) { /* silencieux */ }
+}
+
+function portailStatutBadge(enfantId) {
+  const statut = _portailStatutCache[enfantId] || 'none';
+  if (statut === 'active') {
+    return `<span title="Portail actif" style="display:inline-flex;align-items:center;color:#15803D;font-size:13px;margin-left:5px;cursor:default">✓</span>`;
+  }
+  if (statut === 'pending') {
+    return `<span title="En attente d'activation — cliquer pour relancer" onclick="event.stopPropagation();inviterParentPortail('${enfantId}')" style="display:inline-flex;align-items:center;color:#B45309;font-size:13px;margin-left:5px;cursor:pointer">⏳</span>`;
+  }
+  // none
+  return `<span title="Inviter sur le portail famille" onclick="event.stopPropagation();inviterParentPortail('${enfantId}')" style="display:inline-flex;align-items:center;color:var(--ink3);font-size:13px;margin-left:5px;cursor:pointer;opacity:0.6" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">🔗</span>`;
+}
+
+async function inviterParentPortail(enfantId) {
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId);
+  const e = enfants.find(x => x.id === enfantId);
+  if (!e) return;
+
+  const email  = (e.parent1?.email || '').trim();
+  const prenom = (e.parent1?.prenom || '').trim();
+  const enfantPrenom = (e.prenom || '').trim();
+  const creche = e._creche || (crecheId !== '__all__' ? crecheId : '');
+
+  if (!email) {
+    showNotif('⚠ Aucun email renseigné pour le parent 1 — ouvrez la fiche pour le saisir.');
+    return;
+  }
+
+  showNotif('Envoi en cours…');
+  try {
+    const res  = await fetch('https://api.orevy.app/portail-invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enfant_id: enfantId, creche_id: creche, email, enfant_prenom: enfantPrenom })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    const sujet = encodeURIComponent('Accès à votre espace famille Orevy — ' + enfantPrenom);
+    const nl = '%0A';
+    const corps = encodeURIComponent('Bonjour ' + prenom + ',') + nl + nl
+      + encodeURIComponent("Nous avons le plaisir de vous ouvrir l'accès à l'espace famille Orevy pour suivre le quotidien de " + enfantPrenom + " (transmissions, planning, documents).")
+      + nl + nl + encodeURIComponent(data.activation_url) + nl + nl
+      + encodeURIComponent('Ce lien est valable une seule fois. Bonne découverte !');
+    window.open('mailto:' + email + '?subject=' + sujet + '&body=' + corps);
+
+    // Mettre à jour le cache et re-render
+    _portailStatutCache[enfantId] = 'pending';
+    renderFamillesFinancement();
+    showNotif('✅ Invitation préparée pour ' + email);
+  } catch(err) {
+    showNotif('⚠ Erreur : ' + err.message);
+  }
+}
+
 function renderFamillesFinancement() {
   const el = document.getElementById('fam-financement-grid');
   if (!el) return;
@@ -5153,13 +5232,27 @@ function renderFamillesFinancement() {
   const hPSU  = psu.reduce((s,e)  => s + (parseInt(e.heures)||0), 0);
   const hPAJE = paje.reduce((s,e) => s + (parseInt(e.heures)||0), 0);
   const isAll = crecheId === '__all__';
-  const rowOpenFn = e => isAll
-    ? `(function(){var sel=document.getElementById('fam-creche-sel');if(sel)sel.value='${e._creche||''}';openFicheEnfant('${e.id}');})()`
-    : `openFicheEnfant('${e.id}')`;
 
   // Option encadrement configurable
   const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   const option = prefs.optionEncadrement || 'NM8M';
+
+  // Charger les statuts portail en arrière-plan puis re-render
+  const tousIds = enfants.map(e => e.id);
+  if (tousIds.length) {
+    loadPortailStatuts(tousIds).then(() => {
+      // Re-render seulement si l'élément existe encore
+      if (document.getElementById('fam-financement-grid')) renderFamillesFinancement_inner(el, psu, paje, isAll, option, crecheId);
+    });
+  }
+
+  renderFamillesFinancement_inner(el, psu, paje, isAll, option, crecheId);
+}
+
+function renderFamillesFinancement_inner(el, psu, paje, isAll, option, crecheId) {
+  const rowOpenFn = e => isAll
+    ? `(function(){var sel=document.getElementById('fam-creche-sel');if(sel)sel.value='${e._creche||''}';openFicheEnfant('${e.id}');})()`
+    : `openFicheEnfant('${e.id}')`;
 
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
@@ -5206,7 +5299,7 @@ function renderFamillesFinancement() {
       <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#6D28D9">📋 Enfants PSU</div>
       <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Crèche</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
       <tbody>${psu.map(e => `<tr onclick="${rowOpenFn(e)}" style="cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
-        <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
+        <td><strong>${e.prenom} ${e.nom}</strong>${portailStatutBadge(e.id)}<br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
         <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
         <td><span style="background:${isNonMarcheur(e)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e)?'Non-marcheur':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
@@ -5220,7 +5313,7 @@ function renderFamillesFinancement() {
       <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#B45309">📋 Enfants PAJE</div>
       <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Crèche</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
       <tbody>${paje.map(e => `<tr onclick="${rowOpenFn(e)}" style="cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
-        <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
+        <td><strong>${e.prenom} ${e.nom}</strong>${portailStatutBadge(e.id)}<br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
         <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
         <td><span style="background:${isNonMarcheur(e)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e)?'Non-marcheur':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
