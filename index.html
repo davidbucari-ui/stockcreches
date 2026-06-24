@@ -5337,9 +5337,15 @@ L'équipe de la crèche`;
       + '?subject=' + encodeURIComponent(sujet)
       + '&body='    + encodeURIComponent(corps);
 
-    statusEl.textContent = '✓ Invitation envoyée';
-    statusEl.style.color = 'var(--green)';
-    showNotif("✅ Lien d'activation généré — client mail ouvert");
+    // Afficher le lien cliquable dans l'app pour copier-coller
+    statusEl.innerHTML = `<span style="color:var(--green);font-weight:600">✓ Lien généré</span>
+      <br><span style="color:var(--ink2)">Copiez ce lien et envoyez-le au parent :</span>
+      <br><a href="${data.activation_url}" target="_blank" style="color:var(--accent);word-break:break-all;font-size:11px">${data.activation_url}</a>
+      <button onclick="navigator.clipboard.writeText('${data.activation_url}').then(()=>showNotif('✅ Lien copié'))"
+        style="margin-left:6px;padding:2px 8px;border:1px solid var(--accent);border-radius:4px;background:none;color:var(--accent);font-size:11px;cursor:pointer;font-family:inherit">
+        Copier
+      </button>`;
+    showNotif("✅ Lien généré — copiez-le pour l'envoyer au parent");
   } catch (e) {
     statusEl.textContent = '⚠ ' + e.message;
     statusEl.style.color = 'var(--red)';
