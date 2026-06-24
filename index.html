@@ -5169,14 +5169,14 @@ async function loadPortailStatuts(enfantIds) {
 
 function portailStatutBadge(enfantId) {
   const statut = _portailStatutCache[enfantId] || 'none';
+  const eid = enfantId.replace(/'/g, "");
   if (statut === 'active') {
-    return `<span title="Portail actif" style="display:inline-flex;align-items:center;color:#15803D;font-size:13px;margin-left:5px;cursor:default">✓</span>`;
+    return '<span title="Portail actif" style="display:inline-flex;align-items:center;color:#15803D;font-size:13px;margin-left:5px;cursor:default">✓</span>';
   }
   if (statut === 'pending') {
-    return `<span title="En attente d'activation — cliquer pour relancer" onclick="event.stopPropagation();inviterParentPortail('${enfantId}')" style="display:inline-flex;align-items:center;color:#B45309;font-size:13px;margin-left:5px;cursor:pointer">⏳</span>`;
+    return '<span title="En attente activation — relancer" data-portail-id="' + eid + '" onclick="event.stopPropagation();inviterParentPortail(this.dataset.portailId)" style="display:inline-flex;align-items:center;color:#B45309;font-size:13px;margin-left:5px;cursor:pointer">⏳</span>';
   }
-  // none
-  return `<span title="Inviter sur le portail famille" onclick="event.stopPropagation();inviterParentPortail('${enfantId}')" style="display:inline-flex;align-items:center;color:var(--ink3);font-size:13px;margin-left:5px;cursor:pointer;opacity:0.6" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">🔗</span>`;
+  return '<span title="Inviter sur le portail famille" data-portail-id="' + eid + '" onclick="event.stopPropagation();inviterParentPortail(this.dataset.portailId)" style="display:inline-flex;align-items:center;color:var(--ink3);font-size:13px;margin-left:5px;cursor:pointer;opacity:0.6" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">🔗</span>';
 }
 
 async function inviterParentPortail(enfantId) {
@@ -5211,7 +5211,11 @@ async function inviterParentPortail(enfantId) {
       + encodeURIComponent("Nous avons le plaisir de vous ouvrir l'accès à l'espace famille Orevy pour suivre le quotidien de " + enfantPrenom + " (transmissions, planning, documents).")
       + nl + nl + encodeURIComponent(data.activation_url) + nl + nl
       + encodeURIComponent('Ce lien est valable une seule fois. Bonne découverte !');
-    window.open('mailto:' + email + '?subject=' + sujet + '&body=' + corps);
+    const a = document.createElement('a');
+    a.href = 'mailto:' + email + '?subject=' + sujet + '&body=' + corps;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 
     // Mettre à jour le cache et re-render
     _portailStatutCache[enfantId] = 'pending';
