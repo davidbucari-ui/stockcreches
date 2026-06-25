@@ -9256,9 +9256,6 @@ async function hubLoadKPIs(role) {
     // une directrice/auxiliaire voit déjà les enfants en vrai dans sa structure, ce chiffre ne leur
     // apporte rien (et évite un appel Supabase superflu pour ces rôles).
     let enfants = '—';
-    let prosPresents = 0;
-    let ratioEncadrement = null; // { ok: bool, ratio: string, enfants: n, pros: n }
-
     if (role === 'admin' || role === 'stagiaire') {
       try {
         const params = 'select=id,creche_id&horodatage=gte.' + todayStr + 'T00:00:00&type=eq.arrivee'
@@ -9266,32 +9263,7 @@ async function hubLoadKPIs(role) {
         const pts = await sbGet('pointages_enfants', params);
         if (Array.isArray(pts)) enfants = pts.length;
       } catch(e) { console.warn('[Hub KPI enfants]', e.message); }
-
-      // Calcul ratio encadrement live (Décret 2025-304 : 1 pro pour 5 enfants non-marcheurs, 1 pour 8 marcheurs)
-      // On approxime : 1 pro pour 6 enfants en moyenne (tolérance mixte)
-      try {
-        const todayISO = new Date().toISOString().split('T')[0];
-        const ptsParams = 'select=id,salarie_id&horodatage=gte.' + todayISO + 'T00:00:00&type=eq.arrivee'
-          + (crecheFilter ? '&creche_id=eq.' + encodeURIComponent(crecheFilter) : '');
-        const ptsPros = await sbGet('pointages', ptsParams);
-        if (Array.isArray(ptsPros)) prosPresents = ptsPros.length;
-
-        if (typeof enfants === 'number' && prosPresents > 0) {
-          const ratio = enfants / prosPresents;
-          const ok = ratio <= 6; // seuil prudent mixte
-          ratioEncadrement = { ok, ratio: ratio.toFixed(1), enfants, pros: prosPresents };
-        } else if (typeof enfants === 'number' && prosPresents === 0 && enfants > 0) {
-          ratioEncadrement = { ok: false, ratio: '∞', enfants, pros: 0 };
-        }
-      } catch(e) { console.warn('[Hub KPI encadrement]', e.message); }
     }
-
-    // Alertes veille réglementaire non lues
-    let veilleNonLues = 0;
-    try {
-      const veilleRows = await sbGet('veille_alertes', 'select=id&lu=eq.false&order=created_at.desc&limit=50');
-      if (Array.isArray(veilleRows)) veilleNonLues = veilleRows.length;
-    } catch(e) { /* table peut ne pas encore exister */ }
 
     // Stocks bas — filtrés par crèche si sélectionnée, uniquement si token Stocks disponible
     let stocksBas = 0;
@@ -9319,38 +9291,17 @@ async function hubLoadKPIs(role) {
         const chips = [];
         if (stocksBas > 0) chips.push(`<div class="hub-s-chip warn">⚠ ${stocksBas} stock${stocksBas>1?'s':''} bas</div>`);
         else chips.push('<div class="hub-s-chip ok">✓ Stocks OK</div>');
-
-        // Alerte encadrement live
-        if (ratioEncadrement) {
-          if (!ratioEncadrement.ok) {
-            chips.push(`<div class="hub-s-chip warn" style="background:#FEE2E2;color:#B91C1C;border-color:#FECACA">🚨 Encadrement : ${ratioEncadrement.ratio} enfants/pro (${ratioEncadrement.enfants} enfants / ${ratioEncadrement.pros} pros)</div>`);
-          } else {
-            chips.push(`<div class="hub-s-chip ok" style="background:#DCFCE7;color:#15803D;border-color:#BBF7D0">✓ Encadrement OK — ${ratioEncadrement.ratio} enfants/pro</div>`);
-          }
-        }
-
-        // Badge veille réglementaire
-        if (veilleNonLues > 0) {
-          chips.push(`<div class="hub-s-chip warn" style="background:#F3E8FF;color:#7C3AED;border-color:#DDD6FE;cursor:pointer" onclick="showPage('reglementaire')">🔔 ${veilleNonLues} alerte${veilleNonLues>1?'s':''} veille réglementaire</div>`);
-        }
-
         chips.push('<div class="hub-s-chip ok">✓ Connexion active</div>');
         alertsEl.innerHTML = chips.join('');
       }
     } else if (role === 'directrice') {
       const elA = document.getElementById('hk-dir-alertes');
-      if (elA) elA.textContent = stocksBas + veilleNonLues;
+      if (elA) elA.textContent = stocksBas;
       const alertsEl = document.getElementById('hub-alerts-dir');
       if (alertsEl) {
         const chips = [];
         if (stocksBas > 0) chips.push(`<div class="hub-s-chip warn">⚠ ${stocksBas} stock${stocksBas>1?'s':''} bas</div>`);
         else chips.push('<div class="hub-s-chip ok">✓ Stocks OK</div>');
-
-        // Veille pour directrice aussi
-        if (veilleNonLues > 0) {
-          chips.push(`<div class="hub-s-chip warn" style="background:#F3E8FF;color:#7C3AED;border-color:#DDD6FE;cursor:pointer" onclick="showPage('reglementaire')">🔔 ${veilleNonLues} alerte${veilleNonLues>1?'s':''} veille réglementaire</div>`);
-        }
-
         chips.push(`<div class="hub-s-chip ok">\u2713 Ratio à vérifier dans Structures</div>`);
         alertsEl.innerHTML = chips.join('');
       }
@@ -12127,8 +12078,7 @@ const RH_TABLES = new Set([
   'enfants','berceaux','salaries','planning_semaines','parametres',
   'transmissions','menus',
   'vaccins_ref','vaccinations_enfant',
-  'suivi_pedagogique',
-  'veille_alertes'
+  'suivi_pedagogique'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -17117,21 +17067,49 @@ function showImportResult(type, html) {
     <button onclick="dsMarquerToutLu()" style="background:rgba(255,255,255,0.2);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;padding:5px 12px;cursor:pointer;font-family:'DM Sans',sans-serif">Tout marquer lu</button>
   </div>
 
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
     <div>
       <h2 style="font-family:'Playfair Display',serif;font-size:23px;font-weight:700;color:#1A1208">Veille réglementaire</h2>
       <p style="font-size:12px;color:#888;margin-top:3px">Alertes, mises à jour et nouveaux textes impactant vos structures</p>
     </div>
     <div style="display:flex;gap:10px;align-items:center">
-      <!-- Filtre impact -->
       <select id="ds-veille-filtre" onchange="dsVeilleRender()" style="padding:7px 12px;border:1.5px solid #E2D9CC;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;color:#1A1208;background:#fff;cursor:pointer">
         <option value="all">Tous les niveaux</option>
         <option value="urgent">🔴 Urgent</option>
         <option value="important">🟠 Important</option>
         <option value="info">🟡 Information</option>
       </select>
-      <!-- Bouton admin uniquement -->
+      <button id="ds-veille-params-btn" onclick="dsVeilleToggleParams()" style="padding:8px 14px;background:#F3E8FF;color:#7C3AED;border:1.5px solid #DDD6FE;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">⚙️ Paramètres</button>
       <button id="ds-veille-add-btn" onclick="dsVeilleOpenForm()" style="display:none;padding:8px 16px;background:#7C3AED;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">+ Nouvelle alerte</button>
+    </div>
+  </div>
+
+  <!-- Panneau paramètres veille -->
+  <div id="ds-veille-params-panel" style="display:none;background:#F9F5FF;border:1.5px solid #DDD6FE;border-radius:14px;padding:20px 24px;margin-bottom:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;color:#5B21B6">⚙️ Paramètres de la veille automatique</div>
+      <div id="ds-veille-lancer-status" style="font-size:12px;color:#888"></div>
+    </div>
+
+    <!-- Mots-clés -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:#6B7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Mots-clés surveillés</div>
+      <div id="ds-veille-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <input id="ds-veille-tag-input" type="text" placeholder="Ajouter un mot-clé…"
+          style="flex:1;padding:7px 12px;border:1.5px solid #DDD6FE;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:#1A1208;background:#fff;outline:none"
+          onkeydown="if(event.key==='Enter'){dsVeilleAddTag();}"
+        />
+        <button onclick="dsVeilleAddTag()" style="padding:7px 14px;background:#7C3AED;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Ajouter</button>
+      </div>
+    </div>
+
+    <!-- Bouton lancer -->
+    <div style="display:flex;align-items:center;gap:12px;padding-top:14px;border-top:1px solid #EDE9FE">
+      <button id="ds-veille-lancer-btn" onclick="dsVeilleLancer()" style="padding:9px 20px;background:#7C3AED;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px">
+        🔍 Lancer la veille maintenant
+      </button>
+      <span style="font-size:11px;color:#9CA3AF">Recherche sur Légifrance, SNPPE et Les Pros de la PE</span>
     </div>
   </div>
 
@@ -19767,6 +19745,98 @@ function dsVeilleMsg(msg, ok) {
   el.style.color = ok ? '#166534' : '#DC2626';
   el.style.border = '1px solid ' + (ok ? '#BBF7D0' : '#FECACA');
   el.style.display = 'block';
+}
+
+// ── Mots-clés veille (localStorage) ───────────────────────────
+const VEILLE_TAGS_DEFAULT = [
+  'crèche','EAJE','micro-crèche','PSU','PAJE','CMG','PMI',
+  'encadrement','décret','arrêté','auxiliaire','référent','CAF',
+  'petite enfance','accueil collectif'
+];
+
+function dsVeilleGetTags() {
+  try {
+    const stored = localStorage.getItem('orevy_veille_tags');
+    return stored ? JSON.parse(stored) : [...VEILLE_TAGS_DEFAULT];
+  } catch { return [...VEILLE_TAGS_DEFAULT]; }
+}
+
+function dsVeilleSaveTags(tags) {
+  localStorage.setItem('orevy_veille_tags', JSON.stringify(tags));
+}
+
+function dsVeilleRenderTags() {
+  const container = document.getElementById('ds-veille-tags');
+  if (!container) return;
+  const tags = dsVeilleGetTags();
+  container.innerHTML = tags.map(t => `
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#EDE9FE;color:#5B21B6;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600">
+      ${t}
+      <button onclick="dsVeilleRemoveTag('${t.replace(/'/g,`\\'`)}')"
+        style="background:none;border:none;color:#7C3AED;cursor:pointer;font-size:14px;line-height:1;padding:0;margin:0">×</button>
+    </span>`).join('');
+}
+
+function dsVeilleAddTag() {
+  const input = document.getElementById('ds-veille-tag-input');
+  const val = (input.value || '').trim().toLowerCase();
+  if (!val) return;
+  const tags = dsVeilleGetTags();
+  if (!tags.includes(val)) { tags.push(val); dsVeilleSaveTags(tags); }
+  input.value = '';
+  dsVeilleRenderTags();
+}
+
+function dsVeilleRemoveTag(tag) {
+  const tags = dsVeilleGetTags().filter(t => t !== tag);
+  dsVeilleSaveTags(tags);
+  dsVeilleRenderTags();
+}
+
+function dsVeilleToggleParams() {
+  const panel = document.getElementById('ds-veille-params-panel');
+  if (!panel) return;
+  const open = panel.style.display === 'none' || panel.style.display === '';
+  panel.style.display = open ? 'block' : 'none';
+  if (open) dsVeilleRenderTags();
+}
+
+async function dsVeilleLancer() {
+  const btn = document.getElementById('ds-veille-lancer-btn');
+  const status = document.getElementById('ds-veille-lancer-status');
+  if (!btn) return;
+
+  const tags = dsVeilleGetTags();
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Veille en cours…';
+  if (status) status.textContent = '';
+
+  try {
+    const res = await fetch('https://api.orevy.app/veille-reglementaire', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keywords: tags }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+
+    const nbAlertes = data.results?.find(r => r.step === 'claude')?.alertes || 0;
+    if (status) {
+      status.textContent = nbAlertes > 0
+        ? `✅ ${nbAlertes} alerte${nbAlertes > 1 ? 's' : ''} ajoutée${nbAlertes > 1 ? 's' : ''}`
+        : '✅ Aucun nouveau texte pertinent trouvé';
+      status.style.color = nbAlertes > 0 ? '#15803D' : '#6B7280';
+    }
+
+    // Recharger la liste
+    await dsVeilleLoad();
+  } catch(e) {
+    if (status) { status.textContent = '⚠ ' + e.message; status.style.color = '#B91C1C'; }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔍 Lancer la veille maintenant';
+  }
 }
 
 // ── Charger le badge veille dès que le hub s'affiche ──────────
