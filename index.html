@@ -1327,6 +1327,24 @@ textarea { resize: vertical; min-height: 72px; }
           </button>
         </div>
 
+        <!-- SECTION Facturation -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Facturation</div>
+        <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="flex:1">
+              <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Jour d'envoi automatique des factures</label>
+              <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Les factures en brouillon sont envoyées automatiquement ce jour du mois (ex : 1 = le 1er de chaque mois)</div>
+              <input type="number" id="param-facture-jour" min="1" max="28" value="1"
+                style="width:100px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;font-family:inherit;outline:none;background:var(--bg)"
+                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div style="font-size:32px">📅</div>
+          </div>
+          <button onclick="sauverParamFacture()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;align-self:flex-start">
+            💾 Enregistrer
+          </button>
+        </div>
+
         <!-- SECTION 3 : Export -->
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Données</div>
         <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">
@@ -8191,6 +8209,46 @@ function sauverAlertes() {
   showNotif('✅ Alertes enregistrées');
 }
 
+async function sauverParamFacture() {
+  const jour = parseInt(document.getElementById('param-facture-jour')?.value) || 1;
+  const crecheId = getCrecheId();
+  try {
+    await fetch(
+      SUPA_RH_URL_V + '/rest/v1/parametres?id=eq.facture_envoi_' + encodeURIComponent(crecheId),
+      {
+        method: 'DELETE',
+        headers: SUPA_HDRS_V
+      }
+    );
+    await fetch(SUPA_RH_URL_V + '/rest/v1/parametres', {
+      method: 'POST',
+      headers: { ...SUPA_HDRS_V, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        id: 'facture_envoi_' + crecheId,
+        data: { creche_id: crecheId, facture_jour_envoi: jour }
+      })
+    });
+    showNotif(`✅ Jour d'envoi enregistre : le ${jour} de chaque mois`);
+  } catch(e) {
+    showNotif('⚠ Erreur : ' + e.message);
+  }
+}
+
+async function chargerParamFacture() {
+  const crecheId = getCrecheId();
+  try {
+    const r = await fetch(
+      SUPA_RH_URL_V + '/rest/v1/parametres?id=eq.facture_envoi_' + encodeURIComponent(crecheId) + '&select=data',
+      { headers: SUPA_HDRS_V }
+    );
+    const rows = r.ok ? await r.json() : [];
+    if (rows.length && rows[0].data && rows[0].data.facture_jour_envoi) {
+      const el = document.getElementById('param-facture-jour');
+      if (el) el.value = rows[0].data.facture_jour_envoi;
+    }
+  } catch(e) { /* silencieux */ }
+}
+
 function appliquerPrefs() {
   const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   if (prefs.accent) document.documentElement.style.setProperty('--accent', prefs.accent);
@@ -9224,6 +9282,7 @@ function startApp() {
   showHub();
   // Charger params depuis Supabase (async — met à jour si plus récent)
   chargerParamsSupabase();
+  chargerParamFacture();
   // Charger salariés depuis Supabase (async — répare les nouveaux appareils)
   chargerSalariesSupabase();
 }
