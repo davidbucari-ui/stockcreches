@@ -862,9 +862,8 @@ function renderApp(data) {
   // Documents
   renderDocuments(data.documents || []);
 
-  // Factures (données depuis enfant.data.factures si existant)
-  const factures = (enfant.data && enfant.data.factures) || enfant.factures || [];
-  renderFactures(factures);
+  // Factures depuis Supabase (table factures projet RH)
+  loadPortailFactures(data.enfant_id || (data.enfant && data.enfant.id) || '');
 
   // Microformations
   renderFormations();
@@ -968,25 +967,49 @@ function renderDocuments(list) {
   `).join('');
 }
 
+// ── Chargement factures depuis Supabase RH ─────────────────────────────
+const SUPA_RH_PORTAIL     = 'https://gokfxejoffzttzvdkoll.supabase.co';
+const SUPA_RH_KEY_PORTAIL = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0';
+
+async function loadPortailFactures(enfant_id) {
+  const el = document.getElementById('factures-list');
+  if (!enfant_id) { renderFactures([]); return; }
+  if (el) el.innerHTML = '<div class="loader"><div class="spinner"></div>Chargement…</div>';
+  try {
+    const r = await fetch(
+      SUPA_RH_PORTAIL + '/rest/v1/factures?enfant_id=eq.' + encodeURIComponent(enfant_id) + '&order=mois.desc',
+      { headers: { 'apikey': SUPA_RH_KEY_PORTAIL, 'Authorization': 'Bearer ' + SUPA_RH_KEY_PORTAIL } }
+    );
+    const list = r.ok ? await r.json() : [];
+    renderFactures(list);
+  } catch(e) {
+    renderFactures([]);
+  }
+}
+
 function renderFactures(list) {
   const el = document.getElementById('factures-list');
+  if (!el) return;
   if (!list.length) {
     el.innerHTML = `<div class="pill-empty"><div class="pill-empty-icon">🧾</div>Aucune facture disponible.</div>`;
     return;
   }
 
-  el.innerHTML = list.map(f => `
+  el.innerHTML = list.map(f => {
+    const moisLabel = f.mois ? new Date(f.mois + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
+    const statut    = f.statut === 'payee' ? 'Réglée' : (f.statut === 'envoyee' ? 'Envoyée' : 'En attente');
+    const statutCls = f.statut === 'payee' ? 'payee' : 'attente';
+    const montant   = f.montant_famille != null ? Number(f.montant_famille).toFixed(2) + ' €' : '—';
+    return `
     <div class="facture-item">
-      <div>
-        <div class="facture-mois">${f.mois || f.periode || '—'}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${f.nb_heures ? f.nb_heures + 'h' : ''}</div>
+      <div style="flex:1">
+        <div class="facture-mois">${moisLabel}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${f.contrat_caf || ''} · ${f.heures_facturees || 0}h</div>
       </div>
-      <span class="facture-badge ${f.statut === 'payée' || f.statut === 'payee' ? 'payee' : 'attente'}">
-        ${f.statut === 'payée' || f.statut === 'payee' ? 'Réglée' : 'À régler'}
-      </span>
-      <div class="facture-montant">${f.montant != null ? Number(f.montant).toFixed(2) + ' €' : '—'}</div>
-    </div>
-  `).join('');
+      <span class="facture-badge ${statutCls}">${statut}</span>
+      <div class="facture-montant">${montant}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderFormations() {
