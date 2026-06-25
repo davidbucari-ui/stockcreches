@@ -9256,6 +9256,9 @@ async function hubLoadKPIs(role) {
     // une directrice/auxiliaire voit déjà les enfants en vrai dans sa structure, ce chiffre ne leur
     // apporte rien (et évite un appel Supabase superflu pour ces rôles).
     let enfants = '—';
+    let prosPresents = 0;
+    let ratioEncadrement = null; // { ok: bool, ratio: string, enfants: n, pros: n }
+
     if (role === 'admin' || role === 'stagiaire') {
       try {
         const params = 'select=id,creche_id&horodatage=gte.' + todayStr + 'T00:00:00&type=eq.arrivee'
@@ -9263,7 +9266,32 @@ async function hubLoadKPIs(role) {
         const pts = await sbGet('pointages_enfants', params);
         if (Array.isArray(pts)) enfants = pts.length;
       } catch(e) { console.warn('[Hub KPI enfants]', e.message); }
+
+      // Calcul ratio encadrement live (Décret 2025-304 : 1 pro pour 5 enfants non-marcheurs, 1 pour 8 marcheurs)
+      // On approxime : 1 pro pour 6 enfants en moyenne (tolérance mixte)
+      try {
+        const todayISO = new Date().toISOString().split('T')[0];
+        const ptsParams = 'select=id,salarie_id&horodatage=gte.' + todayISO + 'T00:00:00&type=eq.arrivee'
+          + (crecheFilter ? '&creche_id=eq.' + encodeURIComponent(crecheFilter) : '');
+        const ptsPros = await sbGet('pointages', ptsParams);
+        if (Array.isArray(ptsPros)) prosPresents = ptsPros.length;
+
+        if (typeof enfants === 'number' && prosPresents > 0) {
+          const ratio = enfants / prosPresents;
+          const ok = ratio <= 6; // seuil prudent mixte
+          ratioEncadrement = { ok, ratio: ratio.toFixed(1), enfants, pros: prosPresents };
+        } else if (typeof enfants === 'number' && prosPresents === 0 && enfants > 0) {
+          ratioEncadrement = { ok: false, ratio: '∞', enfants, pros: 0 };
+        }
+      } catch(e) { console.warn('[Hub KPI encadrement]', e.message); }
     }
+
+    // Alertes veille réglementaire non lues
+    let veilleNonLues = 0;
+    try {
+      const veilleRows = await sbGet('veille_alertes', 'select=id&lu=eq.false&order=created_at.desc&limit=50');
+      if (Array.isArray(veilleRows)) veilleNonLues = veilleRows.length;
+    } catch(e) { /* table peut ne pas encore exister */ }
 
     // Stocks bas — filtrés par crèche si sélectionnée, uniquement si token Stocks disponible
     let stocksBas = 0;
@@ -9291,17 +9319,38 @@ async function hubLoadKPIs(role) {
         const chips = [];
         if (stocksBas > 0) chips.push(`<div class="hub-s-chip warn">⚠ ${stocksBas} stock${stocksBas>1?'s':''} bas</div>`);
         else chips.push('<div class="hub-s-chip ok">✓ Stocks OK</div>');
+
+        // Alerte encadrement live
+        if (ratioEncadrement) {
+          if (!ratioEncadrement.ok) {
+            chips.push(`<div class="hub-s-chip warn" style="background:#FEE2E2;color:#B91C1C;border-color:#FECACA">🚨 Encadrement : ${ratioEncadrement.ratio} enfants/pro (${ratioEncadrement.enfants} enfants / ${ratioEncadrement.pros} pros)</div>`);
+          } else {
+            chips.push(`<div class="hub-s-chip ok" style="background:#DCFCE7;color:#15803D;border-color:#BBF7D0">✓ Encadrement OK — ${ratioEncadrement.ratio} enfants/pro</div>`);
+          }
+        }
+
+        // Badge veille réglementaire
+        if (veilleNonLues > 0) {
+          chips.push(`<div class="hub-s-chip warn" style="background:#F3E8FF;color:#7C3AED;border-color:#DDD6FE;cursor:pointer" onclick="showPage('reglementaire')">🔔 ${veilleNonLues} alerte${veilleNonLues>1?'s':''} veille réglementaire</div>`);
+        }
+
         chips.push('<div class="hub-s-chip ok">✓ Connexion active</div>');
         alertsEl.innerHTML = chips.join('');
       }
     } else if (role === 'directrice') {
       const elA = document.getElementById('hk-dir-alertes');
-      if (elA) elA.textContent = stocksBas;
+      if (elA) elA.textContent = stocksBas + veilleNonLues;
       const alertsEl = document.getElementById('hub-alerts-dir');
       if (alertsEl) {
         const chips = [];
         if (stocksBas > 0) chips.push(`<div class="hub-s-chip warn">⚠ ${stocksBas} stock${stocksBas>1?'s':''} bas</div>`);
         else chips.push('<div class="hub-s-chip ok">✓ Stocks OK</div>');
+
+        // Veille pour directrice aussi
+        if (veilleNonLues > 0) {
+          chips.push(`<div class="hub-s-chip warn" style="background:#F3E8FF;color:#7C3AED;border-color:#DDD6FE;cursor:pointer" onclick="showPage('reglementaire')">🔔 ${veilleNonLues} alerte${veilleNonLues>1?'s':''} veille réglementaire</div>`);
+        }
+
         chips.push(`<div class="hub-s-chip ok">\u2713 Ratio à vérifier dans Structures</div>`);
         alertsEl.innerHTML = chips.join('');
       }
@@ -12078,7 +12127,8 @@ const RH_TABLES = new Set([
   'enfants','berceaux','salaries','planning_semaines','parametres',
   'transmissions','menus',
   'vaccins_ref','vaccinations_enfant',
-  'suivi_pedagogique'
+  'suivi_pedagogique',
+  'veille_alertes'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
