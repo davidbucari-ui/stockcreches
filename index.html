@@ -1664,6 +1664,8 @@ textarea { resize: vertical; min-height: 72px; }
           <a href="inscription.html" target="_blank" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink3);display:flex;align-items:center;gap:6px;text-decoration:none">🔗 Lien d'inscription</a>
           <button onclick="document.getElementById('import-inscription-input').click()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:var(--ink3);display:flex;align-items:center;gap:6px">📥 Importer inscription</button>
           <input type="file" id="import-inscription-input" accept=".json" style="display:none" onchange="importerInscription(event)">
+          <button onclick="document.getElementById('import-excel-familles-input').click()" style="background:none;border:1.5px solid #6D28D9;border-radius:10px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;color:#6D28D9;display:flex;align-items:center;gap:6px">📊 Importer Excel Orevy</button>
+          <input type="file" id="import-excel-familles-input" accept=".xlsx" style="display:none" onchange="importExcelFamilles(event)">
           <select id="fam-creche-sel" onchange="renderFamilles()" style="padding:8px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2)"></select>
           <button class="btn btn-primary" onclick="openModalFamille(null)">+ Ajouter un enfant</button>
         </div>
@@ -5639,6 +5641,119 @@ function confirmerImportCreche() {
   renderFamilles();
   showNotif('✅ Inscription importée — fiche créée pour ' + enfant.prenom + ' ' + enfant.nom);
   setTimeout(() => openFicheEnfant(enfant.id), 600);
+}
+
+async function importExcelFamilles(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { showNotif('⚠ SheetJS non disponible'); return; }
+
+  const crecheId = document.getElementById('fam-creche-sel')?.value || getCrecheId();
+  if (!crecheId || crecheId === 'all' || crecheId === '__all__') {
+    showNotif("⚠ Sélectionnez une crèche avant d'importer"); return;
+  }
+
+  showNotif('⏳ Lecture du fichier Excel…');
+
+  const buf  = await file.arrayBuffer();
+  const wb   = XLSX.read(buf, { type: 'array' });
+
+  // Chercher l'onglet Familles_Brunet ou Familles_Picot1 (ou le premier onglet avec "Familles")
+  const sheetName = wb.SheetNames.find(n => n.startsWith('Familles')) || wb.SheetNames[0];
+  const ws   = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  // Ligne 3 (index 2) = headers, données dès ligne 4 (index 3)
+  const headers = (rows[2] || []).map(h => String(h).trim());
+  const dataRows = rows.slice(3).filter(r => r[0] && String(r[0]).match(/^\d+$/));
+
+  if (!dataRows.length) { showNotif("⚠ Aucune donnée trouvée dans l'onglet " + sheetName); return; }
+
+  // Mapping colonnes → index
+  const idx = (label) => headers.findIndex(h => h.toLowerCase().includes(label.toLowerCase()));
+  const iNom    = idx('Nom famille');
+  const iP1     = idx('Prénom parent 1');
+  const iP2     = idx('Prénom parent 2');
+  const iTel    = idx('Tel');
+  const iEmail  = idx('Email');
+  const iRFR    = idx('Revenu fiscal');
+  const iQF     = idx('QF CAF');
+  const iNbEnf  = idx('Nb enfants foyer');
+  const iFinanc = idx('Mode financement');
+  const iEnfant = idx('Prénom enfant');
+  const iSexe   = idx('Sexe');
+  const iDDN    = idx('Mois naissance');
+  const iAge    = idx('Âge');
+  const iJours  = idx('Jours contrat');
+  const iNbJ    = idx('Nb jours');
+  const iHJour  = idx('H/jour');
+  const iTarif  = idx('Tarif horaire');
+  const iMensuel= idx('Mensualisation');
+
+  const JOURS_MAP = { 'Lun':1,'Mar':2,'Mer':3,'Jeu':4,'Ven':5 };
+
+  const enfants = getFamilles(crecheId);
+  let created = 0, skipped = 0;
+
+  for (const row of dataRows) {
+    const g = (i) => i >= 0 ? String(row[i] || '').trim() : '';
+    const nomFamille = g(iNom).replace(/^Famille\s+/i,'');
+    const prenom     = g(iEnfant);
+    if (!prenom || !nomFamille) { skipped++; continue; }
+
+    // Éviter les doublons
+    if (enfants.find(e => e.prenom === prenom && e.nom === nomFamille)) { skipped++; continue; }
+
+    // Jours de présence : "Lun Mar Jeu" → [1,2,4]
+    const joursStr = g(iJours);
+    const joursPresence = joursStr.split(/\s+/).map(j => JOURS_MAP[j]).filter(Boolean);
+
+    // Calcul tarif PSU auto si pas dans le fichier
+    const qf = parseInt(g(iQF)) || 0;
+    const rfr = parseInt(g(iRFR)) || 0;
+    const financement = g(iFinanc) || 'PSU';
+    const tarifH = parseFloat(g(iTarif)) || (financement === 'PSU' && qf > 0
+      ? Math.min(0.0006 * 11.88 * qf, 5.57) : 0);
+    const hJour  = parseFloat(g(iHJour)) || 10;
+    const nbJours = parseInt(g(iNbJ)) || joursPresence.length || 4;
+
+    const enfant = {
+      id: 'fam_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      prenom, nom: nomFamille,
+      ddn: g(iDDN) || '',
+      type: '2.5-6',
+      contrat_caf: financement,
+      rfr, nb_enfants_foyer: parseInt(g(iNbEnf)) || 1,
+      qf: String(qf), qf_auto: rfr > 0,
+      taux_caf: tarifH > 0 ? String(tarifH.toFixed(4)) : '',
+      tarif_heure: tarifH > 0 ? tarifH : '',
+      jours: nbJours,
+      heures: Math.round(hJour * nbJours * 52 / 12),
+      heures_mois: Math.round(hJour * nbJours * 52 / 12),
+      jours_presence: joursPresence,
+      parent1: {
+        prenom: g(iP1),
+        nom: nomFamille,
+        tel: g(iTel),
+        email: g(iEmail),
+        lien: 'Mère',
+      },
+      parent2: { prenom: g(iP2), nom: nomFamille, lien: 'Père' },
+      referents: [], factures: [], documents: [],
+      allergies: '', pai: '', medecin: '', notes_libres: '',
+    };
+
+    enfants.push(enfant);
+    created++;
+  }
+
+  if (created === 0) { showNotif(`⚠ Aucune famille importée (${skipped} doublons ignorés)`); return; }
+
+  saveFamilles(enfants, crecheId);
+  await pushFamillesCloud(enfants, crecheId);
+  renderFamilles();
+  showNotif(`✅ ${created} famille(s) importée(s) depuis Excel${skipped ? ` (${skipped} ignorée(s))` : ''}`);
 }
 
 // ══════════════════════════════════════════════════════════════════
