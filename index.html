@@ -5756,11 +5756,13 @@ async function importExcelFamilles(event) {
   // Insérer UNIQUEMENT les nouveaux dans Supabase (sans écraser les existants)
   const nouveaux = enfants.slice(enfants.length - created);
   try {
-    await sbInsert('enfants', nouveaux.map(e => enfantToRow(e, crecheId)));
+    const rows = nouveaux.map(e => enfantToRow(e, crecheId));
+    console.log('[importExcel] Envoi Supabase:', rows.length, 'enfants, ex:', JSON.stringify(rows[0]).slice(0,200));
+    await sbInsert('enfants', rows);
     showNotif(`✅ ${created} famille(s) importée(s)${skipped ? ` · ${skipped} ignorée(s)` : ''}`);
   } catch(e) {
-    console.error('[importExcel]', e);
-    showNotif(`⚠ Erreur Supabase : ${e.message} — données sauvegardées en local`);
+    console.error('[importExcel] ERREUR:', e.message, e.status, e.body);
+    showNotif(`⚠ Import local OK mais Supabase KO : ${e.status || ''} ${e.message} — voir console F12`);
   }
   renderFamilles();
 }
