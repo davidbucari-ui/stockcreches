@@ -5748,12 +5748,21 @@ async function importExcelFamilles(event) {
     created++;
   }
 
-  if (created === 0) { showNotif(`⚠ Aucune famille importée (${skipped} doublons ignorés)`); return; }
+  if (created === 0) { showNotif(`⚠ Aucune famille importée (${skipped} doublon(s) ignoré(s))`); return; }
 
+  // Sauvegarder en local (inclut les existants + les nouveaux)
   saveFamilles(enfants, crecheId);
-  await pushFamillesCloud(enfants, crecheId);
+
+  // Insérer UNIQUEMENT les nouveaux dans Supabase (sans écraser les existants)
+  const nouveaux = enfants.slice(enfants.length - created);
+  try {
+    await sbInsert('enfants', nouveaux.map(e => enfantToRow(e, crecheId)));
+    showNotif(`✅ ${created} famille(s) importée(s)${skipped ? ` · ${skipped} ignorée(s)` : ''}`);
+  } catch(e) {
+    console.error('[importExcel]', e);
+    showNotif(`⚠ Erreur Supabase : ${e.message} — données sauvegardées en local`);
+  }
   renderFamilles();
-  showNotif(`✅ ${created} famille(s) importée(s) depuis Excel${skipped ? ` (${skipped} ignorée(s))` : ''}`);
 }
 
 // ══════════════════════════════════════════════════════════════════
