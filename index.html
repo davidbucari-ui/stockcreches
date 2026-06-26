@@ -1327,24 +1327,6 @@ textarea { resize: vertical; min-height: 72px; }
           </button>
         </div>
 
-        <!-- SECTION Facturation -->
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Facturation</div>
-        <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px">
-          <div style="display:flex;align-items:center;gap:16px">
-            <div style="flex:1">
-              <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:4px">Jour d'envoi automatique des factures</label>
-              <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Les factures en brouillon sont envoyées automatiquement ce jour du mois (ex : 1 = le 1er de chaque mois)</div>
-              <input type="number" id="param-facture-jour" min="1" max="28" value="1"
-                style="width:100px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;font-family:inherit;outline:none;background:var(--bg)"
-                onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-            </div>
-            <div style="font-size:32px">📅</div>
-          </div>
-          <button onclick="sauverParamFacture()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;align-self:flex-start">
-            💾 Enregistrer
-          </button>
-        </div>
-
         <!-- SECTION 3 : Export -->
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Données</div>
         <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px">
@@ -1772,7 +1754,7 @@ textarea { resize: vertical; min-height: 72px; }
           <button class="fiche-tab" data-tab="fi-accueil"   onclick="switchFicheTab('fi-accueil',this)"   style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Accueil</button>
           <button class="fiche-tab" data-tab="fi-notes"     onclick="switchFicheTab('fi-notes',this)"     style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Notes</button>
           <button class="fiche-tab" data-tab="fi-planning"  onclick="switchFicheTab('fi-planning',this)"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Planning</button>
-          <button class="fiche-tab" data-tab="fi-factures"  onclick="switchFicheTab('fi-factures',this);loadFacturesFiche()"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Factures</button>
+          <button class="fiche-tab" data-tab="fi-factures"  onclick="switchFicheTab('fi-factures',this)"  style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Factures</button>
           <button class="fiche-tab" data-tab="fi-docs"      onclick="switchFicheTab('fi-docs',this)"      style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">Documents</button>
           <button class="fiche-tab" data-tab="fi-sante"    onclick="switchFicheTab('fi-sante',this);loadVaccinsFiche()"    style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">💉 Santé</button>
           <button class="fiche-tab" data-tab="fi-suivi" onclick="switchFicheTab('fi-suivi',this);loadSuiviPedago()" style="color:var(--ink3);border-bottom:2px solid transparent;font-weight:600;padding:9px 14px;border-left:none;border-right:none;border-top:none;background:none;font-family:inherit;font-size:12px;cursor:pointer;margin-bottom:-2px;white-space:nowrap">📚 Suivi péda</button>
@@ -1825,10 +1807,15 @@ textarea { resize: vertical; min-height: 72px; }
             </div>
             <div class="fi-row">
               <div class="fi-field"><label>N° sécu parent 2</label><input id="fi-nss2" type="text" placeholder="15 chiffres"></div>
-              <div class="fi-field"><label>Quotient familial</label><input id="fi-qf" type="text" placeholder="Ex : 1240"></div>
+              <div class="fi-field"><label>Revenu fiscal de référence (N-2)</label><input id="fi-revenu-fiscal" type="number" placeholder="Ex : 32000" oninput="calcQFAuto()"></div>
             </div>
-            <div class="fi-row solo">
-              <div class="fi-field"><label>Taux horaire CAF</label><input id="fi-taux-caf" type="text" placeholder="Ex : 0,42 €/h" oninput="syncTauxCafToTarif()"></div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Nb enfants à charge (foyer)</label><input id="fi-nb-enfants-foyer" type="number" placeholder="Ex : 2" min="1" max="10" oninput="calcQFAuto()"></div>
+              <div class="fi-field"><label>Quotient familial <span style="font-size:10px;color:var(--ink3);font-weight:400">(calculé auto ou saisi)</span></label><input id="fi-qf" type="number" placeholder="Ex : 1240" oninput="calcTauxPSU()"></div>
+            </div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Taux horaire CAF (PSU)</label><input id="fi-taux-caf" type="text" placeholder="Ex : 0,42 €/h" oninput="syncTauxCafToTarif()"></div>
+              <div class="fi-field"></div>
             </div>
           </div>
         </div>
@@ -1944,18 +1931,9 @@ textarea { resize: vertical; min-height: 72px; }
 
         <!-- FACTURES -->
         <div id="fi-factures" style="display:none">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-            <div style="font-size:14px;font-weight:700;color:var(--ink)">🧾 Factures et règlements</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <select id="fact-filtre-mois" onchange="loadFacturesFiche()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--surface2)"></select>
-              <button onclick="ouvrirModalGenererFacture()" style="background:var(--accent);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ Générer une facture</button>
-            </div>
-          </div>
-          <div id="fact-resume-psu" style="display:none;background:#EDE9FE;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:12px;color:#5B21B6">
-            <strong>Calcul PSU :</strong> Taux horaire = 0,06% × SMIC (11,88 €) × QF / 100 — plafonné à 5,57 €/h
-          </div>
-          <div id="fact-list" style="display:flex;flex-direction:column;gap:10px">
-            <div style="padding:32px;text-align:center;color:var(--ink3);font-size:13px">Chargement…</div>
+          <div style="padding:48px;text-align:center;color:var(--ink3)">
+            <div style="font-size:40px;margin-bottom:12px">🧾</div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px">Factures et règlements</div>
           </div>
         </div>
 
@@ -2310,91 +2288,6 @@ textarea { resize: vertical; min-height: 72px; }
 
   </div><!-- /content -->
 
-
-
-<!-- ── MODAL FACTURE ────────────────────────────────────────────────── -->
-<div class="modal-overlay" id="modal-facture" onclick="closeModalClick(event,'modal-facture')">
-  <div class="modal-box" style="max-width:560px">
-    <div class="modal-header">
-      <h2 id="fact-modal-title">Générer une facture</h2>
-      <button class="modal-close" onclick="closeModal('modal-facture')">✕</button>
-    </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
-
-      <!-- Période & contrat -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group">
-          <label>Mois facturé</label>
-          <input type="month" id="fact-m-mois">
-        </div>
-        <div class="form-group">
-          <label>Type de contrat</label>
-          <select id="fact-m-contrat" onchange="factModalContratToggle();factModalCalc()">
-            <option value="PSU">PSU</option>
-            <option value="PAJE">PAJE</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Heures -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-        <div class="form-group">
-          <label>Heures contractualisées</label>
-          <input type="number" id="fact-m-heures-contrat" step="0.5" oninput="factModalCalc()" placeholder="0">
-        </div>
-        <div class="form-group">
-          <label>Heures déduites (absences justif.)</label>
-          <input type="number" id="fact-m-heures-deduites" step="0.5" oninput="factModalCalc()" placeholder="0">
-        </div>
-        <div class="form-group">
-          <label>Heures facturées</label>
-          <div id="fact-m-heures-fact" style="padding:9px 12px;background:var(--accent-lt);border-radius:8px;font-weight:700;color:var(--accent);font-size:14px">0 h</div>
-        </div>
-      </div>
-
-      <!-- Champs PSU -->
-      <div id="fact-m-row-psu" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group">
-          <label>Quotient familial (QF)</label>
-          <input type="number" id="fact-m-qf" oninput="document.getElementById('fact-m-taux').value=(Math.min(Math.max(0.0006*11.88*(+this.value||0),0.15),5.57)).toFixed(4);factModalCalc()" placeholder="Ex : 1240">
-        </div>
-        <div class="form-group">
-          <label>Taux horaire calculé (€/h)</label>
-          <input type="number" id="fact-m-taux" step="0.0001" oninput="factModalCalc()" placeholder="0.0000">
-        </div>
-      </div>
-
-      <!-- Champs PAJE -->
-      <div id="fact-m-row-paje" style="display:none">
-        <div class="form-group">
-          <label>Tarif horaire PAJE (€/h)</label>
-          <input type="number" id="fact-m-tarif-paje" step="0.01" oninput="factModalCalc()" placeholder="0.00">
-        </div>
-      </div>
-
-      <!-- Récap montants -->
-      <div style="background:var(--bg);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:6px 20px">
-        <div style="font-size:12px;color:var(--ink2)">Part famille</div>
-        <div id="fact-m-montant-fam" style="font-size:13px;font-weight:700;color:var(--ink);text-align:right">0,00 €</div>
-        <div style="font-size:12px;color:var(--ink2)">Prise en charge CAF</div>
-        <div id="fact-m-montant-caf" style="font-size:13px;color:var(--ink3);text-align:right">—</div>
-        <div style="font-size:13px;font-weight:700;color:var(--accent);border-top:1px solid var(--border);padding-top:6px">Total coût accueil</div>
-        <div id="fact-m-montant-total" style="font-size:14px;font-weight:700;color:var(--accent);text-align:right;border-top:1px solid var(--border);padding-top:6px">0,00 €</div>
-      </div>
-
-      <!-- Notes -->
-      <div class="form-group">
-        <label>Notes (optionnel)</label>
-        <input type="text" id="fact-m-notes" placeholder="Ex : absence maladie semaine 12 non déduite…">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-facture')">Annuler</button>
-      <button class="btn" style="background:var(--ink3);color:#fff;border:none" onclick="factSauvegarder();setTimeout(()=>factGenererPDF(FACT_EDIT_ID),800)">💾 Sauvegarder &amp; PDF</button>
-      <button class="btn btn-primary" onclick="factSauvegarder()">💾 Sauvegarder</button>
-    </div>
-  </div>
-</div>
 
 
 <div class="modal-overlay" id="modal-famille" onclick="closeModalClick(event,'modal-famille')">
@@ -5803,6 +5696,8 @@ function openFicheEnfant(id) {
   setV('fi-prenom', e.prenom); setV('fi-nom', e.nom); setV('fi-ddn', e.ddn);
   setV('fi-entree', e.entree); setV('fi-sortie', e.sortie);
   setV('fi-num-caf', e.num_caf); setV('fi-nss1', e.nss1); setV('fi-nss2', e.nss2);
+  setV('fi-revenu-fiscal', e.revenu_fiscal || '');
+  setV('fi-nb-enfants-foyer', e.nb_enfants_foyer || '');
   setV('fi-qf', e.qf); setV('fi-taux-caf', e.taux_caf);
   const typeEl = document.getElementById('fi-type'); if(typeEl) typeEl.value = e.type || '2.5-6';
   const cafEl  = document.getElementById('fi-contrat-caf'); if(cafEl) cafEl.value = e.contrat_caf || 'PSU';
@@ -6348,6 +6243,38 @@ function syncContratFromCreche() {
 
 function syncTauxCafToTarif() { syncTarifCAF(); }
 
+// Calcul automatique QF CAF à partir du revenu fiscal et du nombre de parts
+function calcQFAuto() {
+  const rfr = parseFloat(document.getElementById('fi-revenu-fiscal')?.value) || 0;
+  if (!rfr) return;
+  // Déduire les parts selon composition (on prend la valeur saisie si dispo, sinon 2.5 par défaut)
+  const nbEnfants = parseInt(document.getElementById('fi-nb-enfants-foyer')?.value) || 1;
+  const parts = 2 + (nbEnfants * 0.5); // approximation couple + enfants
+  const qf = Math.round(rfr / 12 / parts);
+  const qfEl = document.getElementById('fi-qf');
+  if (qfEl && !qfEl.dataset.manualEdit) {
+    qfEl.value = qf;
+    calcTauxPSU();
+  }
+}
+
+// Calcul automatique du taux horaire PSU à partir du QF
+function calcTauxPSU() {
+  const qf = parseFloat(document.getElementById('fi-qf')?.value) || 0;
+  const contrat = document.getElementById('fi-contrat-caf')?.value || '';
+  if (!qf || contrat !== 'PSU') return;
+  const SMIC = 11.88;
+  const PLANCHER = 0.26;
+  const PLAFOND = 5.57;
+  let taux = 0.0006 * SMIC * qf;
+  taux = Math.max(PLANCHER, Math.min(PLAFOND, taux));
+  const tauxEl = document.getElementById('fi-taux-caf');
+  if (tauxEl) {
+    tauxEl.value = taux.toFixed(2).replace('.', ',') + ' €/h';
+    syncTarifCAF();
+  }
+}
+
 function syncTarifCAF() {
   const contrat = document.getElementById('fi-contrat-caf')?.value;
   const tarifEl = document.getElementById('fi-tarif-heure');
@@ -6438,6 +6365,8 @@ function saveFicheEnfant() {
     marcheur: !!document.getElementById('fi-marcheur')?.checked,
     entree: getV('fi-entree'), sortie: getV('fi-sortie'),
     num_caf: getV('fi-num-caf'), nss1: getV('fi-nss1'), nss2: getV('fi-nss2'),
+    revenu_fiscal: getV('fi-revenu-fiscal') ? parseFloat(getV('fi-revenu-fiscal')) : null,
+    nb_enfants_foyer: getV('fi-nb-enfants-foyer') ? parseInt(getV('fi-nb-enfants-foyer')) : null,
     qf: getV('fi-qf'), taux_caf: getV('fi-taux-caf'),
     parent1: {
       prenom: getV('fi-p1-prenom'), nom: getV('fi-p1-nom'),
@@ -8209,46 +8138,6 @@ function sauverAlertes() {
   showNotif('✅ Alertes enregistrées');
 }
 
-async function sauverParamFacture() {
-  const jour = parseInt(document.getElementById('param-facture-jour')?.value) || 1;
-  const crecheId = getCrecheId();
-  try {
-    await fetch(
-      SUPA_RH_URL_V + '/rest/v1/parametres?id=eq.facture_envoi_' + encodeURIComponent(crecheId),
-      {
-        method: 'DELETE',
-        headers: SUPA_HDRS_V
-      }
-    );
-    await fetch(SUPA_RH_URL_V + '/rest/v1/parametres', {
-      method: 'POST',
-      headers: { ...SUPA_HDRS_V, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        id: 'facture_envoi_' + crecheId,
-        data: { creche_id: crecheId, facture_jour_envoi: jour }
-      })
-    });
-    showNotif(`✅ Jour d'envoi enregistre : le ${jour} de chaque mois`);
-  } catch(e) {
-    showNotif('⚠ Erreur : ' + e.message);
-  }
-}
-
-async function chargerParamFacture() {
-  const crecheId = getCrecheId();
-  try {
-    const r = await fetch(
-      SUPA_RH_URL_V + '/rest/v1/parametres?id=eq.facture_envoi_' + encodeURIComponent(crecheId) + '&select=data',
-      { headers: SUPA_HDRS_V }
-    );
-    const rows = r.ok ? await r.json() : [];
-    if (rows.length && rows[0].data && rows[0].data.facture_jour_envoi) {
-      const el = document.getElementById('param-facture-jour');
-      if (el) el.value = rows[0].data.facture_jour_envoi;
-    }
-  } catch(e) { /* silencieux */ }
-}
-
 function appliquerPrefs() {
   const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   if (prefs.accent) document.documentElement.style.setProperty('--accent', prefs.accent);
@@ -9282,7 +9171,6 @@ function startApp() {
   showHub();
   // Charger params depuis Supabase (async — met à jour si plus récent)
   chargerParamsSupabase();
-  chargerParamFacture();
   // Charger salariés depuis Supabase (async — répare les nouveaux appareils)
   chargerSalariesSupabase();
 }
@@ -12231,8 +12119,7 @@ const RH_TABLES = new Set([
   'enfants','berceaux','salaries','planning_semaines','parametres',
   'transmissions','menus',
   'vaccins_ref','vaccinations_enfant',
-  'suivi_pedagogique',
-  'factures'
+  'suivi_pedagogique'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -22127,399 +22014,6 @@ function sendSuiviEmail() {
   window.location.href = 'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
   showNotif('Ouverture du client mail');
 }
-
-// ══════════════════════════════════════════════════════════════════
-// MODULE FACTURES
-// ══════════════════════════════════════════════════════════════════
-
-// Constantes réglementaires 2025
-const SMIC_HORAIRE_2025 = 11.88;
-const PSU_TAUX_PLAFOND  = 5.57;   // plafond CAF 2025 (€/h participation famille)
-const PSU_TAUX_PLANCHER = 0.15;   // plancher CAF
-
-let FACT_LISTE       = [];
-let FACT_ENFANT_ID   = null;
-let FACT_ENFANT_DATA = null;
-let FACT_EDIT_ID     = null;   // null = création, uuid = édition
-
-// ── Calcul du taux horaire PSU selon QF ────────────────────────────────────
-function calcTauxPSU(qf) {
-  const t = (0.0006 * SMIC_HORAIRE_2025 * parseFloat(qf || 0));
-  return Math.min(Math.max(t, PSU_TAUX_PLANCHER), PSU_TAUX_PLAFOND);
-}
-
-// ── Calcul heures contractuelles mensuelles à partir de l'hebdomadaire ─────
-function heuresMensuelles(heuresHebdo) {
-  return Math.round((parseFloat(heuresHebdo || 0) * 52) / 12 * 100) / 100;
-}
-
-// ── Chargement des factures de l'enfant courant ────────────────────────────
-async function loadFacturesFiche() {
-  const eid = ficheEnfantId;
-  if (!eid) return;
-  FACT_ENFANT_ID = eid;
-
-  // Récupérer les données de l'enfant (depuis la fiche en mémoire)
-  const crecheId = getCrecheId();
-  const enfants  = getFamilles(crecheId);
-  FACT_ENFANT_DATA = enfants.find(x => x.id === eid) || null;
-
-  // Préremplir filtre mois (12 derniers mois)
-  const selMois = document.getElementById('fact-filtre-mois');
-  if (selMois && selMois.options.length === 0) {
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-      const lbl = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-      const opt = document.createElement('option');
-      opt.value = val; opt.textContent = lbl;
-      selMois.appendChild(opt);
-    }
-  }
-
-  // Info PSU
-  const resumePSU = document.getElementById('fact-resume-psu');
-  if (resumePSU) resumePSU.style.display = FACT_ENFANT_DATA?.contrat_caf === 'PSU' ? 'block' : 'none';
-
-  // Charger depuis Supabase
-  const listEl = document.getElementById('fact-list');
-  if (listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3)">Chargement…</div>';
-  try {
-    const r = await fetch(
-      SUPA_RH_URL_V + '/rest/v1/factures?enfant_id=eq.' + encodeURIComponent(eid) + '&order=mois.desc',
-      { headers: SUPA_HDRS_V }
-    );
-    FACT_LISTE = r.ok ? await r.json() : [];
-  } catch(e) { FACT_LISTE = []; }
-  factRender();
-}
-
-// ── Rendu liste factures ────────────────────────────────────────────────────
-function factRender() {
-  const listEl = document.getElementById('fact-list');
-  if (!listEl) return;
-  if (!FACT_LISTE.length) {
-    listEl.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
-      <div style="font-size:36px;margin-bottom:8px">🧾</div>
-      <div style="font-weight:600">Aucune facture pour cet enfant</div>
-      <div style="font-size:12px;margin-top:6px">Cliquez sur "+ Générer une facture" pour commencer</div>
-    </div>`;
-    return;
-  }
-  listEl.innerHTML = FACT_LISTE.map(f => {
-    const statutCfg = {
-      brouillon: { bg:'#F3F4F6', color:'#6B7280', label:'Brouillon' },
-      envoyee:   { bg:'#EFF6FF', color:'#2563EB', label:'Envoyée' },
-      payee:     { bg:'#F0FDF4', color:'#16A34A', label:'Payée' }
-    }[f.statut] || { bg:'#F3F4F6', color:'#6B7280', label:f.statut };
-    const moisLabel = f.mois ? new Date(f.mois + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
-    const montantFam = f.montant_famille != null ? Number(f.montant_famille).toFixed(2) + ' €' : '—';
-    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      <div style="flex:1;min-width:160px">
-        <div style="font-weight:700;font-size:14px;color:var(--ink)">${moisLabel}</div>
-        <div style="font-size:12px;color:var(--ink3);margin-top:3px">${f.contrat_caf || '—'} · ${f.heures_facturees || 0}h facturées</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:17px;font-weight:700;color:var(--ink);font-family:'Syne',sans-serif">${montantFam}</div>
-        <div style="font-size:10px;color:var(--ink3)">part famille</div>
-      </div>
-      <span style="background:${statutCfg.bg};color:${statutCfg.color};font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">${statutCfg.label}</span>
-      <div style="display:flex;gap:6px">
-        <button onclick="factEditer('${f.id}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer;color:var(--ink2)" title="Modifier">✏️</button>
-        <button onclick="factGenererPDF('${f.id}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer;color:var(--ink2)" title="Télécharger PDF">⬇ PDF</button>
-        ${f.statut === 'brouillon' ? `<button onclick="factEnvoyer('${f.id}')" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600" title="Envoyer par mail">📧 Envoyer</button>` : ''}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ── Ouvrir modal génération ─────────────────────────────────────────────────
-function ouvrirModalGenererFacture() {
-  FACT_EDIT_ID = null;
-  const e = FACT_ENFANT_DATA;
-  if (!e) { showNotif('Données enfant introuvables'); return; }
-
-  // Calcul auto
-  const qf           = parseFloat(e.qf) || 0;
-  const contrat       = e.contrat_caf || 'PSU';
-  const heuresHebdo   = parseFloat(e.heures) || 0;
-  const heuresMens    = heuresMensuelles(heuresHebdo);
-  const tauxPSU       = calcTauxPSU(qf);
-  const tarifPAJE     = parseFloat(e.tarif_heure) || 0;
-
-  // Mois courant
-  const now   = new Date();
-  const moisV = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-
-  const moisLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-
-  document.getElementById('fact-modal-title').textContent = 'Générer — ' + moisLabel;
-  document.getElementById('fact-m-mois').value            = moisV;
-  document.getElementById('fact-m-contrat').value         = contrat;
-  document.getElementById('fact-m-qf').value              = qf || '';
-  document.getElementById('fact-m-heures-contrat').value  = heuresMens;
-  document.getElementById('fact-m-heures-deduites').value = 0;
-  document.getElementById('fact-m-taux').value            = tauxPSU.toFixed(4);
-  document.getElementById('fact-m-tarif-paje').value      = tarifPAJE.toFixed(2);
-  document.getElementById('fact-m-notes').value           = '';
-  factModalContratToggle();
-  factModalCalc();
-  openModal('facture');
-}
-
-// ── Afficher/masquer champs PSU vs PAJE ────────────────────────────────────
-function factModalContratToggle() {
-  const c = document.getElementById('fact-m-contrat').value;
-  document.getElementById('fact-m-row-psu').style.display  = c === 'PSU'  ? '' : 'none';
-  document.getElementById('fact-m-row-paje').style.display = c === 'PAJE' ? '' : 'none';
-}
-
-// ── Recalcul à la volée ─────────────────────────────────────────────────────
-function factModalCalc() {
-  const contrat  = document.getElementById('fact-m-contrat').value;
-  const hContrat = parseFloat(document.getElementById('fact-m-heures-contrat').value) || 0;
-  const hDed     = parseFloat(document.getElementById('fact-m-heures-deduites').value) || 0;
-  const hFact    = Math.max(0, hContrat - hDed);
-  document.getElementById('fact-m-heures-fact').textContent = hFact.toFixed(1) + ' h';
-
-  let montantFam = 0, montantTotal = 0, montantCAF = 0;
-  if (contrat === 'PSU') {
-    const taux  = parseFloat(document.getElementById('fact-m-taux').value) || 0;
-    montantFam  = hFact * taux;
-    // La PSU est prise en charge à ~66% par la CAF (taux de référence, simplifié)
-    montantCAF  = hFact * (SMIC_HORAIRE_2025 * 0.66 - taux);
-    montantTotal = montantFam + Math.max(0, montantCAF);
-  } else {
-    const tarif = parseFloat(document.getElementById('fact-m-tarif-paje').value) || 0;
-    montantFam  = hFact * tarif;
-    montantTotal = montantFam;
-    montantCAF  = 0;
-  }
-  document.getElementById('fact-m-montant-fam').textContent   = montantFam.toFixed(2) + ' €';
-  document.getElementById('fact-m-montant-caf').textContent   = montantCAF > 0 ? montantCAF.toFixed(2) + ' €' : '—';
-  document.getElementById('fact-m-montant-total').textContent = montantTotal.toFixed(2) + ' €';
-}
-
-// ── Sauvegarder la facture ──────────────────────────────────────────────────
-async function factSauvegarder() {
-  const contrat  = document.getElementById('fact-m-contrat').value;
-  const hContrat = parseFloat(document.getElementById('fact-m-heures-contrat').value) || 0;
-  const hDed     = parseFloat(document.getElementById('fact-m-heures-deduites').value) || 0;
-  const hFact    = Math.max(0, hContrat - hDed);
-  const taux     = parseFloat(document.getElementById('fact-m-taux').value) || 0;
-  const tarifPAJE= parseFloat(document.getElementById('fact-m-tarif-paje').value) || 0;
-  const montFam  = contrat === 'PSU' ? hFact * taux : hFact * tarifPAJE;
-  const montCAF  = contrat === 'PSU' ? Math.max(0, hFact * (SMIC_HORAIRE_2025 * 0.66 - taux)) : 0;
-
-  const payload = {
-    enfant_id:              FACT_ENFANT_ID,
-    creche_id:              getCrecheId(),
-    mois:                   document.getElementById('fact-m-mois').value,
-    contrat_caf:            contrat,
-    qf:                     parseFloat(document.getElementById('fact-m-qf').value) || null,
-    taux_horaire:           taux,
-    tarif_paje:             tarifPAJE,
-    heures_contractualisees:hContrat,
-    heures_deduites:        hDed,
-    heures_facturees:       hFact,
-    montant_famille:        Math.round(montFam * 100) / 100,
-    montant_caf:            Math.round(montCAF * 100) / 100,
-    montant_total:          Math.round((montFam + montCAF) * 100) / 100,
-    notes:                  document.getElementById('fact-m-notes').value,
-    statut:                 'brouillon'
-  };
-
-  try {
-    if (FACT_EDIT_ID) {
-      const r = await fetch(
-        SUPA_RH_URL_V + '/rest/v1/factures?id=eq.' + FACT_EDIT_ID,
-        { method:'PATCH', headers:SUPA_HDRS_V, body:JSON.stringify(payload) }
-      );
-      if (!r.ok) throw new Error(await r.text());
-    } else {
-      const r = await fetch(
-        SUPA_RH_URL_V + '/rest/v1/factures',
-        { method:'POST', headers:SUPA_HDRS_V, body:JSON.stringify(payload) }
-      );
-      if (!r.ok) throw new Error(await r.text());
-    }
-    closeModal('modal-facture');
-    showNotif('✅ Facture sauvegardée');
-    await loadFacturesFiche();
-  } catch(e) {
-    showNotif('⚠ Erreur : ' + e.message);
-    console.error(e);
-  }
-}
-
-// ── Éditer une facture existante ────────────────────────────────────────────
-function factEditer(id) {
-  const f = FACT_LISTE.find(x => x.id === id);
-  if (!f) return;
-  FACT_EDIT_ID = id;
-  const moisLabel = f.mois ? new Date(f.mois + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
-  document.getElementById('fact-modal-title').textContent             = 'Modifier — ' + moisLabel;
-  document.getElementById('fact-m-mois').value                        = f.mois || '';
-  document.getElementById('fact-m-contrat').value                     = f.contrat_caf || 'PSU';
-  document.getElementById('fact-m-qf').value                          = f.qf || '';
-  document.getElementById('fact-m-heures-contrat').value              = f.heures_contractualisees || 0;
-  document.getElementById('fact-m-heures-deduites').value             = f.heures_deduites || 0;
-  document.getElementById('fact-m-taux').value                        = f.taux_horaire || 0;
-  document.getElementById('fact-m-tarif-paje').value                  = f.tarif_paje || 0;
-  document.getElementById('fact-m-notes').value                       = f.notes || '';
-  factModalContratToggle();
-  factModalCalc();
-  openModal('facture');
-}
-
-// ── Génération PDF facture conforme ────────────────────────────────────────
-function factGenererPDF(id) {
-  const f = id ? FACT_LISTE.find(x => x.id === id) : null;
-  if (!f && id) { showNotif('Facture introuvable'); return; }
-  const facture = f || { contrat_caf:'PSU', mois:'', heures_facturees:0, montant_famille:0, montant_caf:0, montant_total:0 };
-  const e = FACT_ENFANT_DATA || {};
-
-  if (typeof jspdf === 'undefined' || !jspdf.jsPDF) { showNotif('⚠ jsPDF non disponible'); return; }
-  const { jsPDF } = jspdf;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W = 210; const margin = 14;
-  let y = 18;
-
-  // En-tête crèche
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(37, 99, 235);
-  doc.text('FACTURE', margin, y); y += 7;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(80, 80, 80);
-  doc.text('Structure : ' + (currentCreche || getCrecheId() || ''), margin, y); y += 5;
-  const moisLabel = facture.mois ? new Date(facture.mois + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
-  doc.text('Période : ' + moisLabel, margin, y);
-  doc.text(`Date d'emission : ` + new Date().toLocaleDateString('fr-FR'), W - margin, y, { align:'right' });
-  y += 8;
-
-  // Ligne séparatrice
-  doc.setDrawColor(200, 200, 200); doc.line(margin, y, W - margin, y); y += 6;
-
-  // Infos enfant / famille
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(30, 30, 30);
-  doc.text('ENFANT', margin, y); y += 5;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(60, 60, 60);
-  doc.text('Nom : ' + (e.prenom || '') + ' ' + (e.nom || ''), margin, y); y += 4.5;
-  const p1 = (e.parents && e.parents[0]) ? e.parents[0] : {};
-  doc.text('Responsable légal : ' + (p1.prenom || '') + ' ' + (p1.nom || ''), margin, y); y += 4.5;
-  if (p1.email) { doc.text('Email : ' + p1.email, margin, y); y += 4.5; }
-  doc.text('Contrat CAF : ' + (facture.contrat_caf || ''), margin, y); y += 8;
-
-  // Tableau heures
-  doc.setDrawColor(200, 200, 200);
-  doc.setFillColor(240, 240, 248);
-  doc.rect(margin, y, W - margin * 2, 7, 'F');
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(37, 99, 235);
-  doc.text('Désignation', margin + 3, y + 5);
-  doc.text('Heures', 130, y + 5);
-  doc.text('Taux (€/h)', 155, y + 5);
-  doc.text('Montant (€)', 180, y + 5, { align:'right' });
-  y += 10;
-
-  doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40);
-  const ligneDesc = facture.contrat_caf === 'PSU'
-    ? 'Accueil collectif — participation famille (PSU)'
-    : 'Accueil collectif — tarif horaire (PAJE)';
-  const tauxAff  = facture.contrat_caf === 'PSU' ? (facture.taux_horaire || 0) : (facture.tarif_paje || 0);
-  doc.text(ligneDesc, margin + 3, y);
-  doc.text(String(facture.heures_facturees || 0), 130, y);
-  doc.text(Number(tauxAff).toFixed(4), 155, y);
-  doc.text(Number(facture.montant_famille || 0).toFixed(2), 180, y, { align:'right' });
-  y += 5;
-
-  if (facture.heures_deduites > 0) {
-    doc.setTextColor(180, 60, 60);
-    doc.text('Déduction absences justifiées', margin + 3, y);
-    doc.text('- ' + facture.heures_deduites, 130, y);
-    doc.text('', 155, y);
-    doc.text('0,00', 180, y, { align:'right' });
-    y += 5;
-    doc.setTextColor(40, 40, 40);
-  }
-
-  doc.line(margin, y, W - margin, y); y += 5;
-
-  // Totaux
-  const totalLines = [
-    ['Part famille', Number(facture.montant_famille || 0).toFixed(2) + ' €'],
-  ];
-  if (facture.contrat_caf === 'PSU' && facture.montant_caf > 0) {
-    totalLines.push(['Prise en charge CAF (PSU)', Number(facture.montant_caf || 0).toFixed(2) + ' €']);
-    totalLines.push(['TOTAL coût accueil', Number(facture.montant_total || 0).toFixed(2) + ' €']);
-  }
-  if (facture.contrat_caf === 'PAJE') {
-    totalLines.push(['CMG CAF (remboursement direct famille)', 'cf. attestation CAF']);
-  }
-  totalLines.forEach(([lbl, val], i) => {
-    const isLast = i === totalLines.length - 1;
-    if (isLast) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(37, 99, 235);
-    } else {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(60, 60, 60);
-    }
-    doc.text(lbl, margin + 3, y);
-    doc.text(val, W - margin, y, { align:'right' });
-    y += isLast ? 7 : 5;
-  });
-
-  // Notes
-  if (facture.notes) {
-    y += 4; doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(100, 100, 100);
-    doc.text('Note : ' + facture.notes, margin, y);
-    y += 6;
-  }
-
-  // Pied de page
-  y = Math.max(y + 10, 260);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(150, 150, 150);
-  doc.text('Document généré par Orevy — Plateforme Petite Enfance', margin, y);
-  doc.text('Facture à conserver', W - margin, y, { align:'right' });
-
-  const nomFichier = 'facture_' + (e.prenom || 'enfant').toLowerCase() + '_' + (facture.mois || 'mois') + '.pdf';
-  doc.save(nomFichier);
-  showNotif('📄 Facture PDF téléchargée');
-}
-
-// ── Envoyer la facture par mail (via Worker) ────────────────────────────────
-async function factEnvoyer(id) {
-  const f = FACT_LISTE.find(x => x.id === id);
-  if (!f) return;
-  const e = FACT_ENFANT_DATA || {};
-  const p1 = (e.parents && e.parents[0]) ? e.parents[0] : {};
-  if (!p1.email) { showNotif('⚠ Aucun email pour le parent 1'); return; }
-  const moisLabel = f.mois ? new Date(f.mois + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
-  if (!confirm('Envoyer la facture de ' + moisLabel + ' à ' + p1.email + ' ?')) return;
-  showNotif('📧 Envoi en cours…');
-  try {
-    const r = await fetch('https://api.orevy.app/factures-envoyer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ facture_id: id, enfant_id: FACT_ENFANT_ID, email: p1.email, prenom_enfant: e.prenom || '', mois_label: moisLabel })
-    });
-    const data = await r.json();
-    if (data.ok) {
-      showNotif('✅ Facture envoyée à ' + p1.email);
-      // Mettre à jour le statut en BDD
-      await fetch(SUPA_RH_URL_V + '/rest/v1/factures?id=eq.' + id, {
-        method:'PATCH', headers:SUPA_HDRS_V,
-        body: JSON.stringify({ statut:'envoyee', date_envoi: new Date().toISOString() })
-      });
-      await loadFacturesFiche();
-    } else {
-      showNotif('⚠ Erreur envoi : ' + (data.error || 'inconnu'));
-    }
-  } catch(err) {
-    showNotif('⚠ Erreur réseau : ' + err.message);
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════
-// FIN MODULE FACTURES
-// ══════════════════════════════════════════════════════════════════
 
 </script>
 
