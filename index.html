@@ -4550,7 +4550,15 @@ async function pushFamillesCloud(data, crecheId) {
   const deduped = dedupeById(data);
   try {
     await sbDeleteWhere('enfants', `creche_id=eq.${encodeURIComponent(cid)}`);
-    if (deduped.length) await sbInsert('enfants', deduped.map(e => enfantToRow(e, cid)));
+    if (deduped.length) {
+      const rows = deduped.map(e => enfantToRow(e, cid));
+      const r = await fetch(`${_sbUrl('enfants')}/rest/v1/enfants`, {
+        method: 'POST',
+        headers: { ..._sbHeaders('enfants'), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(rows),
+      });
+      if (!r.ok) throw new Error('INSERT enfants : ' + r.status);
+    }
   } catch(e) { console.error('[pushFamilles]', e.message); showNotif('⚠ Sync familles : ' + e.message); }
 }
 async function pushBerceauxCloud(data, crecheId) {
