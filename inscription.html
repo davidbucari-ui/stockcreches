@@ -357,14 +357,14 @@
         </div>
         <div class="field">
           <label>Date de naissance <span class="req">*</span></label>
-          <input type="date" id="e-ddn" onchange="calcTrancheAuto()">
+          <input type="date" id="e-ddn">
         </div>
       </div>
       <div class="row">
         <div class="field">
-          <label>Tranche d'âge</label>
-          <select id="e-tranche" disabled style="background:var(--accent-lt);color:var(--ink2);cursor:not-allowed;font-weight:600">
-            <option value="">— Renseignez la date de naissance —</option>
+          <label>Tranche d'âge <span class="req">*</span></label>
+          <select id="e-tranche">
+            <option value="">— Sélectionner —</option>
             <option value="2.5-6">2½ – 6 mois</option>
             <option value="6-12">6 – 12 mois</option>
             <option value="12-18">12 – 18 mois</option>
@@ -372,7 +372,6 @@
             <option value="24-30">24 – 30 mois</option>
             <option value="30-36">30 – 36 mois</option>
           </select>
-          <span class="hint">Calculée automatiquement à partir de la date de naissance</span>
         </div>
         <div class="field">
           <label>Lieu de naissance</label>
@@ -390,19 +389,36 @@
           <span class="hint">Indiqué sur votre attestation CAF</span>
         </div>
         <div class="field">
-          <label>Quotient familial</label>
-          <input type="number" id="e-qf" placeholder="Ex : 1240">
-          <span class="hint">Revenu mensuel net / nombre de parts</span>
+          <label>Type de contrat <span class="req">*</span></label>
+          <select id="e-contrat-caf">
+            <option value="PSU">PSU — Prestation de Service Unique</option>
+            <option value="PAJE">PAJE — Prestation d'Accueil du Jeune Enfant</option>
+          </select>
         </div>
       </div>
-      <div class="row solo">
+      <div class="row">
+        <div class="field">
+          <label>Revenu fiscal de référence (N-2)</label>
+          <input type="number" id="e-revenu-fiscal" placeholder="Ex : 32000" oninput="calcQFAutoInscription()">
+          <span class="hint">Montant indiqué sur votre avis d'imposition (case 9N ou RFR)</span>
+        </div>
+        <div class="field">
+          <label>Quotient familial CAF</label>
+          <input type="number" id="e-qf" placeholder="Calculé automatiquement ou saisi" oninput="calcTauxInscription()">
+          <span class="hint">Visible sur votre attestation CAF ou espace Mon Compte</span>
+        </div>
+      </div>
+      <div class="row">
         <div class="field">
           <label>N° sécurité sociale (enfant)</label>
           <input type="text" id="e-nss" placeholder="15 chiffres">
         </div>
+        <div class="field">
+          <label>Nombre d'enfants à charge (foyer)</label>
+          <input type="number" id="e-nb-enfants-foyer" placeholder="Ex : 2" min="1" max="10" oninput="calcQFAutoInscription()">
+          <span class="hint">Permet de calculer automatiquement le QF</span>
+        </div>
       </div>
-      <input type="hidden" id="e-contrat-caf" value="">
-      <div style="font-size:11px;color:var(--ink3);line-height:1.5;padding-top:2px">Le type de contrat (PSU / PAJE) sera déterminé par la crèche lors de la finalisation de l'inscription.</div>
     </div>
 
     <div class="card">
@@ -611,7 +627,23 @@
 
     <div class="card">
       <div class="card-title">Rythme d'accueil</div>
-      <div style="margin-bottom:16px">
+      <div class="row">
+        <div class="field">
+          <label>Nombre de jours / semaine</label>
+          <select id="a-jours">
+            <option value="1">1 jour</option>
+            <option value="2">2 jours</option>
+            <option value="3">3 jours</option>
+            <option value="4">4 jours</option>
+            <option value="5" selected>5 jours</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Heures / semaine estimées</label>
+          <input type="number" id="a-heures" placeholder="Ex : 40" min="1" max="50">
+        </div>
+      </div>
+      <div style="margin-top:8px">
         <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:10px">Jours de présence habituels</label>
         <div class="jours-grid" id="jours-grid">
           <button type="button" class="jour-btn" data-jour="0" onclick="toggleJour(this)">Lundi</button>
@@ -619,17 +651,6 @@
           <button type="button" class="jour-btn" data-jour="2" onclick="toggleJour(this)">Mercredi</button>
           <button type="button" class="jour-btn" data-jour="3" onclick="toggleJour(this)">Jeudi</button>
           <button type="button" class="jour-btn" data-jour="4" onclick="toggleJour(this)">Vendredi</button>
-        </div>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Nombre de jours / semaine</label>
-          <input type="text" id="a-jours" value="0" disabled style="background:var(--accent-lt);color:var(--ink2);cursor:not-allowed;font-weight:700;text-align:center">
-          <span class="hint">Calculé automatiquement selon les jours cochés ci-dessus</span>
-        </div>
-        <div class="field">
-          <label>Heures / semaine estimées</label>
-          <input type="number" id="a-heures" placeholder="Ex : 40" min="1" max="50">
         </div>
       </div>
     </div>
@@ -712,32 +733,6 @@ let currentStep = 1;
 let referentsData = [];
 let joursSelectionnes = [];
 
-// ── Tranche d'âge automatique (à partir de la date de naissance) ─────────
-const TRANCHES_BOUNDS = [
-  { val:'2.5-6',  min:2.5,  max:6  },
-  { val:'6-12',   min:6,    max:12 },
-  { val:'12-18',  min:12,   max:18 },
-  { val:'18-24',  min:18,   max:24 },
-  { val:'24-30',  min:24,   max:30 },
-  { val:'30-36',  min:30,   max:36 },
-];
-
-function calcTrancheAuto() {
-  const ddnVal = document.getElementById('e-ddn')?.value;
-  const sel = document.getElementById('e-tranche');
-  if (!sel) return;
-  if (!ddnVal) { sel.value = ''; return; }
-
-  const d = new Date(ddnVal), now = new Date();
-  let mois = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
-  if (now.getDate() < d.getDate()) mois -= 1;
-  if (mois < 0) mois = 0;
-
-  let match = TRANCHES_BOUNDS.find(t => mois >= t.min && mois < t.max);
-  if (!match) match = mois < TRANCHES_BOUNDS[0].min ? TRANCHES_BOUNDS[0] : TRANCHES_BOUNDS[TRANCHES_BOUNDS.length - 1];
-  sel.value = match.val;
-}
-
 // ── Navigation ──────────────────────────────────────────
 function showStep(n) {
   // Cacher toutes les sections par inline style
@@ -776,7 +771,7 @@ function prevStep(from) {
 // ── Validation ──────────────────────────────────────────
 function validateStep(step) {
   const required = {
-    1: ['e-prenom', 'e-nom', 'e-ddn'],
+    1: ['e-prenom', 'e-nom', 'e-ddn', 'e-tranche'],
     2: ['p1-prenom', 'p1-nom', 'p1-tel'],
     3: [],
     4: [],
@@ -851,12 +846,6 @@ function toggleJour(btn) {
   } else {
     joursSelectionnes = joursSelectionnes.filter(x => x !== j);
   }
-  updateJoursCount();
-}
-
-function updateJoursCount() {
-  const el = document.getElementById('a-jours');
-  if (el) el.value = joursSelectionnes.length;
 }
 
 // ── Récap ───────────────────────────────────────────────
@@ -874,7 +863,9 @@ function buildRecap() {
         ['Prénom / Nom', v('e-prenom') + ' ' + v('e-nom')],
         ['Date de naissance', v('e-ddn') ? new Date(v('e-ddn')).toLocaleDateString('fr-FR') : '—'],
         ['Tranche d\'âge', TRANCHES[v('e-tranche')] || '—'],
+        ['Contrat CAF', v('e-contrat-caf')],
         ['N° allocataire CAF', v('e-num-caf') || '—'],
+        ['Revenu fiscal de référence', v('e-revenu-fiscal') ? parseInt(v('e-revenu-fiscal')).toLocaleString('fr-FR') + ' €' : '—'],
         ['Quotient familial', v('e-qf') || '—'],
         ['Allergies', v('e-allergies') || 'Aucune connue'],
       ]
@@ -936,7 +927,10 @@ function telecharger() {
     enfant: {
       prenom: v('e-prenom'), nom: v('e-nom'), ddn: v('e-ddn'),
       type: v('e-tranche'), contrat_caf: v('e-contrat-caf'),
-      num_caf: v('e-num-caf'), qf: v('e-qf'), nss1: v('e-nss'),
+      num_caf: v('e-num-caf'), qf: v('e-qf') ? parseFloat(v('e-qf')) : null,
+      revenu_fiscal: v('e-revenu-fiscal') ? parseFloat(v('e-revenu-fiscal')) : null,
+      nb_enfants_foyer: v('e-nb-enfants-foyer') ? parseInt(v('e-nb-enfants-foyer')) : null,
+      nss1: v('e-nss'),
       allergies: v('e-allergies'), pai: v('e-pai'), medecin: v('e-medecin'),
       entree: v('a-entree'), sortie: v('a-sortie'),
       jours: parseInt(v('a-jours')) || 5,
@@ -977,6 +971,30 @@ function telecharger() {
 }
 
 // ── Notif ───────────────────────────────────────────────
+// ── Calcul automatique QF et taux PSU ─────────────────────
+function calcQFAutoInscription() {
+  const rfr = parseFloat(document.getElementById('e-revenu-fiscal')?.value) || 0;
+  if (!rfr) return;
+  const nbEnfants = parseInt(document.getElementById('e-nb-enfants-foyer')?.value) || 1;
+  // Parts CAF : 2 (couple) + 0.5 par enfant, ou 1 (parent isolé) + 0.5 par enfant
+  const parts = 2 + (nbEnfants * 0.5);
+  const qf = Math.round(rfr / 12 / parts);
+  const qfEl = document.getElementById('e-qf');
+  if (qfEl) { qfEl.value = qf; calcTauxInscription(); }
+}
+
+function calcTauxInscription() {
+  const qf = parseFloat(document.getElementById('e-qf')?.value) || 0;
+  const contrat = document.getElementById('e-contrat-caf')?.value || '';
+  if (!qf || contrat !== 'PSU') return;
+  const SMIC = 11.88, PLANCHER = 0.26, PLAFOND = 5.57;
+  const taux = Math.max(PLANCHER, Math.min(PLAFOND, 0.0006 * SMIC * qf));
+  // Affichage informatif dans la hint
+  const hint = document.querySelector('#e-qf + .hint, label[for="e-qf"] ~ .hint');
+  const tauxFormate = taux.toFixed(2).replace('.', ',') + ' €/h';
+  if (hint) hint.textContent = 'Taux horaire PSU estimé : ' + tauxFormate;
+}
+
 function showNotif(msg) {
   let n = document.getElementById('notif-bar');
   if (!n) {
