@@ -5721,7 +5721,7 @@ async function importExcelFamilles(event) {
     const enfant = {
       id: 'fam_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
       prenom, nom: nomFamille,
-      ddn: g(iDDN) || '',
+      ddn: (() => { const d = g(iDDN); if (!d) return null; const m = d.match(/^(\d{2})\/(\d{4})$/); return m ? `${m[2]}-${m[1]}-01` : d; })(),
       type: '2.5-6',
       contrat_caf: financement,
       rfr, nb_enfants_foyer: parseInt(g(iNbEnf)) || 1,
