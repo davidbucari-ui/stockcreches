@@ -12324,6 +12324,10 @@ async function syncFromCloud() {
     saveData();
     renderActiveInvTable(); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique(); updateCounts();
     if (typeof currentPage !== 'undefined' && currentPage === 'univers') renderUnivers();
+    // Sync familles cross-device (tablette voit les imports faits sur PC)
+    loadFamillesCloud().then(() => {
+      try { if (typeof currentPage !== 'undefined' && currentPage === 'familles') renderFamilles(); } catch(_) {}
+    }).catch(() => {});
     const now = new Date();
     setIndicator('☁️ À jour — ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}), 'var(--green)');
   } catch(e) {
