@@ -5757,8 +5757,13 @@ async function importExcelFamilles(event) {
   const nouveaux = enfants.slice(enfants.length - created);
   try {
     const rows = nouveaux.map(e => enfantToRow(e, crecheId));
-    console.log('[importExcel] Envoi Supabase:', rows.length, 'enfants, ex:', JSON.stringify(rows[0]).slice(0,200));
-    await sbInsert('enfants', rows);
+    // Upsert : evite le 409 si des IDs existent deja (import partiel precedent)
+    const r = await fetch(`${_sbUrl('enfants')}/rest/v1/enfants`, {
+      method: 'POST',
+      headers: { ..._sbHeaders('enfants'), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows),
+    });
+    if (!r.ok) { const t = await r.text(); throw Object.assign(new Error('INSERT enfants : ' + r.status), {status: r.status, body: t}); }
     showNotif(`✅ ${created} famille(s) importée(s)${skipped ? ` · ${skipped} ignorée(s)` : ''}`);
   } catch(e) {
     console.error('[importExcel] ERREUR:', e.message, e.status, e.body);
