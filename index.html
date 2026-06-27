@@ -330,7 +330,7 @@ body {
 .btn-danger:hover { background: #FEE2E2; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 
-.content { padding: 24px 28px; flex: 1; }
+.content { padding: 24px 28px; flex: 1; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
 /* ── STATS CARDS ── */
 .stats-grid {
@@ -1205,21 +1205,21 @@ textarea { resize: vertical; min-height: 72px; }
     <!-- ── PAGE DASHBOARD ── -->
     <div id="page-dashboard">
       <!-- Dashboard DIRECTRICE/ADMIN -->
-      <div id="dash-directrice" style="display:none;padding:24px;max-width:960px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div id="dash-directrice" style="display:none;padding:24px;max-width:960px;margin:0 auto;width:100%">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:20px">
           <div>
             <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">Vue pilotage</div>
             <div style="font-size:13px;color:var(--ink3);margin-top:2px" id="hub-date-dir"></div>
           </div>
           <div id="dash-dir-creche" style="font-size:13px;color:var(--ink3);font-weight:600"></div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px" id="dash-dir-kpis"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px" id="dash-dir-kpis"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:16px">
           <div id="dash-dir-equipe" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
           <div id="dash-dir-alertes" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
         </div>
         <div id="dash-dir-taux" style="display:none"></div>
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
           <div id="dash-dir-planning" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
           <div id="dash-dir-stats" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
         </div>
@@ -1227,12 +1227,12 @@ textarea { resize: vertical; min-height: 72px; }
       </div>
 
       <!-- Dashboard AUXILIAIRE -->
-      <div id="dash-auxiliaire" style="display:none;padding:24px;max-width:800px">
+      <div id="dash-auxiliaire" style="display:none;padding:24px;max-width:800px;margin:0 auto;width:100%">
         <div style="margin-bottom:20px">
           <div style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif">Ma journée</div>
           <div style="font-size:13px;color:var(--ink3);margin-top:2px" id="hub-date-aux"></div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px" id="dash-aux-kpis"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px" id="dash-aux-kpis"></div>
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px" id="dash-aux-actions"></div>
         <div id="dash-aux-enfants" style="background:var(--surface2);border-radius:var(--radius);padding:16px;border:1px solid var(--border)"></div>
       </div>
@@ -8598,7 +8598,7 @@ async function renderDashboardDirectrice(dateStr) {
   if (kpiEl) kpiEl.innerHTML = `
     <div onclick="showPage('familles', document.querySelector('.nav-item[onclick*=familles]'))" style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.10)'" onmouseout="this.style.boxShadow=''">
       <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Enfants présents</div>
-      <div style="font-size:26px;font-weight:800;font-family:'Syne',sans-serif;color:var(--green)">${enfantsPresents}</div>
+      <div style="font-size:clamp(18px,4vw,26px);font-weight:800;font-family:'Syne',sans-serif;color:var(--green)">${enfantsPresents}</div>
       <div style="font-size:10px;color:var(--accent);margin-top:4px">Voir les familles →</div>
     </div>
     <div onclick="showPage('inventaire', document.querySelector('.nav-item[onclick*=inventaire]'))" style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.10)'" onmouseout="this.style.boxShadow=''">
@@ -8613,7 +8613,7 @@ async function renderDashboardDirectrice(dateStr) {
     </div>
     <div onclick="showPage('statistiques', document.querySelector('.nav-item[onclick*=statistiques]'))" style="background:var(--surface2);border-radius:var(--radius);padding:14px;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.10)'" onmouseout="this.style.boxShadow=''">
       <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Valeur stock</div>
-      <div style="font-size:22px;font-weight:800;font-family:'Syne',sans-serif">${articlesFiltered.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)} €</div>
+      <div style="font-size:clamp(16px,3.5vw,22px);font-weight:800;font-family:'Syne',sans-serif">${articlesFiltered.reduce((s,a)=>s+a.stock*a.prix,0).toFixed(0)} €</div>
       <div style="font-size:10px;color:var(--accent);margin-top:4px">Voir les stats →</div>
     </div>`;
 
