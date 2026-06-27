@@ -17446,11 +17446,26 @@ function showImportResult(type, html) {
 <div id="login-screen" style="display:flex;position:fixed;inset:0;background:linear-gradient(135deg,#1C1917,#292524,#1E1B4B);z-index:9999;align-items:stretch;justify-content:stretch">
 
   <!-- Panneau gauche : visuel PC uniquement -->
-  <div id="login-visual" style="flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px;position:relative;overflow:hidden">
-    <img src="Visuel_Orevy.png" style="width:320px;max-width:80%;opacity:0.18;user-select:none;pointer-events:none" alt="">
-    <div style="position:absolute;bottom:48px;left:0;right:0;text-align:center">
-      <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:900;color:#fff;letter-spacing:-1px">Orevy</div>
-      <div style="font-size:15px;color:rgba(255,255,255,0.5);margin-top:6px">Formations & Solutions Petite Enfance</div>
+  <div id="login-visual" style="flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden">
+    <img src="Visuel_Orevy.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.13;user-select:none;pointer-events:none" alt="">
+    <div style="position:relative;z-index:1;text-align:center;padding:48px">
+      <img src="logo_orevy.png" style="width:90px;height:90px;border-radius:50%;object-fit:cover;margin-bottom:24px;box-shadow:0 8px 32px rgba(0,0,0,0.4)" alt="Orevy">
+      <div style="font-family:'Syne',sans-serif;font-size:42px;font-weight:900;color:#fff;letter-spacing:-1px;line-height:1">Orevy</div>
+      <div style="font-size:16px;color:rgba(255,255,255,0.55);margin-top:10px;line-height:1.5">Formations & Solutions<br>Petite Enfance</div>
+      <div style="margin-top:40px;display:flex;flex-direction:column;gap:12px;max-width:320px;text-align:left">
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,0.7);font-size:14px">
+          <span style="font-size:20px">🧸</span> Gestion des stocks pédagogiques
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,0.7);font-size:14px">
+          <span style="font-size:20px">👨‍👩‍👧</span> Suivi des familles & enfants
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,0.7);font-size:14px">
+          <span style="font-size:20px">👥</span> Ressources humaines & planning
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,0.7);font-size:14px">
+          <span style="font-size:20px">📋</span> Réglementation & conformité
+        </div>
+      </div>
     </div>
   </div>
 
