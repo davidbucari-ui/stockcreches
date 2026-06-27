@@ -263,16 +263,38 @@ body {
 .topbar {
   background: var(--surface2);
   border-bottom: 1px solid var(--border);
-  padding: 14px 28px;
+  padding: 10px 20px;
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.topbar-row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.topbar-row2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.topbar-row2::-webkit-scrollbar { display: none; }
+
+.topbar-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .topbar-left { display: flex; align-items: center; gap: 16px; }
@@ -398,7 +420,8 @@ body {
   border-radius: var(--radius);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Planning : contenu aligné en haut */
@@ -603,14 +626,16 @@ textarea { resize: vertical; min-height: 72px; }
 }
 
 /* ── TABS ── */
-.tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 20px; }
+.tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap; }
+.tabs::-webkit-scrollbar { display: none; }
 
 .tab-btn {
-  flex: 1;
-  padding: 8px 16px;
+  flex: 0 0 auto;
+  padding: 8px 14px;
   border-radius: 8px;
   border: none;
   background: none;
+  white-space: nowrap;
   font-family: 'Instrument Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
@@ -1179,24 +1204,26 @@ textarea { resize: vertical; min-height: 72px; }
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="topbar-left">
+    <div class="topbar-row1">
       <div class="page-title" id="pageTitle">Inventaire</div>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center">
-      <div class="search-box">
-        <span>🔍</span>
-        <input type="text" id="searchInput" placeholder="Rechercher un article..." oninput="filterTable()">
-      </div>
-      <button class="btn btn-secondary" onclick="triggerImport()">⬆ Importer Excel</button>
-      <input type="file" id="importInput" accept=".xlsx" style="display:none" onchange="importExcel(event)">
-      <button class="btn btn-secondary" onclick="exportCSV()">⬇ CSV</button>
-      <button class="btn btn-secondary" onclick="exportInventairePDF()" title="Exporter l'inventaire en PDF imprimable">🖨 PDF</button>
-      <button class="btn btn-secondary" onclick="openEtiquettes()" title="Imprimer des étiquettes QR code">🏷 Étiquettes</button>
-      <button class="btn btn-secondary" onclick="exportBackup()" title="Sauvegarder toutes les données (JSON)">💾 Sauvegarder</button>
-      <button class="btn btn-secondary" onclick="document.getElementById('restoreInput').click()" title="Restaurer une sauvegarde">📂 Restaurer</button>
-      <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importBackup(event)">
       <span id="save-indicator" style="font-size:11px;color:var(--ink3);white-space:nowrap">⏳ Connexion…</span>
-      <button class="btn btn-secondary btn-sm" onclick="onClearData()" title="Supprimer toutes les données locales" style="color:var(--red);border-color:#FECACA">🗑 Reset</button>
+    </div>
+    <div class="topbar-row2">
+      <div class="search-box" style="flex:1;min-width:120px;max-width:260px">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="Rechercher..." oninput="filterTable()">
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-secondary btn-sm" onclick="triggerImport()" title="Importer Excel">⬆ Excel</button>
+        <input type="file" id="importInput" accept=".xlsx" style="display:none" onchange="importExcel(event)">
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()" title="Exporter CSV">⬇ CSV</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportInventairePDF()" title="Exporter PDF">🖨 PDF</button>
+        <button class="btn btn-secondary btn-sm" onclick="openEtiquettes()" title="Étiquettes QR">🏷</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportBackup()" title="Sauvegarder">💾</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('restoreInput').click()" title="Restaurer">📂</button>
+        <input type="file" id="restoreInput" accept=".json" style="display:none" onchange="importBackup(event)">
+        <button class="btn btn-secondary btn-sm" onclick="onClearData()" title="Supprimer données locales" style="color:var(--red);border-color:#FECACA">🗑</button>
+      </div>
     </div>
   </div>
 
