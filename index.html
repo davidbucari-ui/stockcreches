@@ -565,6 +565,30 @@ textarea { resize: vertical; min-height: 72px; }
 }
 
 
+/* ── LOGIN DESKTOP ── */
+@media (min-width: 640px) {
+  #login-screen { align-items: center !important; justify-content: center !important; }
+  #login-card {
+    min-height: auto !important;
+    max-width: 420px !important;
+    border-radius: 24px !important;
+    padding: 40px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4) !important;
+  }
+}
+
+/* ── MODAL ARTICLE DESKTOP ── */
+@media (min-width: 640px) {
+  #modal-add-inner {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 580px !important;
+    max-height: 90vh !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+  }
+}
+
 /* ── TABS ── */
 .tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 20px; }
 
@@ -9184,7 +9208,7 @@ async function confirmResetPassword(token) {
 
 function showLoginScreen() {
   const s = document.getElementById('login-screen');
-  if (s) { s.style.display = 'flex'; }
+  if (s) s.style.display = 'flex';
 }
 
 function hideLoginScreen() {
@@ -10056,8 +10080,8 @@ function openModal(type) {
   if (type === 'add') {
     const overlay = document.getElementById('modal-add');
     const inner = document.getElementById('modal-add-inner');
-    overlay.style.cssText = 'display:flex;position:fixed;inset:0;z-index:100;padding:0;background:var(--surface2);';
-    inner.style.cssText = 'width:100%;height:100%;max-width:100%;max-height:100%;border-radius:0;display:flex;flex-direction:column;box-shadow:none;overflow:hidden;';
+    overlay.style.cssText = 'display:flex;position:fixed;inset:0;z-index:100;padding:0;align-items:center;justify-content:center;background:rgba(28,25,23,0.5);backdrop-filter:blur(3px);';
+    inner.style.cssText = 'width:100%;height:100%;max-width:100%;max-height:100%;border-radius:0;display:flex;flex-direction:column;box-shadow:none;overflow:hidden;background:var(--surface2);';
     const body = inner.querySelector('.modal-body');
     if (body) { body.style.flex = '1 1 auto'; body.style.overflowY = 'auto'; body.style.WebkitOverflowScrolling = 'touch'; }
     const footer = inner.querySelector('.modal-footer');
@@ -17403,7 +17427,7 @@ function showImportResult(type, html) {
 
 
 <div id="login-screen" style="display:flex;position:fixed;inset:0;background:linear-gradient(135deg,#1C1917,#292524,#1E1B4B);z-index:9999;align-items:center;justify-content:center"><div style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:0;overflow:hidden"><img src="Visuel_Orevy.png" style="width:100vw;height:100vh;object-fit:cover;opacity:0.08;user-select:none;display:block" alt=""></div>
-  <div style="background:#fff;border-radius:24px;padding:40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+  <div id="login-card" style="background:#fff;width:100%;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;padding:40px 24px;box-sizing:border-box;">
     <div style="text-align:center;margin-bottom:32px">
       <div style="margin-bottom:12px"><img src="logo_orevy.png" style="width:64px;height:64px;border-radius:50%;object-fit:cover;display:block;margin:0 auto" alt="Orevy"></div>
       <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#1C1917">Orevy</div>
