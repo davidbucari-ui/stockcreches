@@ -6069,17 +6069,17 @@ function switchFicheTab(tabId, btn) {
 }
 
 // ── Retour Android : intercepter le bouton back ──────────────────────────────
-// On place un état sentinelle au chargement pour que le premier back
-// ne ferme pas Chrome mais revienne au dashboard
-history.replaceState({ page: 'dashboard', sentinel: true }, '', window.location.pathname + window.location.search);
+// Double état au démarrage : sentinelle (pos 0) + courant (pos 1).
+// Retour Android : pos 1 → pos 0 → on repousse pos 1 + affiche hub.
+// Chrome ne peut jamais remonter au-delà et fermer l'app.
+(function() {
+  history.replaceState({ orevy: true, sentinel: true }, '');
+  history.pushState({ orevy: true, sentinel: false }, '');
+})();
 
 window.addEventListener('popstate', function(e) {
-  // Si on atteint l'état sentinelle ou un état sans page, on repousse un état
-  // pour éviter que Chrome ferme l'app, et on affiche le dashboard
-  // Retour Android → toujours revenir au hub Orevy
-  if (!e.state || e.state.sentinel) {
-    history.pushState({ page: 'hub' }, '', window.location.pathname + window.location.search);
-  }
+  // Toujours repousser un état pour rester dans l'app
+  history.pushState({ orevy: true, sentinel: false }, '');
   showHub();
 });
 
