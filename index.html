@@ -1060,6 +1060,9 @@ textarea { resize: vertical; min-height: 72px; }
   .sidebar-section-title { display: none; }
   .sidebar-nav { display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; padding: 0 12px 8px; gap: 4px; }
   .nav-item { white-space: nowrap; padding: 7px 12px; font-size: 12px; border-radius: 20px; flex-shrink: 0; }
+  /* Bouton 🏠 accueil : toujours visible en premier, épinglé à gauche */
+  .nav-item[title="Tableau de bord"] { order: -1; position: sticky; left: 0; z-index: 2; background: var(--sidebar-bg, #1a2236); box-shadow: 2px 0 6px rgba(0,0,0,0.18); }
+  .nav-item[title="Tableau de bord"].active { background: var(--accent); }
   .nav-item .nav-icon { font-size: 14px; }
   .sidebar-creches { display: none; }
   .sidebar-bottom { display: none; }
@@ -6060,6 +6063,13 @@ function switchFicheTab(tabId, btn) {
   if (tabId === 'fi-planning') renderFichePlanningEnfant();
 }
 
+// ── Retour Android : intercepter le bouton back ──────────────────────────────
+window.addEventListener('popstate', function(e) {
+  const page = e.state && e.state.page ? e.state.page : 'dashboard';
+  const btn = document.querySelector('.nav-item[onclick*="showPage(\'"+page+"\'"]') || null;
+  showPage(page, btn, true);
+});
+
 // Génère le planning hebdomadaire de l'enfant à partir du rythme d'accueil
 // défini dans l'onglet Accueil (jours de présence + horaires par jour) :
 // remplace l'ancien renvoi statique "Lié au module Planning" qui n'affichait
@@ -11013,9 +11023,13 @@ function _syncFullscreenBtn() {
 document.addEventListener('fullscreenchange', _syncFullscreenBtn);
 document.addEventListener('webkitfullscreenchange', _syncFullscreenBtn);
 
-function showPage(page, btn) {
+function showPage(page, btn, fromPopState) {
   currentPage = page;
   autoOpenGroupForPage(page);
+  // Historique Android : on pousse un état sauf si on revient via popstate
+  if (!fromPopState) {
+    history.pushState({ page }, '', window.location.pathname + window.location.search);
+  }
   ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
