@@ -1066,6 +1066,8 @@ textarea { resize: vertical; min-height: 72px; }
   .nav-item .nav-icon { font-size: 14px; }
   .sidebar-creches { display: none; }
   .sidebar-bottom { display: none; }
+  /* Bouton Accueil Orevy visible dans la nav mobile */
+  .btn-accueil-orevy-mobile { display: flex !important; }
   .sidebar-toggle-btn { display: none; }
   .content { padding: 12px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
@@ -1156,8 +1158,11 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 
   <div class="sidebar-section-title">Navigation</div>
+  <button class="nav-item btn-accueil-orevy-mobile" onclick="showHub()" title="Accueil Orevy" style="display:none;background:rgba(143,175,138,0.18);color:#8FAF8A;font-weight:700;border:1px solid rgba(143,175,138,0.3)">
+    <span class="nav-icon">🏠</span> Accueil Orevy
+  </button>
   <button class="nav-item active" data-roles="admin,directrice,auxiliaire,stagiaire,coordinateur" onclick="showPage('dashboard', this)" title="Tableau de bord">
-    <span class="nav-icon">🏠</span> Tableau de bord
+    <span class="nav-icon">📊</span> Tableau de bord
   </button>
 
   <div class="nav-grp">
@@ -6064,10 +6069,18 @@ function switchFicheTab(tabId, btn) {
 }
 
 // ── Retour Android : intercepter le bouton back ──────────────────────────────
+// On place un état sentinelle au chargement pour que le premier back
+// ne ferme pas Chrome mais revienne au dashboard
+history.replaceState({ page: 'dashboard', sentinel: true }, '', window.location.pathname + window.location.search);
+
 window.addEventListener('popstate', function(e) {
-  const page = e.state && e.state.page ? e.state.page : 'dashboard';
-  const btn = document.querySelector('.nav-item[onclick*="showPage(\'"+page+"\'"]') || null;
-  showPage(page, btn, true);
+  // Si on atteint l'état sentinelle ou un état sans page, on repousse un état
+  // pour éviter que Chrome ferme l'app, et on affiche le dashboard
+  // Retour Android → toujours revenir au hub Orevy
+  if (!e.state || e.state.sentinel) {
+    history.pushState({ page: 'hub' }, '', window.location.pathname + window.location.search);
+  }
+  showHub();
 });
 
 // Génère le planning hebdomadaire de l'enfant à partir du rythme d'accueil
