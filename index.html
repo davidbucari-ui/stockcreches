@@ -1058,15 +1058,11 @@ textarea { resize: vertical; min-height: 72px; }
   .sidebar-logo { padding: 12px 16px 8px; }
   .sidebar-logo h1 { font-size: 16px; }
   .sidebar-section-title { display: none; }
-  .sidebar-nav { display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; padding: 0 12px 8px; gap: 4px; }
-  .nav-item { white-space: nowrap; padding: 7px 12px; font-size: 12px; border-radius: 20px; flex-shrink: 0; }
-  /* Bouton 🏠 accueil : toujours visible en premier, épinglé à gauche */
-  .nav-item[title="Tableau de bord"] { order: -1; position: sticky; left: 0; z-index: 2; background: var(--sidebar-bg, #1a2236); box-shadow: 2px 0 6px rgba(0,0,0,0.18); }
-  .nav-item[title="Tableau de bord"].active { background: var(--accent); }
-  .nav-item .nav-icon { font-size: 14px; }
+  .nav-item { padding: 9px 14px; font-size: 13px; }
+  .nav-item .nav-icon { font-size: 15px; }
   .sidebar-creches { display: none; }
   .sidebar-bottom { display: none; }
-  /* Bouton Accueil Orevy visible dans la nav mobile */
+  /* Bouton Accueil Orevy toujours visible */
   .btn-accueil-orevy-mobile { display: flex !important; }
   .sidebar-toggle-btn { display: none; }
   .content { padding: 12px; }
