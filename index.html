@@ -15888,6 +15888,18 @@ function _drFmt(dt) {
   if (!dt) return '';
   return new Date(dt).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
 }
+function _drFmtHeure(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  const h = d.getHours(), m = d.getMinutes();
+  if (h === 0 && m === 0) return '';
+  return String(h).padStart(2,'0') + 'h' + String(m).padStart(2,'0');
+}
+function _drFmtDT(dt) {
+  if (!dt) return '';
+  const h = _drFmtHeure(dt);
+  return _drFmt(dt) + (h ? ' à ' + h : '');
+}
 
 // ── CSS injecté une seule fois ─────────────────────────────────────────────
 function _drInjectCSS() {
@@ -16246,7 +16258,8 @@ function drRenderCal() {
       '<div class="dr-cal-day-num">' + cellDate.getDate() + '</div>' +
       dayEvts.map(e => {
         const ti = _drEvtTypeInfo(e.type);
-        return '<div class="dr-cal-dot" title="' + e.titre + '" onclick="drViewEvt(\'' + e.id + '\')">' + ti.icon + ' ' + e.titre + '</div>';
+        const heure = _drFmtHeure(e.date_debut);
+        return '<div class="dr-cal-dot" title="' + e.titre + (heure?' — '+heure:'') + '" onclick="drViewEvt(\'' + e.id + '\')">' + ti.icon + (heure?' '+heure+' ':' ') + e.titre + '</div>';
       }).join('') +
       '</div>';
     cellDate.setDate(cellDate.getDate() + 1);
@@ -16281,7 +16294,7 @@ function drRenderCal() {
         '<div class="dr-card-meta">' +
           '<span class="badge badge-purple">' + ti.label + '</span>' +
           (e.creche_id ? '<span class="badge badge-gray">' + e.creche_id + '</span>' : '<span class="badge badge-blue">Toutes les structures</span>') +
-          '<span style="color:var(--ink3)">' + _drFmt(e.date_debut) + (e.date_fin ? ' → ' + _drFmt(e.date_fin) : '') + '</span>' +
+          '<span style="color:var(--ink3)">' + _drFmtDT(e.date_debut) + (e.date_fin ? ' → ' + _drFmtDT(e.date_fin) : '') + '</span>' +
         '</div>' +
         (e.description ? '<div class="dr-card-body">' + e.description + '</div>' : '') +
         (isCoord ? '<div style="margin-top:8px"><button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="drDeleteEvt(\'' + e.id + '\')">🗑 Supprimer</button></div>' : '') +
@@ -16291,7 +16304,7 @@ function drRenderCal() {
 
 function drViewEvt(id) {
   const e = _drEvenements.find(x => x.id === id);
-  if (e) showNotif('📅 ' + e.titre + ' — ' + _drFmt(e.date_debut));
+  if (e) showNotif('📅 ' + e.titre + ' — ' + _drFmtDT(e.date_debut));
 }
 
 async function drDeleteEvt(id) {
@@ -16308,6 +16321,8 @@ function drOpenEvt() {
   document.getElementById('evt-desc') && (document.getElementById('evt-desc').value = '');
   document.getElementById('evt-date') && (document.getElementById('evt-date').value = '');
   document.getElementById('evt-date-fin') && (document.getElementById('evt-date-fin').value = '');
+  document.getElementById('evt-heure-debut') && (document.getElementById('evt-heure-debut').value = '');
+  document.getElementById('evt-heure-fin') && (document.getElementById('evt-heure-fin').value = '');
   const sel = document.getElementById('evt-creche');
   if (sel) {
     sel.innerHTML = '<option value="">Toutes les structures</option>' + _drGetCreches().map(c=>'<option value="'+c+'">'+c+'</option>').join('');
@@ -16323,13 +16338,16 @@ async function drSaveEvt() {
   const btn = document.querySelector('#modal-evt-new .btn-primary');
   if (btn) { btn.disabled=true; btn.textContent='⏳…'; }
   try {
+    const heureDebut = document.getElementById('evt-heure-debut')?.value || '00:00';
+    const dateFin     = document.getElementById('evt-date-fin')?.value;
+    const heureFin    = document.getElementById('evt-heure-fin')?.value;
     await sbInsert('evenements_reseau', {
       titre,
       type: document.getElementById('evt-type')?.value || 'autre',
       description: document.getElementById('evt-desc')?.value.trim() || null,
       creche_id:   document.getElementById('evt-creche')?.value || null,
-      date_debut:  new Date(date).toISOString(),
-      date_fin:    document.getElementById('evt-date-fin')?.value ? new Date(document.getElementById('evt-date-fin').value).toISOString() : null,
+      date_debut:  new Date(date + 'T' + heureDebut + ':00').toISOString(),
+      date_fin:    dateFin ? new Date(dateFin + 'T' + (heureFin || '23:59') + ':00').toISOString() : null,
     });
     closeModal('modal-evt-new');
     showNotif('✅ Événement créé');
@@ -23159,7 +23177,9 @@ function sendSuiviEmail() {
           <option value="autre" selected>⚪ Autre</option>
         </select></div>
         <div class="form-group"><label>Date de début *</label><input id="evt-date" type="date" class="form-control" style="width:100%"/></div>
+        <div class="form-group"><label>Heure de début</label><input id="evt-heure-debut" type="time" class="form-control" style="width:100%"/></div>
         <div class="form-group"><label>Date de fin</label><input id="evt-date-fin" type="date" class="form-control" style="width:100%"/></div>
+        <div class="form-group"><label>Heure de fin</label><input id="evt-heure-fin" type="time" class="form-control" style="width:100%"/></div>
         <div class="form-group full"><label>Structure concernée</label><select id="evt-creche" style="width:100%"><option value="">Toutes les structures</option></select></div>
         <div class="form-group full"><label>Description</label><textarea id="evt-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
       </div>
