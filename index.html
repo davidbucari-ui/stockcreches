@@ -12480,7 +12480,7 @@ const RH_TABLES = new Set([
   'transmissions','menus',
   'vaccins_ref','vaccinations_enfant',
   'suivi_pedagogique',
-  'demandes_reseau','consignes_reseau'
+  'demandes_reseau','consignes_reseau','evenements_reseau'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -15852,182 +15852,527 @@ async function enregistrerPointage(type) {
 
 
 // ── MODULE DEMANDES RÉSEAU ─────────────────────────────────────────────────
+// Tables Supabase RH : demandes_reseau, consignes_reseau, evenements_reseau
 
 const DR_THEMES = ['Pédagogie','Matériel','Formation','Organisation','Sécurité','Autre'];
-const DR_PRIO_LABELS = { normal:{label:'Normale',cls:'badge-blue'}, urgent:{label:'🔴 Urgente',cls:'badge-red'}, info:{label:'ℹ Info',cls:'badge-amber'} };
-const DR_STATUT_LABELS = { ouvert:{label:'🟠 Ouvert',cls:'badge-amber'}, en_cours:{label:'🔵 En cours',cls:'badge-blue'}, traite:{label:'✅ Traité',cls:'badge-green'}, clos:{label:'⬛ Clos',cls:'badge-gray'} };
-let _drCurrentId = null;
-let _drTab = 'demandes';
+const DR_PRIO = {
+  normal: { label: 'Normale',  cls: 'badge-blue'  },
+  urgent: { label: 'Urgente',  cls: 'badge-red'   },
+  info:   { label: 'Info',     cls: 'badge-gray'  }
+};
+const DR_STAT = {
+  ouvert:   { label: 'En attente', cls: 'badge-amber' },
+  en_cours: { label: 'En cours',   cls: 'badge-blue'  },
+  traite:   { label: 'Traité',     cls: 'badge-green' },
+  clos:     { label: 'Clos',       cls: 'badge-gray'  }
+};
 
+let _drTab      = 'demandes';
+let _drFilter   = 'tous';
+let _drSearch   = '';
+let _drCreche   = '';
+let _drCurrentId = null;
+let _drEvenements = [];
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function _drGetCreches() {
+  if (typeof CRECHES !== 'undefined' && CRECHES.length) return CRECHES;
+  const sel = document.getElementById('creche-select-sidebar');
+  if (!sel) return [];
+  return Array.from(sel.options).map(o => o.value).filter(v => v && v !== 'all' && v !== '__all__');
+}
+
+function _drFmt(dt) {
+  if (!dt) return '';
+  return new Date(dt).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+// ── CSS injecté une seule fois ─────────────────────────────────────────────
+function _drInjectCSS() {
+  if (document.getElementById('dr-style')) return;
+  const s = document.createElement('style');
+  s.id = 'dr-style';
+  s.textContent = `
+    #dr-wrap { padding: 24px; max-width: 1100px; }
+    .dr-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:20px; flex-wrap:wrap; }
+    .dr-tab { padding:10px 20px; border:none; background:none; font-family:inherit; font-size:13px; font-weight:600;
+              color:var(--ink3); border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer; white-space:nowrap; }
+    .dr-tab.active { color:var(--accent); font-weight:700; border-bottom-color:var(--accent); }
+    .dr-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+    @media(max-width:640px){ .dr-kpis { grid-template-columns:repeat(2,1fr); } }
+    .dr-kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+    .dr-kpi-lbl { font-size:11px; color:var(--ink3); font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+    .dr-kpi-val { font-size:28px; font-weight:800; font-family:'Syne',sans-serif; }
+    .dr-kpi-val.amber { color:var(--amber); }
+    .dr-kpi-val.red   { color:var(--red); }
+    .dr-kpi-val.green { color:var(--green); }
+    .dr-toolbar { display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    .dr-search { display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border);
+                 border-radius:var(--radius-sm); padding:6px 12px; flex:1; min-width:160px; max-width:280px; }
+    .dr-search input { border:none; background:none; font-family:inherit; font-size:13px; color:var(--ink); outline:none; width:100%; }
+    .dr-filters { display:flex; gap:6px; flex-wrap:wrap; }
+    .dr-filter { padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface);
+                 font-size:12px; font-weight:600; cursor:pointer; color:var(--ink2); white-space:nowrap; }
+    .dr-filter.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .dr-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+               padding:14px 16px; margin-bottom:10px; }
+    .dr-card:hover { border-color:var(--accent); }
+    .dr-card-title { font-weight:700; font-size:14px; color:var(--ink); margin-bottom:4px; }
+    .dr-card-meta  { font-size:12px; color:var(--ink3); margin-bottom:6px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .dr-card-body  { font-size:13px; color:var(--ink2); }
+    .dr-card-rep   { background:var(--green-lt); border:1px solid #A7F3D0; border-radius:8px;
+                     padding:8px 12px; font-size:12.5px; color:#065F46; margin-top:8px; }
+    .dr-card-footer{ display:flex; align-items:center; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px; }
+    .dr-section-lbl{ font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase;
+                     letter-spacing:.08em; margin:16px 0 8px; }
+    .dr-ref-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+                   padding:12px 14px; display:flex; align-items:center; gap:12px; }
+    .dr-ref-avatar{ width:36px; height:36px; border-radius:50%; background:var(--accent-lt); color:var(--accent);
+                    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0; }
+    .dr-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:20px; }
+    .dr-cal-hd   { text-align:center; font-size:11px; font-weight:700; color:var(--ink3); padding:4px; }
+    .dr-cal-day  { min-height:52px; border-radius:6px; background:var(--surface); border:1px solid var(--border);
+                   padding:4px 5px; font-size:11px; cursor:default; }
+    .dr-cal-day.today { border-color:var(--accent); background:var(--accent-lt); }
+    .dr-cal-day.other { opacity:.35; }
+    .dr-cal-day-num { font-weight:700; font-size:12px; margin-bottom:2px; }
+    .dr-cal-dot { width:100%; border-radius:3px; font-size:10px; padding:1px 3px; margin-top:1px;
+                  background:var(--accent-lt); color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+    .dr-creche-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
+    .dr-creche-pill { padding:5px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface);
+                      font-size:12px; font-weight:600; cursor:pointer; color:var(--ink2); }
+    .dr-creche-pill.active { background:var(--ink); color:#fff; border-color:var(--ink); }
+  `;
+  document.head.appendChild(s);
+}
+
+// ── Page principale ────────────────────────────────────────────────────────
 function renderPageDemandesReseau() {
+  _drInjectCSS();
   const role = currentUserRole;
   const isCoord = ['admin','coordinateur'].includes(role);
   const page = document.getElementById('page-demandesReseau');
   if (!page) return;
-  const themeOpts = DR_THEMES.map(t => '<option>' + t + '</option>').join('');
-  page.innerHTML = `
-    <div style="padding:0 0 24px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ink)">💬 Demandes réseau</div>
-          <div style="font-size:12px;color:var(--ink3);margin-top:2px">Communication inter-structures</div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${isCoord ? `<button class="btn btn-secondary" onclick="openModalConsigne()"><i class="ti ti-send"></i> Envoyer une consigne</button>` : ''}
-          <button class="btn btn-primary" onclick="openModalDemande()"><i class="ti ti-plus"></i> Nouvelle demande</button>
-        </div>
-      </div>
-      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:18px">
-        <button id="dr-tab-demandes" onclick="drSwitchTab('demandes')" style="padding:9px 18px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer">📋 Demandes</button>
-        <button id="dr-tab-consignes" onclick="drSwitchTab('consignes')" style="padding:9px 18px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
-          📣 Consignes reçues
-          <span id="dr-consignes-badge" style="display:none;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">0</span>
-        </button>
-      </div>
-      <div id="dr-content"></div>
-    </div>
-  `;
-  drSwitchTab('demandes');
-  // Populate theme select (static modal)
+
+  // Populate static modals theme select
   const thSel = document.getElementById('dr-theme');
-  if (thSel && !thSel.options.length) {
-    thSel.innerHTML = DR_THEMES.map(t => '<option>' + t + '</option>').join('');
-  }
+  if (thSel) thSel.innerHTML = DR_THEMES.map(t => '<option>' + t + '</option>').join('');
+
+  page.innerHTML = `<div id="dr-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ink)">💬 Demandes réseau</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:2px">Communication inter-structures</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${isCoord ? '<button class="btn btn-secondary" onclick="drOpenConsigne()"><i class="ti ti-send"></i> Envoyer une consigne</button>' : ''}
+        <button class="btn btn-primary" onclick="drOpenDemande()"><i class="ti ti-plus"></i> Nouvelle demande</button>
+      </div>
+    </div>
+
+    <!-- Filtre crèche -->
+    <div class="dr-creche-filter" id="dr-creche-pills"></div>
+
+    <!-- Onglets -->
+    <div class="dr-tabs">
+      <button class="dr-tab active" id="dr-tab-demandes" onclick="drSwitchTab('demandes')">📋 Demandes</button>
+      <button class="dr-tab" id="dr-tab-referents" onclick="drSwitchTab('referents')">👥 Référents</button>
+      <button class="dr-tab" id="dr-tab-evenements" onclick="drSwitchTab('evenements')">📅 Événements</button>
+      <button class="dr-tab" id="dr-tab-consignes" onclick="drSwitchTab('consignes')">
+        📣 Consignes
+        <span id="dr-consignes-badge" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">0</span>
+      </button>
+    </div>
+
+    <div id="dr-content"></div>
+  </div>`;
+
+  _drBuildCrechePills();
+  drSwitchTab('demandes');
 }
 
-function drSwitchTab(tab) {
+function _drBuildCrechePills() {
+  const wrap = document.getElementById('dr-creche-pills');
+  if (!wrap) return;
+  const creches = _drGetCreches();
+  wrap.innerHTML = '<button class="dr-creche-pill active" onclick="drSetCreche(\'\',this)">Toutes</button>' +
+    creches.map(c => '<button class="dr-creche-pill" onclick="drSetCreche(\'' + c + '\',this)">' + c + '</button>').join('');
+}
+
+function drSetCreche(val, btn) {
+  _drCreche = val;
+  document.querySelectorAll('.dr-creche-pill').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  drSwitchTab(_drTab, true);
+}
+
+function drSwitchTab(tab, reload) {
   _drTab = tab;
-  ['demandes','consignes'].forEach(t => {
-    const btn = document.getElementById('dr-tab-' + t);
-    if (!btn) return;
-    const active = t === tab;
-    btn.style.fontWeight = active ? '700' : '600';
-    btn.style.color = active ? 'var(--accent)' : 'var(--ink3)';
-    btn.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
-  });
+  document.querySelectorAll('.dr-tab').forEach(b => b.classList.remove('active'));
+  const active = document.getElementById('dr-tab-' + tab);
+  if (active) active.classList.add('active');
   const cont = document.getElementById('dr-content');
   if (!cont) return;
-  if (tab === 'demandes') drLoadDemandes();
-  else drLoadConsignes();
+  if (tab === 'demandes')   drLoadDemandes();
+  else if (tab === 'referents')  drLoadReferents();
+  else if (tab === 'evenements') drLoadEvenements();
+  else if (tab === 'consignes')  drLoadConsignes();
 }
 
+// ── DEMANDES ───────────────────────────────────────────────────────────────
 async function drLoadDemandes() {
   const cont = document.getElementById('dr-content');
   if (!cont) return;
-  cont.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:16px 0">Chargement…</div>';
+  cont.innerHTML = '<div style="color:var(--ink3);padding:20px 0">Chargement…</div>';
   try {
     const role = currentUserRole;
     const isCoord = ['admin','coordinateur'].includes(role);
     let url = SUPA_RH_URL + '/rest/v1/demandes_reseau?select=*&order=created_at.desc';
     if (!isCoord && currentCreche && currentCreche !== '__all__') url += '&creche_id=eq.' + encodeURIComponent(currentCreche);
+    else if (_drCreche) url += '&creche_id=eq.' + encodeURIComponent(_drCreche);
+
     const r = await fetch(url, { headers: SUPA_RH_HEADERS });
     const rows = await r.json();
-    if (!rows.length) { cont.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:13px">Aucune demande pour le moment</div>'; return; }
-    cont.innerHTML = rows.map(d => {
-      const prio = DR_PRIO_LABELS[d.priorite] || DR_PRIO_LABELS.normal;
-      const stat = DR_STATUT_LABELS[d.statut] || DR_STATUT_LABELS.ouvert;
-      const date = new Date(d.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
-      return `<div style="border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;background:var(--surface)">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:14px;color:var(--ink);margin-bottom:4px">${d.titre}</div>
-            <div style="font-size:12px;color:var(--ink3);margin-bottom:6px">${d.creche_id} · ${d.theme} · ${date}</div>
-            ${d.description ? `<div style="font-size:13px;color:var(--ink2);margin-bottom:6px">${d.description}</div>` : ''}
-            ${d.reponse ? `<div style="background:#F0FDF4;border:1px solid #A7F3D0;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#065F46;margin-top:6px"><b>Réponse :</b> ${d.reponse}</div>` : ''}
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
-            <span class="badge ${prio.cls}">${prio.label}</span>
-            <span class="badge ${stat.cls}">${stat.label}</span>
-            ${isCoord ? `<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="openReponseModal('${d.id}','${d.statut}')">Répondre</button>` : ''}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  } catch(e) { cont.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
+
+    // KPIs
+    const total   = rows.length;
+    const enAtt   = rows.filter(d => d.statut === 'ouvert').length;
+    const urgent  = rows.filter(d => d.priorite === 'urgent').length;
+    const traite  = rows.filter(d => d.statut === 'traite' || d.statut === 'clos').length;
+
+    // Filtres actifs
+    const filters = [
+      { key:'tous',     label:'Toutes (' + total + ')' },
+      { key:'ouvert',   label:'En attente' },
+      { key:'urgent',   label:'Urgentes' },
+      { key:'en_cours', label:'En cours' },
+      { key:'traite',   label:'Traitées' },
+    ];
+
+    // Appliquer filtre search + statut
+    let visible = rows;
+    if (_drFilter && _drFilter !== 'tous') {
+      if (_drFilter === 'urgent') visible = visible.filter(d => d.priorite === 'urgent');
+      else visible = visible.filter(d => d.statut === _drFilter);
+    }
+    if (_drSearch) {
+      const q = _drSearch.toLowerCase();
+      visible = visible.filter(d => (d.titre||'').toLowerCase().includes(q) || (d.description||'').toLowerCase().includes(q));
+    }
+
+    cont.innerHTML = `
+      <div class="dr-kpis">
+        <div class="dr-kpi"><div class="dr-kpi-lbl">Total</div><div class="dr-kpi-val">${total}</div></div>
+        <div class="dr-kpi"><div class="dr-kpi-lbl">En attente</div><div class="dr-kpi-val amber">${enAtt}</div></div>
+        <div class="dr-kpi"><div class="dr-kpi-lbl">Urgentes</div><div class="dr-kpi-val red">${urgent}</div></div>
+        <div class="dr-kpi"><div class="dr-kpi-lbl">Traitées</div><div class="dr-kpi-val green">${traite}</div></div>
+      </div>
+      <div class="dr-toolbar">
+        <div class="dr-search"><span>🔍</span><input placeholder="Rechercher…" value="${_drSearch}" oninput="_drSearch=this.value;drLoadDemandes()"/></div>
+        <div class="dr-filters">${filters.map(f =>
+          '<button class="dr-filter' + (_drFilter===f.key?' active':'') + '" onclick="_drFilter=\'' + f.key + '\';drLoadDemandes()">' + f.label + '</button>'
+        ).join('')}</div>
+        ${isCoord ? '<button class="btn btn-primary" style="margin-left:auto" onclick="drOpenDemande()"><i class="ti ti-plus"></i> Nouvelle demande</button>' : ''}
+      </div>
+      ${visible.length === 0 ? '<div style="text-align:center;padding:40px 0;color:var(--ink3)">Aucune demande</div>' :
+        visible.map(d => {
+          const prio = DR_PRIO[d.priorite] || DR_PRIO.normal;
+          const stat = DR_STAT[d.statut]   || DR_STAT.ouvert;
+          return '<div class="dr-card">' +
+            '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">' +
+            '<div style="flex:1;min-width:0">' +
+            '<div class="dr-card-title">' + d.titre + '</div>' +
+            '<div class="dr-card-meta">' +
+              '<span class="badge ' + prio.cls + '">' + prio.label + '</span>' +
+              '<span class="badge ' + stat.cls + '">' + stat.label + '</span>' +
+              (d.theme ? '<span class="badge badge-gray">' + d.theme + '</span>' : '') +
+              '<span style="color:var(--ink3)">' + (d.creche_id||'') + ' · ' + _drFmt(d.created_at) + '</span>' +
+            '</div>' +
+            (d.description ? '<div class="dr-card-body">' + d.description + '</div>' : '') +
+            (d.reponse ? '<div class="dr-card-rep"><b>Réponse :</b> ' + d.reponse + '</div>' : '') +
+            '</div>' +
+            (isCoord ? '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;flex-shrink:0" onclick="drOpenReponse(\'' + d.id + '\',\'' + d.statut + '\')">Répondre</button>' : '') +
+            '</div></div>';
+        }).join('')}
+    `;
+  } catch(e) { document.getElementById('dr-content').innerHTML = '<div style="color:var(--red)">Erreur : ' + e.message + '</div>'; }
 }
 
+// ── RÉFÉRENTS ──────────────────────────────────────────────────────────────
+async function drLoadReferents() {
+  const cont = document.getElementById('dr-content');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:var(--ink3);padding:20px 0">Chargement…</div>';
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/salaries?select=id,nom,prenom,poste,creche_id&order=nom.asc';
+    if (_drCreche) url += '&creche_id=eq.' + encodeURIComponent(_drCreche);
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+
+    if (!rows.length) { cont.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--ink3)">Aucun référent trouvé</div>'; return; }
+
+    // Grouper par crèche
+    const byCreche = {};
+    rows.forEach(s => {
+      const c = s.creche_id || 'Non affecté';
+      if (!byCreche[c]) byCreche[c] = [];
+      byCreche[c].push(s);
+    });
+
+    cont.innerHTML = Object.entries(byCreche).map(([creche, list]) =>
+      '<div class="dr-section-lbl">📍 ' + creche + ' (' + list.length + ')</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:16px">' +
+      list.map(s => {
+        const initiales = ((s.prenom||'').charAt(0) + (s.nom||'').charAt(0)).toUpperCase();
+        const nomComplet = (s.prenom||'') + ' ' + (s.nom||'');
+        return '<div class="dr-ref-card">' +
+          '<div class="dr-ref-avatar">' + initiales + '</div>' +
+          '<div><div style="font-weight:700;font-size:13px;color:var(--ink)">' + nomComplet + '</div>' +
+          '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">' + (s.poste||'—') + '</div></div>' +
+          '</div>';
+      }).join('') +
+      '</div>'
+    ).join('');
+  } catch(e) { cont.innerHTML = '<div style="color:var(--red)">Erreur : ' + e.message + '</div>'; }
+}
+
+// ── ÉVÉNEMENTS ─────────────────────────────────────────────────────────────
+let _drCalYear  = new Date().getFullYear();
+let _drCalMonth = new Date().getMonth(); // 0-indexed
+
+async function drLoadEvenements() {
+  const cont = document.getElementById('dr-content');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:var(--ink3);padding:20px 0">Chargement…</div>';
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/evenements_reseau?select=*&order=date_debut.asc';
+    if (_drCreche) url += '&creche_id=eq.' + encodeURIComponent(_drCreche);
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    _drEvenements = Array.isArray(await r.json()) ? await (async()=>{ const r2=await fetch(url,{headers:SUPA_RH_HEADERS}); return r2.json(); })() : [];
+    // refetch since we consumed it
+  } catch(e) { _drEvenements = []; }
+
+  // fetch again clean
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/evenements_reseau?select=*&order=date_debut.asc';
+    if (_drCreche) url += '&creche_id=eq.' + encodeURIComponent(_drCreche);
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    _drEvenements = await r.json();
+    if (!Array.isArray(_drEvenements)) _drEvenements = [];
+  } catch(e) { _drEvenements = []; }
+
+  drRenderCal();
+}
+
+function drRenderCal() {
+  const cont = document.getElementById('dr-content');
+  if (!cont) return;
+  const isCoord = ['admin','coordinateur'].includes(currentUserRole);
+
+  const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const dayNames   = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+
+  const firstDay = new Date(_drCalYear, _drCalMonth, 1);
+  const lastDay  = new Date(_drCalYear, _drCalMonth + 1, 0);
+  const today    = new Date();
+
+  // Grid start: Monday before firstDay
+  let startDow = firstDay.getDay(); // 0=Sun
+  startDow = startDow === 0 ? 6 : startDow - 1; // convert to Mon=0
+
+  const evtsThisMonth = _drEvenements.filter(e => {
+    const d = new Date(e.date_debut);
+    return d.getFullYear() === _drCalYear && d.getMonth() === _drCalMonth;
+  });
+
+  // Build calendar cells
+  let cells = '';
+  let cellDate = new Date(_drCalYear, _drCalMonth, 1 - startDow);
+  for (let i = 0; i < 42; i++) {
+    const isThisMonth = cellDate.getMonth() === _drCalMonth;
+    const isToday = cellDate.toDateString() === today.toDateString();
+    const dayEvts = _drEvenements.filter(e => new Date(e.date_debut).toDateString() === cellDate.toDateString());
+    cells += '<div class="dr-cal-day' + (!isThisMonth?' other':'') + (isToday?' today':'') + '">' +
+      '<div class="dr-cal-day-num">' + cellDate.getDate() + '</div>' +
+      dayEvts.map(e => '<div class="dr-cal-dot" title="' + e.titre + '" onclick="drViewEvt(\'' + e.id + '\')">' + e.titre + '</div>').join('') +
+      '</div>';
+    cellDate.setDate(cellDate.getDate() + 1);
+  }
+
+  // Upcoming events list
+  const upcoming = _drEvenements.filter(e => new Date(e.date_debut) >= new Date(today.toDateString())).slice(0, 8);
+
+  cont.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-secondary" style="padding:6px 10px" onclick="_drCalMonth--;if(_drCalMonth<0){_drCalMonth=11;_drCalYear--;}drRenderCal()">‹</button>
+        <span style="font-weight:700;font-size:16px;font-family:'Syne',sans-serif">${monthNames[_drCalMonth]} ${_drCalYear}</span>
+        <button class="btn btn-secondary" style="padding:6px 10px" onclick="_drCalMonth++;if(_drCalMonth>11){_drCalMonth=0;_drCalYear++;}drRenderCal()">›</button>
+      </div>
+      ${isCoord ? '<button class="btn btn-primary" onclick="drOpenEvt()"><i class="ti ti-plus"></i> Nouvel événement</button>' : ''}
+    </div>
+    <div class="dr-cal-grid">${dayNames.map(d=>'<div class="dr-cal-hd">'+d+'</div>').join('')}${cells}</div>
+    <div class="dr-section-lbl">À venir</div>
+    ${upcoming.length === 0 ? '<div style="color:var(--ink3);font-size:13px">Aucun événement à venir</div>' :
+      upcoming.map(e => '<div class="dr-card" style="margin-bottom:8px">' +
+        '<div class="dr-card-title">' + e.titre + '</div>' +
+        '<div class="dr-card-meta">' +
+          (e.creche_id ? '<span class="badge badge-gray">' + e.creche_id + '</span>' : '<span class="badge badge-blue">Toutes les structures</span>') +
+          '<span style="color:var(--ink3)">' + _drFmt(e.date_debut) + (e.date_fin ? ' → ' + _drFmt(e.date_fin) : '') + '</span>' +
+        '</div>' +
+        (e.description ? '<div class="dr-card-body">' + e.description + '</div>' : '') +
+        (isCoord ? '<div style="margin-top:8px"><button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="drDeleteEvt(\'' + e.id + '\')">🗑 Supprimer</button></div>' : '') +
+      '</div>').join('')}
+  `;
+}
+
+function drViewEvt(id) {
+  const e = _drEvenements.find(x => x.id === id);
+  if (e) showNotif('📅 ' + e.titre + ' — ' + _drFmt(e.date_debut));
+}
+
+async function drDeleteEvt(id) {
+  if (!confirm('Supprimer cet événement ?')) return;
+  try {
+    await fetch(SUPA_RH_URL + '/rest/v1/evenements_reseau?id=eq.' + id, { method:'DELETE', headers:{ ...SUPA_RH_HEADERS,'Prefer':'return=minimal' } });
+    showNotif('✅ Événement supprimé');
+    drLoadEvenements();
+  } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
+}
+
+function drOpenEvt() {
+  document.getElementById('evt-titre')?.value && (document.getElementById('evt-titre').value = '');
+  document.getElementById('evt-desc') && (document.getElementById('evt-desc').value = '');
+  document.getElementById('evt-date') && (document.getElementById('evt-date').value = '');
+  document.getElementById('evt-date-fin') && (document.getElementById('evt-date-fin').value = '');
+  const sel = document.getElementById('evt-creche');
+  if (sel) {
+    sel.innerHTML = '<option value="">Toutes les structures</option>' + _drGetCreches().map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+  }
+  const m = document.getElementById('modal-evt-new');
+  if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
+}
+
+async function drSaveEvt() {
+  const titre = document.getElementById('evt-titre')?.value.trim();
+  const date  = document.getElementById('evt-date')?.value;
+  if (!titre || !date) { showNotif('⚠ Titre et date requis'); return; }
+  const btn = document.querySelector('#modal-evt-new .btn-primary');
+  if (btn) { btn.disabled=true; btn.textContent='⏳…'; }
+  try {
+    await sbInsert('evenements_reseau', {
+      titre,
+      description: document.getElementById('evt-desc')?.value.trim() || null,
+      creche_id:   document.getElementById('evt-creche')?.value || null,
+      date_debut:  new Date(date).toISOString(),
+      date_fin:    document.getElementById('evt-date-fin')?.value ? new Date(document.getElementById('evt-date-fin').value).toISOString() : null,
+    });
+    closeModal('modal-evt-new');
+    showNotif('✅ Événement créé');
+    drLoadEvenements();
+  } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
+  finally { if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer';} }
+}
+
+// ── CONSIGNES ──────────────────────────────────────────────────────────────
 async function drLoadConsignes() {
   const cont = document.getElementById('dr-content');
   if (!cont) return;
-  cont.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:16px 0">Chargement…</div>';
+  cont.innerHTML = '<div style="color:var(--ink3);padding:20px 0">Chargement…</div>';
   try {
+    const isCoord = ['admin','coordinateur'].includes(currentUserRole);
     let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?select=*&order=created_at.desc';
-    if (currentCreche && currentCreche !== '__all__') url += '&or=(destinataire_creche.eq.' + encodeURIComponent(currentCreche) + ',destinataire_creche.is.null)';
+    if (!isCoord) {
+      const c = currentCreche && currentCreche !== '__all__' ? currentCreche : _drCreche;
+      if (c) url += '&or=(destinataire_creche.eq.' + encodeURIComponent(c) + ',destinataire_creche.is.null)';
+    } else if (_drCreche) {
+      url += '&or=(destinataire_creche.eq.' + encodeURIComponent(_drCreche) + ',destinataire_creche.is.null)';
+    }
     const r = await fetch(url, { headers: SUPA_RH_HEADERS });
     const rows = await r.json();
-    if (!rows.length) { cont.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:13px">Aucune consigne reçue</div>'; return; }
+    if (!rows.length) { cont.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--ink3)">Aucune consigne</div>'; drMarkConsignesLues(); return; }
     drMarkConsignesLues();
-    document.getElementById('dr-consignes-badge')?.style && (document.getElementById('dr-consignes-badge').style.display = 'none');
     cont.innerHTML = rows.map(c => {
-      const prio = DR_PRIO_LABELS[c.priorite] || DR_PRIO_LABELS.normal;
-      const date = new Date(c.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
-      return `<div style="border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;background:${c.lue ? 'var(--surface)' : 'rgba(143,175,138,0.08)'}">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
-          <div style="flex:1;min-width:0">
-            ${!c.lue ? '<span style="font-size:10px;background:#8FAF8A;color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;margin-bottom:6px;display:inline-block">Nouveau</span>' : ''}
-            <div style="font-weight:700;font-size:14px;color:var(--ink);margin-bottom:4px">${c.sujet}</div>
-            <div style="font-size:12px;color:var(--ink3);margin-bottom:6px">${c.destinataire_creche || 'Toutes les structures'} · ${date}</div>
-            <div style="font-size:13px;color:var(--ink2)">${c.message}</div>
-          </div>
-          <span class="badge ${prio.cls}">${prio.label}</span>
-        </div>
-      </div>`;
+      const prio = DR_PRIO[c.priorite] || DR_PRIO.normal;
+      return '<div class="dr-card" style="background:' + (c.lue?'var(--surface)':'rgba(37,99,235,0.04)') + ';border-left:3px solid ' + (c.lue?'var(--border)':'var(--accent)') + '">' +
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:0">' +
+        (!c.lue ? '<span style="font-size:10px;background:var(--accent);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;margin-bottom:6px;display:inline-block">Nouveau</span>' : '') +
+        '<div class="dr-card-title">' + c.sujet + '</div>' +
+        '<div class="dr-card-meta">' +
+          (c.destinataire_creche ? '<span class="badge badge-gray">' + c.destinataire_creche + '</span>' : '<span class="badge badge-blue">Toutes les structures</span>') +
+          '<span style="color:var(--ink3)">' + _drFmt(c.created_at) + '</span>' +
+        '</div>' +
+        '<div class="dr-card-body">' + c.message + '</div>' +
+        '</div>' +
+        '<span class="badge ' + prio.cls + '">' + prio.label + '</span>' +
+        '</div></div>';
     }).join('');
-  } catch(e) { cont.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
+  } catch(e) { cont.innerHTML='<div style="color:var(--red)">Erreur : ' + e.message + '</div>'; }
 }
 
 async function drMarkConsignesLues() {
   try {
     let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?lue=eq.false';
-    if (currentCreche && currentCreche !== '__all__') url += '&or=(destinataire_creche.eq.' + encodeURIComponent(currentCreche) + ',destinataire_creche.is.null)';
-    await fetch(url, { method: 'PATCH', headers: { ...SUPA_RH_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ lue: true }) });
+    const c = currentCreche && currentCreche !== '__all__' ? currentCreche : _drCreche;
+    if (c) url += '&or=(destinataire_creche.eq.' + encodeURIComponent(c) + ',destinataire_creche.is.null)';
+    await fetch(url, { method:'PATCH', headers:{ ...SUPA_RH_HEADERS,'Content-Type':'application/json','Prefer':'return=minimal' }, body: JSON.stringify({lue:true}) });
     const nb = document.getElementById('nav-demandes-badge');
     if (nb) nb.style.display = 'none';
+    const cb = document.getElementById('dr-consignes-badge');
+    if (cb) cb.style.display = 'none';
   } catch(e) {}
 }
 
-function openModalDemande() { const m=document.getElementById('modal-demande-new'); if(m){m.classList.add('open');document.body.style.overflow='hidden';} }
-
-function openModalConsigne() {
-  const sel = document.getElementById('cs-creche');
-  if (sel && typeof CRECHES !== 'undefined') {
-    sel.innerHTML = '<option value="">Toutes les structures</option>' + CRECHES.map(c => '<option value="' + c + '">' + c + '</option>').join('');
-  }
-  const m = document.getElementById('modal-consigne-new');
-  if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
+// ── Modals Demande ─────────────────────────────────────────────────────────
+function drOpenDemande() {
+  ['dr-titre','dr-desc'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const thSel = document.getElementById('dr-theme');
+  if (thSel && !thSel.options.length) thSel.innerHTML = DR_THEMES.map(t=>'<option>'+t+'</option>').join('');
+  const m = document.getElementById('modal-demande-new');
+  if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
 }
 
-async function saveDemande() {
+async function drSaveDemande() {
   const titre = document.getElementById('dr-titre')?.value.trim();
   if (!titre) { showNotif('⚠ Titre requis'); return; }
   const btn = document.querySelector('#modal-demande-new .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement…'; }
+  if (btn) { btn.disabled=true; btn.textContent='⏳…'; }
   try {
     await sbInsert('demandes_reseau', {
-      creche_id: (currentCreche && currentCreche !== '__all__') ? currentCreche : 'Réseau',
-      auteur_id: currentUser?.id || null,
-      theme: document.getElementById('dr-theme')?.value || 'Autre',
-      priorite: document.getElementById('dr-prio')?.value || 'normal',
+      creche_id:   (currentCreche && currentCreche !== '__all__') ? currentCreche : (_drCreche || 'Réseau'),
+      auteur_id:   currentUser?.id || null,
+      theme:       document.getElementById('dr-theme')?.value || 'Autre',
+      priorite:    document.getElementById('dr-prio')?.value || 'normal',
       titre,
       description: document.getElementById('dr-desc')?.value.trim() || null,
-      statut: 'ouvert'
+      statut:      'ouvert'
     });
     closeModal('modal-demande-new');
     showNotif('✅ Demande enregistrée');
     drLoadDemandes();
   } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
-  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Enregistrer'; } }
+  finally { if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Enregistrer';} }
 }
 
-async function saveConsigne() {
-  const sujet = document.getElementById('cs-sujet')?.value.trim();
+// ── Modal Consigne ─────────────────────────────────────────────────────────
+function drOpenConsigne() {
+  ['cs-sujet','cs-message'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const sel = document.getElementById('cs-creche');
+  if (sel) sel.innerHTML = '<option value="">Toutes les structures</option>' + _drGetCreches().map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+  const m = document.getElementById('modal-consigne-new');
+  if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
+}
+
+async function drSaveConsigne() {
+  const sujet   = document.getElementById('cs-sujet')?.value.trim();
   const message = document.getElementById('cs-message')?.value.trim();
   if (!sujet || !message) { showNotif('⚠ Sujet et message requis'); return; }
   const btn = document.querySelector('#modal-consigne-new .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Envoi…'; }
+  if (btn) { btn.disabled=true; btn.textContent='⏳…'; }
   try {
     await sbInsert('consignes_reseau', {
-      emetteur_id: currentUser?.id || null,
+      emetteur_id:         currentUser?.id || null,
       destinataire_creche: document.getElementById('cs-creche')?.value || null,
       sujet, message,
       priorite: document.getElementById('cs-prio')?.value || 'normal',
@@ -16036,51 +16381,55 @@ async function saveConsigne() {
     closeModal('modal-consigne-new');
     showNotif('✅ Consigne envoyée');
   } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
-  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-send"></i> Envoyer'; } }
+  finally { if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Envoyer';} }
 }
 
-function openReponseModal(id, currentStatut) {
+// ── Modal Réponse ──────────────────────────────────────────────────────────
+function drOpenReponse(id, currentStatut) {
   _drCurrentId = id;
   const sel = document.getElementById('rep-statut');
   if (sel) sel.value = currentStatut === 'ouvert' ? 'en_cours' : currentStatut;
   const ta = document.getElementById('rep-reponse');
   if (ta) ta.value = '';
   const m = document.getElementById('modal-demande-rep');
-  if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
 }
 
-async function saveReponse() {
+async function drSaveReponse() {
   if (!_drCurrentId) return;
-  const statut = document.getElementById('rep-statut')?.value;
+  const statut  = document.getElementById('rep-statut')?.value;
   const reponse = document.getElementById('rep-reponse')?.value.trim();
   const btn = document.querySelector('#modal-demande-rep .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
+  if (btn) { btn.disabled=true; btn.textContent='⏳…'; }
   try {
     await fetch(SUPA_RH_URL + '/rest/v1/demandes_reseau?id=eq.' + _drCurrentId, {
-      method: 'PATCH',
-      headers: { ...SUPA_RH_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ statut, reponse: reponse || null, updated_at: new Date().toISOString() })
+      method:'PATCH',
+      headers:{ ...SUPA_RH_HEADERS,'Content-Type':'application/json','Prefer':'return=minimal' },
+      body: JSON.stringify({ statut, reponse: reponse||null, updated_at: new Date().toISOString() })
     });
     closeModal('modal-demande-rep');
     showNotif('✅ Réponse enregistrée');
     drLoadDemandes();
     if (document.getElementById('coord-demandes-wrap')) renderCoordDemandes();
   } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
-  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Enregistrer'; } }
+  finally { if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Enregistrer';} }
 }
 
+// ── Badge sidebar ──────────────────────────────────────────────────────────
 async function checkDemandesBadge() {
   try {
     let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?select=id&lue=eq.false';
-    if (currentCreche && currentCreche !== '__all__') url += '&or=(destinataire_creche.eq.' + encodeURIComponent(currentCreche) + ',destinataire_creche.is.null)';
+    const c = currentCreche && currentCreche !== '__all__' ? currentCreche : null;
+    if (c) url += '&or=(destinataire_creche.eq.' + encodeURIComponent(c) + ',destinataire_creche.is.null)';
     const r = await fetch(url, { headers: SUPA_RH_HEADERS });
     const rows = await r.json();
     const count = Array.isArray(rows) ? rows.length : 0;
     const badge = document.getElementById('nav-demandes-badge');
-    if (badge) { badge.style.display = count > 0 ? 'inline' : 'none'; badge.textContent = count; }
+    if (badge) { badge.style.display = count>0?'inline':'none'; badge.textContent=count; }
   } catch(e) {}
 }
 
+// ── Vue Coordinateur (sous-onglet Planning) ────────────────────────────────
 async function renderCoordDemandes() {
   const wrap = document.getElementById('coord-demandes-wrap');
   if (!wrap) return;
@@ -16088,32 +16437,37 @@ async function renderCoordDemandes() {
   try {
     const r = await fetch(SUPA_RH_URL + '/rest/v1/demandes_reseau?select=*&order=created_at.desc', { headers: SUPA_RH_HEADERS });
     const rows = await r.json();
-    if (!rows.length) { wrap.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:13px">Aucune demande</div>'; return; }
-    const byStatut = { ouvert: [], en_cours: [], traite: [], clos: [] };
-    rows.forEach(d => { (byStatut[d.statut] || byStatut.ouvert).push(d); });
+    if (!rows.length) { wrap.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:13px">Aucune demande</div>'; return; }
+    const byStatut = { ouvert:[], en_cours:[], traite:[], clos:[] };
+    rows.forEach(d => { (byStatut[d.statut]||byStatut.ouvert).push(d); });
     const renderGroup = (label, list) => {
       if (!list.length) return '';
-      return `<div style="margin-bottom:18px">
-        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${label} (${list.length})</div>
-        ${list.map(d => {
-          const prio = DR_PRIO_LABELS[d.priorite] || DR_PRIO_LABELS.normal;
-          const date = new Date(d.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
-          return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:700;font-size:13px;color:var(--ink)">${d.titre}</div>
-              <div style="font-size:11.5px;color:var(--ink3);margin-top:2px">${d.creche_id} · ${d.theme} · ${date}</div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-              <span class="badge ${prio.cls}" style="font-size:10px">${prio.label}</span>
-              <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="openReponseModal('${d.id}','${d.statut}')">Répondre</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`;
+      return '<div style="margin-bottom:16px"><div class="dr-section-lbl">' + label + ' (' + list.length + ')</div>' +
+        list.map(d => {
+          const prio = DR_PRIO[d.priorite]||DR_PRIO.normal;
+          return '<div class="dr-card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
+            '<div style="flex:1;min-width:0"><div class="dr-card-title" style="font-size:13px">' + d.titre + '</div>' +
+            '<div class="dr-card-meta" style="margin-bottom:0">' +
+              '<span class="badge badge-gray" style="font-size:10px">' + (d.creche_id||'') + '</span>' +
+              '<span class="badge ' + prio.cls + '" style="font-size:10px">' + prio.label + '</span>' +
+              '<span style="color:var(--ink3);font-size:11px">' + _drFmt(d.created_at) + '</span>' +
+            '</div></div>' +
+            '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;flex-shrink:0" onclick="drOpenReponse(\'' + d.id + '\',\'' + d.statut + '\')">Répondre</button>' +
+            '</div>';
+        }).join('') + '</div>';
     };
     wrap.innerHTML = renderGroup('🟠 Ouvertes', byStatut.ouvert) + renderGroup('🔵 En cours', byStatut.en_cours) + renderGroup('✅ Traitées', byStatut.traite) + renderGroup('⬛ Closes', byStatut.clos);
-  } catch(e) { wrap.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
+    _drInjectCSS();
+  } catch(e) { wrap.innerHTML='<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
 }
+
+// Aliases pour compatibilité boutons modals statiques
+function openModalDemande() { drOpenDemande(); }
+function openModalConsigne() { drOpenConsigne(); }
+function openReponseModal(id, s) { drOpenReponse(id, s); }
+function saveDemande()  { drSaveDemande(); }
+function saveConsigne() { drSaveConsigne(); }
+function saveReponse()  { drSaveReponse(); }
 
 // ── FIN MODULE DEMANDES RÉSEAU ─────────────────────────────────────────────
 // ── FIN MODULE ADMIN ───────────────────────────────────────────────
@@ -22691,7 +23045,7 @@ function sendSuiviEmail() {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-demande-new')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveDemande()"><i class="ti ti-check"></i> Enregistrer</button>
+      <button class="btn btn-primary" onclick="drSaveDemande()"><i class="ti ti-check"></i> Enregistrer</button>
     </div>
   </div>
 </div>
@@ -22708,7 +23062,7 @@ function sendSuiviEmail() {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-consigne-new')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveConsigne()"><i class="ti ti-send"></i> Envoyer</button>
+      <button class="btn btn-primary" onclick="drSaveConsigne()"><i class="ti ti-send"></i> Envoyer</button>
     </div>
   </div>
 </div>
@@ -22721,7 +23075,25 @@ function sendSuiviEmail() {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-demande-rep')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveReponse()"><i class="ti ti-check"></i> Enregistrer</button>
+      <button class="btn btn-primary" onclick="drSaveReponse()"><i class="ti ti-check"></i> Enregistrer</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-evt-new" onclick="closeModalClick(event,'modal-evt-new')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><h2>📅 Nouvel événement</h2><button class="modal-close" onclick="closeModal('modal-evt-new')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>Titre *</label><input id="evt-titre" class="form-control" placeholder="Ex : Journée pédagogique" style="width:100%"/></div>
+        <div class="form-group"><label>Date de début *</label><input id="evt-date" type="date" class="form-control" style="width:100%"/></div>
+        <div class="form-group"><label>Date de fin</label><input id="evt-date-fin" type="date" class="form-control" style="width:100%"/></div>
+        <div class="form-group full"><label>Structure concernée</label><select id="evt-creche" style="width:100%"><option value="">Toutes les structures</option></select></div>
+        <div class="form-group full"><label>Description</label><textarea id="evt-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-evt-new')">Annuler</button>
+      <button class="btn btn-primary" onclick="drSaveEvt()"><i class="ti ti-check"></i> Créer</button>
     </div>
   </div>
 </div>
