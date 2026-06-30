@@ -16297,14 +16297,13 @@ function drRenderCal() {
           '<span style="color:var(--ink3)">' + _drFmtDT(e.date_debut) + (e.date_fin ? ' → ' + _drFmtDT(e.date_fin) : '') + '</span>' +
         '</div>' +
         (e.description ? '<div class="dr-card-body">' + e.description + '</div>' : '') +
-        (isCoord ? '<div style="margin-top:8px"><button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="drDeleteEvt(\'' + e.id + '\')">🗑 Supprimer</button></div>' : '') +
+        (isCoord ? '<div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="drOpenEvt(\'' + e.id + '\')">✎ Modifier</button><button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="drDeleteEvt(\'' + e.id + '\')">🗑 Supprimer</button></div>' : '') +
       '</div>'; }).join('')}
   `;
 }
 
 function drViewEvt(id) {
-  const e = _drEvenements.find(x => x.id === id);
-  if (e) showNotif('📅 ' + e.titre + ' — ' + _drFmtDT(e.date_debut));
+  drOpenEvt(id);
 }
 
 async function drDeleteEvt(id) {
@@ -16316,17 +16315,46 @@ async function drDeleteEvt(id) {
   } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
 }
 
-function drOpenEvt() {
-  document.getElementById('evt-titre')?.value && (document.getElementById('evt-titre').value = '');
-  document.getElementById('evt-desc') && (document.getElementById('evt-desc').value = '');
-  document.getElementById('evt-date') && (document.getElementById('evt-date').value = '');
-  document.getElementById('evt-date-fin') && (document.getElementById('evt-date-fin').value = '');
-  document.getElementById('evt-heure-debut') && (document.getElementById('evt-heure-debut').value = '');
-  document.getElementById('evt-heure-fin') && (document.getElementById('evt-heure-fin').value = '');
+let _drEvtEditingId = null;
+
+function _drToDateInput(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function _drToTimeInput(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  const h = d.getHours(), m = d.getMinutes();
+  if (h === 0 && m === 0) return '';
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+
+function drOpenEvt(id) {
+  _drEvtEditingId = id || null;
+  const e = id ? _drEvenements.find(x => x.id === id) : null;
+
+  document.getElementById('evt-titre') && (document.getElementById('evt-titre').value = e ? e.titre : '');
+  document.getElementById('evt-desc') && (document.getElementById('evt-desc').value = e ? (e.description||'') : '');
+  document.getElementById('evt-date') && (document.getElementById('evt-date').value = e ? _drToDateInput(e.date_debut) : '');
+  document.getElementById('evt-date-fin') && (document.getElementById('evt-date-fin').value = e ? _drToDateInput(e.date_fin) : '');
+  document.getElementById('evt-heure-debut') && (document.getElementById('evt-heure-debut').value = e ? _drToTimeInput(e.date_debut) : '');
+  document.getElementById('evt-heure-fin') && (document.getElementById('evt-heure-fin').value = e ? _drToTimeInput(e.date_fin) : '');
+  const typeSel = document.getElementById('evt-type');
+  if (typeSel) typeSel.value = e ? (e.type || 'autre') : 'autre';
+
   const sel = document.getElementById('evt-creche');
   if (sel) {
     sel.innerHTML = '<option value="">Toutes les structures</option>' + _drGetCreches().map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+    if (e) sel.value = e.creche_id || '';
   }
+
+  // Adapter titre modal + bouton selon mode
+  const titleEl = document.querySelector('#modal-evt-new .modal-header h2');
+  if (titleEl) titleEl.textContent = e ? '✎ Modifier l\'événement' : '📅 Nouvel événement';
+  const btnEl = document.querySelector('#modal-evt-new .btn-primary');
+  if (btnEl) btnEl.innerHTML = e ? '<i class="ti ti-check"></i> Enregistrer' : '<i class="ti ti-check"></i> Créer';
+
   const m = document.getElementById('modal-evt-new');
   if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
 }
@@ -16341,16 +16369,27 @@ async function drSaveEvt() {
     const heureDebut = document.getElementById('evt-heure-debut')?.value || '00:00';
     const dateFin     = document.getElementById('evt-date-fin')?.value;
     const heureFin    = document.getElementById('evt-heure-fin')?.value;
-    await sbInsert('evenements_reseau', {
+    const payload = {
       titre,
       type: document.getElementById('evt-type')?.value || 'autre',
       description: document.getElementById('evt-desc')?.value.trim() || null,
       creche_id:   document.getElementById('evt-creche')?.value || null,
       date_debut:  new Date(date + 'T' + heureDebut + ':00').toISOString(),
       date_fin:    dateFin ? new Date(dateFin + 'T' + (heureFin || '23:59') + ':00').toISOString() : null,
-    });
+    };
+    if (_drEvtEditingId) {
+      await fetch(SUPA_RH_URL + '/rest/v1/evenements_reseau?id=eq.' + _drEvtEditingId, {
+        method: 'PATCH',
+        headers: { ...SUPA_RH_HEADERS, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify(payload)
+      });
+      showNotif('✅ Événement modifié');
+    } else {
+      await sbInsert('evenements_reseau', payload);
+      showNotif('✅ Événement créé');
+    }
     closeModal('modal-evt-new');
-    showNotif('✅ Événement créé');
+    _drEvtEditingId = null;
     drLoadEvenements();
   } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
   finally { if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer';} }
@@ -23163,7 +23202,7 @@ function sendSuiviEmail() {
 </div>
 <div class="modal-overlay" id="modal-evt-new" onclick="closeModalClick(event,'modal-evt-new')">
   <div class="modal" style="max-width:480px">
-    <div class="modal-header"><h2>📅 Nouvel événement</h2><button class="modal-close" onclick="closeModal('modal-evt-new')">✕</button></div>
+    <div class="modal-header"><h2>📅 Nouvel événement</h2><button class="modal-close" onclick="_drEvtEditingId=null;closeModal('modal-evt-new')">✕</button></div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group full"><label>Titre *</label><input id="evt-titre" class="form-control" placeholder="Ex : Journée pédagogique" style="width:100%"/></div>
@@ -23185,7 +23224,7 @@ function sendSuiviEmail() {
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-evt-new')">Annuler</button>
+      <button class="btn btn-secondary" onclick="_drEvtEditingId=null;closeModal('modal-evt-new')">Annuler</button>
       <button class="btn btn-primary" onclick="drSaveEvt()"><i class="ti ti-check"></i> Créer</button>
     </div>
   </div>
