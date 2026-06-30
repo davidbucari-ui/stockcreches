@@ -1228,6 +1228,10 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item" data-roles="admin" onclick="showPage('admin', this)" title="Administration">
     <span class="nav-icon">🔐</span> Administration
   </button>
+  <button class="nav-item" id="nav-demandes-reseau" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('demandesReseau', this)" title="Demandes réseau">
+    <span class="nav-icon">&#x1F4AC;</span> Demandes réseau
+    <span id="nav-demandes-badge" style="display:none;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:auto">0</span>
+  </button>
   <button class="nav-item" id="nav-reglementaire" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="openHubDocs()" title="Réglementaire">
     <span class="nav-icon">⚖️</span> Réglementaire
   </button>
@@ -9138,9 +9142,9 @@ let currentUserDbId = null;
 
 const ROLE_PAGES = {
   admin:         ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles','transmissions'],
-  coordinateur:  ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions'],
-  directrice:    ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions'],
-  auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles','transmissions'],
+  coordinateur:  ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau'],
+  directrice:    ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau'],
+  auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles','transmissions','demandesReseau'],
   stagiaire:     ['dashboard'],
 };
 
@@ -9451,6 +9455,7 @@ function startApp() {
   chargerParamsSupabase();
   // Charger salariés depuis Supabase (async — répare les nouveaux appareils)
   chargerSalariesSupabase();
+  setTimeout(checkDemandesBadge, 1500);
 }
 
 function showHub() {
@@ -11041,13 +11046,13 @@ function showPage(page, btn, fromPopState) {
   if (!fromPopState) {
     history.pushState({ page }, '', window.location.pathname + window.location.search);
   }
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions','demandesReseau'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions' };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions', demandesReseau:'Demandes réseau' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Re-render page content when switching to ensure fresh data
   if (page === 'commandes') { renderCommandes(); }
@@ -11065,6 +11070,7 @@ function showPage(page, btn, fromPopState) {
   if (page === 'planning') { showPlanningEquipePage(); }
   if (page === 'salarie')  { showPage('planning', null); }
   if (page === 'transmissions') { renderTransmissions(); }
+  if (page === 'demandesReseau') { renderPageDemandesReseau(); }
 }
 
 function showTab(tab, btn) {
@@ -12432,7 +12438,8 @@ const RH_TABLES = new Set([
   'enfants','berceaux','salaries','planning_semaines','parametres',
   'transmissions','menus',
   'vaccins_ref','vaccinations_enfant',
-  'suivi_pedagogique'
+  'suivi_pedagogique',
+  'demandes_reseau','consignes_reseau'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -15802,8 +15809,317 @@ async function enregistrerPointage(type) {
 
 // ── FIN MODULE RH ─────────────────────────────────────────────────
 
+
+// ── MODULE DEMANDES RÉSEAU ─────────────────────────────────────────────────
+
+const DR_THEMES = ['Pédagogie','Matériel','Formation','Organisation','Sécurité','Autre'];
+const DR_PRIO_LABELS = { normal:{label:'Normale',cls:'badge-blue'}, urgent:{label:'🔴 Urgente',cls:'badge-red'}, info:{label:'ℹ Info',cls:'badge-amber'} };
+const DR_STATUT_LABELS = { ouvert:{label:'🟠 Ouvert',cls:'badge-amber'}, en_cours:{label:'🔵 En cours',cls:'badge-blue'}, traite:{label:'✅ Traité',cls:'badge-green'}, clos:{label:'⬛ Clos',cls:'badge-gray'} };
+let _drCurrentId = null;
+let _drTab = 'demandes';
+
+function renderPageDemandesReseau() {
+  const role = currentUserRole;
+  const isCoord = ['admin','coordinateur'].includes(role);
+  const page = document.getElementById('page-demandesReseau');
+  if (!page) return;
+  const themeOpts = DR_THEMES.map(t => '<option>' + t + '</option>').join('');
+  page.innerHTML = `
+    <div style="padding:0 0 24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ink)">💬 Demandes réseau</div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:2px">Communication inter-structures · Réseau Koalakids</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${isCoord ? `<button class="btn btn-secondary" onclick="openModalConsigne()"><i class="ti ti-send"></i> Envoyer une consigne</button>` : ''}
+          <button class="btn btn-primary" onclick="openModalDemande()"><i class="ti ti-plus"></i> Nouvelle demande</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:18px">
+        <button id="dr-tab-demandes" onclick="drSwitchTab('demandes')" style="padding:9px 18px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer">📋 Demandes</button>
+        <button id="dr-tab-consignes" onclick="drSwitchTab('consignes')" style="padding:9px 18px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">
+          📣 Consignes reçues
+          <span id="dr-consignes-badge" style="display:none;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">0</span>
+        </button>
+      </div>
+      <div id="dr-content"></div>
+    </div>
+    <div class="modal-overlay" id="modal-demande-new" onclick="closeModalClick(event,'modal-demande-new')" style="display:none">
+      <div class="modal" style="max-width:480px">
+        <div class="modal-header"><h2>💬 Nouvelle demande</h2><button class="modal-close" onclick="closeModal('modal-demande-new')">✕</button></div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Thème *</label><select id="dr-theme" style="width:100%">${themeOpts}</select></div>
+            <div class="form-group"><label>Priorité</label><select id="dr-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
+            <div class="form-group full"><label>Titre *</label><input id="dr-titre" class="form-control" placeholder="Ex : Besoin de tapis de sol" style="width:100%"/></div>
+            <div class="form-group full"><label>Description</label><textarea id="dr-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-demande-new')">Annuler</button>
+          <button class="btn btn-primary" onclick="saveDemande()"><i class="ti ti-check"></i> Enregistrer</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" id="modal-consigne-new" onclick="closeModalClick(event,'modal-consigne-new')" style="display:none">
+      <div class="modal" style="max-width:480px">
+        <div class="modal-header"><h2>📣 Envoyer une consigne</h2><button class="modal-close" onclick="closeModal('modal-consigne-new')">✕</button></div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group full"><label>Structure destinataire</label><select id="cs-creche" style="width:100%"><option value="">Toutes les structures</option></select></div>
+            <div class="form-group"><label>Priorité</label><select id="cs-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
+            <div class="form-group full"><label>Sujet *</label><input id="cs-sujet" class="form-control" style="width:100%"/></div>
+            <div class="form-group full"><label>Message *</label><textarea id="cs-message" class="form-control" rows="4" style="width:100%;resize:vertical"></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-consigne-new')">Annuler</button>
+          <button class="btn btn-primary" onclick="saveConsigne()"><i class="ti ti-send"></i> Envoyer</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" id="modal-demande-rep" onclick="closeModalClick(event,'modal-demande-rep')" style="display:none">
+      <div class="modal" style="max-width:480px">
+        <div class="modal-header"><h2>💬 Répondre à la demande</h2><button class="modal-close" onclick="closeModal('modal-demande-rep')">✕</button></div>
+        <div class="modal-body">
+          <div class="form-group full" style="margin-bottom:12px"><label>Nouveau statut</label><select id="rep-statut" style="width:100%"><option value="en_cours">🔵 En cours</option><option value="traite">✅ Traité</option><option value="clos">⬛ Clos</option></select></div>
+          <div class="form-group full"><label>Réponse</label><textarea id="rep-reponse" class="form-control" rows="4" style="width:100%;resize:vertical"></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-demande-rep')">Annuler</button>
+          <button class="btn btn-primary" onclick="saveReponse()"><i class="ti ti-check"></i> Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  `;
+  drSwitchTab('demandes');
+}
+
+function drSwitchTab(tab) {
+  _drTab = tab;
+  ['demandes','consignes'].forEach(t => {
+    const btn = document.getElementById('dr-tab-' + t);
+    if (!btn) return;
+    const active = t === tab;
+    btn.style.fontWeight = active ? '700' : '600';
+    btn.style.color = active ? 'var(--accent)' : 'var(--ink3)';
+    btn.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
+  });
+  const cont = document.getElementById('dr-content');
+  if (!cont) return;
+  if (tab === 'demandes') drLoadDemandes();
+  else drLoadConsignes();
+}
+
+async function drLoadDemandes() {
+  const cont = document.getElementById('dr-content');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:16px 0">Chargement…</div>';
+  try {
+    const role = currentUserRole;
+    const isCoord = ['admin','coordinateur'].includes(role);
+    let url = SUPA_RH_URL + '/rest/v1/demandes_reseau?select=*&order=created_at.desc';
+    if (!isCoord && currentCreche && currentCreche !== '__all__') url += '&creche_id=eq.' + encodeURIComponent(currentCreche);
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (!rows.length) { cont.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:13px">Aucune demande pour le moment</div>'; return; }
+    cont.innerHTML = rows.map(d => {
+      const prio = DR_PRIO_LABELS[d.priorite] || DR_PRIO_LABELS.normal;
+      const stat = DR_STATUT_LABELS[d.statut] || DR_STATUT_LABELS.ouvert;
+      const date = new Date(d.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+      return `<div style="border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;background:var(--surface)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:14px;color:var(--ink);margin-bottom:4px">${d.titre}</div>
+            <div style="font-size:12px;color:var(--ink3);margin-bottom:6px">${d.creche_id} · ${d.theme} · ${date}</div>
+            ${d.description ? `<div style="font-size:13px;color:var(--ink2);margin-bottom:6px">${d.description}</div>` : ''}
+            ${d.reponse ? `<div style="background:#F0FDF4;border:1px solid #A7F3D0;border-radius:8px;padding:8px 12px;font-size:12.5px;color:#065F46;margin-top:6px"><b>Réponse :</b> ${d.reponse}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+            <span class="badge ${prio.cls}">${prio.label}</span>
+            <span class="badge ${stat.cls}">${stat.label}</span>
+            ${isCoord ? `<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="openReponseModal('${d.id}','${d.statut}')">Répondre</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { cont.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
+}
+
+async function drLoadConsignes() {
+  const cont = document.getElementById('dr-content');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:16px 0">Chargement…</div>';
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?select=*&order=created_at.desc';
+    if (currentCreche && currentCreche !== '__all__') url += '&or=(destinataire_creche.eq.' + encodeURIComponent(currentCreche) + ',destinataire_creche.is.null)';
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (!rows.length) { cont.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:13px">Aucune consigne reçue</div>'; return; }
+    drMarkConsignesLues();
+    document.getElementById('dr-consignes-badge')?.style && (document.getElementById('dr-consignes-badge').style.display = 'none');
+    cont.innerHTML = rows.map(c => {
+      const prio = DR_PRIO_LABELS[c.priorite] || DR_PRIO_LABELS.normal;
+      const date = new Date(c.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+      return `<div style="border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;background:${c.lue ? 'var(--surface)' : 'rgba(143,175,138,0.08)'}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            ${!c.lue ? '<span style="font-size:10px;background:#8FAF8A;color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;margin-bottom:6px;display:inline-block">Nouveau</span>' : ''}
+            <div style="font-weight:700;font-size:14px;color:var(--ink);margin-bottom:4px">${c.sujet}</div>
+            <div style="font-size:12px;color:var(--ink3);margin-bottom:6px">${c.destinataire_creche || 'Toutes les structures'} · ${date}</div>
+            <div style="font-size:13px;color:var(--ink2)">${c.message}</div>
+          </div>
+          <span class="badge ${prio.cls}">${prio.label}</span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { cont.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
+}
+
+async function drMarkConsignesLues() {
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?lue=eq.false';
+    if (currentCreche && currentCreche !== '__all__') url += '&or=(destinataire_creche.eq.' + encodeURIComponent(currentCreche) + ',destinataire_creche.is.null)';
+    await fetch(url, { method: 'PATCH', headers: { ...SUPA_RH_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ lue: true }) });
+    const nb = document.getElementById('nav-demandes-badge');
+    if (nb) nb.style.display = 'none';
+  } catch(e) {}
+}
+
+function openModalDemande() { openModal('modal-demande-new'); }
+
+function openModalConsigne() {
+  const sel = document.getElementById('cs-creche');
+  if (sel && typeof CRECHES !== 'undefined') {
+    sel.innerHTML = '<option value="">Toutes les structures</option>' + CRECHES.map(c => '<option value="' + c + '">' + c + '</option>').join('');
+  }
+  openModal('modal-consigne-new');
+}
+
+async function saveDemande() {
+  const titre = document.getElementById('dr-titre')?.value.trim();
+  if (!titre) { showNotif('⚠ Titre requis'); return; }
+  const btn = document.querySelector('#modal-demande-new .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement…'; }
+  try {
+    await sbInsert('demandes_reseau', {
+      creche_id: (currentCreche && currentCreche !== '__all__') ? currentCreche : 'Réseau',
+      auteur_id: currentUser?.id || null,
+      theme: document.getElementById('dr-theme')?.value || 'Autre',
+      priorite: document.getElementById('dr-prio')?.value || 'normal',
+      titre,
+      description: document.getElementById('dr-desc')?.value.trim() || null,
+      statut: 'ouvert'
+    });
+    closeModal('modal-demande-new');
+    showNotif('✅ Demande enregistrée');
+    drLoadDemandes();
+  } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Enregistrer'; } }
+}
+
+async function saveConsigne() {
+  const sujet = document.getElementById('cs-sujet')?.value.trim();
+  const message = document.getElementById('cs-message')?.value.trim();
+  if (!sujet || !message) { showNotif('⚠ Sujet et message requis'); return; }
+  const btn = document.querySelector('#modal-consigne-new .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Envoi…'; }
+  try {
+    await sbInsert('consignes_reseau', {
+      emetteur_id: currentUser?.id || null,
+      destinataire_creche: document.getElementById('cs-creche')?.value || null,
+      sujet, message,
+      priorite: document.getElementById('cs-prio')?.value || 'normal',
+      lue: false
+    });
+    closeModal('modal-consigne-new');
+    showNotif('✅ Consigne envoyée');
+  } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-send"></i> Envoyer'; } }
+}
+
+function openReponseModal(id, currentStatut) {
+  _drCurrentId = id;
+  const sel = document.getElementById('rep-statut');
+  if (sel) sel.value = currentStatut === 'ouvert' ? 'en_cours' : currentStatut;
+  const ta = document.getElementById('rep-reponse');
+  if (ta) ta.value = '';
+  openModal('modal-demande-rep');
+}
+
+async function saveReponse() {
+  if (!_drCurrentId) return;
+  const statut = document.getElementById('rep-statut')?.value;
+  const reponse = document.getElementById('rep-reponse')?.value.trim();
+  const btn = document.querySelector('#modal-demande-rep .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
+  try {
+    await fetch(SUPA_RH_URL + '/rest/v1/demandes_reseau?id=eq.' + _drCurrentId, {
+      method: 'PATCH',
+      headers: { ...SUPA_RH_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ statut, reponse: reponse || null, updated_at: new Date().toISOString() })
+    });
+    closeModal('modal-demande-rep');
+    showNotif('✅ Réponse enregistrée');
+    drLoadDemandes();
+    if (document.getElementById('coord-demandes-wrap')) renderCoordDemandes();
+  } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Enregistrer'; } }
+}
+
+async function checkDemandesBadge() {
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?select=id&lue=eq.false';
+    if (currentCreche && currentCreche !== '__all__') url += '&or=(destinataire_creche.eq.' + encodeURIComponent(currentCreche) + ',destinataire_creche.is.null)';
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    const count = Array.isArray(rows) ? rows.length : 0;
+    const badge = document.getElementById('nav-demandes-badge');
+    if (badge) { badge.style.display = count > 0 ? 'inline' : 'none'; badge.textContent = count; }
+  } catch(e) {}
+}
+
+async function renderCoordDemandes() {
+  const wrap = document.getElementById('coord-demandes-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="color:var(--ink3);font-size:13px;padding:16px 0">Chargement…</div>';
+  try {
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/demandes_reseau?select=*&order=created_at.desc', { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (!rows.length) { wrap.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:13px">Aucune demande</div>'; return; }
+    const byStatut = { ouvert: [], en_cours: [], traite: [], clos: [] };
+    rows.forEach(d => { (byStatut[d.statut] || byStatut.ouvert).push(d); });
+    const renderGroup = (label, list) => {
+      if (!list.length) return '';
+      return `<div style="margin-bottom:18px">
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${label} (${list.length})</div>
+        ${list.map(d => {
+          const prio = DR_PRIO_LABELS[d.priorite] || DR_PRIO_LABELS.normal;
+          const date = new Date(d.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+          return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:13px;color:var(--ink)">${d.titre}</div>
+              <div style="font-size:11.5px;color:var(--ink3);margin-top:2px">${d.creche_id} · ${d.theme} · ${date}</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+              <span class="badge ${prio.cls}" style="font-size:10px">${prio.label}</span>
+              <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="openReponseModal('${d.id}','${d.statut}')">Répondre</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    };
+    wrap.innerHTML = renderGroup('🟠 Ouvertes', byStatut.ouvert) + renderGroup('🔵 En cours', byStatut.en_cours) + renderGroup('✅ Traitées', byStatut.traite) + renderGroup('⬛ Closes', byStatut.clos);
+  } catch(e) { wrap.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
+}
+
+// ── FIN MODULE DEMANDES RÉSEAU ─────────────────────────────────────────────
 // ── FIN MODULE ADMIN ───────────────────────────────────────────────
 </script>
+<!-- ── PAGE DEMANDES RÉSEAU ── -->
+<div id="page-demandesReseau" class="page" style="display:none;padding:24px"></div>
+
 <!-- ── MODAL PLANNING ÉQUIPE ── -->
 <div class="modal-overlay" id="modal-pe" onclick="closeModalClick(event,'modal-pe')">
   <div class="modal" style="max-width:420px">
@@ -20380,8 +20696,8 @@ function renderPlanningCoord() {
 
       <!-- Sous-onglets -->
       <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:18px;flex-wrap:wrap">
-        ${['rotation','semaine','missions','suivi'].map((t, i) => {
-          const labels = ['🔄 Rotation', '📅 Semaine type', '🎯 Missions', '📊 Suivi mensuel'];
+        ${['rotation','semaine','missions','suivi','demandes'].map((t, i) => {
+          const labels = ['🔄 Rotation', '📅 Semaine type', '🎯 Missions', '📊 Suivi mensuel', '💬 Demandes'];
           const active = _coordTab === t;
           return `<button onclick="_coordSwitchTab('${t}')"
             style="padding:9px 16px;border:none;background:none;font-family:inherit;font-size:13px;
@@ -20425,6 +20741,7 @@ function _coordRenderSubtab(tab) {
   else if (tab === 'semaine')   el.innerHTML = _coordHtmlSemaine();
   else if (tab === 'missions')  el.innerHTML = _coordHtmlMissions();
   else if (tab === 'suivi')     el.innerHTML = _coordHtmlSuivi();
+  else if (tab === 'demandes')  { el.innerHTML = '<div id="coord-demandes-wrap"></div>'; renderCoordDemandes(); }
 }
 
 // ── Helpers rotation ─────────────────────────────────────────────
