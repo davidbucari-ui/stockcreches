@@ -2350,6 +2350,8 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
 
     <!-- ── PAGE ADMIN ── -->
+    <div id="page-demandesReseau" style="display:none;padding:24px"></div>
+
     <div id="page-admin" style="display:none;position:relative;overflow:hidden">
       <div style="position:absolute;inset:0;pointer-events:none;z-index:0;display:flex;align-items:center;justify-content:center"><img src="Visuel_Orevy.png" style="width:480px;opacity:0.05;user-select:none" alt=""></div>
       <div style="padding:28px 24px;max-width:900px;position:relative;z-index:1">
@@ -3648,6 +3650,42 @@ function printEtiquettes() {
         return `try { new QRCode(document.getElementById('qr-${a.id}'), { text:'${code}', width:${qrSize}, height:${qrSize}, colorDark:'#1C1917', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}`;
       }).join('\n      ')}
     };
+
+          <button class="btn btn-primary" onclick="saveDemande()"><i class="ti ti-check"></i> Enregistrer</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" id="modal-consigne-new" onclick="closeModalClick(event,'modal-consigne-new')">
+      <div class="modal" style="max-width:480px">
+        <div class="modal-header"><h2>📣 Envoyer une consigne</h2><button class="modal-close" onclick="closeModal('modal-consigne-new')">✕</button></div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group full"><label>Structure destinataire</label><select id="cs-creche" style="width:100%"><option value="">Toutes les structures</option></select></div>
+            <div class="form-group"><label>Priorité</label><select id="cs-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
+            <div class="form-group full"><label>Sujet *</label><input id="cs-sujet" class="form-control" style="width:100%"/></div>
+            <div class="form-group full"><label>Message *</label><textarea id="cs-message" class="form-control" rows="4" style="width:100%;resize:vertical"></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-consigne-new')">Annuler</button>
+          <button class="btn btn-primary" onclick="saveConsigne()"><i class="ti ti-send"></i> Envoyer</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-overlay" id="modal-demande-rep" onclick="closeModalClick(event,'modal-demande-rep')">
+      <div class="modal" style="max-width:480px">
+        <div class="modal-header"><h2>💬 Répondre à la demande</h2><button class="modal-close" onclick="closeModal('modal-demande-rep')">✕</button></div>
+        <div class="modal-body">
+          <div class="form-group full" style="margin-bottom:12px"><label>Nouveau statut</label><select id="rep-statut" style="width:100%"><option value="en_cours">🔵 En cours</option><option value="traite">✅ Traité</option><option value="clos">⬛ Clos</option></select></div>
+          <div class="form-group full"><label>Réponse</label><textarea id="rep-reponse" class="form-control" rows="4" style="width:100%;resize:vertical"></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-demande-rep')">Annuler</button>
+          <button class="btn btn-primary" onclick="saveReponse()"><i class="ti ti-check"></i> Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
   <\/script></body></html>`;
 
   closeModal('modal-etiquettes');
@@ -15848,55 +15886,13 @@ function renderPageDemandesReseau() {
       </div>
       <div id="dr-content"></div>
     </div>
-    <div class="modal-overlay" id="modal-demande-new" onclick="closeModalClick(event,'modal-demande-new')" style="display:none">
-      <div class="modal" style="max-width:480px">
-        <div class="modal-header"><h2>💬 Nouvelle demande</h2><button class="modal-close" onclick="closeModal('modal-demande-new')">✕</button></div>
-        <div class="modal-body">
-          <div class="form-grid">
-            <div class="form-group"><label>Thème *</label><select id="dr-theme" style="width:100%">${themeOpts}</select></div>
-            <div class="form-group"><label>Priorité</label><select id="dr-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
-            <div class="form-group full"><label>Titre *</label><input id="dr-titre" class="form-control" placeholder="Ex : Besoin de tapis de sol" style="width:100%"/></div>
-            <div class="form-group full"><label>Description</label><textarea id="dr-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closeModal('modal-demande-new')">Annuler</button>
-          <button class="btn btn-primary" onclick="saveDemande()"><i class="ti ti-check"></i> Enregistrer</button>
-        </div>
-      </div>
-    </div>
-    <div class="modal-overlay" id="modal-consigne-new" onclick="closeModalClick(event,'modal-consigne-new')" style="display:none">
-      <div class="modal" style="max-width:480px">
-        <div class="modal-header"><h2>📣 Envoyer une consigne</h2><button class="modal-close" onclick="closeModal('modal-consigne-new')">✕</button></div>
-        <div class="modal-body">
-          <div class="form-grid">
-            <div class="form-group full"><label>Structure destinataire</label><select id="cs-creche" style="width:100%"><option value="">Toutes les structures</option></select></div>
-            <div class="form-group"><label>Priorité</label><select id="cs-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
-            <div class="form-group full"><label>Sujet *</label><input id="cs-sujet" class="form-control" style="width:100%"/></div>
-            <div class="form-group full"><label>Message *</label><textarea id="cs-message" class="form-control" rows="4" style="width:100%;resize:vertical"></textarea></div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closeModal('modal-consigne-new')">Annuler</button>
-          <button class="btn btn-primary" onclick="saveConsigne()"><i class="ti ti-send"></i> Envoyer</button>
-        </div>
-      </div>
-    </div>
-    <div class="modal-overlay" id="modal-demande-rep" onclick="closeModalClick(event,'modal-demande-rep')" style="display:none">
-      <div class="modal" style="max-width:480px">
-        <div class="modal-header"><h2>💬 Répondre à la demande</h2><button class="modal-close" onclick="closeModal('modal-demande-rep')">✕</button></div>
-        <div class="modal-body">
-          <div class="form-group full" style="margin-bottom:12px"><label>Nouveau statut</label><select id="rep-statut" style="width:100%"><option value="en_cours">🔵 En cours</option><option value="traite">✅ Traité</option><option value="clos">⬛ Clos</option></select></div>
-          <div class="form-group full"><label>Réponse</label><textarea id="rep-reponse" class="form-control" rows="4" style="width:100%;resize:vertical"></textarea></div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closeModal('modal-demande-rep')">Annuler</button>
-          <button class="btn btn-primary" onclick="saveReponse()"><i class="ti ti-check"></i> Enregistrer</button>
-        </div>
-      </div>
-    </div>
   `;
   drSwitchTab('demandes');
+  // Populate theme select (static modal)
+  const thSel = document.getElementById('dr-theme');
+  if (thSel && !thSel.options.length) {
+    thSel.innerHTML = DR_THEMES.map(t => '<option>' + t + '</option>').join('');
+  }
 }
 
 function drSwitchTab(tab) {
@@ -15990,14 +15986,15 @@ async function drMarkConsignesLues() {
   } catch(e) {}
 }
 
-function openModalDemande() { openModal('modal-demande-new'); }
+function openModalDemande() { const m=document.getElementById('modal-demande-new'); if(m){m.classList.add('open');document.body.style.overflow='hidden';} }
 
 function openModalConsigne() {
   const sel = document.getElementById('cs-creche');
   if (sel && typeof CRECHES !== 'undefined') {
     sel.innerHTML = '<option value="">Toutes les structures</option>' + CRECHES.map(c => '<option value="' + c + '">' + c + '</option>').join('');
   }
-  openModal('modal-consigne-new');
+  const m = document.getElementById('modal-consigne-new');
+  if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
 }
 
 async function saveDemande() {
@@ -16048,7 +16045,8 @@ function openReponseModal(id, currentStatut) {
   if (sel) sel.value = currentStatut === 'ouvert' ? 'en_cours' : currentStatut;
   const ta = document.getElementById('rep-reponse');
   if (ta) ta.value = '';
-  openModal('modal-demande-rep');
+  const m = document.getElementById('modal-demande-rep');
+  if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
 }
 
 async function saveReponse() {
@@ -16120,8 +16118,6 @@ async function renderCoordDemandes() {
 // ── FIN MODULE DEMANDES RÉSEAU ─────────────────────────────────────────────
 // ── FIN MODULE ADMIN ───────────────────────────────────────────────
 </script>
-<!-- ── PAGE DEMANDES RÉSEAU ── -->
-<div id="page-demandesReseau" class="page" style="display:none;padding:24px"></div>
 
 <!-- ── MODAL PLANNING ÉQUIPE ── -->
 <div class="modal-overlay" id="modal-pe" onclick="closeModalClick(event,'modal-pe')">
@@ -22681,5 +22677,53 @@ function sendSuiviEmail() {
 </script>
 
 
+<!-- ── MODALS DEMANDES RÉSEAU (statiques) ── -->
+<div class="modal-overlay" id="modal-demande-new" onclick="closeModalClick(event,'modal-demande-new')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><h2>💬 Nouvelle demande</h2><button class="modal-close" onclick="closeModal('modal-demande-new')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Thème *</label><select id="dr-theme" style="width:100%"></select></div>
+        <div class="form-group"><label>Priorité</label><select id="dr-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
+        <div class="form-group full"><label>Titre *</label><input id="dr-titre" class="form-control" placeholder="Ex : Besoin de tapis de sol" style="width:100%"/></div>
+        <div class="form-group full"><label>Description</label><textarea id="dr-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-demande-new')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveDemande()"><i class="ti ti-check"></i> Enregistrer</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-consigne-new" onclick="closeModalClick(event,'modal-consigne-new')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><h2>📣 Envoyer une consigne</h2><button class="modal-close" onclick="closeModal('modal-consigne-new')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>Structure destinataire</label><select id="cs-creche" style="width:100%"><option value="">Toutes les structures</option></select></div>
+        <div class="form-group"><label>Priorité</label><select id="cs-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
+        <div class="form-group full"><label>Sujet *</label><input id="cs-sujet" class="form-control" style="width:100%"/></div>
+        <div class="form-group full"><label>Message *</label><textarea id="cs-message" class="form-control" rows="4" style="width:100%;resize:vertical"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-consigne-new')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveConsigne()"><i class="ti ti-send"></i> Envoyer</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-demande-rep" onclick="closeModalClick(event,'modal-demande-rep')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><h2>💬 Répondre à la demande</h2><button class="modal-close" onclick="closeModal('modal-demande-rep')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group full" style="margin-bottom:12px"><label>Nouveau statut</label><select id="rep-statut" style="width:100%"><option value="en_cours">🔵 En cours</option><option value="traite">✅ Traité</option><option value="clos">⬛ Clos</option></select></div>
+      <div class="form-group full"><label>Réponse</label><textarea id="rep-reponse" class="form-control" rows="4" style="width:100%;resize:vertical"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-demande-rep')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveReponse()"><i class="ti ti-check"></i> Enregistrer</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
