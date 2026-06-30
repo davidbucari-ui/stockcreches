@@ -16180,6 +16180,17 @@ function drMailReferent(email) {
 // ── ÉVÉNEMENTS ─────────────────────────────────────────────────────────────
 let _drCalYear  = new Date().getFullYear();
 let _drCalMonth = new Date().getMonth(); // 0-indexed
+let _drEvtTypeFilter = 'tous';
+const DR_EVT_TYPES = [
+  { key:'recrutement', label:'Recrutement', icon:'🧑\u200d💼' },
+  { key:'formation',   label:'Formation',   icon:'📗' },
+  { key:'reunion',      label:'Réunion',     icon:'👥' },
+  { key:'visite',       label:'Visite',      icon:'🏠' },
+  { key:'entretien',    label:'Entretien',   icon:'🧡' },
+  { key:'fete',         label:'Fête',        icon:'🎉' },
+  { key:'autre',        label:'Autre',       icon:'⚪' },
+];
+function _drEvtTypeInfo(key) { return DR_EVT_TYPES.find(t => t.key === key) || { key:'autre', label:'Autre', icon:'⚪' }; }
 
 async function drLoadEvenements() {
   const cont = document.getElementById('dr-content');
@@ -16221,10 +16232,8 @@ function drRenderCal() {
   let startDow = firstDay.getDay(); // 0=Sun
   startDow = startDow === 0 ? 6 : startDow - 1; // convert to Mon=0
 
-  const evtsThisMonth = _drEvenements.filter(e => {
-    const d = new Date(e.date_debut);
-    return d.getFullYear() === _drCalYear && d.getMonth() === _drCalMonth;
-  });
+  // Filtrer par type sélectionné
+  const evtsFiltered = _drEvtTypeFilter === 'tous' ? _drEvenements : _drEvenements.filter(e => (e.type||'autre') === _drEvtTypeFilter);
 
   // Build calendar cells
   let cells = '';
@@ -16232,38 +16241,51 @@ function drRenderCal() {
   for (let i = 0; i < 42; i++) {
     const isThisMonth = cellDate.getMonth() === _drCalMonth;
     const isToday = cellDate.toDateString() === today.toDateString();
-    const dayEvts = _drEvenements.filter(e => new Date(e.date_debut).toDateString() === cellDate.toDateString());
+    const dayEvts = evtsFiltered.filter(e => new Date(e.date_debut).toDateString() === cellDate.toDateString());
     cells += '<div class="dr-cal-day' + (!isThisMonth?' other':'') + (isToday?' today':'') + '">' +
       '<div class="dr-cal-day-num">' + cellDate.getDate() + '</div>' +
-      dayEvts.map(e => '<div class="dr-cal-dot" title="' + e.titre + '" onclick="drViewEvt(\'' + e.id + '\')">' + e.titre + '</div>').join('') +
+      dayEvts.map(e => {
+        const ti = _drEvtTypeInfo(e.type);
+        return '<div class="dr-cal-dot" title="' + e.titre + '" onclick="drViewEvt(\'' + e.id + '\')">' + ti.icon + ' ' + e.titre + '</div>';
+      }).join('') +
       '</div>';
     cellDate.setDate(cellDate.getDate() + 1);
   }
 
   // Upcoming events list
-  const upcoming = _drEvenements.filter(e => new Date(e.date_debut) >= new Date(today.toDateString())).slice(0, 8);
+  const upcoming = evtsFiltered.filter(e => new Date(e.date_debut) >= new Date(today.toDateString())).slice(0, 8);
+
+  const typeFilterBar = `
+    <div class="dr-filters" style="margin-bottom:16px">
+      <button class="dr-filter${_drEvtTypeFilter==='tous'?' active':''}" onclick="_drEvtTypeFilter='tous';drRenderCal()">Tous</button>
+      ${DR_EVT_TYPES.map(t => '<button class="dr-filter' + (_drEvtTypeFilter===t.key?' active':'') + '" onclick="_drEvtTypeFilter=\'' + t.key + '\';drRenderCal()">' + t.icon + ' ' + t.label + '</button>').join('')}
+    </div>
+  `;
 
   cont.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="display:flex;align-items:center;gap:10px">
         <button class="btn btn-secondary" style="padding:6px 10px" onclick="_drCalMonth--;if(_drCalMonth<0){_drCalMonth=11;_drCalYear--;}drRenderCal()">‹</button>
         <span style="font-weight:700;font-size:16px;font-family:'Syne',sans-serif">${monthNames[_drCalMonth]} ${_drCalYear}</span>
         <button class="btn btn-secondary" style="padding:6px 10px" onclick="_drCalMonth++;if(_drCalMonth>11){_drCalMonth=0;_drCalYear++;}drRenderCal()">›</button>
+        <button class="btn btn-secondary" onclick="_drCalYear=new Date().getFullYear();_drCalMonth=new Date().getMonth();drRenderCal()"><i class="ti ti-calendar"></i> Aujourd'hui</button>
       </div>
       ${isCoord ? '<button class="btn btn-primary" onclick="drOpenEvt()"><i class="ti ti-plus"></i> Nouvel événement</button>' : ''}
     </div>
+    ${typeFilterBar}
     <div class="dr-cal-grid">${dayNames.map(d=>'<div class="dr-cal-hd">'+d+'</div>').join('')}${cells}</div>
     <div class="dr-section-lbl">À venir</div>
     ${upcoming.length === 0 ? '<div style="color:var(--ink3);font-size:13px">Aucun événement à venir</div>' :
-      upcoming.map(e => '<div class="dr-card" style="margin-bottom:8px">' +
-        '<div class="dr-card-title">' + e.titre + '</div>' +
+      upcoming.map(e => { const ti = _drEvtTypeInfo(e.type); return '<div class="dr-card" style="margin-bottom:8px">' +
+        '<div class="dr-card-title">' + ti.icon + ' ' + e.titre + '</div>' +
         '<div class="dr-card-meta">' +
+          '<span class="badge badge-purple">' + ti.label + '</span>' +
           (e.creche_id ? '<span class="badge badge-gray">' + e.creche_id + '</span>' : '<span class="badge badge-blue">Toutes les structures</span>') +
           '<span style="color:var(--ink3)">' + _drFmt(e.date_debut) + (e.date_fin ? ' → ' + _drFmt(e.date_fin) : '') + '</span>' +
         '</div>' +
         (e.description ? '<div class="dr-card-body">' + e.description + '</div>' : '') +
         (isCoord ? '<div style="margin-top:8px"><button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="drDeleteEvt(\'' + e.id + '\')">🗑 Supprimer</button></div>' : '') +
-      '</div>').join('')}
+      '</div>'; }).join('')}
   `;
 }
 
@@ -16303,6 +16325,7 @@ async function drSaveEvt() {
   try {
     await sbInsert('evenements_reseau', {
       titre,
+      type: document.getElementById('evt-type')?.value || 'autre',
       description: document.getElementById('evt-desc')?.value.trim() || null,
       creche_id:   document.getElementById('evt-creche')?.value || null,
       date_debut:  new Date(date).toISOString(),
@@ -23126,6 +23149,15 @@ function sendSuiviEmail() {
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group full"><label>Titre *</label><input id="evt-titre" class="form-control" placeholder="Ex : Journée pédagogique" style="width:100%"/></div>
+        <div class="form-group"><label>Type</label><select id="evt-type" style="width:100%">
+          <option value="recrutement">🧑‍💼 Recrutement</option>
+          <option value="formation">📗 Formation</option>
+          <option value="reunion">👥 Réunion</option>
+          <option value="visite">🏠 Visite</option>
+          <option value="entretien">🧡 Entretien</option>
+          <option value="fete">🎉 Fête</option>
+          <option value="autre" selected>⚪ Autre</option>
+        </select></div>
         <div class="form-group"><label>Date de début *</label><input id="evt-date" type="date" class="form-control" style="width:100%"/></div>
         <div class="form-group"><label>Date de fin</label><input id="evt-date-fin" type="date" class="form-control" style="width:100%"/></div>
         <div class="form-group full"><label>Structure concernée</label><select id="evt-creche" style="width:100%"><option value="">Toutes les structures</option></select></div>
