@@ -20677,6 +20677,10 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { dsCloseMod
 //  VEILLE RÉGLEMENTAIRE — Niveau 1
 // ══════════════════════════════════════════════════════════════
 
+// ⏸️ VEILLE SUSPENDUE jusqu'à la commercialisation.
+// Pour la réactiver : repasser VEILLE_ENABLED à true (rien d'autre à toucher).
+const VEILLE_ENABLED = false;
+
 const SUPA_RH_URL_V = 'https://gokfxejoffzttzvdkoll.supabase.co';
 const SUPA_RH_KEY_V = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0';
 const SUPA_HDRS_V = { 'Content-Type':'application/json', 'apikey':SUPA_RH_KEY_V, 'Authorization':'Bearer '+SUPA_RH_KEY_V, 'Prefer':'return=representation' };
@@ -20701,6 +20705,13 @@ let DS_VEILLE_EDIT_ID = null;
 
 // ── Chargement depuis Supabase ─────────────────────────────────
 async function dsVeilleLoad() {
+  if (!VEILLE_ENABLED) {
+    const vt = document.getElementById('ds-tab-veille');
+    if (vt) vt.style.display = 'none';
+    const vBadge = document.getElementById('ds-veille-badge');
+    if (vBadge) vBadge.style.display = 'none';
+    return;
+  }
   try {
     const r = await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes?select=*&order=created_at.desc', { headers: SUPA_HDRS_V });
     if (!r.ok) { DS_VEILLE_DATA = []; dsVeilleRender(); return; }
@@ -20976,6 +20987,7 @@ function dsVeilleToggleParams() {
 }
 
 async function dsVeilleLancer() {
+  if (!VEILLE_ENABLED) return;
   const btn = document.getElementById('ds-veille-lancer-btn');
   const status = document.getElementById('ds-veille-lancer-status');
   if (!btn) return;
@@ -21015,6 +21027,7 @@ async function dsVeilleLancer() {
 
 // ── Charger le badge veille dès que le hub s'affiche ──────────
 async function dsVeilleLoadBadgeOnly() {
+  if (!VEILLE_ENABLED) return;
   try {
     const r = await fetch(SUPA_RH_URL_V + '/rest/v1/veille_alertes?select=id,lu,impact&lu=eq.false', { headers: SUPA_HDRS_V });
     if (!r.ok) return;
