@@ -9935,6 +9935,7 @@ function renderTableConso() {
   });
   const tb = document.getElementById('tableBodyConso');
   if (!tb) return;
+  updateInvTabCounts();
   const CONSO_PER_PAGE = 10;
   const consoTotal = data.length;
   const consoPages = Math.max(1, Math.ceil(consoTotal / CONSO_PER_PAGE));
@@ -10051,6 +10052,7 @@ function filterCreche(creche, el) {
   if (hubEl && hubEl.style.display !== 'none') showHub();
   renderStats();
   updateCounts();
+  updateInvTabCounts();
 }
 
 function filterCrecheFromSelect(val) {
