@@ -13384,11 +13384,13 @@ async function renderRhStats() {
     const crecheFiltre = (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all')
       ? currentCreche : '';
     // table salaries : structure (id TEXT, data JSONB) — filtrage côté client
+    // Chaque requête est indépendante : l'échec d'une table (conges, recrutements…)
+    // ne doit plus faire tomber le compteur d'employés à 0.
     const [salariesSupa, conges, recru, formations] = await Promise.all([
-      sbGet('salaries', 'select=id,data'),
-      sbGet('conges', 'statut=eq.en_attente&select=id'),
-      sbGet('recrutements', 'statut=eq.ouvert&select=id'),
-      sbGet('formations_rh', `renouvellement=lte.${d90str}&renouvellement=gte.${today}&select=id`),
+      sbGet('salaries', 'select=id,data').catch(() => []),
+      sbGet('conges', 'statut=eq.en_attente&select=id').catch(() => []),
+      sbGet('recrutements', 'statut=eq.ouvert&select=id').catch(() => []),
+      sbGet('formations_rh', `renouvellement=lte.${d90str}&renouvellement=gte.${today}&select=id`).catch(() => []),
     ]);
     // Filtrage actif + crèche côté client sur le JSONB
     let nbActifs;
