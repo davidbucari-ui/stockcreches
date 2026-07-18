@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Orevy — Borne de pointage</title>
+<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root { --accent:#8FAF8A; --green:#3B6D11; --red:#B91C1C; --amber:#B45309; }
+  html,body { height:100%; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:#1C1917; color:#fff; height:100vh; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:20px; user-select:none;
+  }
+  .top { position:fixed; top:14px; left:0; right:0; display:flex; align-items:center; justify-content:space-between; padding:0 18px; }
+  .gear { background:rgba(255,255,255,0.10); border:none; color:#fff; width:40px; height:40px; border-radius:50%; font-size:18px; cursor:pointer; }
+  .creche-name { font-size:22px; font-weight:800; letter-spacing:-.3px; }
+  .clock { font-size:14px; opacity:.65; }
+  .stage { width:100%; max-width:400px; text-align:center; }
+  .hint { font-size:16px; opacity:.85; margin-bottom:18px; }
+  .btn-big { width:100%; padding:22px; border:none; border-radius:18px; font-size:18px; font-weight:700; cursor:pointer; color:#fff; background:var(--accent); }
+  .pad { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .key { padding:22px 0; border:none; border-radius:16px; background:rgba(255,255,255,0.13); color:#fff; font-size:24px; font-weight:700; cursor:pointer; }
+  .key:active { background:rgba(255,255,255,0.28); }
+  .key.ok { background:var(--accent); }
+  .key.clr { background:rgba(255,255,255,0.07); }
+  .dots { font-size:34px; letter-spacing:10px; height:44px; margin-bottom:10px; }
+  .feedback { min-height:22px; font-size:15px; color:#FCA5A5; margin-bottom:12px; }
+  video { width:100%; max-width:340px; border-radius:16px; background:#000; aspect-ratio:1/1; object-fit:cover; }
+  .person { font-size:30px; font-weight:800; margin:14px 0 2px; }
+  .person-sub { font-size:14px; opacity:.6; margin-bottom:22px; }
+  .actions { display:grid; gap:12px; }
+  .act { padding:20px; border:none; border-radius:16px; font-size:18px; font-weight:700; color:#fff; cursor:pointer; }
+  .act.in { background:var(--green); } .act.out { background:var(--red); }
+  .act.p1 { background:var(--amber); } .act.p2 { background:#4B5563; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .confirm { font-size:20px; font-weight:700; }
+  .pick { width:100%; padding:16px; margin-bottom:10px; border:none; border-radius:14px; background:rgba(255,255,255,0.13); color:#fff; font-size:17px; font-weight:700; cursor:pointer; }
+  .back { margin-top:10px; background:transparent; border:none; color:#fff; opacity:.6; font-size:14px; cursor:pointer; }
+  .spin { font-size:15px; opacity:.7; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <button class="gear" onclick="openMenu()" title="Options">⚙</button>
+    <div class="creche-name" id="creche-name"></div>
+    <div class="clock" id="clock"></div>
+  </div>
+  <div class="stage" id="stage"><div class="spin">Chargement…</div></div>
+
+<script>
+const SUPA_URL = 'https://gokfxejoffzttzvdkoll.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTY0NDQsImV4cCI6MjA5NTg5MjQ0NH0.2oghhJNpqeh-zLUjHE0iAJLK_eJX40_ZRuQTaQFGzhw';
+const H = { 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY, 'Content-Type':'application/json' };
+
+async function sget(table, q) {
+  const r = await fetch(SUPA_URL + '/rest/v1/' + table + '?' + q, { headers:H });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sinsert(table, obj) {
+  const r = await fetch(SUPA_URL + '/rest/v1/' + table, { method:'POST', headers: Object.assign({}, H, {'Prefer':'return=minimal'}), body: JSON.stringify(obj) });
+  if (!r.ok) throw new Error(await r.text());
+}
+
+let CRECHES = [], MODES = {}, PINS = { pinsSalaries:{}, pinsEnfants:{} };
+let USERS = {}, ENFANTS = {};
+let BORNE_CRECHE = null, BORNE_MODE = 'tablette', PIN = '';
+let zxingReader = null;
+
+function qs(k) { return new URLSearchParams(location.search).get(k); }
+function el(id) { return document.getElementById(id); }
+function tickClock() { const c = el('clock'); if (c) c.textContent = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+
+async function boot() {
+  setInterval(tickClock, 1000); tickClock();
+  try {
+    const params = await sget('parametres', 'id=in.(orevy_creches,orevy_pointage)&select=id,data');
+    params.forEach(p => {
+      if (p.id === 'orevy_creches' && Array.isArray(p.data)) { CRECHES = p.data; p.data.forEach(c => MODES[c.nom] = c.mode_pointage || 'tablette'); }
+      if (p.id === 'orevy_pointage' && p.data) { PINS = Object.assign({ pinsSalaries:{}, pinsEnfants:{} }, p.data); }
+    });
+  } catch(e) { el('stage').innerHTML = '<div class="hint">Connexion impossible.<br>' + e.message + '</div>'; return; }
+
+  const wanted = qs('creche') || localStorage.getItem('orevy_borne_creche');
+  if (wanted && CRECHES.some(c => c.nom === wanted)) { startCreche(wanted); }
+  else { renderStructurePicker(); }
+}
+
+function renderStructurePicker() {
+  stopScanner();
+  el('creche-name').textContent = '';
+  el('stage').innerHTML =
+    '<div class="hint">Choisir la structure</div>' +
+    CRECHES.map((c,i) => '<button class="pick" onclick="startCreche(\'' + c.nom.replace(/'/g,"\\'") + '\')">🏠 ' + c.nom + '</button>').join('');
+}
+
+async function startCreche(nom) {
+  BORNE_CRECHE = nom;
+  BORNE_MODE = MODES[nom] || 'tablette';
+  localStorage.setItem('orevy_borne_creche', nom);
+  el('creche-name').textContent = nom;
+  el('stage').innerHTML = '<div class="spin">Chargement…</div>';
+  USERS = {}; ENFANTS = {};
+  try {
+    const us = await sget('utilisateurs', 'select=id,email,role,creche_id').catch(() => []);
+    us.forEach(u => USERS[u.id] = u);
+    const es = await sget('enfants', 'select=id,prenom,nom,creche_id&creche_id=eq.' + encodeURIComponent(nom)).catch(() => []);
+    es.forEach(e => ENFANTS[e.id] = { nom: ((e.prenom||'') + ' ' + (e.nom||'')).trim() || 'Enfant', creche: e.creche_id || nom });
+  } catch(e) {}
+  renderIdle();
+}
+
+function renderIdle() {
+  PIN = '';
+  if (BORNE_MODE === 'scanner') { renderScanner(); }
+  else { renderPinPad(); }
+}
+
+// ── Mode scanner QR ────────────────────────────────────────────────
+function renderScanner() {
+  stopScanner();
+  el('stage').innerHTML =
+    '<div class="hint">Présentez votre badge devant la caméra</div>' +
+    '<video id="cam" playsinline></video>' +
+    '<div class="feedback" id="scan-fb"></div>';
+  startScanner();
+}
+async function startScanner() {
+  if (typeof ZXing === 'undefined') { const f = el('scan-fb'); if (f) f.textContent = 'Scanner indisponible'; return; }
+  try {
+    zxingReader = new ZXing.BrowserMultiFormatReader();
+    zxingReader.decodeFromVideoDevice(null, 'cam', (result, err) => {
+      if (result) { const t = result.getText(); parseCode(t); }
+    });
+  } catch(e) { const f = el('scan-fb'); if (f) f.textContent = 'Caméra refusée'; }
+}
+function stopScanner() { if (zxingReader) { try { zxingReader.reset(); } catch(e){} zxingReader = null; } }
+let _scanLock = false;
+function parseCode(code) {
+  if (_scanLock) return;
+  if (code.indexOf('OREVY_USER:') === 0) { _scanLock = true; stopScanner(); showSalarie(code.slice(11).trim()); }
+  else if (code.indexOf('OREVY_CHILD:') === 0) { _scanLock = true; stopScanner(); showEnfant(code.slice(12).trim()); }
+  else { const f = el('scan-fb'); if (f) f.textContent = 'Badge non reconnu'; }
+}
+
+// ── Mode tablette PIN ──────────────────────────────────────────────
+function renderPinPad() {
+  const keys = ['1','2','3','4','5','6','7','8','9','C','0','✓'];
+  el('stage').innerHTML =
+    '<div class="hint">Entrez votre code PIN</div>' +
+    '<div class="dots" id="dots">•</div>' +
+    '<div class="feedback" id="pin-fb"></div>' +
+    '<div class="pad">' +
+    keys.map(k => {
+      const cls = k === '✓' ? 'key ok' : k === 'C' ? 'key clr' : 'key';
+      const act = k === 'C' ? 'pinClear()' : k === '✓' ? 'pinSubmit()' : 'pinPress(\'' + k + '\')';
+      return '<button class="' + cls + '" onclick="' + act + '">' + k + '</button>';
+    }).join('') + '</div>';
+  updateDots();
+}
+function updateDots() { const d = el('dots'); if (d) d.textContent = PIN.length ? '●'.repeat(PIN.length) : '•'; }
+function pinPress(k) { if (PIN.length < 6) { PIN += k; updateDots(); const f = el('pin-fb'); if (f) f.textContent = ''; } }
+function pinClear() { PIN = ''; updateDots(); const f = el('pin-fb'); if (f) f.textContent = ''; }
+function pinSubmit() {
+  if (!PIN) return;
+  const sid = Object.keys(PINS.pinsSalaries||{}).find(k => String(PINS.pinsSalaries[k]) === PIN);
+  if (sid) { PIN = ''; showSalarie(sid); return; }
+  const eids = Object.keys(PINS.pinsEnfants||{}).filter(k => String(PINS.pinsEnfants[k]) === PIN);
+  if (eids.length === 1) { PIN = ''; showEnfant(eids[0]); return; }
+  if (eids.length > 1) { PIN = ''; showEnfantChooser(eids); return; }
+  const f = el('pin-fb'); if (f) f.textContent = 'Code inconnu, réessayez'; PIN = ''; updateDots();
+}
+
+// ── Écrans de confirmation ─────────────────────────────────────────
+function showSalarie(id) {
+  const u = USERS[id];
+  const nom = u && u.email ? u.email.split('@')[0] : ('Salarié #' + id);
+  el('stage').innerHTML =
+    '<div class="person">👤 ' + nom + '</div>' +
+    '<div class="person-sub">' + (u && u.role ? u.role : '') + '</div>' +
+    '<div class="actions">' +
+      '<div class="row2">' +
+        '<button class="act in" onclick="doSalarie(\'' + id + '\',\'entree\')">➡ Arrivée</button>' +
+        '<button class="act out" onclick="doSalarie(\'' + id + '\',\'sortie\')">⬅ Départ</button>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<button class="act p1" onclick="doSalarie(\'' + id + '\',\'debut_pause\')">⏸ Début pause</button>' +
+        '<button class="act p2" onclick="doSalarie(\'' + id + '\',\'fin_pause\')">▶ Fin pause</button>' +
+      '</div>' +
+    '</div>' +
+    '<button class="back" onclick="renderIdle();_scanLock=false">← Annuler</button>';
+}
+async function doSalarie(id, type) {
+  const LABEL = { entree:'Arrivée', sortie:'Départ', debut_pause:'Début de pause', fin_pause:'Fin de pause' };
+  try {
+    await sinsert('pointages', { user_id: parseInt(id,10), type, horodatage: new Date().toISOString(), creche_id: (USERS[id] && USERS[id].creche_id) || BORNE_CRECHE || '' });
+    flashOk(LABEL[type]);
+  } catch(e) { flashErr(e.message); }
+}
+function showEnfant(id) {
+  const e = ENFANTS[id] || { nom: 'Enfant' };
+  el('stage').innerHTML =
+    '<div class="person">🧒 ' + e.nom + '</div>' +
+    '<div class="person-sub">' + (e.creche || '') + '</div>' +
+    '<div class="actions"><div class="row2">' +
+      '<button class="act in" onclick="doEnfant(\'' + id + '\',\'arrivee\')">➡ Arrivée</button>' +
+      '<button class="act out" onclick="doEnfant(\'' + id + '\',\'depart\')">⬅ Départ</button>' +
+    '</div></div>' +
+    '<button class="back" onclick="renderIdle();_scanLock=false">← Annuler</button>';
+}
+async function doEnfant(id, type) {
+  try {
+    await sinsert('pointages_enfants', { enfant_id: id, type, horodatage: new Date().toISOString(), creche_id: (ENFANTS[id] && ENFANTS[id].creche) || BORNE_CRECHE || '' });
+    flashOk(type === 'arrivee' ? 'Arrivée' : 'Départ');
+  } catch(e) { flashErr(e.message); }
+}
+function showEnfantChooser(eids) {
+  el('stage').innerHTML =
+    '<div class="hint">Qui pointez-vous ?</div>' +
+    eids.map(id => '<button class="pick" onclick="showEnfant(\'' + id + '\')">🧒 ' + ((ENFANTS[id]||{}).nom || 'Enfant') + '</button>').join('') +
+    '<button class="back" onclick="renderIdle()">← Retour</button>';
+}
+function flashOk(label) {
+  const h = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  el('stage').innerHTML = '<div style="font-size:60px;margin-bottom:12px">✅</div><div class="confirm">' + label + ' enregistrée</div><div class="person-sub" style="margin-top:8px">à ' + h + '</div>';
+  setTimeout(() => { _scanLock = false; renderIdle(); }, 1700);
+}
+function flashErr(msg) {
+  el('stage').innerHTML = '<div style="font-size:52px;margin-bottom:12px">⚠</div><div class="confirm" style="color:#FCA5A5">Erreur</div><div class="person-sub" style="margin-top:8px">' + msg + '</div>';
+  setTimeout(() => { _scanLock = false; renderIdle(); }, 2600);
+}
+
+// ── Menu options ───────────────────────────────────────────────────
+function openMenu() {
+  stopScanner();
+  el('stage').innerHTML =
+    '<div class="hint">Options de la borne</div>' +
+    '<button class="pick" onclick="renderIdle();_scanLock=false">← Reprendre le pointage</button>' +
+    '<button class="pick" onclick="localStorage.removeItem(\'orevy_borne_creche\');renderStructurePicker()">🔄 Changer de structure</button>' +
+    '<button class="pick" onclick="toggleFs()">⛶ Plein écran</button>';
+}
+function toggleFs() {
+  if (!document.fullscreenElement) { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+  else { document.exitFullscreen && document.exitFullscreen(); }
+  renderIdle(); _scanLock = false;
+}
+
+boot();
+</script>
+</body>
+</html>

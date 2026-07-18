@@ -2011,12 +2011,13 @@ textarea { resize: vertical; min-height: 72px; }
             <div class="fiche-card-title">🕐 Pointage (borne)</div>
             <div class="fi-row">
               <div class="fi-field"><label>Code PIN famille</label><input id="fe-pin-input" type="text" inputmode="numeric" maxlength="6" placeholder="Ex : 5678" style="letter-spacing:3px"></div>
-              <div class="fi-field" style="display:flex;align-items:flex-end;gap:8px">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="saveFicheEnfantPin()">💾 Enregistrer le PIN</button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="printQrEnfant()">🪪 QR pointage</button>
+              <div class="fi-field" style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="generateFicheEnfantPin()" title="Générer un code unique">🎲 Générer</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="saveFicheEnfantPin()">💾 Enregistrer</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="printQrEnfant()">🪪 Badge QR</button>
               </div>
             </div>
-            <div style="font-size:11px;color:var(--ink3)">Saisi par les parents sur la borne (mode PIN) ou badge QR scanné (mode scanner), pour l'arrivée et le départ de l'enfant.</div>
+            <div id="fe-pin-hint" style="font-size:11px;color:var(--ink3)">Saisi par les parents sur la borne (mode PIN) ou badge QR scanné (mode scanner), pour l'arrivée et le départ de l'enfant.</div>
           </div>
           <div class="fiche-card">
             <div class="fiche-card-title">Contrat d'accueil</div>
@@ -16001,13 +16002,14 @@ function renderPagePointage() {
     '<div style="display:flex;gap:6px;border-bottom:2px solid var(--border);margin-bottom:18px">' +
       '<button id="pt-tab-salaries" onclick="pointageSwitchTab(\'salaries\')"></button>' +
       '<button id="pt-tab-enfants" onclick="pointageSwitchTab(\'enfants\')"></button>' +
+      '<button id="pt-tab-badges" onclick="pointageSwitchTab(\'badges\')"></button>' +
     '</div>' +
     '<div id="pt-content"><div style="text-align:center;color:var(--ink3);padding:40px">Chargement\u2026</div></div>';
   pointageSwitchTab(pointageCurrentTab);
 }
 function pointageSwitchTab(tab) {
   pointageCurrentTab = tab;
-  const defs = [['salaries','\uD83D\uDC65 Salari\u00E9s'],['enfants','\uD83E\uDDD2 Enfants']];
+  const defs = [['salaries','\uD83D\uDC65 Salari\u00E9s'],['enfants','\uD83E\uDDD2 Enfants'],['badges','\uD83E\uDEAA Badges & codes']];
   defs.forEach(([t,label]) => {
     const btn = document.getElementById('pt-tab-' + t);
     if (!btn) return;
@@ -16016,7 +16018,8 @@ function pointageSwitchTab(tab) {
     btn.style.cssText = 'padding:9px 16px;border:none;background:none;font-family:inherit;font-size:13px;cursor:pointer;margin-bottom:-2px;border-bottom:2px solid ' + (on?'var(--accent)':'transparent') + ';color:' + (on?'var(--accent)':'var(--ink3)') + ';font-weight:' + (on?'700':'600');
   });
   if (tab === 'salaries') renderPointageSalaries();
-  else renderPointageEnfants();
+  else if (tab === 'enfants') renderPointageEnfants();
+  else renderPointageBadges();
 }
 
 // ── Onglet Salariés ────────────────────────────────────────────────
@@ -16151,84 +16154,10 @@ async function enregistrerPointageEnfant(type) {
   } catch(e) { if (conf) conf.innerHTML = '<span style="color:var(--red)">\u26A0 ' + e.message + '</span>'; }
 }
 
-// ── Mode borne (plein écran) ───────────────────────────────────────
+// ── Mode borne → page autonome pointage.html ───────────────────────
 function openBornePointage() {
-  loadPointageConfig();
-  if (currentCreche && currentCreche !== 'all') { borneCreche = currentCreche; borneShow(); }
-  else { borneCreche = null; borneShowStructurePicker(); }
-}
-function borneShowStructurePicker() {
-  const ov = document.getElementById('borne-overlay'); if (!ov) return;
-  ov.style.display = 'flex'; document.body.style.overflow = 'hidden';
-  ov.innerHTML =
-    '<button onclick="closeBornePointage()" style="position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer">\u2715</button>' +
-    '<div style="font-family:\'Syne\',sans-serif;font-size:24px;font-weight:800;margin-bottom:20px">Choisir la structure</div>' +
-    '<div style="width:100%;max-width:340px">' +
-    (CRECHES_DATA||[]).map((c,i) => '<button onclick="borneChooseStructure(' + i + ')" style="width:100%;padding:16px;margin-bottom:10px;border:none;border-radius:14px;background:rgba(255,255,255,0.14);color:#fff;font-size:16px;font-weight:700;cursor:pointer">\uD83C\uDFE0 ' + c.nom + '</button>').join('') +
-    '</div>';
-}
-function borneChooseStructure(i) { borneCreche = CRECHES_DATA[i].nom; borneShow(); }
-function borneShow() {
-  const ov = document.getElementById('borne-overlay'); if (!ov) return;
-  const mode = getModePointage(borneCreche);
-  bornePin = '';
-  ov.style.display = 'flex'; document.body.style.overflow = 'hidden';
-  ov.innerHTML =
-    '<button onclick="closeBornePointage()" style="position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer">\u2715</button>' +
-    '<div style="text-align:center;margin-bottom:22px"><div style="font-family:\'Syne\',sans-serif;font-size:26px;font-weight:800">' + (borneCreche||'Pointage') + '</div><div id="borne-clock" style="font-size:15px;opacity:.7;margin-top:4px"></div></div>' +
-    '<div id="borne-body" style="width:100%;max-width:360px"></div>';
-  borneRenderIdle(mode);
-  if (borneClockTimer) clearInterval(borneClockTimer);
-  const tick = () => { const c = document.getElementById('borne-clock'); if (c) c.textContent = new Date().toLocaleString('fr-FR',{weekday:'long',hour:'2-digit',minute:'2-digit',second:'2-digit'}); };
-  tick(); borneClockTimer = setInterval(tick, 1000);
-}
-function closeBornePointage() {
-  const ov = document.getElementById('borne-overlay'); if (ov) ov.style.display = 'none';
-  document.body.style.overflow = '';
-  if (borneClockTimer) { clearInterval(borneClockTimer); borneClockTimer = null; }
-}
-function borneRenderIdle(mode) {
-  const body = document.getElementById('borne-body'); if (!body) return;
-  if (mode === 'scanner') {
-    body.innerHTML = '<div style="text-align:center"><div style="font-size:15px;opacity:.85;margin-bottom:18px">Pr\u00E9sentez votre badge QR</div><button onclick="openScanner()" style="width:100%;padding:22px;border:none;border-radius:18px;background:var(--accent);color:#fff;font-size:18px;font-weight:700;cursor:pointer">\uD83D\uDCF7 Scanner un badge</button></div>';
-  } else {
-    const keys = ['1','2','3','4','5','6','7','8','9','C','0','\u2713'];
-    body.innerHTML =
-      '<div style="text-align:center;margin-bottom:14px;font-size:15px;opacity:.85">Entrez votre code PIN</div>' +
-      '<div id="borne-dots" style="text-align:center;font-size:30px;letter-spacing:8px;height:38px;margin-bottom:12px">\u2022</div>' +
-      '<div id="borne-feedback" style="text-align:center;min-height:20px;font-size:14px;color:#FCA5A5;margin-bottom:10px"></div>' +
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">' +
-      keys.map(k => {
-        const isC = k==='C', isOk = k==='\u2713';
-        const act = isC ? 'bornePinClear()' : isOk ? 'bornePinSubmit()' : ('bornePinPress(\'' + k + '\')');
-        const bg = isOk ? 'var(--accent)' : isC ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.14)';
-        return '<button onclick="' + act + '" style="padding:20px 0;border:none;border-radius:14px;background:' + bg + ';color:#fff;font-size:22px;font-weight:700;cursor:pointer">' + k + '</button>';
-      }).join('') + '</div>';
-    borneUpdateDots();
-  }
-}
-function borneUpdateDots() { const d = document.getElementById('borne-dots'); if (d) d.textContent = bornePin.length ? '\u25CF'.repeat(bornePin.length) : '\u2022'; }
-function bornePinPress(k) { if (bornePin.length < 6) { bornePin += k; borneUpdateDots(); const f = document.getElementById('borne-feedback'); if (f) f.textContent = ''; } }
-function bornePinClear() { bornePin = ''; borneUpdateDots(); const f = document.getElementById('borne-feedback'); if (f) f.textContent = ''; }
-function borneFeedback(msg) { const f = document.getElementById('borne-feedback'); if (f) f.textContent = msg; }
-async function bornePinSubmit() {
-  const pin = bornePin;
-  if (!pin) return;
-  await loadPointageConfig();
-  const sid = Object.keys(POINTAGE_CFG.pinsSalaries||{}).find(k => String(POINTAGE_CFG.pinsSalaries[k]) === pin);
-  if (sid) { bornePin = ''; borneUpdateDots(); openPointageModal(parseInt(sid,10)); return; }
-  const eids = Object.keys(POINTAGE_CFG.pinsEnfants||{}).filter(k => String(POINTAGE_CFG.pinsEnfants[k]) === pin);
-  if (eids.length === 1) { bornePin = ''; borneUpdateDots(); openPointageEnfantModal(eids[0]); return; }
-  if (eids.length > 1) { bornePin = ''; borneUpdateDots(); borneEnfantChooser(eids); return; }
-  borneFeedback('Code inconnu, r\u00E9essayez'); bornePin = ''; borneUpdateDots();
-}
-function borneEnfantChooser(eids) {
-  const body = document.getElementById('borne-body'); if (!body) return;
-  const map = pointageEnfantNameMap();
-  body.innerHTML =
-    '<div style="text-align:center;margin-bottom:14px;font-size:15px;opacity:.85">Qui pointez-vous ?</div>' +
-    eids.map(id => '<button onclick="openPointageEnfantModal(\'' + id + '\')" style="width:100%;padding:16px;margin-bottom:10px;border:none;border-radius:14px;background:rgba(255,255,255,0.14);color:#fff;font-size:16px;font-weight:700;cursor:pointer">\uD83E\uDDD2 ' + ((map[id]||{}).nom||'Enfant') + '</button>').join('') +
-    '<button onclick="borneRenderIdle(getModePointage(borneCreche))" style="width:100%;padding:12px;border:none;border-radius:12px;background:transparent;color:#fff;opacity:.7;font-size:14px;cursor:pointer">\u2190 Retour</button>';
+  const url = 'pointage.html' + (currentCreche && currentCreche !== 'all' ? ('?creche=' + encodeURIComponent(currentCreche)) : '');
+  window.open(url, '_blank');
 }
 
 // ── Attribution des PIN (fiches) ───────────────────────────────────
@@ -16236,6 +16165,7 @@ async function renderFichePin(userId) {
   await loadPointageConfig();
   const inp = document.getElementById('fiche-pin-input');
   if (inp) inp.value = (POINTAGE_CFG.pinsSalaries||{})[userId] || '';
+  _setPinHint('fiche-pin-hint', ficheCurrentUser && ficheCurrentUser.creche_id);
 }
 async function saveFichePin() {
   if (!ficheCurrentUserId) return;
@@ -16249,6 +16179,34 @@ async function renderFicheEnfantPin(enfantId) {
   await loadPointageConfig();
   const inp = document.getElementById('fe-pin-input');
   if (inp) inp.value = (POINTAGE_CFG.pinsEnfants||{})[enfantId] || '';
+  _setPinHint('fe-pin-hint', ficheEnfantCrecheId);
+}
+function _pinExists(code) {
+  const s = Object.values(POINTAGE_CFG.pinsSalaries||{}).map(String);
+  const e = Object.values(POINTAGE_CFG.pinsEnfants||{}).map(String);
+  return s.indexOf(code) >= 0 || e.indexOf(code) >= 0;
+}
+function _genPin() {
+  let c, n = 0;
+  do { c = String(Math.floor(1000 + Math.random()*9000)); n++; } while (_pinExists(c) && n < 60);
+  return c;
+}
+async function generateFichePin() {
+  await loadPointageConfig();
+  const i = document.getElementById('fiche-pin-input');
+  if (i) { i.value = _genPin(); await saveFichePin(); }
+}
+async function generateFicheEnfantPin() {
+  await loadPointageConfig();
+  const i = document.getElementById('fe-pin-input');
+  if (i) { i.value = _genPin(); await saveFicheEnfantPin(); }
+}
+function _setPinHint(hintId, crecheNom) {
+  const h = document.getElementById(hintId);
+  if (!h) return;
+  const m = crecheNom ? getModePointage(crecheNom) : null;
+  if (m === 'scanner') h.innerHTML = '<span style="color:#1D4ED8;font-weight:600">Structure en mode QR</span> \u2014 imprimez plut\u00f4t le badge. Le PIN reste utilisable en secours.';
+  else h.innerHTML = '<span style="color:#0F766E;font-weight:600">Structure en mode PIN</span> \u2014 ce code est saisi sur la borne pour pointer.';
 }
 async function saveFicheEnfantPin() {
   if (!ficheEnfantId) return;
@@ -16309,6 +16267,101 @@ async function pointageExportMois() {
     showNotif('\u2B07 Export ' + mois + ' g\u00E9n\u00E9r\u00E9');
   } catch(e) { showNotif('\u26A0 ' + e.message); }
 }
+// ── Onglet Badges & codes (onboarding) ─────────────────────────────
+let pointageBadgeUsers = [], pointageBadgeEnfants = [];
+
+function _qrDataUrl(text) {
+  const tmp = document.createElement('div'); tmp.style.display = 'none'; document.body.appendChild(tmp);
+  let d = '';
+  try {
+    new QRCode(tmp, { text, width:160, height:160, colorDark:'#1C1917', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    const cv = tmp.querySelector('canvas'); d = cv ? cv.toDataURL('image/png') : '';
+  } catch(e) {}
+  document.body.removeChild(tmp);
+  return d;
+}
+function pointageBadgeRow(kind, id, name, sub) {
+  const store = (kind === 'salarie') ? (POINTAGE_CFG.pinsSalaries||{}) : (POINTAGE_CFG.pinsEnfants||{});
+  const pin = store[id] || '';
+  return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)">' +
+    '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-weight:600;font-size:14px">' + name + '</span>' + (sub ? ' <span style="font-size:12px;color:var(--ink3);text-transform:capitalize">' + sub + '</span>' : '') + '</span>' +
+    '<span style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:15px;letter-spacing:2px;min-width:52px;text-align:center;color:' + (pin?'var(--ink)':'var(--ink3)') + '">' + (pin||'\u2014') + '</span>' +
+    '<button class="btn btn-secondary btn-sm" title="G\u00E9n\u00E9rer un PIN" onclick="generateBadgePin(\'' + kind + '\',\'' + id + '\')">\uD83C\uDFB2</button>' +
+    '<button class="btn btn-secondary btn-sm" title="Imprimer le badge QR" onclick="printSingleBadge(\'' + kind + '\',\'' + id + '\')">\uD83E\uDEAA</button>' +
+    '</div>';
+}
+async function renderPointageBadges() {
+  const el = document.getElementById('pt-content'); if (!el) return;
+  el.innerHTML = '<div style="text-align:center;color:var(--ink3);padding:40px">Chargement\u2026</div>';
+  try {
+    await loadPointageConfig();
+    const uf = (currentCreche && currentCreche !== 'all') ? ('&creche_id=eq.' + encodeURIComponent(currentCreche)) : '';
+    pointageBadgeUsers = await sbGet('utilisateurs', 'select=id,email,role,creche_id' + uf + '&order=id.asc');
+    const crecheId = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
+    pointageBadgeEnfants = (getFamilles(crecheId) || []).slice().sort((a,b) => (((a.prenom||'')+(a.nom||'')).localeCompare((b.prenom||'')+(b.nom||''))));
+    const missing = pointageBadgeUsers.filter(u => !(POINTAGE_CFG.pinsSalaries||{})[u.id]).length + pointageBadgeEnfants.filter(e => !(POINTAGE_CFG.pinsEnfants||{})[e.id]).length;
+    const scopeLabel = (currentCreche && currentCreche !== 'all') ? currentCreche : 'Toutes les structures';
+    const bar = '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px">' +
+      '<button class="btn btn-primary btn-sm" onclick="bulkGeneratePins()">\uD83C\uDFB2 G\u00E9n\u00E9rer les PIN manquants' + (missing ? (' (' + missing + ')') : '') + '</button>' +
+      '<button class="btn btn-secondary btn-sm" onclick="printAllBadges()">\uD83D\uDDA8 Imprimer tous les badges QR</button>' +
+      '<span style="font-size:12px;color:var(--ink3)">\uD83D\uDCCD ' + scopeLabel + '</span></div>';
+    const salBlock = '<div style="font-size:13px;font-weight:700;color:var(--ink2);margin:0 0 8px">\uD83D\uDC65 Salari\u00E9s (' + pointageBadgeUsers.length + ')</div>' +
+      (pointageBadgeUsers.length
+        ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:22px">' + pointageBadgeUsers.map(u => pointageBadgeRow('salarie', u.id, (u.email ? u.email.split('@')[0] : ('#'+u.id)), (u.role||''))).join('') + '</div>'
+        : '<div style="color:var(--ink3);font-size:13px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:22px">Aucun salari\u00E9.</div>');
+    const enfBlock = '<div style="font-size:13px;font-weight:700;color:var(--ink2);margin:0 0 8px">\uD83E\uDDD2 Enfants (' + pointageBadgeEnfants.length + ')</div>' +
+      (pointageBadgeEnfants.length
+        ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden">' + pointageBadgeEnfants.map(e => pointageBadgeRow('enfant', e.id, (((e.prenom||'')+' '+(e.nom||'')).trim()||'Enfant'), (e._creche||''))).join('') + '</div>'
+        : '<div style="color:var(--ink3);font-size:13px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">Aucun enfant.</div>');
+    el.innerHTML = bar + salBlock + enfBlock;
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:20px">Erreur : ' + e.message + '</div>'; }
+}
+async function generateBadgePin(kind, id) {
+  await loadPointageConfig();
+  const store = (kind === 'salarie') ? POINTAGE_CFG.pinsSalaries : POINTAGE_CFG.pinsEnfants;
+  store[id] = _genPin();
+  await savePointageConfig();
+  renderPointageBadges();
+}
+async function bulkGeneratePins() {
+  await loadPointageConfig();
+  let n = 0;
+  pointageBadgeUsers.forEach(u => { if (!POINTAGE_CFG.pinsSalaries[u.id]) { POINTAGE_CFG.pinsSalaries[u.id] = _genPin(); n++; } });
+  pointageBadgeEnfants.forEach(e => { if (!POINTAGE_CFG.pinsEnfants[e.id]) { POINTAGE_CFG.pinsEnfants[e.id] = _genPin(); n++; } });
+  if (n) { await savePointageConfig(); showNotif('\u2705 ' + n + ' code(s) PIN g\u00E9n\u00E9r\u00E9(s)'); } else { showNotif('Tous les PIN sont d\u00E9j\u00E0 attribu\u00E9s'); }
+  renderPointageBadges();
+}
+function printSingleBadge(kind, id) {
+  const code = (kind === 'salarie' ? 'OREVY_USER:' : 'OREVY_CHILD:') + id;
+  let name = '', sub = '';
+  if (kind === 'salarie') { const u = pointageBadgeUsers.find(x => String(x.id) === String(id)); name = u && u.email ? u.email.split('@')[0] : ('#'+id); sub = u && u.role ? u.role : ''; }
+  else { const e = pointageBadgeEnfants.find(x => String(x.id) === String(id)); name = e ? (((e.prenom||'')+' '+(e.nom||'')).trim()||'Enfant') : 'Enfant'; sub = e && e._creche ? e._creche : ''; }
+  _printBadges([{ code, name, sub }]);
+}
+function printAllBadges() {
+  const list = [];
+  pointageBadgeUsers.forEach(u => list.push({ code:'OREVY_USER:'+u.id, name:(u.email?u.email.split('@')[0]:('#'+u.id)), sub:(u.role||'') }));
+  pointageBadgeEnfants.forEach(e => list.push({ code:'OREVY_CHILD:'+e.id, name:(((e.prenom||'')+' '+(e.nom||'')).trim()||'Enfant'), sub:(e._creche||'') }));
+  if (!list.length) { showNotif('Aucun badge \u00E0 imprimer'); return; }
+  _printBadges(list);
+}
+function _printBadges(list) {
+  const cards = list.map(b => {
+    const d = _qrDataUrl(b.code);
+    return '<div class="card"><div class="logo">Orevy</div><div class="nm">' + b.name + '</div><div class="sb">' + (b.sub||'') + '</div>' + (d ? '<img src="' + d + '" width="150" height="150">' : '<div class="noqr">QR indisponible</div>') + '</div>';
+  }).join('');
+  const html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Badges de pointage Orevy</title>' +
+    '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:#fff;padding:14px}' +
+    '.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}' +
+    '.card{border:1.5px solid #1C1917;border-radius:14px;padding:16px 10px;text-align:center;break-inside:avoid;page-break-inside:avoid}' +
+    '.logo{font-size:15px;font-weight:800;color:#1C1917;margin-bottom:6px}.nm{font-size:15px;font-weight:700;color:#1C1917}.sb{font-size:11px;color:#57534E;margin-bottom:8px;text-transform:capitalize;min-height:13px}' +
+    '.noqr{font-size:11px;color:#999;padding:40px 0}img{display:block;margin:0 auto}' +
+    '@media print{@page{margin:10mm}}</style></head><body><div class="grid">' + cards + '</div>' +
+    '<scr' + 'ipt>window.onload=function(){setTimeout(function(){window.print();},500);}<' + '/scr' + 'ipt></body></html>';
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
 // ── FIN MODULE POINTAGE UNIFIÉ ─────────────────────────────────────
 
 // ── FIN MODULE POINTAGE ───────────────────────────────────────────
@@ -17420,9 +17473,10 @@ function saveReponse()  { drSaveReponse(); }
             <label style="font-size:12px;font-weight:700;color:var(--ink2);display:block;margin-bottom:6px">🔢 Code PIN pointage</label>
             <div style="display:flex;gap:8px">
               <input id="fiche-pin-input" type="text" inputmode="numeric" maxlength="6" placeholder="Ex : 1234" style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;outline:none;background:var(--bg);letter-spacing:3px">
+              <button class="btn btn-secondary btn-sm" onclick="generateFichePin()" title="Générer un code unique">🎲</button>
               <button class="btn btn-secondary btn-sm" onclick="saveFichePin()">💾</button>
             </div>
-            <div style="font-size:11px;color:var(--ink3);margin-top:5px">Saisi par le salarié sur la borne (mode PIN) pour pointer.</div>
+            <div id="fiche-pin-hint" style="font-size:11px;color:var(--ink3);margin-top:5px">Saisi par le salarié sur la borne (mode PIN) pour pointer.</div>
           </div>
           <button class="btn btn-primary" onclick="printFicheSalarie()">🖨 Imprimer la fiche</button>
         </div>
@@ -17435,9 +17489,6 @@ function saveReponse()  { drSaveReponse(); }
     </div>
   </div>
 </div>
-
-<!-- ── OVERLAY BORNE POINTAGE ── -->
-<div id="borne-overlay" style="display:none;position:fixed;inset:0;z-index:90;background:#1C1917;color:#fff;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:'Instrument Sans',sans-serif"></div>
 
 <!-- ── MODAL POINTAGE ENFANT ── -->
 <div class="modal-overlay" id="modal-pointage-enfant" onclick="closeModalClick(event,'modal-pointage-enfant')">
