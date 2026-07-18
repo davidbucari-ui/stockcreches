@@ -1213,6 +1213,9 @@ textarea { resize: vertical; min-height: 72px; }
       <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('planning', this)" title="Planning">
         <span class="nav-icon">📅</span> Planning
       </button>
+      <button class="nav-item" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('pointage', this)" title="Pointage">
+        <span class="nav-icon">🕐</span> Pointage
+      </button>
     </div>
   </div>
 
@@ -2005,6 +2008,17 @@ textarea { resize: vertical; min-height: 72px; }
         <!-- ACCUEIL -->
         <div id="fi-accueil" style="display:none">
           <div class="fiche-card">
+            <div class="fiche-card-title">🕐 Pointage (borne)</div>
+            <div class="fi-row">
+              <div class="fi-field"><label>Code PIN famille</label><input id="fe-pin-input" type="text" inputmode="numeric" maxlength="6" placeholder="Ex : 5678" style="letter-spacing:3px"></div>
+              <div class="fi-field" style="display:flex;align-items:flex-end;gap:8px">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="saveFicheEnfantPin()">💾 Enregistrer le PIN</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="printQrEnfant()">🪪 QR pointage</button>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--ink3)">Saisi par les parents sur la borne (mode PIN) ou badge QR scanné (mode scanner), pour l'arrivée et le départ de l'enfant.</div>
+          </div>
+          <div class="fiche-card">
             <div class="fiche-card-title">Contrat d'accueil</div>
             <div class="fi-row">
               <div class="fi-field"><label>Crèche *</label><select id="fi-creche" onchange="syncContratFromCreche()"></select></div>
@@ -2356,6 +2370,7 @@ textarea { resize: vertical; min-height: 72px; }
     <div id="page-demandesReseau" style="display:none;padding:24px"></div>
 
     <div id="page-incidents" style="display:none;padding:24px"></div>
+    <div id="page-pointage" style="display:none;padding:24px"></div>
 
     <div id="page-admin" style="display:none;position:relative;overflow:hidden">
       <div style="position:absolute;inset:0;pointer-events:none;z-index:0;display:flex;align-items:center;justify-content:center"><img src="Visuel_Orevy.png" style="width:480px;opacity:0.05;user-select:none" alt=""></div>
@@ -4017,6 +4032,12 @@ async function processBarcode(code) {
   if (code.startsWith('OREVY_USER:')) {
     const userId = parseInt(code.replace('OREVY_USER:', ''), 10);
     if (!isNaN(userId)) { await openPointageModal(userId); return; }
+  }
+
+  // ── QR enfant (pointage)
+  if (code.startsWith('OREVY_CHILD:')) {
+    const cid = code.replace('OREVY_CHILD:', '').trim();
+    if (cid) { openPointageEnfantModal(cid); return; }
   }
 
   // Mode "associer au formulaire"
@@ -6011,6 +6032,7 @@ function openFicheEnfant(id) {
   setV('fi-entree', e.entree); setV('fi-sortie', e.sortie);
   setV('fi-num-caf', e.num_caf); setV('fi-nss1', e.nss1); setV('fi-nss2', e.nss2);
   setV('fi-rfr', e.rfr); setV('fi-nb-enfants-foyer', e.nb_enfants_foyer);
+  renderFicheEnfantPin(id);
   setV('fi-qf', e.qf); setV('fi-taux-caf', e.taux_caf);
   // Badge auto si QF calculé depuis RFR
   const qfBadge = document.getElementById('fi-qf-auto-badge');
@@ -8402,6 +8424,7 @@ function renderParametres() {
 
   list.innerHTML = CRECHES_DATA.map((c, i) => {
     const mode = c.mode_financement || 'PSU';
+    const modeP = c.mode_pointage || 'tablette';
     return `
     <div style="background:var(--surface);border-radius:14px;padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="width:32px;height:32px;border-radius:50%;background:${c.color};flex-shrink:0;cursor:pointer" onclick="document.getElementById('color-picker-${i}').click()" title="Changer la couleur"></div>
@@ -8418,6 +8441,16 @@ function renderParametres() {
         <button onclick="changerModeFinancement(${i},'PAJE')"
           style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:2px solid ${mode==='PAJE'?'#B45309':'var(--border)'};background:${mode==='PAJE'?'#FEF3C7':'var(--surface2)'};color:${mode==='PAJE'?'#B45309':'var(--ink3)'}">
           PAJE
+        </button>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button onclick="changerModePointage(${i},'tablette')"
+          style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:2px solid ${modeP==='tablette'?'#0F766E':'var(--border)'};background:${modeP==='tablette'?'#CCFBF1':'var(--surface2)'};color:${modeP==='tablette'?'#0F766E':'var(--ink3)'}" title="Borne à code PIN">
+          📟 PIN
+        </button>
+        <button onclick="changerModePointage(${i},'scanner')"
+          style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:2px solid ${modeP==='scanner'?'#1D4ED8':'var(--border)'};background:${modeP==='scanner'?'#DBEAFE':'var(--surface2)'};color:${modeP==='scanner'?'#1D4ED8':'var(--ink3)'}" title="Scanner de QR codes">
+          📷 QR
         </button>
       </div>
       <button onclick="supprimerCreche(${i})" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:18px;padding:4px" title="Supprimer">🗑</button>
@@ -9005,14 +9038,17 @@ async function renderDashboardAuxiliaire(dateStr) {
     try {
       const todayStr = new Date().toISOString().split('T')[0];
       const pts = await sbGet('pointages_enfants',
-        'date=eq.'+todayStr+'&select=enfant_nom,heure_arrivee,statut' +
-        (currentCreche !== 'all' ? '&creche=eq.'+encodeURIComponent(currentCreche) : '') +
-        '&order=heure_arrivee.asc&limit=12'
+        'horodatage=gte.'+todayStr+'T00:00:00&select=enfant_id,type,horodatage,creche_id' +
+        (currentCreche !== 'all' ? '&creche_id=eq.'+encodeURIComponent(currentCreche) : '') +
+        '&order=horodatage.asc'
       ).catch(() => []);
-      enfHtml = pts.length === 0
-        ? '<div style="font-size:13px;color:var(--ink3)">Aucun enfant point\u00e9 aujourd\'hui</div>'
+      const etatEnf = pointageEtatEnfants(pts);
+      const nmapEnf = pointageEnfantNameMap();
+      const presentsEnf = Object.keys(etatEnf).filter(id => etatEnf[id].status === 'present');
+      enfHtml = presentsEnf.length === 0
+        ? '<div style="font-size:13px;color:var(--ink3)">Aucun enfant pointé aujourd\'hui</div>'
         : '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">' +
-          pts.map(p => '<div style="background:var(--bg);border-radius:8px;padding:8px 12px"><div style="font-size:13px;font-weight:600">'+(p.enfant_nom||'—')+'</div><div style="font-size:11px;color:var(--ink3)">arr. '+(p.heure_arrivee||'—')+'</div></div>').join('') +
+          presentsEnf.map(id => '<div style="background:var(--bg);border-radius:8px;padding:8px 12px"><div style="font-size:13px;font-weight:600">'+((nmapEnf[id]||{}).nom||'—')+'</div><div style="font-size:11px;color:var(--ink3)">arr. '+(etatEnf[id].arrivee?new Date(etatEnf[id].arrivee).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'—')+'</div></div>').join('') +
           '</div>';
     } catch(e) { enfHtml = '<div style="font-size:13px;color:var(--ink3)">Données indisponibles</div>'; }
     enfEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:12px">👶 Enfants présents aujourd\'hui</div>' + enfHtml;
@@ -9184,10 +9220,10 @@ let currentUserRole = 'stagiaire';
 let currentUserDbId = null;
 
 const ROLE_PAGES = {
-  admin:         ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles','transmissions','demandesReseau','incidents'],
-  coordinateur:  ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau','incidents'],
-  directrice:    ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau','incidents'],
-  auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles','transmissions','demandesReseau','incidents'],
+  admin:         ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles','transmissions','demandesReseau','incidents','pointage'],
+  coordinateur:  ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau','incidents','pointage'],
+  directrice:    ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau','incidents','pointage'],
+  auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles','transmissions','demandesReseau','incidents','pointage'],
   stagiaire:     ['dashboard'],
 };
 
@@ -11098,13 +11134,13 @@ function showPage(page, btn, fromPopState) {
   if (!fromPopState) {
     history.pushState({ page }, '', window.location.pathname + window.location.search);
   }
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions','demandesReseau','incidents'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions','demandesReseau','incidents','pointage'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions', demandesReseau:'Demandes réseau' };
+  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions', demandesReseau:'Demandes réseau', pointage:'Pointage' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Remonter en haut de page lors du changement
   try { window.scrollTo(0,0); document.querySelector('.content')?.scrollTo?.(0,0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch(_) {}
@@ -11126,6 +11162,7 @@ function showPage(page, btn, fromPopState) {
   if (page === 'transmissions') { renderTransmissions(); }
   if (page === 'demandesReseau') { renderPageDemandesReseau(); }
   if (page === 'incidents') { renderPageIncidents(); }
+  if (page === 'pointage') { renderPagePointage(); }
   // Topbar row2 : visible seulement pour inventaire/entretien
   const topbarRow2 = document.querySelector('.topbar-row2');
   if (topbarRow2) topbarRow2.style.display = ['inventaire','entretien'].includes(page) ? '' : 'none';
@@ -15718,6 +15755,7 @@ function renderFicheQR(userId, email, role, crecheId) {
     <span style="color:var(--ink3)">${role ? role.charAt(0).toUpperCase()+role.slice(1) : '—'}</span>
     ${crecheId ? ` · ${crecheId}` : ''}<br>
     <span style="font-size:11px;color:var(--ink3)">ID : ${userId}</span>`;
+  renderFichePin(userId);
 }
 
 function printFicheSalarie() {
@@ -15863,6 +15901,415 @@ async function enregistrerPointage(type) {
     if (confirmEl) confirmEl.innerHTML = `<span style="color:var(--red)">⚠ Erreur : ${e.message}</span>`;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// ── MODULE POINTAGE UNIFIÉ (salariés + enfants) ────────────────────
+// ═══════════════════════════════════════════════════════════════════
+
+let POINTAGE_CFG = { pinsSalaries:{}, pinsEnfants:{} };
+let pointageCfgLoaded = false;
+let pointageCurrentTab = 'salaries';
+let pointageMonth = null;
+let borneCreche = null;
+let bornePin = '';
+let borneClockTimer = null;
+let pointageEnfantId = null;
+let pointageEnfantData = null;
+
+async function loadPointageConfig(force) {
+  if (pointageCfgLoaded && !force) return POINTAGE_CFG;
+  try {
+    const rows = await sbGet('parametres', 'id=eq.orevy_pointage&select=id,data');
+    if (rows && rows.length && rows[0].data) {
+      POINTAGE_CFG = Object.assign({ pinsSalaries:{}, pinsEnfants:{} }, rows[0].data);
+    }
+  } catch(e) { console.warn('[Pointage] config:', e.message); }
+  POINTAGE_CFG.pinsSalaries = POINTAGE_CFG.pinsSalaries || {};
+  POINTAGE_CFG.pinsEnfants  = POINTAGE_CFG.pinsEnfants  || {};
+  pointageCfgLoaded = true;
+  return POINTAGE_CFG;
+}
+async function savePointageConfig() {
+  try { await sbUpsertParametre('orevy_pointage', POINTAGE_CFG); }
+  catch(e) { showNotif('\u26A0 Sauvegarde PIN : ' + e.message); }
+}
+
+function getModePointage(crecheNom) {
+  const c = (CRECHES_DATA || []).find(x => x.nom === crecheNom);
+  return (c && c.mode_pointage) ? c.mode_pointage : 'tablette';
+}
+function changerModePointage(i, mode) {
+  CRECHES_DATA[i].mode_pointage = mode;
+  sauverCreches();
+  renderParametres();
+  showNotif('\u2705 Pointage ' + (mode === 'scanner' ? 'scanner QR' : 'tablette PIN') + ' pour ' + CRECHES_DATA[i].nom);
+}
+
+// ── Helpers enfants ────────────────────────────────────────────────
+function pointageEnfantNameMap() {
+  const map = {};
+  try {
+    getFamilles('__all__').forEach(e => {
+      map[e.id] = {
+        nom: ((e.prenom||'') + ' ' + (e.nom||'')).trim() || '\u2014',
+        creche: e._creche || '',
+        prenom: e.prenom || ''
+      };
+    });
+  } catch(e) {}
+  return map;
+}
+function pointageEtatEnfants(events) {
+  const byChild = {};
+  (events||[]).forEach(ev => { (byChild[ev.enfant_id] = byChild[ev.enfant_id] || []).push(ev); });
+  const res = {};
+  Object.keys(byChild).forEach(id => {
+    const evs = byChild[id].slice().sort((a,b) => new Date(a.horodatage) - new Date(b.horodatage));
+    const last = evs[evs.length-1];
+    res[id] = {
+      status: last.type === 'arrivee' ? 'present' : 'parti',
+      since: last.horodatage,
+      arrivee: (evs.find(e => e.type === 'arrivee') || {}).horodatage
+    };
+  });
+  return res;
+}
+function _pairMinutes(events, startT, endT) {
+  let ms = 0, last = null;
+  events.slice().sort((a,b) => new Date(a.horodatage) - new Date(b.horodatage)).forEach(e => {
+    if (e.type === startT) last = new Date(e.horodatage);
+    else if (e.type === endT && last) { ms += new Date(e.horodatage) - last; last = null; }
+  });
+  return ms / 60000;
+}
+function _fmtMin(m) { return Math.floor(m/60) + 'h' + String(Math.round(m%60)).padStart(2,'0'); }
+function _fmtHeure(ts) { return ts ? new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '\u2014'; }
+
+// ── Page principale ────────────────────────────────────────────────
+function renderPagePointage() {
+  loadPointageConfig();
+  if (!pointageMonth) pointageMonth = new Date().toISOString().slice(0,7);
+  const el = document.getElementById('page-pointage');
+  if (!el) return;
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">' +
+      '<h2 style="font-family:\'Syne\',sans-serif;font-size:20px;font-weight:800;margin:0">\uD83D\uDD50 Pointage</h2>' +
+      '<div style="flex:1"></div>' +
+      '<button class="btn btn-secondary" onclick="openBornePointage()">\uD83D\uDCDF Mode borne</button>' +
+      '<button class="btn btn-secondary" onclick="pointageExportMois()">\u2B07 Export mois</button>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;border-bottom:2px solid var(--border);margin-bottom:18px">' +
+      '<button id="pt-tab-salaries" onclick="pointageSwitchTab(\'salaries\')"></button>' +
+      '<button id="pt-tab-enfants" onclick="pointageSwitchTab(\'enfants\')"></button>' +
+    '</div>' +
+    '<div id="pt-content"><div style="text-align:center;color:var(--ink3);padding:40px">Chargement\u2026</div></div>';
+  pointageSwitchTab(pointageCurrentTab);
+}
+function pointageSwitchTab(tab) {
+  pointageCurrentTab = tab;
+  const defs = [['salaries','\uD83D\uDC65 Salari\u00E9s'],['enfants','\uD83E\uDDD2 Enfants']];
+  defs.forEach(([t,label]) => {
+    const btn = document.getElementById('pt-tab-' + t);
+    if (!btn) return;
+    const on = (t === tab);
+    btn.textContent = label;
+    btn.style.cssText = 'padding:9px 16px;border:none;background:none;font-family:inherit;font-size:13px;cursor:pointer;margin-bottom:-2px;border-bottom:2px solid ' + (on?'var(--accent)':'transparent') + ';color:' + (on?'var(--accent)':'var(--ink3)') + ';font-weight:' + (on?'700':'600');
+  });
+  if (tab === 'salaries') renderPointageSalaries();
+  else renderPointageEnfants();
+}
+
+// ── Onglet Salariés ────────────────────────────────────────────────
+async function renderPointageSalaries() {
+  const el = document.getElementById('pt-content'); if (!el) return;
+  el.innerHTML = '<div style="text-align:center;color:var(--ink3);padding:40px">Chargement\u2026</div>';
+  try {
+    const crecheFilter = (currentCreche && currentCreche !== 'all') ? currentCreche : null;
+    const users = await sbGet('utilisateurs', 'select=id,email,role,creche_id' + (crecheFilter ? ('&creche_id=eq.' + encodeURIComponent(crecheFilter)) : '') + '&order=id.asc');
+    const uMap = {}; users.forEach(u => uMap[u.id] = u);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const pts = await sbGet('pointages', 'horodatage=gte.' + todayStr + 'T00:00:00&select=user_id,type,horodatage&order=horodatage.asc');
+    const byUser = {}; pts.forEach(p => { if (!uMap[p.user_id]) return; (byUser[p.user_id] = byUser[p.user_id] || []).push(p); });
+    let nPres=0, nPause=0, nParti=0, totMin=0;
+    const STLABEL = { present:'pr\u00E9sent', pause:'en pause', parti:'parti' };
+    const STCOL   = { present:'var(--green)', pause:'var(--amber)', parti:'var(--ink3)' };
+    const rows = Object.keys(byUser).map(uid => {
+      const evs = byUser[uid]; const last = evs[evs.length-1];
+      const st = last.type==='entree' ? 'present' : last.type==='sortie' ? 'parti' : last.type==='debut_pause' ? 'pause' : 'present';
+      if (st==='present') nPres++; else if (st==='pause') nPause++; else nParti++;
+      const wk = calculerHeures(evs).worked; totMin += wk;
+      const u = uMap[uid];
+      return { nom: u.email ? u.email.split('@')[0] : ('#'+uid), role: u.role||'', st, worked: wk, arr: evs[0] ? evs[0].horodatage : null };
+    }).sort((a,b) => a.nom.localeCompare(b.nom));
+    const kpiDefs = [['Pr\u00E9sents',nPres,'var(--green)'],['En pause',nPause,'var(--amber)'],['Partis',nParti,'var(--ink3)'],['Heures du jour',_fmtMin(totMin),'var(--ink)']];
+    const kpi = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px">' +
+      kpiDefs.map(d => '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px"><div style="font-size:12px;color:var(--ink3)">' + d[0] + '</div><div style="font-size:22px;font-weight:800;font-family:\'Syne\',sans-serif;color:' + d[2] + '">' + d[1] + '</div></div>').join('') + '</div>';
+    const board = rows.length
+      ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:22px">' +
+        rows.map(r => '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)"><span style="display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:50%;background:' + STCOL[r.st] + '"></span><span style="font-weight:700;font-size:14px">' + r.nom + '</span><span style="font-size:12px;color:var(--ink3);text-transform:capitalize">' + r.role + '</span></span><span style="font-size:12px;color:var(--ink3)">arr. ' + _fmtHeure(r.arr) + ' \u00B7 <span style="color:' + STCOL[r.st] + ';font-weight:600">' + STLABEL[r.st] + '</span> \u00B7 <strong>' + _fmtMin(r.worked) + '</strong></span></div>').join('') + '</div>'
+      : '<div style="text-align:center;color:var(--ink3);padding:30px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:22px">Aucun salari\u00E9 point\u00E9 aujourd\u2019hui.</div>';
+    el.innerHTML = '<div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:10px">Pr\u00E9sence en direct \u2014 aujourd\u2019hui</div>' + kpi + board +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--ink2)">R\u00E9capitulatif mensuel</div><input type="month" value="' + (pointageMonth||'') + '" onchange="pointageMonth=this.value;pointageSwitchTab(\'salaries\')" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-family:inherit;font-size:13px;background:var(--bg)"></div><div id="pt-recap-sal"><div style="color:var(--ink3);font-size:13px">Chargement\u2026</div></div>';
+    renderPointageRecapSalaries(uMap);
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:20px">Erreur : ' + e.message + '</div>'; }
+}
+async function renderPointageRecapSalaries(uMap) {
+  const el = document.getElementById('pt-recap-sal'); if (!el) return;
+  const mois = pointageMonth || new Date().toISOString().slice(0,7);
+  const start = mois + '-01T00:00:00';
+  const ed = new Date(mois + '-01T00:00:00'); ed.setMonth(ed.getMonth()+1);
+  const end = ed.toISOString().slice(0,10) + 'T00:00:00';
+  try {
+    const pts = await sbGet('pointages', 'horodatage=gte.' + start + '&horodatage=lt.' + end + '&select=user_id,type,horodatage&order=horodatage.asc');
+    const agg = {}; pts.forEach(p => { if (uMap && !uMap[p.user_id]) return; const d = p.horodatage.split('T')[0]; ((agg[p.user_id] = agg[p.user_id] || {})[d] = (agg[p.user_id][d] || [])).push(p); });
+    const rows = Object.keys(agg).map(uid => {
+      let tot=0, jours=0;
+      Object.values(agg[uid]).forEach(evs => { const w = calculerHeures(evs).worked; if (w>0) { tot+=w; jours++; } });
+      const u = (uMap && uMap[uid]) || {};
+      return { nom: u.email ? u.email.split('@')[0] : ('#'+uid), jours, tot };
+    }).sort((a,b) => b.tot - a.tot);
+    el.innerHTML = rows.length
+      ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden"><div style="display:flex;padding:9px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase"><span style="flex:1">Salari\u00E9</span><span style="width:80px;text-align:center">Jours</span><span style="width:90px;text-align:right">Heures</span></div>' +
+        rows.map(r => '<div style="display:flex;padding:10px 16px;border-bottom:1px solid var(--border);font-size:14px"><span style="flex:1;font-weight:600">' + r.nom + '</span><span style="width:80px;text-align:center;color:var(--ink3)">' + r.jours + '</span><span style="width:90px;text-align:right;font-weight:700;font-family:\'Syne\',sans-serif">' + _fmtMin(r.tot) + '</span></div>').join('') + '</div>'
+      : '<div style="color:var(--ink3);font-size:13px;padding:20px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">Aucun pointage ce mois.</div>';
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
+}
+
+// ── Onglet Enfants ─────────────────────────────────────────────────
+async function renderPointageEnfants() {
+  const el = document.getElementById('pt-content'); if (!el) return;
+  el.innerHTML = '<div style="text-align:center;color:var(--ink3);padding:40px">Chargement\u2026</div>';
+  try {
+    const crecheFilter = (currentCreche && currentCreche !== 'all') ? currentCreche : null;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const pts = await sbGet('pointages_enfants', 'horodatage=gte.' + todayStr + 'T00:00:00&select=enfant_id,type,horodatage,creche_id' + (crecheFilter ? ('&creche_id=eq.' + encodeURIComponent(crecheFilter)) : '') + '&order=horodatage.asc');
+    const etat = pointageEtatEnfants(pts);
+    const nmap = pointageEnfantNameMap();
+    const ids = Object.keys(etat);
+    const present = ids.filter(id => etat[id].status === 'present');
+    const parti   = ids.filter(id => etat[id].status === 'parti');
+    const kpiDefs = [['Pr\u00E9sents',present.length,'var(--green)'],['Partis',parti.length,'var(--ink3)'],['Total point\u00E9s',ids.length,'var(--ink)']];
+    const kpi = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px">' +
+      kpiDefs.map(d => '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px"><div style="font-size:12px;color:var(--ink3)">' + d[0] + '</div><div style="font-size:22px;font-weight:800;font-family:\'Syne\',sans-serif;color:' + d[2] + '">' + d[1] + '</div></div>').join('') + '</div>';
+    const line = id => { const st = etat[id]; const col = st.status==='present' ? 'var(--green)' : 'var(--ink3)'; return '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)"><span style="display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:50%;background:' + col + '"></span><span style="font-weight:700;font-size:14px">' + ((nmap[id]||{}).nom||'\u2014') + '</span></span><span style="font-size:12px;color:var(--ink3)">arr. ' + _fmtHeure(st.arrivee) + ' \u00B7 <span style="color:' + col + ';font-weight:600">' + (st.status==='present'?'pr\u00E9sent':'parti \u00E0 '+_fmtHeure(st.since)) + '</span></span></div>'; };
+    const board = ids.length
+      ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:22px">' + present.concat(parti).map(line).join('') + '</div>'
+      : '<div style="text-align:center;color:var(--ink3);padding:30px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:22px">Aucun enfant point\u00E9 aujourd\u2019hui.</div>';
+    el.innerHTML = '<div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:10px">Pr\u00E9sence en direct \u2014 aujourd\u2019hui</div>' + kpi + board +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--ink2)">R\u00E9capitulatif mensuel (heures de pr\u00E9sence)</div><input type="month" value="' + (pointageMonth||'') + '" onchange="pointageMonth=this.value;pointageSwitchTab(\'enfants\')" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-family:inherit;font-size:13px;background:var(--bg)"></div><div id="pt-recap-enf"><div style="color:var(--ink3);font-size:13px">Chargement\u2026</div></div>';
+    renderPointageRecapEnfants(nmap);
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:20px">Erreur : ' + e.message + '</div>'; }
+}
+async function renderPointageRecapEnfants(nmap) {
+  const el = document.getElementById('pt-recap-enf'); if (!el) return;
+  const mois = pointageMonth || new Date().toISOString().slice(0,7);
+  const start = mois + '-01T00:00:00';
+  const ed = new Date(mois + '-01T00:00:00'); ed.setMonth(ed.getMonth()+1);
+  const end = ed.toISOString().slice(0,10) + 'T00:00:00';
+  try {
+    const crecheFilter = (currentCreche && currentCreche !== 'all') ? currentCreche : null;
+    const pts = await sbGet('pointages_enfants', 'horodatage=gte.' + start + '&horodatage=lt.' + end + '&select=enfant_id,type,horodatage,creche_id' + (crecheFilter ? ('&creche_id=eq.' + encodeURIComponent(crecheFilter)) : '') + '&order=horodatage.asc');
+    const agg = {}; pts.forEach(p => { const d = p.horodatage.split('T')[0]; ((agg[p.enfant_id] = agg[p.enfant_id] || {})[d] = (agg[p.enfant_id][d] || [])).push(p); });
+    const rows = Object.keys(agg).map(eid => {
+      let tot=0, jours=0;
+      Object.values(agg[eid]).forEach(evs => { const m = _pairMinutes(evs,'arrivee','depart'); if (m>0) { tot+=m; jours++; } });
+      return { nom: (nmap[eid]||{}).nom || eid, jours, tot };
+    }).sort((a,b) => b.tot - a.tot);
+    el.innerHTML = rows.length
+      ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden"><div style="display:flex;padding:9px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase"><span style="flex:1">Enfant</span><span style="width:80px;text-align:center">Jours</span><span style="width:90px;text-align:right">Pr\u00E9sence</span></div>' +
+        rows.map(r => '<div style="display:flex;padding:10px 16px;border-bottom:1px solid var(--border);font-size:14px"><span style="flex:1;font-weight:600">' + r.nom + '</span><span style="width:80px;text-align:center;color:var(--ink3)">' + r.jours + '</span><span style="width:90px;text-align:right;font-weight:700;font-family:\'Syne\',sans-serif">' + _fmtMin(r.tot) + '</span></div>').join('') + '</div>'
+      : '<div style="color:var(--ink3);font-size:13px;padding:20px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">Aucun pointage enfant ce mois.</div>';
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
+}
+
+// ── Modal pointage enfant ──────────────────────────────────────────
+function openPointageEnfantModal(enfantId) {
+  const map = pointageEnfantNameMap();
+  const info = map[enfantId];
+  pointageEnfantId = enfantId;
+  pointageEnfantData = info;
+  const setT = (id,v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  setT('pe-scan-name', info ? info.nom : 'Enfant');
+  setT('pe-scan-creche', info ? info.creche : '');
+  setT('pe-scan-heure', new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
+  const c = document.getElementById('pe-scan-confirm'); if (c) c.innerHTML = '';
+  document.getElementById('modal-pointage-enfant').classList.add('open');
+}
+async function enregistrerPointageEnfant(type) {
+  if (!pointageEnfantId) return;
+  const conf = document.getElementById('pe-scan-confirm');
+  try {
+    await sbInsert('pointages_enfants', {
+      enfant_id: pointageEnfantId,
+      type,
+      horodatage: new Date().toISOString(),
+      creche_id: (pointageEnfantData && pointageEnfantData.creche) || borneCreche || ''
+    });
+    const h = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    if (conf) conf.innerHTML = '<span style="color:var(--green);font-weight:600">\u2705 ' + (type==='arrivee'?'Arriv\u00E9e':'D\u00E9part') + ' enregistr\u00E9 \u00E0 ' + h + '</span>';
+    setTimeout(() => closeModal('modal-pointage-enfant'), 1600);
+  } catch(e) { if (conf) conf.innerHTML = '<span style="color:var(--red)">\u26A0 ' + e.message + '</span>'; }
+}
+
+// ── Mode borne (plein écran) ───────────────────────────────────────
+function openBornePointage() {
+  loadPointageConfig();
+  if (currentCreche && currentCreche !== 'all') { borneCreche = currentCreche; borneShow(); }
+  else { borneCreche = null; borneShowStructurePicker(); }
+}
+function borneShowStructurePicker() {
+  const ov = document.getElementById('borne-overlay'); if (!ov) return;
+  ov.style.display = 'flex'; document.body.style.overflow = 'hidden';
+  ov.innerHTML =
+    '<button onclick="closeBornePointage()" style="position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer">\u2715</button>' +
+    '<div style="font-family:\'Syne\',sans-serif;font-size:24px;font-weight:800;margin-bottom:20px">Choisir la structure</div>' +
+    '<div style="width:100%;max-width:340px">' +
+    (CRECHES_DATA||[]).map((c,i) => '<button onclick="borneChooseStructure(' + i + ')" style="width:100%;padding:16px;margin-bottom:10px;border:none;border-radius:14px;background:rgba(255,255,255,0.14);color:#fff;font-size:16px;font-weight:700;cursor:pointer">\uD83C\uDFE0 ' + c.nom + '</button>').join('') +
+    '</div>';
+}
+function borneChooseStructure(i) { borneCreche = CRECHES_DATA[i].nom; borneShow(); }
+function borneShow() {
+  const ov = document.getElementById('borne-overlay'); if (!ov) return;
+  const mode = getModePointage(borneCreche);
+  bornePin = '';
+  ov.style.display = 'flex'; document.body.style.overflow = 'hidden';
+  ov.innerHTML =
+    '<button onclick="closeBornePointage()" style="position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer">\u2715</button>' +
+    '<div style="text-align:center;margin-bottom:22px"><div style="font-family:\'Syne\',sans-serif;font-size:26px;font-weight:800">' + (borneCreche||'Pointage') + '</div><div id="borne-clock" style="font-size:15px;opacity:.7;margin-top:4px"></div></div>' +
+    '<div id="borne-body" style="width:100%;max-width:360px"></div>';
+  borneRenderIdle(mode);
+  if (borneClockTimer) clearInterval(borneClockTimer);
+  const tick = () => { const c = document.getElementById('borne-clock'); if (c) c.textContent = new Date().toLocaleString('fr-FR',{weekday:'long',hour:'2-digit',minute:'2-digit',second:'2-digit'}); };
+  tick(); borneClockTimer = setInterval(tick, 1000);
+}
+function closeBornePointage() {
+  const ov = document.getElementById('borne-overlay'); if (ov) ov.style.display = 'none';
+  document.body.style.overflow = '';
+  if (borneClockTimer) { clearInterval(borneClockTimer); borneClockTimer = null; }
+}
+function borneRenderIdle(mode) {
+  const body = document.getElementById('borne-body'); if (!body) return;
+  if (mode === 'scanner') {
+    body.innerHTML = '<div style="text-align:center"><div style="font-size:15px;opacity:.85;margin-bottom:18px">Pr\u00E9sentez votre badge QR</div><button onclick="openScanner()" style="width:100%;padding:22px;border:none;border-radius:18px;background:var(--accent);color:#fff;font-size:18px;font-weight:700;cursor:pointer">\uD83D\uDCF7 Scanner un badge</button></div>';
+  } else {
+    const keys = ['1','2','3','4','5','6','7','8','9','C','0','\u2713'];
+    body.innerHTML =
+      '<div style="text-align:center;margin-bottom:14px;font-size:15px;opacity:.85">Entrez votre code PIN</div>' +
+      '<div id="borne-dots" style="text-align:center;font-size:30px;letter-spacing:8px;height:38px;margin-bottom:12px">\u2022</div>' +
+      '<div id="borne-feedback" style="text-align:center;min-height:20px;font-size:14px;color:#FCA5A5;margin-bottom:10px"></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">' +
+      keys.map(k => {
+        const isC = k==='C', isOk = k==='\u2713';
+        const act = isC ? 'bornePinClear()' : isOk ? 'bornePinSubmit()' : ('bornePinPress(\'' + k + '\')');
+        const bg = isOk ? 'var(--accent)' : isC ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.14)';
+        return '<button onclick="' + act + '" style="padding:20px 0;border:none;border-radius:14px;background:' + bg + ';color:#fff;font-size:22px;font-weight:700;cursor:pointer">' + k + '</button>';
+      }).join('') + '</div>';
+    borneUpdateDots();
+  }
+}
+function borneUpdateDots() { const d = document.getElementById('borne-dots'); if (d) d.textContent = bornePin.length ? '\u25CF'.repeat(bornePin.length) : '\u2022'; }
+function bornePinPress(k) { if (bornePin.length < 6) { bornePin += k; borneUpdateDots(); const f = document.getElementById('borne-feedback'); if (f) f.textContent = ''; } }
+function bornePinClear() { bornePin = ''; borneUpdateDots(); const f = document.getElementById('borne-feedback'); if (f) f.textContent = ''; }
+function borneFeedback(msg) { const f = document.getElementById('borne-feedback'); if (f) f.textContent = msg; }
+async function bornePinSubmit() {
+  const pin = bornePin;
+  if (!pin) return;
+  await loadPointageConfig();
+  const sid = Object.keys(POINTAGE_CFG.pinsSalaries||{}).find(k => String(POINTAGE_CFG.pinsSalaries[k]) === pin);
+  if (sid) { bornePin = ''; borneUpdateDots(); openPointageModal(parseInt(sid,10)); return; }
+  const eids = Object.keys(POINTAGE_CFG.pinsEnfants||{}).filter(k => String(POINTAGE_CFG.pinsEnfants[k]) === pin);
+  if (eids.length === 1) { bornePin = ''; borneUpdateDots(); openPointageEnfantModal(eids[0]); return; }
+  if (eids.length > 1) { bornePin = ''; borneUpdateDots(); borneEnfantChooser(eids); return; }
+  borneFeedback('Code inconnu, r\u00E9essayez'); bornePin = ''; borneUpdateDots();
+}
+function borneEnfantChooser(eids) {
+  const body = document.getElementById('borne-body'); if (!body) return;
+  const map = pointageEnfantNameMap();
+  body.innerHTML =
+    '<div style="text-align:center;margin-bottom:14px;font-size:15px;opacity:.85">Qui pointez-vous ?</div>' +
+    eids.map(id => '<button onclick="openPointageEnfantModal(\'' + id + '\')" style="width:100%;padding:16px;margin-bottom:10px;border:none;border-radius:14px;background:rgba(255,255,255,0.14);color:#fff;font-size:16px;font-weight:700;cursor:pointer">\uD83E\uDDD2 ' + ((map[id]||{}).nom||'Enfant') + '</button>').join('') +
+    '<button onclick="borneRenderIdle(getModePointage(borneCreche))" style="width:100%;padding:12px;border:none;border-radius:12px;background:transparent;color:#fff;opacity:.7;font-size:14px;cursor:pointer">\u2190 Retour</button>';
+}
+
+// ── Attribution des PIN (fiches) ───────────────────────────────────
+async function renderFichePin(userId) {
+  await loadPointageConfig();
+  const inp = document.getElementById('fiche-pin-input');
+  if (inp) inp.value = (POINTAGE_CFG.pinsSalaries||{})[userId] || '';
+}
+async function saveFichePin() {
+  if (!ficheCurrentUserId) return;
+  const v = (document.getElementById('fiche-pin-input').value || '').trim();
+  await loadPointageConfig();
+  if (v) POINTAGE_CFG.pinsSalaries[ficheCurrentUserId] = v; else delete POINTAGE_CFG.pinsSalaries[ficheCurrentUserId];
+  await savePointageConfig();
+  showNotif('\u2705 Code PIN enregistr\u00E9');
+}
+async function renderFicheEnfantPin(enfantId) {
+  await loadPointageConfig();
+  const inp = document.getElementById('fe-pin-input');
+  if (inp) inp.value = (POINTAGE_CFG.pinsEnfants||{})[enfantId] || '';
+}
+async function saveFicheEnfantPin() {
+  if (!ficheEnfantId) return;
+  const v = (document.getElementById('fe-pin-input').value || '').trim();
+  await loadPointageConfig();
+  if (v) POINTAGE_CFG.pinsEnfants[ficheEnfantId] = v; else delete POINTAGE_CFG.pinsEnfants[ficheEnfantId];
+  await savePointageConfig();
+  showNotif('\u2705 Code PIN famille enregistr\u00E9');
+}
+function printQrEnfant() {
+  if (!ficheEnfantId) return;
+  const map = pointageEnfantNameMap();
+  const info = map[ficheEnfantId] || { nom: 'Enfant' };
+  const tmp = document.createElement('div'); tmp.style.display = 'none'; document.body.appendChild(tmp);
+  let qrData = '';
+  try {
+    new QRCode(tmp, { text: 'OREVY_CHILD:' + ficheEnfantId, width:200, height:200, colorDark:'#1C1917', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    const cv = tmp.querySelector('canvas'); qrData = cv ? cv.toDataURL('image/png') : '';
+  } catch(e) {}
+  document.body.removeChild(tmp);
+  const html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Badge ' + info.nom + '</title>' +
+    '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fff}.fiche{border:2px solid #1C1917;border-radius:16px;padding:40px;max-width:360px;width:90%;text-align:center}h1{font-size:24px;font-weight:800;margin-bottom:6px;color:#1C1917}.sub{font-size:13px;color:#57534E;margin-bottom:22px}.qr{margin:0 auto 20px;display:block}.logo{font-size:22px;font-weight:800;color:#1C1917;margin-bottom:18px}.info{font-size:12px;color:#57534E}</style>' +
+    '</head><body><div class="fiche"><div class="logo">Orevy</div><h1>' + info.nom + '</h1><div class="sub">Badge de pointage</div>' +
+    (qrData ? '<img src="' + qrData + '" class="qr" width="200" height="200" alt="QR">' : '') +
+    '<div class="info">\uD83D\uDCCD ' + (info.creche || '') + '</div></div>' +
+    '<scr' + 'ipt>window.onload=function(){setTimeout(function(){window.print();window.close();},400);}<' + '/scr' + 'ipt></body></html>';
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+// ── Export mensuel Excel ───────────────────────────────────────────
+async function pointageExportMois() {
+  if (typeof XLSX === 'undefined') { showNotif('\u26A0 Export indisponible'); return; }
+  const mois = pointageMonth || new Date().toISOString().slice(0,7);
+  const start = mois + '-01T00:00:00';
+  const ed = new Date(mois + '-01T00:00:00'); ed.setMonth(ed.getMonth()+1);
+  const end = ed.toISOString().slice(0,10) + 'T00:00:00';
+  showNotif('\u23F3 Export en cours\u2026');
+  try {
+    const results = await Promise.all([
+      sbGet('utilisateurs', 'select=id,email,role,creche_id'),
+      sbGet('pointages', 'horodatage=gte.' + start + '&horodatage=lt.' + end + '&select=user_id,type,horodatage&order=horodatage.asc'),
+      sbGet('pointages_enfants', 'horodatage=gte.' + start + '&horodatage=lt.' + end + '&select=enfant_id,type,horodatage&order=horodatage.asc')
+    ]);
+    const users = results[0], ptsS = results[1], ptsE = results[2];
+    const uMap = {}; users.forEach(u => uMap[u.id] = u.email ? u.email.split('@')[0] : ('#'+u.id));
+    const salAgg = {}; ptsS.forEach(p => { const d = p.horodatage.split('T')[0]; ((salAgg[p.user_id] = salAgg[p.user_id] || {})[d] = (salAgg[p.user_id][d] || [])).push(p); });
+    const salRows = [['Salari\u00E9','Jours point\u00E9s','Total heures']];
+    Object.keys(salAgg).forEach(uid => { let tot=0, jours=0; Object.values(salAgg[uid]).forEach(evs => { const w = calculerHeures(evs).worked; if (w>0) { tot+=w; jours++; } }); salRows.push([uMap[uid]||('#'+uid), jours, +(tot/60).toFixed(2)]); });
+    const nmap = pointageEnfantNameMap();
+    const enfAgg = {}; ptsE.forEach(p => { const d = p.horodatage.split('T')[0]; ((enfAgg[p.enfant_id] = enfAgg[p.enfant_id] || {})[d] = (enfAgg[p.enfant_id][d] || [])).push(p); });
+    const enfRows = [['Enfant','Jours pr\u00E9sents','Total heures pr\u00E9sence']];
+    Object.keys(enfAgg).forEach(eid => { let tot=0, jours=0; Object.values(enfAgg[eid]).forEach(evs => { const m = _pairMinutes(evs,'arrivee','depart'); if (m>0) { tot+=m; jours++; } }); enfRows.push([(nmap[eid]||{}).nom||eid, jours, +(tot/60).toFixed(2)]); });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(salRows), 'Salari\u00E9s');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(enfRows), 'Enfants');
+    XLSX.writeFile(wb, 'pointage_' + mois + '.xlsx');
+    showNotif('\u2B07 Export ' + mois + ' g\u00E9n\u00E9r\u00E9');
+  } catch(e) { showNotif('\u26A0 ' + e.message); }
+}
+// ── FIN MODULE POINTAGE UNIFIÉ ─────────────────────────────────────
 
 // ── FIN MODULE POINTAGE ───────────────────────────────────────────
 
@@ -16969,6 +17416,14 @@ function saveReponse()  { drSaveReponse(); }
         <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
           <div id="fiche-qr-container" style="padding:16px;background:#fff;border:1px solid var(--border);border-radius:12px;line-height:0"></div>
           <div id="fiche-info" style="text-align:center;font-size:13px;color:var(--ink2);line-height:1.6"></div>
+          <div id="fiche-pin-block" style="width:100%;max-width:280px;border-top:1px solid var(--border);padding-top:14px">
+            <label style="font-size:12px;font-weight:700;color:var(--ink2);display:block;margin-bottom:6px">🔢 Code PIN pointage</label>
+            <div style="display:flex;gap:8px">
+              <input id="fiche-pin-input" type="text" inputmode="numeric" maxlength="6" placeholder="Ex : 1234" style="flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;outline:none;background:var(--bg);letter-spacing:3px">
+              <button class="btn btn-secondary btn-sm" onclick="saveFichePin()">💾</button>
+            </div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:5px">Saisi par le salarié sur la borne (mode PIN) pour pointer.</div>
+          </div>
           <button class="btn btn-primary" onclick="printFicheSalarie()">🖨 Imprimer la fiche</button>
         </div>
       </div>
@@ -16977,6 +17432,35 @@ function saveReponse()  { drSaveReponse(); }
           <div style="text-align:center;color:var(--ink3);padding:20px">Chargement…</div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── OVERLAY BORNE POINTAGE ── -->
+<div id="borne-overlay" style="display:none;position:fixed;inset:0;z-index:90;background:#1C1917;color:#fff;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:'Instrument Sans',sans-serif"></div>
+
+<!-- ── MODAL POINTAGE ENFANT ── -->
+<div class="modal-overlay" id="modal-pointage-enfant" onclick="closeModalClick(event,'modal-pointage-enfant')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h2>Pointage enfant</h2>
+      <button class="modal-close" onclick="closeModal('modal-pointage-enfant')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align:center">
+        <div style="font-size:40px">🧒</div>
+        <div id="pe-scan-name" style="font-size:20px;font-weight:800;font-family:'Syne',sans-serif;color:var(--ink)">—</div>
+        <div id="pe-scan-creche" style="font-size:12px;color:var(--ink3);margin-top:2px"></div>
+        <div id="pe-scan-heure" style="font-size:13px;font-weight:600;color:var(--ink2);margin-top:8px;font-family:'Syne',sans-serif"></div>
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <button class="btn btn-primary" style="flex:1;background:var(--green);border-color:var(--green)" onclick="enregistrerPointageEnfant('arrivee')">➡ Arrivée</button>
+          <button class="btn btn-primary" style="flex:1;background:var(--red);border-color:var(--red)" onclick="enregistrerPointageEnfant('depart')">⬅ Départ</button>
+        </div>
+        <div id="pe-scan-confirm" style="margin-top:14px;min-height:22px;font-size:13px"></div>
+      </div>
+    </div>
+    <div style="padding:0 24px 20px;text-align:center">
+      <button class="btn btn-secondary" onclick="closeModal('modal-pointage-enfant')">Fermer</button>
     </div>
   </div>
 </div>
