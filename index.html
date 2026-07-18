@@ -16722,6 +16722,45 @@ function incRender() {
   }).join('');
 }
 
+function incRefreshLists() {
+  const creche  = document.getElementById('inc-creche')?.value || '';
+  const dateStr = document.getElementById('inc-date')?.value || '';
+
+  // ── Enfants présents ce jour-là (crèche + jour de la date) ──
+  const childSel = document.getElementById('inc-child');
+  if (childSel) {
+    let enfants = [];
+    if (creche && typeof getFamilles === 'function') {
+      try { enfants = getFamilles(creche).filter(e => !e.sortie || new Date(e.sortie) >= new Date()); } catch (e) { enfants = []; }
+    }
+    let jour = -1;
+    if (dateStr) { const g = new Date(dateStr + 'T00:00:00').getDay(); jour = (g === 0 || g === 6) ? -1 : g - 1; } // Lun=0..Ven=4
+    let presents = enfants;
+    if (jour >= 0) {
+      const f = enfants.filter(e => (e.jours_presence || []).includes(jour));
+      if (f.length) presents = f; // sinon repli : tous les enfants de la crèche
+    }
+    presents = presents.slice().sort((a,b) => ((a.prenom||'')+' '+(a.nom||'')).localeCompare((b.prenom||'')+' '+(b.nom||'')));
+    const prev = childSel.value;
+    childSel.innerHTML = '<option value="">-- Choisir un enfant --</option>' +
+      presents.map(e => { const nm = ((e.prenom||'')+' '+(e.nom||'')).trim(); return '<option value="' + nm + '">' + nm + '</option>'; }).join('');
+    if (prev && childSel.querySelector('option[value="' + prev.replace(/"/g,'') + '"]')) childSel.value = prev;
+  }
+
+  // ── Déclarant : salariés actifs (de la crèche si possible) ──
+  const repSel = document.getElementById('inc-reporter');
+  if (repSel) {
+    if (typeof loadSalaries === 'function' && (!window.SALARIES || !SALARIES.length)) { try { loadSalaries(); } catch (e) {} }
+    let sals = (window.SALARIES || []).filter(s => (s.statut || 'actif') === 'actif');
+    if (creche) { const f = sals.filter(s => s.creche === creche); if (f.length) sals = f; }
+    sals = sals.slice().sort((a,b) => ((a.prenom||'')+' '+(a.nom||'')).localeCompare((b.prenom||'')+' '+(b.nom||'')));
+    const prev = repSel.value;
+    repSel.innerHTML = '<option value="">-- Choisir un déclarant --</option>' +
+      sals.map(s => { const nm = ((s.prenom||'')+' '+(s.nom||'')).trim(); return '<option value="' + nm + '">' + nm + '</option>'; }).join('');
+    if (prev && repSel.querySelector('option[value="' + prev.replace(/"/g,'') + '"]')) repSel.value = prev;
+  }
+}
+
 function openIncidentModal() {
   const creches = (typeof _drGetCreches === 'function') ? _drGetCreches() : [];
   const preselect = (!_incIsCoord() && currentCreche && currentCreche !== '__all__') ? currentCreche : '';
@@ -16733,7 +16772,8 @@ function openIncidentModal() {
   const t = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   const setv = (id,v) => { const el = document.getElementById(id); if (el) el.value = v; };
   setv('inc-date', d); setv('inc-time', t);
-  ['inc-child','inc-desc','inc-actions','inc-reporter'].forEach(id => setv(id,''));
+  ['inc-desc','inc-actions'].forEach(id => setv(id,''));
+  incRefreshLists();
   const m = document.getElementById('modal-incident-new');
   if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
 }
@@ -23399,10 +23439,10 @@ function sendSuiviEmail() {
     <div class="modal-header"><h2>🚨 Déclarer un incident</h2><button class="modal-close" onclick="closeModal('modal-incident-new')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group"><label>Date</label><input id="inc-date" type="date" class="form-control" style="width:100%"></div>
+        <div class="form-group"><label>Date</label><input id="inc-date" type="date" class="form-control" style="width:100%" onchange="incRefreshLists()"></div>
         <div class="form-group"><label>Heure</label><input id="inc-time" type="time" class="form-control" style="width:100%"></div>
-        <div class="form-group full"><label>Crèche</label><select id="inc-creche" class="form-control" style="width:100%"><option value="">-- Choisir --</option></select></div>
-        <div class="form-group full"><label>Enfant concerné</label><input id="inc-child" class="form-control" placeholder="Prénom Nom de l'enfant" style="width:100%"></div>
+        <div class="form-group full"><label>Crèche</label><select id="inc-creche" class="form-control" style="width:100%" onchange="incRefreshLists()"><option value="">-- Choisir --</option></select></div>
+        <div class="form-group full"><label>Enfant concerné</label><select id="inc-child" class="form-control" style="width:100%"><option value="">-- Choisir un enfant --</option></select></div>
         <div class="form-group"><label>Type d'incident</label><select id="inc-type" class="form-control" style="width:100%">
           <option value="chute">Chute</option>
           <option value="morsure">Morsure</option>
@@ -23419,7 +23459,7 @@ function sendSuiviEmail() {
         </select></div>
         <div class="form-group full"><label>Description</label><textarea id="inc-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
         <div class="form-group full"><label>Actions menées</label><textarea id="inc-actions" class="form-control" rows="2" style="width:100%;resize:vertical"></textarea></div>
-        <div class="form-group full"><label>Déclarant</label><input id="inc-reporter" class="form-control" placeholder="Prénom Nom" style="width:100%"></div>
+        <div class="form-group full"><label>Déclarant</label><select id="inc-reporter" class="form-control" style="width:100%"><option value="">-- Choisir un déclarant --</option></select></div>
         <div class="form-group full" style="background:var(--red-lt);color:var(--red);border-radius:8px;padding:10px 12px;font-size:12px;display:flex;gap:8px;align-items:center"><i class="ti ti-alert-circle" style="font-size:16px"></i> En cas d'urgence médicale, appelez le 15 (SAMU) immédiatement.</div>
       </div>
     </div>
