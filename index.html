@@ -8785,7 +8785,7 @@ async function renderDashboardDirectrice(dateStr) {
     let salariesActifs = [];
     try {
       loadSalaries();
-      salariesActifs = SALARIES.filter(s => s.statut === 'actif');
+      salariesActifs = SALARIES.filter(s => s && s.statut !== 'inactif');
     } catch(e) { /* SALARIES pas encore chargé — pas grave, prochain rendu OK */ }
     const actifsTous = salariesActifs;
     if (currentCreche === 'all') {
@@ -8924,7 +8924,7 @@ async function renderDashboardDirectrice(dateStr) {
       salActifs = (currentCreche === 'all'
         ? SALARIES
         : SALARIES.filter(s => s.creche === currentCreche)
-      ).filter(s => s.statut === 'actif').length;
+      ).filter(s => s.statut !== 'inactif').length;
     } catch(e) { /* SALARIES pas encore chargé — pas grave, prochain rendu OK */ }
     statsEl.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:10px">📈 Résumé</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
@@ -13395,13 +13395,13 @@ async function renderRhStats() {
     if (Array.isArray(salariesSupa) && salariesSupa.length > 0) {
       nbActifs = salariesSupa.filter(r => {
         const d = r.data || {};
-        if (d.statut !== 'actif') return false;
+        if (d.statut === 'inactif') return false;
         if (crecheFiltre && d.creche !== crecheFiltre) return false;
         return true;
       }).length;
     } else {
       loadSalaries();
-      const all = SALARIES.filter(s => s.statut === 'actif');
+      const all = SALARIES.filter(s => s.statut !== 'inactif');
       nbActifs = crecheFiltre ? all.filter(s => s.creche === crecheFiltre).length : all.length;
     }
     set('rh-stat-employes',   nbActifs);
@@ -16751,7 +16751,8 @@ function incRefreshLists() {
   const repSel = document.getElementById('inc-reporter');
   if (repSel) {
     if (typeof loadSalaries === 'function' && (!window.SALARIES || !SALARIES.length)) { try { loadSalaries(); } catch (e) {} }
-    let sals = (window.SALARIES || []).filter(s => (s.statut || 'actif') === 'actif');
+    let sals = (window.SALARIES || []).filter(s => s && s.statut !== 'inactif');
+    if (!sals.length) sals = (window.SALARIES || []);
     if (creche) { const f = sals.filter(s => s.creche === creche); if (f.length) sals = f; }
     sals = sals.slice().sort((a,b) => ((a.prenom||'')+' '+(a.nom||'')).localeCompare((b.prenom||'')+' '+(b.nom||'')));
     const prev = repSel.value;
