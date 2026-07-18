@@ -16752,9 +16752,10 @@ function incRefreshLists() {
   // ── Déclarant : salariés actifs (de la crèche si possible) ──
   const repSel = document.getElementById('inc-reporter');
   if (repSel) {
-    if (typeof loadSalaries === 'function' && (!window.SALARIES || !SALARIES.length)) { try { loadSalaries(); } catch (e) {} }
-    let sals = (window.SALARIES || []).filter(s => s && s.statut !== 'inactif');
-    if (!sals.length) sals = (window.SALARIES || []);
+    if (typeof loadSalaries === 'function') { try { if (typeof SALARIES === 'undefined' || !SALARIES.length) loadSalaries(); } catch (e) {} }
+    const _allSals = (typeof SALARIES !== 'undefined' && Array.isArray(SALARIES)) ? SALARIES : [];
+    let sals = _allSals.filter(s => s && s.statut !== 'inactif');
+    if (!sals.length) sals = _allSals;
     if (creche) { const f = sals.filter(s => s.creche === creche); if (f.length) sals = f; }
     sals = sals.slice().sort((a,b) => ((a.prenom||'')+' '+(a.nom||'')).localeCompare((b.prenom||'')+' '+(b.nom||'')));
     const prev = repSel.value;
