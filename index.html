@@ -11098,7 +11098,7 @@ function showPage(page, btn, fromPopState) {
   if (!fromPopState) {
     history.pushState({ page }, '', window.location.pathname + window.location.search);
   }
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions','demandesReseau'].forEach(p => {
+  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions','demandesReseau','incidents'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
