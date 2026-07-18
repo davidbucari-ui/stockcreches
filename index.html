@@ -1232,6 +1232,9 @@ textarea { resize: vertical; min-height: 72px; }
     <span class="nav-icon">&#x1F4AC;</span> Demandes réseau
     <span id="nav-demandes-badge" style="display:none;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:auto">0</span>
   </button>
+  <button class="nav-item" id="nav-incidents" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('incidents', this)" title="Registre des incidents">
+    <span class="nav-icon">🚨</span> Incidents
+  </button>
   <button class="nav-item" id="nav-reglementaire" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="openHubDocs()" title="Réglementaire">
     <span class="nav-icon">⚖️</span> Réglementaire
   </button>
@@ -2351,6 +2354,8 @@ textarea { resize: vertical; min-height: 72px; }
 
     <!-- ── PAGE ADMIN ── -->
     <div id="page-demandesReseau" style="display:none;padding:24px"></div>
+
+    <div id="page-incidents" style="display:none;padding:24px"></div>
 
     <div id="page-admin" style="display:none;position:relative;overflow:hidden">
       <div style="position:absolute;inset:0;pointer-events:none;z-index:0;display:flex;align-items:center;justify-content:center"><img src="Visuel_Orevy.png" style="width:480px;opacity:0.05;user-select:none" alt=""></div>
@@ -9179,10 +9184,10 @@ let currentUserRole = 'stagiaire';
 let currentUserDbId = null;
 
 const ROLE_PAGES = {
-  admin:         ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles','transmissions'],
-  coordinateur:  ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau'],
-  directrice:    ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau'],
-  auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles','transmissions','demandesReseau'],
+  admin:         ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','admin','rh','planning','salarie','familles','transmissions','demandesReseau','incidents'],
+  coordinateur:  ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau','incidents'],
+  directrice:    ['dashboard','inventaire','entretien','univers','fournisseurs','statistiques','notice','parametres','rh','planning','salarie','familles','transmissions','demandesReseau','incidents'],
+  auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles','transmissions','demandesReseau','incidents'],
   stagiaire:     ['dashboard'],
 };
 
@@ -11120,6 +11125,7 @@ function showPage(page, btn, fromPopState) {
   if (page === 'salarie')  { showPage('planning', null); }
   if (page === 'transmissions') { renderTransmissions(); }
   if (page === 'demandesReseau') { renderPageDemandesReseau(); }
+  if (page === 'incidents') { renderPageIncidents(); }
   // Topbar row2 : visible seulement pour inventaire/entretien
   const topbarRow2 = document.querySelector('.topbar-row2');
   if (topbarRow2) topbarRow2.style.display = ['inventaire','entretien'].includes(page) ? '' : 'none';
@@ -12491,7 +12497,8 @@ const RH_TABLES = new Set([
   'transmissions','menus',
   'vaccins_ref','vaccinations_enfant',
   'suivi_pedagogique',
-  'demandes_reseau','consignes_reseau','evenements_reseau'
+  'demandes_reseau','consignes_reseau','evenements_reseau',
+  'incidents'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -16546,6 +16553,231 @@ async function drSaveReponse() {
 }
 
 // ── Badge sidebar ──────────────────────────────────────────────────────────
+// ── REGISTRE DES INCIDENTS ──────────────────────────────
+let _incCache  = [];
+let _incFilter = 'all';
+let _incCreche = '';
+
+const INC_TYPES = [
+  {v:'chute',        label:"Chute"},
+  {v:'morsure',      label:"Morsure"},
+  {v:'malaise',      label:"Malaise / fi\u00e8vre"},
+  {v:'allergie',     label:"R\u00e9action allergique"},
+  {v:'comportement', label:"Incident comportemental"},
+  {v:'materiel',     label:"Incident mat\u00e9riel"},
+  {v:'autre',        label:"Autre"}
+];
+const INC_SEV = {
+  grave: {emoji:'\U0001F534', label:"Grave",       bg:'var(--red-lt)', fg:'var(--red)', border:'var(--red)'},
+  leger: {emoji:'\U0001F7E0', label:"L\u00e9ger",   bg:'#FFF7ED',       fg:'#C2410C',    border:'#FED7AA'},
+  info:  {emoji:'\U0001F535', label:"Information",  bg:'#EFF6FF',       fg:'#1D4ED8',    border:'#BFDBFE'}
+};
+
+function _incIsCoord() { return ['admin','coordinateur'].includes(currentUserRole); }
+function _incFmtDate(d) { if (!d) return ''; const p = String(d).split('-'); return p.length===3 ? (p[2]+'/'+p[1]+'/'+p[0]) : d; }
+
+function renderPageIncidents() {
+  _drInjectCSS();
+  const page = document.getElementById('page-incidents');
+  if (!page) return;
+  page.innerHTML = `<div id="inc-wrap" style="max-width:1100px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ink)"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> Registre des incidents</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:2px">Chutes, morsures, malaises \u2014 avec suites donn\u00e9es</div>
+      </div>
+      <button class="btn btn-primary" onclick="openIncidentModal()"><i class="ti ti-plus"></i> D\u00e9clarer un incident</button>
+    </div>
+    <div class="dr-creche-filter" id="inc-creche-pills"></div>
+    <div class="dr-kpis" style="grid-template-columns:repeat(3,1fr);margin:14px 0 16px" id="inc-kpis"></div>
+    <div class="dr-filters" id="inc-filters" style="margin-bottom:16px"></div>
+    <div id="inc-list"></div>
+  </div>`;
+  _incBuildCrechePills();
+  _incBuildFilters();
+  incLoad();
+}
+
+function _incBuildCrechePills() {
+  const wrap = document.getElementById('inc-creche-pills');
+  if (!wrap) return;
+  const creches = (typeof _drGetCreches === 'function') ? _drGetCreches() : [];
+  wrap.innerHTML = '<button class="dr-creche-pill active" onclick="incSetCreche(\'\',this)">Toutes</button>' +
+    creches.map(nom => '<button class="dr-creche-pill" onclick="incSetCreche(\'' + nom + '\',this)">' + nom + '</button>').join('');
+}
+
+function _incBuildFilters() {
+  const wrap = document.getElementById('inc-filters');
+  if (!wrap) return;
+  const chips = [
+    {k:'all',        label:"Tous"},
+    {k:'grave',      label:"\U0001F534 Grave"},
+    {k:'leger',      label:"\U0001F7E0 L\u00e9ger"},
+    {k:'info',       label:"\U0001F535 Info"},
+    {k:'non-traite', label:"Non trait\u00e9s"}
+  ];
+  wrap.innerHTML = chips.map(ch =>
+    '<button class="dr-filter' + (_incFilter===ch.k?' active':'') + '" onclick="incSetFilter(\'' + ch.k + '\',this)">' + ch.label + '</button>'
+  ).join('');
+}
+
+function incSetCreche(val, btn) {
+  _incCreche = val;
+  document.querySelectorAll('#inc-creche-pills .dr-creche-pill').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  incLoad();
+}
+
+function incSetFilter(f, btn) {
+  _incFilter = f;
+  document.querySelectorAll('#inc-filters .dr-filter').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  incRender();
+}
+
+async function incLoad() {
+  const list = document.getElementById('inc-list');
+  if (list) list.innerHTML = '<div style="color:var(--ink3);padding:20px 0">Chargement\u2026</div>';
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/incidents?select=*&order=created_at.desc';
+    if (!_incIsCoord() && currentCreche && currentCreche !== '__all__') {
+      url += '&creche_id=eq.' + encodeURIComponent(currentCreche);
+    } else if (_incCreche) {
+      url += '&creche_id=eq.' + encodeURIComponent(_incCreche);
+    }
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    _incCache = await r.json();
+    if (!Array.isArray(_incCache)) _incCache = [];
+  } catch (e) {
+    _incCache = [];
+    if (list) list.innerHTML = '<div style="color:var(--red);padding:20px 0">\u26a0 Erreur de chargement : ' + e.message + '</div>';
+    return;
+  }
+  incRender();
+}
+
+function incRender() {
+  const list = document.getElementById('inc-list');
+  const kpis = document.getElementById('inc-kpis');
+  if (!list) return;
+
+  // KPIs sur l'ensemble charg\u00e9
+  if (kpis) {
+    const total   = _incCache.length;
+    const graves  = _incCache.filter(i => i.severity === 'grave').length;
+    const nonTrait = _incCache.filter(i => !i.treated).length;
+    kpis.innerHTML =
+      '<div class="dr-kpi"><div class="dr-kpi-lbl">Total</div><div class="dr-kpi-val">' + total + '</div></div>' +
+      '<div class="dr-kpi"><div class="dr-kpi-lbl">Graves</div><div class="dr-kpi-val red">' + graves + '</div></div>' +
+      '<div class="dr-kpi"><div class="dr-kpi-lbl">Non trait\u00e9s</div><div class="dr-kpi-val amber">' + nonTrait + '</div></div>';
+  }
+
+  // Filtre s\u00e9v\u00e9rit\u00e9 / non-trait\u00e9
+  const filtered = _incCache.filter(i => {
+    if (_incFilter === 'grave')      return i.severity === 'grave';
+    if (_incFilter === 'leger')      return i.severity === 'leger';
+    if (_incFilter === 'info')       return i.severity === 'info';
+    if (_incFilter === 'non-traite') return !i.treated;
+    return true;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--ink3);padding:48px 0"><i class="ti ti-shield-check" style="font-size:32px;display:block;margin-bottom:8px;color:var(--green)"></i>Aucun incident.</div>';
+    return;
+  }
+
+  const isCoord = _incIsCoord();
+  const typeLabel = v => (INC_TYPES.find(t => t.v === v) || {label:v}).label;
+
+  list.innerHTML = filtered.map(i => {
+    const sev = INC_SEV[i.severity] || INC_SEV.info;
+    const heure = i.incident_time ? (' \u00e0 ' + String(i.incident_time).slice(0,5)) : '';
+    const actionsHtml = i.actions
+      ? '<div class="dr-card-rep" style="margin-top:6px;font-size:12px"><strong>Actions :</strong> ' + i.actions + '</div>'
+      : '';
+    const reporterHtml = i.reporter ? '<span style="font-size:12px;color:var(--ink3)">' + i.reporter + '</span>' : '';
+    const traiteBadge = i.treated
+      ? '<span style="background:var(--green-lt);color:var(--green);font-size:12px;font-weight:600;padding:2px 10px;border-radius:20px">\u2705 Trait\u00e9</span>'
+      : '<span style="background:#FFF7ED;color:#C2410C;font-size:12px;font-weight:600;padding:2px 10px;border-radius:20px">\u23f3 En cours</span>';
+    const delBtn = isCoord
+      ? '<button title="Supprimer" onclick="deleteIncident(\'' + i.id + '\')" style="width:32px;height:32px;border:1px solid var(--red);border-radius:var(--radius-sm);background:var(--surface);color:var(--red);cursor:pointer"><i class="ti ti-trash"></i></button>'
+      : '';
+    return '<div class="dr-card" style="border-color:' + sev.border + ';display:flex;gap:14px;align-items:flex-start;margin-bottom:12px">' +
+      '<div style="font-size:22px;flex-shrink:0">' + sev.emoji + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div class="dr-card-meta"><i class="ti ti-user" style="font-size:12px"></i> ' + (i.child_name || 'Enfant non pr\u00e9cis\u00e9') + (i.creche_id ? ' \u2014 ' + i.creche_id : '') + '</div>' +
+        '<div class="dr-card-title">' + typeLabel(i.type) + ' \u00b7 ' + _incFmtDate(i.incident_date) + heure + '</div>' +
+        '<div class="dr-card-body">' + (i.description || '\u2014') + '</div>' +
+        actionsHtml +
+        '<div class="dr-card-footer">' +
+          '<span style="background:' + sev.bg + ';color:' + sev.fg + ';font-size:12px;font-weight:600;padding:2px 10px;border-radius:20px">' + sev.label + '</span>' +
+          reporterHtml + traiteBadge +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">' +
+        '<button title="' + (i.treated ? 'Rouvrir' : 'Marquer trait\u00e9') + '" onclick="toggleIncident(\'' + i.id + '\',' + (i.treated ? 'true' : 'false') + ')" style="width:32px;height:32px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:' + (i.treated ? 'var(--ink3)' : 'var(--green)') + ';cursor:pointer"><i class="ti ti-' + (i.treated ? 'rotate-clockwise' : 'check') + '"></i></button>' +
+        delBtn +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openIncidentModal() {
+  const creches = (typeof _drGetCreches === 'function') ? _drGetCreches() : [];
+  const preselect = (!_incIsCoord() && currentCreche && currentCreche !== '__all__') ? currentCreche : '';
+  const sel = document.getElementById('inc-creche');
+  if (sel) sel.innerHTML = '<option value="">-- Choisir --</option>' +
+    creches.map(nom => '<option value="' + nom + '"' + (nom === preselect ? ' selected' : '') + '>' + nom + '</option>').join('');
+  const now = new Date();
+  const d = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const t = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const setv = (id,v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  setv('inc-date', d); setv('inc-time', t);
+  ['inc-child','inc-desc','inc-actions','inc-reporter'].forEach(id => setv(id,''));
+  const m = document.getElementById('modal-incident-new');
+  if (m) { m.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+
+async function saveIncident() {
+  const desc = document.getElementById('inc-desc')?.value.trim();
+  if (!desc) { showNotif('\u26a0 Description requise'); return; }
+  const btn = document.querySelector('#modal-incident-new .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '\u23f3\u2026'; }
+  try {
+    await sbInsert('incidents', {
+      creche_id:     document.getElementById('inc-creche')?.value || null,
+      child_name:    document.getElementById('inc-child')?.value.trim() || null,
+      incident_date: document.getElementById('inc-date')?.value || null,
+      incident_time: document.getElementById('inc-time')?.value || null,
+      type:          document.getElementById('inc-type')?.value || 'autre',
+      severity:      document.getElementById('inc-severity')?.value || 'info',
+      description:   desc,
+      actions:       document.getElementById('inc-actions')?.value.trim() || null,
+      reporter:      document.getElementById('inc-reporter')?.value.trim() || null,
+      treated:       false
+    });
+    closeModal('modal-incident-new');
+    showNotif('\u2705 Incident enregistr\u00e9');
+    incLoad();
+  } catch (e) { showNotif('\u26a0 Erreur : ' + e.message); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Enregistrer'; } }
+}
+
+async function toggleIncident(id, treated) {
+  try {
+    await sbUpdate('incidents', id, { treated: !treated });
+    incLoad();
+  } catch (e) { showNotif('\u26a0 Erreur : ' + e.message); }
+}
+
+async function deleteIncident(id) {
+  if (!confirm('Supprimer cet incident ?')) return;
+  try {
+    await sbDelete('incidents', id);
+    incLoad();
+  } catch (e) { showNotif('\u26a0 Erreur : ' + e.message); }
+}
+
 async function checkDemandesBadge() {
   try {
     let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?select=id&lue=eq.false';
@@ -23162,6 +23394,41 @@ function sendSuiviEmail() {
 
 
 <!-- ── MODALS DEMANDES RÉSEAU (statiques) ── -->
+<div class="modal-overlay" id="modal-incident-new" onclick="closeModalClick(event,'modal-incident-new')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><h2>🚨 Déclarer un incident</h2><button class="modal-close" onclick="closeModal('modal-incident-new')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Date</label><input id="inc-date" type="date" class="form-control" style="width:100%"></div>
+        <div class="form-group"><label>Heure</label><input id="inc-time" type="time" class="form-control" style="width:100%"></div>
+        <div class="form-group full"><label>Crèche</label><select id="inc-creche" class="form-control" style="width:100%"><option value="">-- Choisir --</option></select></div>
+        <div class="form-group full"><label>Enfant concerné</label><input id="inc-child" class="form-control" placeholder="Prénom Nom de l'enfant" style="width:100%"></div>
+        <div class="form-group"><label>Type d'incident</label><select id="inc-type" class="form-control" style="width:100%">
+          <option value="chute">Chute</option>
+          <option value="morsure">Morsure</option>
+          <option value="malaise">Malaise / fièvre</option>
+          <option value="allergie">Réaction allergique</option>
+          <option value="comportement">Incident comportemental</option>
+          <option value="materiel">Incident matériel</option>
+          <option value="autre">Autre</option>
+        </select></div>
+        <div class="form-group"><label>Sévérité</label><select id="inc-severity" class="form-control" style="width:100%">
+          <option value="info">🔵 Information</option>
+          <option value="leger">🟠 Léger</option>
+          <option value="grave">🔴 Grave / urgence médicale</option>
+        </select></div>
+        <div class="form-group full"><label>Description</label><textarea id="inc-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
+        <div class="form-group full"><label>Actions menées</label><textarea id="inc-actions" class="form-control" rows="2" style="width:100%;resize:vertical"></textarea></div>
+        <div class="form-group full"><label>Déclarant</label><input id="inc-reporter" class="form-control" placeholder="Prénom Nom" style="width:100%"></div>
+        <div class="form-group full" style="background:var(--red-lt);color:var(--red);border-radius:8px;padding:10px 12px;font-size:12px;display:flex;gap:8px;align-items:center"><i class="ti ti-alert-circle" style="font-size:16px"></i> En cas d'urgence médicale, appelez le 15 (SAMU) immédiatement.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-incident-new')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveIncident()"><i class="ti ti-check"></i> Enregistrer</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-demande-new" onclick="closeModalClick(event,'modal-demande-new')">
   <div class="modal" style="max-width:480px">
     <div class="modal-header"><h2>💬 Nouvelle demande</h2><button class="modal-close" onclick="closeModal('modal-demande-new')">✕</button></div>
