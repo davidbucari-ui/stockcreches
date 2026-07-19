@@ -4031,8 +4031,8 @@ function processManualBarcode() {
 async function processBarcode(code) {
   // ── QR salarié (pointage)
   if (code.startsWith('OREVY_USER:')) {
-    const userId = parseInt(code.replace('OREVY_USER:', ''), 10);
-    if (!isNaN(userId)) { await openPointageModal(userId); return; }
+    const userId = code.replace('OREVY_USER:', '').trim();
+    if (userId) { await openPointageModal(userId); return; }
   }
 
   // ── QR enfant (pointage)

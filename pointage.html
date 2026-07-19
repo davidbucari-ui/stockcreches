@@ -197,7 +197,7 @@ function showSalarie(id) {
 async function doSalarie(id, type) {
   const LABEL = { entree:'Arrivée', sortie:'Départ', debut_pause:'Début de pause', fin_pause:'Fin de pause' };
   try {
-    await sinsert('pointages', { user_id: parseInt(id,10), type, horodatage: new Date().toISOString(), creche_id: (USERS[id] && USERS[id].creche_id) || BORNE_CRECHE || '' });
+    await sinsert('pointages', { user_id: id, type, horodatage: new Date().toISOString(), creche_id: (USERS[id] && USERS[id].creche_id) || BORNE_CRECHE || '' });
     flashOk(LABEL[type]);
   } catch(e) { flashErr(e.message); }
 }
