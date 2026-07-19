@@ -654,6 +654,9 @@ body {
       <button class="portal-tab active" onclick="switchTab('transmissions', this)">
         <span class="tab-icon">📋</span>Transmissions
       </button>
+      <button class="portal-tab" onclick="switchTab('badge', this)">
+        <span class="tab-icon">🎫</span>Badge
+      </button>
       <button class="portal-tab" onclick="switchTab('planning', this)">
         <span class="tab-icon">📅</span>Planning
       </button>
@@ -674,6 +677,11 @@ body {
       <div id="trans-list"><div class="loader"><div class="spinner"></div>Chargement…</div></div>
     </div>
 
+    <div id="tab-badge" style="display:none">
+      <div class="section-title">Badge de pointage</div>
+      <div class="card" id="badge-content"><div class="loader"><div class="spinner"></div>Chargement…</div></div>
+    </div>
+
     <div id="tab-planning" style="display:none">
       <div class="section-title">Planning de votre enfant</div>
       <div id="planning-content"><div class="loader"><div class="spinner"></div>Chargement…</div></div>
@@ -681,6 +689,19 @@ body {
 
     <div id="tab-documents" style="display:none">
       <div class="section-title">Documents</div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px">Déposer un document</div>
+        <p style="font-size:12px;color:var(--ink3);margin:0 0 12px">Carnet de vaccination, arrêt maladie, document contractuel… (PDF ou photo, max 10 Mo)</p>
+        <select id="doc-categorie" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface2);margin-bottom:10px">
+          <option value="vaccin">Carnet de vaccination</option>
+          <option value="arret_maladie">Arrêt maladie</option>
+          <option value="contractuel">Document contractuel</option>
+          <option value="autre">Autre document</option>
+        </select>
+        <input type="file" id="doc-file" accept=".pdf,image/*" style="width:100%;font-family:inherit;font-size:13px;margin-bottom:12px">
+        <button id="doc-upload-btn" onclick="uploadDocParent()" style="width:100%;padding:11px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">📎 Envoyer à la crèche</button>
+        <div id="doc-upload-msg" style="display:none;font-size:12px;font-weight:600;margin-top:10px;text-align:center"></div>
+      </div>
       <div class="card" id="docs-list"><div class="loader"><div class="spinner"></div>Chargement…</div></div>
     </div>
 
@@ -698,6 +719,7 @@ body {
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
 const WORKER = 'https://api.orevy.app';
@@ -784,7 +806,7 @@ async function doActivation() {
 // ── LOGIN ──────────────────────────────────────────────────────────
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
-  const pwd   = document.getElementById('login-password').value;
+  const pwd   = document.getElementById('login-password').value.trim();
   const err   = document.getElementById('login-error');
   err.style.display = 'none';
 
@@ -853,6 +875,9 @@ function renderApp(data) {
   document.getElementById('enfant-avatar').textContent      = prenom ? prenom[0].toUpperCase() : '👶';
   document.getElementById('enfant-card').style.display      = 'flex';
 
+  // Badge de pointage (QR affichable + PIN)
+  renderBadge(enfant, data.pin);
+
   // Transmissions
   renderTransmissions(data.transmissions || []);
 
@@ -862,8 +887,9 @@ function renderApp(data) {
   // Documents
   renderDocuments(data.documents || []);
 
-  // Factures depuis Supabase (table factures projet RH)
-  loadPortailFactures(data.enfant_id || (data.enfant && data.enfant.id) || '');
+  // Factures (données depuis enfant.data.factures si existant)
+  const factures = (enfant.data && enfant.data.factures) || enfant.factures || [];
+  renderFactures(factures);
 
   // Microformations
   renderFormations();
@@ -949,17 +975,15 @@ function renderPlanning(enfant) {
 function renderDocuments(list) {
   const el = document.getElementById('docs-list');
   if (!list.length) {
-    el.innerHTML = `<div class="pill-empty"><div class="pill-empty-icon">📄</div>Aucun document disponible.</div>`;
+    el.innerHTML = `<div class="pill-empty"><div class="pill-empty-icon">📄</div>Aucun document pour le moment.</div>`;
     return;
   }
-
-  const icons = { contrat: '📋', reglement: '📜', pai: '🏥', autorisation: '✍️', autre: '📄' };
-
+  const icons = { vaccin:'💉', arret_maladie:'🤒', contractuel:'📋', contrat:'📋', reglement:'📜', pai:'🏥', autorisation:'✍️', autre:'📄' };
   el.innerHTML = list.map(doc => `
     <div class="doc-item" onclick="${doc.url ? `window.open('${doc.url}','_blank')` : ''}">
-      <div class="doc-icon">${icons[doc.type] || '📄'}</div>
-      <div>
-        <div class="doc-name">${doc.nom}</div>
+      <div class="doc-icon">${icons[doc.type] || icons[doc.categorie] || '📄'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="doc-name">${doc.nom}${doc.source === 'parent' ? ` <span style="background:#EFF6FF;color:var(--accent);font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;white-space:nowrap">déposé par vous</span>` : ''}</div>
         <div class="doc-date">${formatDate(doc.created_at)}</div>
       </div>
       ${doc.url ? `<div class="doc-arrow">↗</div>` : ''}
@@ -967,49 +991,62 @@ function renderDocuments(list) {
   `).join('');
 }
 
-// ── Chargement factures depuis Supabase RH ─────────────────────────────
-const SUPA_RH_PORTAIL     = 'https://gokfxejoffzttzvdkoll.supabase.co';
-const SUPA_RH_KEY_PORTAIL = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0';
-
-async function loadPortailFactures(enfant_id) {
-  const el = document.getElementById('factures-list');
-  if (!enfant_id) { renderFactures([]); return; }
-  if (el) el.innerHTML = '<div class="loader"><div class="spinner"></div>Chargement…</div>';
+async function uploadDocParent() {
+  const catEl  = document.getElementById('doc-categorie');
+  const fileEl = document.getElementById('doc-file');
+  const msg    = document.getElementById('doc-upload-msg');
+  const btn    = document.getElementById('doc-upload-btn');
+  const file   = fileEl.files[0];
+  msg.style.display = 'block';
+  if (!file) { msg.textContent = 'Choisissez un fichier.'; msg.style.color = '#DC2626'; return; }
+  if (file.size > 10 * 1024 * 1024) { msg.textContent = 'Fichier trop volumineux (max 10 Mo).'; msg.style.color = '#DC2626'; return; }
+  const session = getSession();
+  if (!session) return;
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Envoi…'; msg.textContent = '';
   try {
-    const r = await fetch(
-      SUPA_RH_PORTAIL + '/rest/v1/factures?enfant_id=eq.' + encodeURIComponent(enfant_id) + '&order=mois.desc',
-      { headers: { 'apikey': SUPA_RH_KEY_PORTAIL, 'Authorization': 'Bearer ' + SUPA_RH_KEY_PORTAIL } }
-    );
-    const list = r.ok ? await r.json() : [];
-    renderFactures(list);
-  } catch(e) {
-    renderFactures([]);
+    const buf = await file.arrayBuffer();
+    const res = await fetch(`${WORKER}/portail-upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.token}`,
+        'Content-Type': file.type || 'application/octet-stream',
+        'x-doc-categorie': catEl.value,
+        'x-doc-nom': encodeURIComponent(file.name)
+      },
+      body: buf
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    msg.textContent = '✓ Document transmis à la crèche.'; msg.style.color = '#15803D';
+    fileEl.value = '';
+    showApp(session);
+  } catch (e) {
+    msg.textContent = '⚠ ' + e.message; msg.style.color = '#DC2626';
+  } finally {
+    btn.disabled = false; btn.textContent = old;
   }
 }
 
 function renderFactures(list) {
   const el = document.getElementById('factures-list');
-  if (!el) return;
   if (!list.length) {
     el.innerHTML = `<div class="pill-empty"><div class="pill-empty-icon">🧾</div>Aucune facture disponible.</div>`;
     return;
   }
 
-  el.innerHTML = list.map(f => {
-    const moisLabel = f.mois ? new Date(f.mois + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—';
-    const statut    = f.statut === 'payee' ? 'Réglée' : (f.statut === 'envoyee' ? 'Envoyée' : 'En attente');
-    const statutCls = f.statut === 'payee' ? 'payee' : 'attente';
-    const montant   = f.montant_famille != null ? Number(f.montant_famille).toFixed(2) + ' €' : '—';
-    return `
+  el.innerHTML = list.map(f => `
     <div class="facture-item">
-      <div style="flex:1">
-        <div class="facture-mois">${moisLabel}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${f.contrat_caf || ''} · ${f.heures_facturees || 0}h</div>
+      <div>
+        <div class="facture-mois">${f.mois || f.periode || '—'}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${f.nb_heures ? f.nb_heures + 'h' : ''}</div>
       </div>
-      <span class="facture-badge ${statutCls}">${statut}</span>
-      <div class="facture-montant">${montant}</div>
-    </div>`;
-  }).join('');
+      <span class="facture-badge ${f.statut === 'payée' || f.statut === 'payee' ? 'payee' : 'attente'}">
+        ${f.statut === 'payée' || f.statut === 'payee' ? 'Réglée' : 'À régler'}
+      </span>
+      <div class="facture-montant">${f.montant != null ? Number(f.montant).toFixed(2) + ' €' : '—'}</div>
+    </div>
+  `).join('');
 }
 
 function renderFormations() {
@@ -1035,8 +1072,32 @@ function renderFormations() {
 }
 
 // ── NAVIGATION ─────────────────────────────────────────────────────
+function renderBadge(enfant, pin) {
+  const box = document.getElementById('badge-content');
+  if (!box) return;
+  const eid    = (enfant && enfant.id) || (getSession() || {}).enfant_id || '';
+  const prenom = (enfant && enfant.data && enfant.data.prenom) || (enfant && enfant.prenom) || 'votre enfant';
+  box.innerHTML = `
+    <p style="font-size:13px;color:var(--ink3);margin:0 0 16px">Présentez ce QR code à la borne de la crèche pour enregistrer l'arrivée et le départ de ${prenom}.</p>
+    <div style="display:flex;justify-content:center;margin-bottom:10px"><div id="badge-qr" style="background:#fff;padding:14px;border-radius:16px;box-shadow:var(--shadow);display:inline-block;line-height:0"></div></div>
+    <p style="font-size:11.5px;color:var(--ink3);text-align:center;margin:0 0 4px">💡 Augmentez la luminosité de votre écran si la borne a du mal à lire.</p>
+    ${pin ? `
+    <div style="text-align:center;border-top:0.5px solid var(--border);margin-top:18px;padding-top:18px">
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Ou saisissez ce code sur la borne</div>
+      <div style="font-size:34px;font-weight:800;letter-spacing:6px;color:var(--accent)">${String(pin)}</div>
+    </div>` : ''}
+  `;
+  const cont = document.getElementById('badge-qr');
+  if (cont && window.QRCode && eid) {
+    cont.innerHTML = '';
+    try {
+      new QRCode(cont, { text: 'OREVY_CHILD:' + eid, width: 200, height: 200, colorDark: '#1C1917', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    } catch (e) { cont.innerHTML = '<span style="font-size:12px;color:var(--ink3)">QR indisponible</span>'; }
+  }
+}
+
 function switchTab(name, btn) {
-  ['transmissions','planning','documents','factures','formations'].forEach(t => {
+  ['transmissions','badge','planning','documents','factures','formations'].forEach(t => {
     document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
   });
   document.querySelectorAll('.portal-tab').forEach(b => b.classList.remove('active'));

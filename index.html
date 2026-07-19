@@ -2108,10 +2108,7 @@ textarea { resize: vertical; min-height: 72px; }
 
         <!-- DOCUMENTS -->
         <div id="fi-docs" style="display:none">
-          <div style="padding:48px;text-align:center;color:var(--ink3)">
-            <div style="font-size:40px;margin-bottom:12px">📄</div>
-            <div style="font-weight:700;font-size:15px;margin-bottom:6px">Documents</div>
-          </div>
+          <div id="fi-docs-content"></div>
         </div>
 
         <!-- SUIVI PÉDAGOGIQUE -->
@@ -6260,6 +6257,51 @@ function showFamillesFromFiche() {
   showPage('familles', document.querySelector('.nav-item[onclick*="familles"]'));
 }
 
+async function renderFiDocs(enfantId) {
+  const box = document.getElementById('fi-docs-content');
+  if (!box || !enfantId) return;
+  box.innerHTML = `<div style="padding:32px;text-align:center;color:var(--ink3)">Chargement…</div>`;
+  let docs = [];
+  try { docs = await sbGet('portail_documents', `enfant_id=eq.${encodeURIComponent(enfantId)}&order=created_at.desc&select=*`) || []; } catch(e){}
+  const icons    = { vaccin:'💉', arret_maladie:'🤒', contractuel:'📋', contrat:'📋', reglement:'📜', pai:'🏥', autorisation:'✍️', autre:'📄' };
+  const catLabel = { vaccin:'Carnet de vaccination', arret_maladie:'Arrêt maladie', contractuel:'Document contractuel', autre:'Autre document' };
+  const parentDocs = docs.filter(d => d.source === 'parent');
+  const proDocs    = docs.filter(d => d.source !== 'parent');
+  const nNew = parentDocs.filter(d => !d.vu_par_pro).length;
+
+  const rowHtml = (d, isParent) => {
+    const dt = d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' }) : '';
+    const nouveau = (isParent && !d.vu_par_pro) ? ` <span style="background:#DCFCE7;color:#15803D;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px">NOUVEAU</span>` : '';
+    const catTag  = d.categorie ? `<span style="font-size:11px;color:var(--ink3)">${catLabel[d.categorie] || d.categorie}</span>` : '';
+    const url = d.url ? String(d.url).replace(/'/g, '') : '';
+    const vuBtn = (isParent && !d.vu_par_pro) ? `<button onclick="event.stopPropagation();marquerDocVu('${String(d.id).replace(/'/g,'')}')" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Marquer lu</button>` : '';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;margin-bottom:8px;background:var(--surface2)">
+      <div style="font-size:22px">${icons[d.type] || icons[d.categorie] || '📄'}</div>
+      <div style="flex:1;min-width:0;${url?'cursor:pointer':''}" ${url?`onclick="window.open('${url}','_blank')"`:''}>
+        <div style="font-weight:700;font-size:13px">${d.nom || 'Document'}${nouveau}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:2px">${catTag}<span style="font-size:11px;color:var(--ink3)">${dt}</span></div>
+      </div>
+      ${vuBtn}
+      ${url ? `<a href="${url}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;color:var(--accent);font-weight:700;font-size:16px">↗</a>` : ''}
+    </div>`;
+  };
+
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div style="font-weight:800;font-size:15px">Documents de la famille</div>
+      ${nNew ? `<span style="background:#DCFCE7;color:#15803D;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px">${nNew} nouveau${nNew>1?'x':''} à consulter</span>` : ''}
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink3);margin:0 0 8px">📥 Déposés par les parents</div>
+    ${parentDocs.length ? parentDocs.map(d => rowHtml(d, true)).join('') : `<div style="padding:20px;text-align:center;color:var(--ink3);font-size:13px;border:1.5px dashed var(--border);border-radius:12px;margin-bottom:8px">Aucun document déposé par les parents pour l'instant.</div>`}
+    ${proDocs.length ? `<div style="font-size:12px;font-weight:700;color:var(--ink3);margin:20px 0 8px">📤 Documents de la crèche</div>${proDocs.map(d => rowHtml(d, false)).join('')}` : ''}
+  `;
+}
+
+async function marquerDocVu(docId) {
+  try { await sbUpdate('portail_documents', docId, { vu_par_pro: true }); } catch(e){}
+  renderFiDocs(ficheEnfantId);
+}
+
 function switchFicheTab(tabId, btn) {
   ['fi-identite','fi-parents','fi-accueil','fi-notes','fi-planning','fi-factures','fi-docs','fi-sante','fi-suivi'].forEach(id => {
     const p = document.getElementById(id);
@@ -6272,6 +6314,7 @@ function switchFicheTab(tabId, btn) {
   });
   const panel = document.getElementById(tabId);
   if (panel) panel.style.display = 'block';
+  if (tabId === 'fi-docs') renderFiDocs(ficheEnfantId);
   const activeBtn = btn || document.querySelector('.fiche-tab[data-tab="' + tabId + '"]');
   if (activeBtn) {
     activeBtn.style.color = 'var(--accent)';
@@ -12683,7 +12726,7 @@ const RH_TABLES = new Set([
   'vaccins_ref','vaccinations_enfant',
   'suivi_pedagogique',
   'demandes_reseau','consignes_reseau','evenements_reseau',
-  'incidents'
+  'incidents','portail_documents'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
