@@ -106,8 +106,8 @@ async function startCreche(nom) {
   el('stage').innerHTML = '<div class="spin">Chargement…</div>';
   USERS = {}; ENFANTS = {};
   try {
-    const us = await sget('utilisateurs', 'select=id,email,role,creche_id').catch(() => []);
-    us.forEach(u => USERS[u.id] = u);
+    const sal = await sget('salaries', 'select=id,data').catch(() => []);
+    sal.forEach(row => { const d = row.data || {}; if ((d.creche || nom) === nom || !d.creche) USERS[row.id] = { id: row.id, nom: ((d.prenom||'')+' '+(d.nom||'')).trim() || 'Salarié', role: d.fonction || '', creche_id: d.creche || nom }; });
     const es = await sget('enfants', 'select=id,prenom,nom,creche_id&creche_id=eq.' + encodeURIComponent(nom)).catch(() => []);
     es.forEach(e => ENFANTS[e.id] = { nom: ((e.prenom||'') + ' ' + (e.nom||'')).trim() || 'Enfant', creche: e.creche_id || nom });
   } catch(e) {}
@@ -165,20 +165,46 @@ function renderPinPad() {
 function updateDots() { const d = el('dots'); if (d) d.textContent = PIN.length ? '●'.repeat(PIN.length) : '•'; }
 function pinPress(k) { if (PIN.length < 6) { PIN += k; updateDots(); const f = el('pin-fb'); if (f) f.textContent = ''; } }
 function pinClear() { PIN = ''; updateDots(); const f = el('pin-fb'); if (f) f.textContent = ''; }
-function pinSubmit() {
+function _resolvePin(pin) {
+  const sid = Object.keys(PINS.pinsSalaries||{}).find(k => String(PINS.pinsSalaries[k]) === pin);
+  if (sid) return { t:'s', id:sid };
+  const eids = Object.keys(PINS.pinsEnfants||{}).filter(k => String(PINS.pinsEnfants[k]) === pin);
+  if (eids.length === 1) return { t:'e', id:eids[0] };
+  if (eids.length > 1) return { t:'m', ids:eids };
+  return null;
+}
+async function _refreshPins() {
+  try {
+    const params = await sget('parametres', 'id=eq.orevy_pointage&select=id,data');
+    if (params && params.length && params[0].data) PINS = Object.assign({ pinsSalaries:{}, pinsEnfants:{} }, params[0].data);
+  } catch(e) {}
+  if (BORNE_CRECHE) {
+    try {
+      const es = await sget('enfants', 'select=id,prenom,nom,creche_id&creche_id=eq.' + encodeURIComponent(BORNE_CRECHE));
+      es.forEach(e => ENFANTS[e.id] = { nom: ((e.prenom||'') + ' ' + (e.nom||'')).trim() || 'Enfant', creche: e.creche_id || BORNE_CRECHE });
+    } catch(e) {}
+  }
+}
+async function pinSubmit() {
   if (!PIN) return;
-  const sid = Object.keys(PINS.pinsSalaries||{}).find(k => String(PINS.pinsSalaries[k]) === PIN);
-  if (sid) { PIN = ''; showSalarie(sid); return; }
-  const eids = Object.keys(PINS.pinsEnfants||{}).filter(k => String(PINS.pinsEnfants[k]) === PIN);
-  if (eids.length === 1) { PIN = ''; showEnfant(eids[0]); return; }
-  if (eids.length > 1) { PIN = ''; showEnfantChooser(eids); return; }
-  const f = el('pin-fb'); if (f) f.textContent = 'Code inconnu, réessayez'; PIN = ''; updateDots();
+  let r = _resolvePin(PIN);
+  if (!r) {
+    const f = el('pin-fb'); if (f) f.textContent = 'Vérification…';
+    await _refreshPins();
+    r = _resolvePin(PIN);
+  }
+  const f = el('pin-fb'); if (f) f.textContent = '';
+  PIN = ''; updateDots();
+  if (!r) { if (f) f.textContent = 'Code inconnu, réessayez'; return; }
+  if (r.t === 's') showSalarie(r.id);
+  else if (r.t === 'e') showEnfant(r.id);
+  else showEnfantChooser(r.ids);
 }
 
 // ── Écrans de confirmation ─────────────────────────────────────────
 function showSalarie(id) {
   const u = USERS[id];
-  const nom = u && u.email ? u.email.split('@')[0] : ('Salarié #' + id);
+  const nom = u && u.nom ? u.nom : ('Salarié');
   el('stage').innerHTML =
     '<div class="person">👤 ' + nom + '</div>' +
     '<div class="person-sub">' + (u && u.role ? u.role : '') + '</div>' +

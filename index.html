@@ -15871,12 +15871,24 @@ function calculerHeures(pointages) {
 
 async function openPointageModal(userId) {
   try {
-    const rows = await sbGet('utilisateurs', `id=eq.${userId}&select=id,email,role,creche_id`);
-    if (!rows.length) { showNotif('⚠ Salarié QR non reconnu (ID ' + userId + ')'); return; }
-    pointageScanUser   = rows[0];
+    let nom = '', role = '', creche = '';
+    if (typeof loadSalaries === 'function') loadSalaries();
+    let sal = (SALARIES || []).find(s => String(s.id) === String(userId));
+    if (sal) {
+      nom = ((sal.prenom||'') + ' ' + (sal.nom||'')).trim() || 'Salarié';
+      role = sal.fonction || '';
+      creche = sal.creche || '';
+    } else {
+      const rows = await sbGet('utilisateurs', `id=eq.${userId}&select=id,email,role,creche_id`);
+      if (!rows.length) { showNotif('⚠ Salarié QR non reconnu (ID ' + userId + ')'); return; }
+      nom = rows[0].email ? rows[0].email.split('@')[0] : ('#'+userId);
+      role = rows[0].role || '';
+      creche = rows[0].creche_id || '';
+    }
+    pointageScanUser   = { creche_id: creche };
     pointageScanUserId = userId;
-    document.getElementById('pointage-user-name').textContent = rows[0].email.split('@')[0];
-    document.getElementById('pointage-user-role').textContent = rows[0].role || '—';
+    document.getElementById('pointage-user-name').textContent = nom;
+    document.getElementById('pointage-user-role').textContent = role || '—';
     const heureEl = document.getElementById('pointage-heure');
     if (heureEl) heureEl.textContent = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     document.getElementById('pointage-confirm').innerHTML = '';
@@ -16295,8 +16307,8 @@ async function renderPointageBadges() {
   el.innerHTML = '<div style="text-align:center;color:var(--ink3);padding:40px">Chargement\u2026</div>';
   try {
     await loadPointageConfig();
-    const uf = (currentCreche && currentCreche !== 'all') ? ('&creche_id=eq.' + encodeURIComponent(currentCreche)) : '';
-    pointageBadgeUsers = await sbGet('utilisateurs', 'select=id,email,role,creche_id' + uf + '&order=id.asc');
+    loadSalaries();
+    pointageBadgeUsers = (SALARIES || []).filter(s => (currentCreche && currentCreche !== 'all') ? (s.creche === currentCreche) : true).slice().sort((a,b) => (((a.prenom||'')+(a.nom||'')).localeCompare((b.prenom||'')+(b.nom||''))));
     const crecheId = (currentCreche && currentCreche !== 'all') ? currentCreche : '__all__';
     pointageBadgeEnfants = (getFamilles(crecheId) || []).slice().sort((a,b) => (((a.prenom||'')+(a.nom||'')).localeCompare((b.prenom||'')+(b.nom||''))));
     const missing = pointageBadgeUsers.filter(u => !(POINTAGE_CFG.pinsSalaries||{})[u.id]).length + pointageBadgeEnfants.filter(e => !(POINTAGE_CFG.pinsEnfants||{})[e.id]).length;
@@ -16307,7 +16319,7 @@ async function renderPointageBadges() {
       '<span style="font-size:12px;color:var(--ink3)">\uD83D\uDCCD ' + scopeLabel + '</span></div>';
     const salBlock = '<div style="font-size:13px;font-weight:700;color:var(--ink2);margin:0 0 8px">\uD83D\uDC65 Salari\u00E9s (' + pointageBadgeUsers.length + ')</div>' +
       (pointageBadgeUsers.length
-        ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:22px">' + pointageBadgeUsers.map(u => pointageBadgeRow('salarie', u.id, (u.email ? u.email.split('@')[0] : ('#'+u.id)), (u.role||''))).join('') + '</div>'
+        ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:22px">' + pointageBadgeUsers.map(u => pointageBadgeRow('salarie', u.id, (((u.prenom||'')+' '+(u.nom||'')).trim()||('#'+u.id)), (u.fonction||''))).join('') + '</div>'
         : '<div style="color:var(--ink3);font-size:13px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:22px">Aucun salari\u00E9.</div>');
     const enfBlock = '<div style="font-size:13px;font-weight:700;color:var(--ink2);margin:0 0 8px">\uD83E\uDDD2 Enfants (' + pointageBadgeEnfants.length + ')</div>' +
       (pointageBadgeEnfants.length
@@ -16334,13 +16346,13 @@ async function bulkGeneratePins() {
 function printSingleBadge(kind, id) {
   const code = (kind === 'salarie' ? 'OREVY_USER:' : 'OREVY_CHILD:') + id;
   let name = '', sub = '';
-  if (kind === 'salarie') { const u = pointageBadgeUsers.find(x => String(x.id) === String(id)); name = u && u.email ? u.email.split('@')[0] : ('#'+id); sub = u && u.role ? u.role : ''; }
+  if (kind === 'salarie') { const u = pointageBadgeUsers.find(x => String(x.id) === String(id)); name = u ? (((u.prenom||'')+' '+(u.nom||'')).trim()||('#'+id)) : ('#'+id); sub = u && u.fonction ? u.fonction : ''; }
   else { const e = pointageBadgeEnfants.find(x => String(x.id) === String(id)); name = e ? (((e.prenom||'')+' '+(e.nom||'')).trim()||'Enfant') : 'Enfant'; sub = e && e._creche ? e._creche : ''; }
   _printBadges([{ code, name, sub }]);
 }
 function printAllBadges() {
   const list = [];
-  pointageBadgeUsers.forEach(u => list.push({ code:'OREVY_USER:'+u.id, name:(u.email?u.email.split('@')[0]:('#'+u.id)), sub:(u.role||'') }));
+  pointageBadgeUsers.forEach(u => list.push({ code:'OREVY_USER:'+u.id, name:(((u.prenom||'')+' '+(u.nom||'')).trim()||('#'+u.id)), sub:(u.fonction||'') }));
   pointageBadgeEnfants.forEach(e => list.push({ code:'OREVY_CHILD:'+e.id, name:(((e.prenom||'')+' '+(e.nom||'')).trim()||'Enfant'), sub:(e._creche||'') }));
   if (!list.length) { showNotif('Aucun badge \u00E0 imprimer'); return; }
   _printBadges(list);
