@@ -107,7 +107,7 @@ async function startCreche(nom) {
   USERS = {}; ENFANTS = {};
   try {
     const sal = await sget('salaries', 'select=id,data').catch(() => []);
-    sal.forEach(row => { const d = row.data || {}; if ((d.creche || nom) === nom || !d.creche) USERS[row.id] = { id: row.id, nom: ((d.prenom||'')+' '+(d.nom||'')).trim() || 'Salarié', role: d.fonction || '', creche_id: d.creche || nom }; });
+    sal.forEach(row => { const d = row.data || {}; USERS[row.id] = { id: row.id, nom: ((d.prenom||'')+' '+(d.nom||'')).trim() || 'Salarié', role: d.fonction || '', creche: d.creche || '', volante: !!d.volante }; });
     const es = await sget('enfants', 'select=id,prenom,nom,creche_id&creche_id=eq.' + encodeURIComponent(nom)).catch(() => []);
     es.forEach(e => ENFANTS[e.id] = { nom: ((e.prenom||'') + ' ' + (e.nom||'')).trim() || 'Enfant', creche: e.creche_id || nom });
   } catch(e) {}
@@ -178,6 +178,10 @@ async function _refreshPins() {
     const params = await sget('parametres', 'id=eq.orevy_pointage&select=id,data');
     if (params && params.length && params[0].data) PINS = Object.assign({ pinsSalaries:{}, pinsEnfants:{} }, params[0].data);
   } catch(e) {}
+  try {
+    const sal = await sget('salaries', 'select=id,data');
+    sal.forEach(row => { const d = row.data || {}; USERS[row.id] = { id: row.id, nom: ((d.prenom||'')+' '+(d.nom||'')).trim() || 'Salarié', role: d.fonction || '', creche: d.creche || '', volante: !!d.volante }; });
+  } catch(e) {}
   if (BORNE_CRECHE) {
     try {
       const es = await sget('enfants', 'select=id,prenom,nom,creche_id&creche_id=eq.' + encodeURIComponent(BORNE_CRECHE));
@@ -202,9 +206,14 @@ async function pinSubmit() {
 }
 
 // ── Écrans de confirmation ─────────────────────────────────────────
+function showRefus(who) {
+  el('stage').innerHTML = '<div style="font-size:52px;margin-bottom:12px">🚫</div><div class="confirm" style="color:#FCA5A5">' + who + ' n\'est pas rattaché(e) à ' + BORNE_CRECHE + '</div><div class="person-sub" style="margin-top:8px">Pointage impossible sur cette borne</div>';
+  setTimeout(() => { _scanLock = false; renderIdle(); }, 2600);
+}
 function showSalarie(id) {
   const u = USERS[id];
-  const nom = u && u.nom ? u.nom : ('Salarié');
+  if (!u || !(u.creche === BORNE_CRECHE || u.volante)) { showRefus(u && u.nom ? u.nom : 'Ce salarié'); return; }
+  const nom = u.nom || 'Salarié';
   el('stage').innerHTML =
     '<div class="person">👤 ' + nom + '</div>' +
     '<div class="person-sub">' + (u && u.role ? u.role : '') + '</div>' +
@@ -223,12 +232,13 @@ function showSalarie(id) {
 async function doSalarie(id, type) {
   const LABEL = { entree:'Arrivée', sortie:'Départ', debut_pause:'Début de pause', fin_pause:'Fin de pause' };
   try {
-    await sinsert('pointages', { user_id: id, type, horodatage: new Date().toISOString(), creche_id: (USERS[id] && USERS[id].creche_id) || BORNE_CRECHE || '' });
+    await sinsert('pointages', { user_id: id, type, horodatage: new Date().toISOString(), creche_id: BORNE_CRECHE || '' });
     flashOk(LABEL[type]);
   } catch(e) { flashErr(e.message); }
 }
 function showEnfant(id) {
-  const e = ENFANTS[id] || { nom: 'Enfant' };
+  const e = ENFANTS[id];
+  if (!e) { showRefus('Cet enfant'); return; }
   el('stage').innerHTML =
     '<div class="person">🧒 ' + e.nom + '</div>' +
     '<div class="person-sub">' + (e.creche || '') + '</div>' +
@@ -240,7 +250,7 @@ function showEnfant(id) {
 }
 async function doEnfant(id, type) {
   try {
-    await sinsert('pointages_enfants', { enfant_id: id, type, horodatage: new Date().toISOString(), creche_id: (ENFANTS[id] && ENFANTS[id].creche) || BORNE_CRECHE || '' });
+    await sinsert('pointages_enfants', { enfant_id: id, type, horodatage: new Date().toISOString(), creche_id: BORNE_CRECHE || '' });
     flashOk(type === 'arrivee' ? 'Arrivée' : 'Départ');
   } catch(e) { flashErr(e.message); }
 }
