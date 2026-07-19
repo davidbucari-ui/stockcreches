@@ -5835,6 +5835,10 @@ function confirmerImportCreche() {
   if (!pendingImportEnfant) { closeModal('modal-import-creche'); return; }
 
   const enfant  = pendingImportEnfant;
+  // Garde-fou anti-doublon réseau
+  const _kk = ((enfant.prenom||'')+'|'+(enfant.nom||'')+'|'+(enfant.ddn||'')).toLowerCase().trim();
+  const _dej = getFamilles('__all__').find(e => e._creche !== crecheChoisie && ((e.prenom||'')+'|'+(e.nom||'')+'|'+(e.ddn||'')).toLowerCase().trim() === _kk);
+  if (_dej && !confirm(enfant.prenom + ' ' + enfant.nom + ' existe déjà dans ' + _dej._creche + '.\n\nCréer quand même une fiche dans ' + crecheChoisie + ' ?')) { closeModal('modal-import-creche'); pendingImportEnfant = null; return; }
   const enfants = getFamilles(crecheChoisie);
   enfants.push(enfant);
   saveFamilles(enfants, crecheChoisie);
@@ -5901,6 +5905,11 @@ async function importExcelFamilles(event) {
 
   const enfants = getFamilles(crecheId);
   let created = 0, skipped = 0;
+  // Garde-fou anti-doublon réseau : enfants existant déjà dans les AUTRES crèches
+  const _normImp = (p,n,d) => ((p||'')+'|'+(n||'')+'|'+(d||'')).toLowerCase().trim();
+  const _autresCreches = new Map();
+  getFamilles('__all__').forEach(e => { if (e._creche !== crecheId) _autresCreches.set(_normImp(e.prenom, e.nom, e.ddn), e._creche); });
+  const _crossDup = [];
 
   for (const row of dataRows) {
     const g = (i) => i >= 0 ? String(row[i] || '').trim() : '';
@@ -5950,8 +5959,18 @@ async function importExcelFamilles(event) {
       allergies: '', pai: '', medecin: '', notes_libres: '',
     };
 
-    enfants.push(enfant);
-    created++;
+    const _autre = _autresCreches.get(_normImp(enfant.prenom, enfant.nom, enfant.ddn));
+    if (_autre) { _crossDup.push({ enfant, creche: _autre }); }
+    else { enfants.push(enfant); created++; }
+  }
+
+  // Garde-fou : enfants déjà présents dans une autre crèche → confirmation
+  if (_crossDup.length) {
+    const _cr = [...new Set(_crossDup.map(x => x.creche))].join(', ');
+    const _noms = _crossDup.slice(0,6).map(x => x.enfant.prenom + ' ' + x.enfant.nom).join(', ');
+    const _ok = confirm(_crossDup.length + ' enfant(s) existent déjà dans une autre crèche (' + _cr + ') :\n' + _noms + (_crossDup.length > 6 ? '…' : '') + '\n\nLes créer AUSSI dans ' + crecheId + ' ?\n\nOK = créer quand même (doublon réseau assumé)\nAnnuler = ignorer ces enfants');
+    if (_ok) { _crossDup.forEach(x => { enfants.push(x.enfant); created++; }); }
+    else { skipped += _crossDup.length; }
   }
 
   if (created === 0) { showNotif(`⚠ Aucune famille importée (${skipped} doublon(s) ignoré(s))`); return; }
