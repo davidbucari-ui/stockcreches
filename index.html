@@ -16035,56 +16035,70 @@ function pointageSwitchTab(tab) {
 }
 
 // ── Onglet Salariés ────────────────────────────────────────────────
+function _pointageResolveSal(maps, uid) {
+  const s = maps.salById[uid];
+  if (s) return { nom: ((s.prenom||'') + ' ' + (s.nom||'')).trim() || ('#'+uid), role: s.fonction || '' };
+  const u = maps.uById[uid];
+  if (u) return { nom: u.email ? u.email.split('@')[0] : ('#'+uid), role: u.role || '' };
+  return { nom: '#'+uid, role: '' };
+}
+async function _pointageSalMaps() {
+  if (typeof loadSalaries === 'function') loadSalaries();
+  const salById = {}; (SALARIES||[]).forEach(s => salById[s.id] = s);
+  const uById = {};
+  try { const us = await sbGet('utilisateurs', 'select=id,email,role'); us.forEach(u => uById[u.id] = u); } catch(e) {}
+  return { salById, uById };
+}
 async function renderPointageSalaries() {
   const el = document.getElementById('pt-content'); if (!el) return;
-  el.innerHTML = '<div style="text-align:center;color:var(--ink3);padding:40px">Chargement\u2026</div>';
+  el.innerHTML = '<div style="text-align:center;color:var(--ink3);padding:40px">Chargement…</div>';
   try {
+    const maps = await _pointageSalMaps();
     const crecheFilter = (currentCreche && currentCreche !== 'all') ? currentCreche : null;
-    const users = await sbGet('utilisateurs', 'select=id,email,role,creche_id' + (crecheFilter ? ('&creche_id=eq.' + encodeURIComponent(crecheFilter)) : '') + '&order=id.asc');
-    const uMap = {}; users.forEach(u => uMap[u.id] = u);
     const todayStr = new Date().toISOString().split('T')[0];
-    const pts = await sbGet('pointages', 'horodatage=gte.' + todayStr + 'T00:00:00&select=user_id,type,horodatage&order=horodatage.asc');
-    const byUser = {}; pts.forEach(p => { if (!uMap[p.user_id]) return; (byUser[p.user_id] = byUser[p.user_id] || []).push(p); });
+    const pts = await sbGet('pointages', 'horodatage=gte.' + todayStr + 'T00:00:00&select=user_id,type,horodatage,creche_id' + (crecheFilter ? ('&creche_id=eq.' + encodeURIComponent(crecheFilter)) : '') + '&order=horodatage.asc');
+    const byUser = {}; pts.forEach(p => { (byUser[p.user_id] = byUser[p.user_id] || []).push(p); });
     let nPres=0, nPause=0, nParti=0, totMin=0;
-    const STLABEL = { present:'pr\u00E9sent', pause:'en pause', parti:'parti' };
+    const STLABEL = { present:'présent', pause:'en pause', parti:'parti' };
     const STCOL   = { present:'var(--green)', pause:'var(--amber)', parti:'var(--ink3)' };
     const rows = Object.keys(byUser).map(uid => {
       const evs = byUser[uid]; const last = evs[evs.length-1];
       const st = last.type==='entree' ? 'present' : last.type==='sortie' ? 'parti' : last.type==='debut_pause' ? 'pause' : 'present';
       if (st==='present') nPres++; else if (st==='pause') nPause++; else nParti++;
       const wk = calculerHeures(evs).worked; totMin += wk;
-      const u = uMap[uid];
-      return { nom: u.email ? u.email.split('@')[0] : ('#'+uid), role: u.role||'', st, worked: wk, arr: evs[0] ? evs[0].horodatage : null };
+      const info = _pointageResolveSal(maps, uid);
+      return { nom: info.nom, role: info.role, st, worked: wk, arr: evs[0] ? evs[0].horodatage : null };
     }).sort((a,b) => a.nom.localeCompare(b.nom));
-    const kpiDefs = [['Pr\u00E9sents',nPres,'var(--green)'],['En pause',nPause,'var(--amber)'],['Partis',nParti,'var(--ink3)'],['Heures du jour',_fmtMin(totMin),'var(--ink)']];
+    const kpiDefs = [['Présents',nPres,'var(--green)'],['En pause',nPause,'var(--amber)'],['Partis',nParti,'var(--ink3)'],['Heures du jour',_fmtMin(totMin),'var(--ink)']];
     const kpi = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px">' +
       kpiDefs.map(d => '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px"><div style="font-size:12px;color:var(--ink3)">' + d[0] + '</div><div style="font-size:22px;font-weight:800;font-family:\'Syne\',sans-serif;color:' + d[2] + '">' + d[1] + '</div></div>').join('') + '</div>';
     const board = rows.length
       ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:22px">' +
-        rows.map(r => '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)"><span style="display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:50%;background:' + STCOL[r.st] + '"></span><span style="font-weight:700;font-size:14px">' + r.nom + '</span><span style="font-size:12px;color:var(--ink3);text-transform:capitalize">' + r.role + '</span></span><span style="font-size:12px;color:var(--ink3)">arr. ' + _fmtHeure(r.arr) + ' \u00B7 <span style="color:' + STCOL[r.st] + ';font-weight:600">' + STLABEL[r.st] + '</span> \u00B7 <strong>' + _fmtMin(r.worked) + '</strong></span></div>').join('') + '</div>'
-      : '<div style="text-align:center;color:var(--ink3);padding:30px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:22px">Aucun salari\u00E9 point\u00E9 aujourd\u2019hui.</div>';
-    el.innerHTML = '<div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:10px">Pr\u00E9sence en direct \u2014 aujourd\u2019hui</div>' + kpi + board +
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--ink2)">R\u00E9capitulatif mensuel</div><input type="month" value="' + (pointageMonth||'') + '" onchange="pointageMonth=this.value;pointageSwitchTab(\'salaries\')" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-family:inherit;font-size:13px;background:var(--bg)"></div><div id="pt-recap-sal"><div style="color:var(--ink3);font-size:13px">Chargement\u2026</div></div>';
-    renderPointageRecapSalaries(uMap);
+        rows.map(r => '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)"><span style="display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:50%;background:' + STCOL[r.st] + '"></span><span style="font-weight:700;font-size:14px">' + r.nom + '</span><span style="font-size:12px;color:var(--ink3);text-transform:capitalize">' + r.role + '</span></span><span style="font-size:12px;color:var(--ink3)">arr. ' + _fmtHeure(r.arr) + ' · <span style="color:' + STCOL[r.st] + ';font-weight:600">' + STLABEL[r.st] + '</span> · <strong>' + _fmtMin(r.worked) + '</strong></span></div>').join('') + '</div>'
+      : '<div style="text-align:center;color:var(--ink3);padding:30px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:22px">Aucun salarié pointé aujourd’hui.</div>';
+    el.innerHTML = '<div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:10px">Présence en direct — aujourd’hui</div>' + kpi + board +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="font-size:13px;font-weight:700;color:var(--ink2)">Récapitulatif mensuel</div><input type="month" value="' + (pointageMonth||'') + '" onchange="pointageMonth=this.value;pointageSwitchTab(\'salaries\')" style="border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;font-family:inherit;font-size:13px;background:var(--bg)"></div><div id="pt-recap-sal"><div style="color:var(--ink3);font-size:13px">Chargement…</div></div>';
+    renderPointageRecapSalaries(maps);
   } catch(e) { el.innerHTML = '<div style="color:var(--red);padding:20px">Erreur : ' + e.message + '</div>'; }
 }
-async function renderPointageRecapSalaries(uMap) {
+async function renderPointageRecapSalaries(maps) {
   const el = document.getElementById('pt-recap-sal'); if (!el) return;
+  if (!maps) maps = await _pointageSalMaps();
   const mois = pointageMonth || new Date().toISOString().slice(0,7);
   const start = mois + '-01T00:00:00';
   const ed = new Date(mois + '-01T00:00:00'); ed.setMonth(ed.getMonth()+1);
   const end = ed.toISOString().slice(0,10) + 'T00:00:00';
+  const crecheFilter = (currentCreche && currentCreche !== 'all') ? currentCreche : null;
   try {
-    const pts = await sbGet('pointages', 'horodatage=gte.' + start + '&horodatage=lt.' + end + '&select=user_id,type,horodatage&order=horodatage.asc');
-    const agg = {}; pts.forEach(p => { if (uMap && !uMap[p.user_id]) return; const d = p.horodatage.split('T')[0]; ((agg[p.user_id] = agg[p.user_id] || {})[d] = (agg[p.user_id][d] || [])).push(p); });
+    const pts = await sbGet('pointages', 'horodatage=gte.' + start + '&horodatage=lt.' + end + '&select=user_id,type,horodatage,creche_id' + (crecheFilter ? ('&creche_id=eq.' + encodeURIComponent(crecheFilter)) : '') + '&order=horodatage.asc');
+    const agg = {}; pts.forEach(p => { const d = p.horodatage.split('T')[0]; ((agg[p.user_id] = agg[p.user_id] || {})[d] = (agg[p.user_id][d] || [])).push(p); });
     const rows = Object.keys(agg).map(uid => {
       let tot=0, jours=0;
       Object.values(agg[uid]).forEach(evs => { const w = calculerHeures(evs).worked; if (w>0) { tot+=w; jours++; } });
-      const u = (uMap && uMap[uid]) || {};
-      return { nom: u.email ? u.email.split('@')[0] : ('#'+uid), jours, tot };
+      return { nom: _pointageResolveSal(maps, uid).nom, jours, tot };
     }).sort((a,b) => b.tot - a.tot);
     el.innerHTML = rows.length
-      ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden"><div style="display:flex;padding:9px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase"><span style="flex:1">Salari\u00E9</span><span style="width:80px;text-align:center">Jours</span><span style="width:90px;text-align:right">Heures</span></div>' +
+      ? '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden"><div style="display:flex;padding:9px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase"><span style="flex:1">Salarié</span><span style="width:80px;text-align:center">Jours</span><span style="width:90px;text-align:right">Heures</span></div>' +
         rows.map(r => '<div style="display:flex;padding:10px 16px;border-bottom:1px solid var(--border);font-size:14px"><span style="flex:1;font-weight:600">' + r.nom + '</span><span style="width:80px;text-align:center;color:var(--ink3)">' + r.jours + '</span><span style="width:90px;text-align:right;font-weight:700;font-family:\'Syne\',sans-serif">' + _fmtMin(r.tot) + '</span></div>').join('') + '</div>'
       : '<div style="color:var(--ink3);font-size:13px;padding:20px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">Aucun pointage ce mois.</div>';
   } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur : ' + e.message + '</div>'; }
