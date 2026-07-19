@@ -1818,6 +1818,7 @@ textarea { resize: vertical; min-height: 72px; }
           <button id="fam-tab-planning" onclick="switchFamTab('planning')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">📅 Planning enfants</button>
           <button id="fam-tab-berceaux" onclick="switchFamTab('berceaux')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">🏢 Berceaux entreprise</button>
           <button id="fam-tab-financement" onclick="switchFamTab('financement')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">💶 Financement</button>
+          <button id="fam-tab-portail" onclick="switchFamTab('portail')" style="padding:9px 20px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer">🔗 Portail famille</button>
         </div>
 
         <div id="fam-view-liste">
@@ -1865,6 +1866,10 @@ textarea { resize: vertical; min-height: 72px; }
 
         <div id="fam-view-financement" style="display:none">
           <div id="fam-financement-grid"></div>
+        </div>
+
+        <div id="fam-view-portail" style="display:none">
+          <div id="fam-portail-content"></div>
         </div>
       </div>
     </div>
@@ -5431,7 +5436,7 @@ async function inviterParentPortail(enfantId) {
 
     // Mettre à jour le cache et re-render
     _portailStatutCache[enfantId] = 'pending';
-    renderFamillesFinancement();
+    if (document.getElementById('fam-portail-content')) renderFamillesPortail(false);
     showNotif('✅ Invitation préparée pour ' + email);
   } catch(err) {
     showNotif('⚠ Erreur : ' + err.message);
@@ -5515,7 +5520,7 @@ function renderFamillesFinancement_inner(el, psu, paje, hPSU, hPAJE, isAll, opti
       <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#6D28D9">📋 Enfants PSU</div>
       <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Crèche</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
       <tbody>${psu.map(e => `<tr onclick="${rowOpenFn(e)}" style="cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
-        <td><strong>${e.prenom} ${e.nom}</strong>${portailStatutBadge(e.id)}<br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
+        <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
         <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
         <td><span style="background:${isNonMarcheur(e)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e)?'Non-marcheur':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
@@ -5529,7 +5534,7 @@ function renderFamillesFinancement_inner(el, psu, paje, hPSU, hPAJE, isAll, opti
       <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#B45309">📋 Enfants PAJE</div>
       <div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Crèche</th><th>Type</th><th>Jours/sem</th><th>Heures/sem</th><th>Berceau</th></tr></thead>
       <tbody>${paje.map(e => `<tr onclick="${rowOpenFn(e)}" style="cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
-        <td><strong>${e.prenom} ${e.nom}</strong>${portailStatutBadge(e.id)}<br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
+        <td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${calcAgeEnfant(e.ddn).label}</span></td>
         <td><span style="font-size:11.5px;font-weight:600;color:var(--ink2)">${e._creche || crecheId || '—'}</span></td>
         <td><span style="background:${isNonMarcheur(e)?'#DBEAFE':'#DCFCE7'};color:${isNonMarcheur(e)?'#1D4ED8':'#15803D'};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${isNonMarcheur(e)?'Non-marcheur':'Marcheur'}</span></td>
         <td>${e.jours||'—'}</td><td>${e.heures||'—'}h</td>
@@ -5549,13 +5554,136 @@ function saveOptionEncadrement(val) {
 
 // ── Tabs familles ─────────────────────────────────────────────────
 function switchFamTab(tab) {
-  ['liste','planning','berceaux','financement'].forEach(t => {
+  ['liste','planning','berceaux','financement','portail'].forEach(t => {
     const btn  = document.getElementById('fam-tab-' + t);
     const view = document.getElementById('fam-view-' + t);
     if (btn)  { btn.style.color = tab===t ? 'var(--accent)' : 'var(--ink3)'; btn.style.borderBottom = tab===t ? '2px solid var(--accent)' : '2px solid transparent'; btn.style.fontWeight = tab===t ? '700' : '600'; }
     if (view) view.style.display = tab===t ? '' : 'none';
   });
+  if (tab === 'portail') renderFamillesPortail();
 }
+
+// ── Portail famille : onglet de gestion ───────────────────────────
+let _portailFilter = 'tous';
+
+async function renderFamillesPortail(reloadStatuts = true) {
+  const box = document.getElementById('fam-portail-content');
+  if (!box) return;
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId) || [];
+  if (reloadStatuts) {
+    box.innerHTML = `<div style="padding:40px;text-align:center;color:var(--ink3)">Chargement des statuts…</div>`;
+    await loadPortailStatuts(enfants.map(e => e.id));
+  }
+  const st = e => _portailStatutCache[e.id] || 'none';
+  const nActive  = enfants.filter(e => st(e) === 'active').length;
+  const nPending = enfants.filter(e => st(e) === 'pending').length;
+  const nNone    = enfants.filter(e => st(e) === 'none').length;
+  const nNoneMail= enfants.filter(e => st(e) === 'none' && (e.parent1?.email||'').trim()).length;
+
+  const f = _portailFilter;
+  const filtered = enfants.filter(e => {
+    const s = st(e);
+    if (f === 'actifs')     return s === 'active';
+    if (f === 'attente')    return s === 'pending';
+    if (f === 'noninvites') return s === 'none';
+    return true;
+  }).sort((a,b) => (`${a.nom} ${a.prenom}`).localeCompare(`${b.nom} ${b.prenom}`));
+
+  const kpi  = (bg,col,lab,v) => `<div style="background:${bg};border-radius:12px;padding:14px 16px"><div style="font-size:12px;color:${col};font-weight:600;margin-bottom:4px">${lab}</div><div style="font-size:26px;font-weight:800;color:${col}">${v}</div></div>`;
+  const pill = (k,lab,n) => `<button onclick="setPortailFilter('${k}')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${f===k?'var(--accent)':'var(--border)'};background:${f===k?'var(--accent)':'var(--surface2)'};color:${f===k?'#fff':'var(--ink3)'};font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">${lab}${n!=null?` (${n})`:''}</button>`;
+
+  const rows = filtered.map(e => {
+    const s     = st(e);
+    const eid   = String(e.id).replace(/'/g, "");
+    const email = (e.parent1?.email||'').trim();
+    const pnom  = `${e.parent1?.prenom||''} ${e.parent1?.nom||''}`.trim() || '—';
+    let statutCell, actionCell;
+    if (s === 'active') {
+      statutCell = `<span style="color:#15803D;font-weight:700;font-size:12px">✓ Actif</span>`;
+      actionCell = `<span style="color:var(--ink3);font-size:12px">—</span>`;
+    } else if (s === 'pending') {
+      statutCell = `<span style="color:#B45309;font-weight:700;font-size:12px">⏳ En attente</span>`;
+      actionCell = `<button data-portail-id="${eid}" onclick="event.stopPropagation();inviterParentPortail(this.dataset.portailId)" style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:#B45309;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">↻ Relancer</button>`;
+    } else if (email) {
+      statutCell = `<span style="color:var(--ink3);font-weight:600;font-size:12px">○ Non invité</span>`;
+      actionCell = `<button data-portail-id="${eid}" onclick="event.stopPropagation();inviterParentPortail(this.dataset.portailId)" style="padding:6px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">✉ Inviter</button>`;
+    } else {
+      statutCell = `<span style="color:var(--ink3);font-weight:600;font-size:12px">○ Non invité</span>`;
+      actionCell = `<button data-portail-id="${eid}" onclick="event.stopPropagation();openModalFamille(this.dataset.portailId)" style="padding:6px 12px;border-radius:8px;border:1.5px solid #FECACA;background:#FEF2F2;color:#DC2626;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">⚠ Ouvrir fiche</button>`;
+    }
+    const mailCell = email
+      ? `<br><span style="font-size:11px;color:var(--ink3)">${email}</span>`
+      : `<br><span style="font-size:11px;color:#DC2626">⚠ email manquant</span>`;
+    return `<tr><td><strong>${e.prenom} ${e.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${e._creche || crecheId || ''}</span></td><td>${pnom}${mailCell}</td><td>${statutCell}</td><td style="text-align:right">${actionCell}</td></tr>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      ${kpi('#F0FDF4','#16A34A','Portails actifs',nActive)}
+      ${kpi('#FFFBEB','#B45309','En attente',nPending)}
+      ${kpi('var(--surface2)','var(--ink3)','Non invités',nNone)}
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${pill('tous','Tous',null)}${pill('actifs','Actifs',nActive)}${pill('attente','En attente',nPending)}${pill('noninvites','Non invités',nNone)}
+      </div>
+      ${nNoneMail>0 ? `<button onclick="inviterTousPortail()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">✉ Inviter tous les non-invités (${nNoneMail})</button>` : ''}
+    </div>
+    ${filtered.length
+      ? `<div class="table-wrap"><table class="table"><thead><tr><th>Enfant</th><th>Parent 1</th><th>Statut</th><th style="text-align:right">Action</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : `<div style="padding:40px;text-align:center;color:var(--ink3)">Aucune famille dans ce filtre.</div>`}
+  `;
+}
+
+function setPortailFilter(f) { _portailFilter = f; renderFamillesPortail(false); }
+
+async function inviterTousPortail() {
+  const crecheId = getCrecheId();
+  const enfants  = getFamilles(crecheId) || [];
+  const cibles = enfants.filter(e => (_portailStatutCache[e.id]||'none') === 'none' && (e.parent1?.email||'').trim());
+  if (!cibles.length) { showNotif('Aucune famille non-invitée avec email.'); return; }
+  if (!confirm(`Créer les invitations portail pour ${cibles.length} famille(s) ?`)) return;
+  showNotif('Création des invitations…');
+  const recap = [];
+  for (const e of cibles) {
+    const email  = (e.parent1?.email||'').trim();
+    const creche = e._creche || (crecheId !== '__all__' ? crecheId : '');
+    try {
+      const res  = await fetch('https://api.orevy.app/portail-invite', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enfant_id: e.id, creche_id: creche, email, enfant_prenom: (e.prenom||'').trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      _portailStatutCache[e.id] = 'pending';
+      recap.push({ nom: `${e.prenom} ${e.nom}`, email, url: data.activation_url });
+    } catch(err) {
+      recap.push({ nom: `${e.prenom} ${e.nom}`, email, error: err.message });
+    }
+  }
+  renderFamillesPortail(false);
+  _portailRecapModal(recap);
+}
+
+function _portailRecapModal(recap) {
+  const ok = recap.filter(r => r.url);
+  const ko = recap.filter(r => !r.url);
+  const ov = document.createElement('div');
+  ov.setAttribute('data-portail-recap', '1');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.onclick = ev => { if (ev.target === ov) ov.remove(); };
+  const lines = ok.map(r => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border)"><div style="flex:1"><strong style="font-size:13px">${r.nom}</strong><br><span style="font-size:11px;color:var(--ink3)">${r.email}</span></div><button data-url="${r.url}" onclick="navigator.clipboard.writeText(this.dataset.url);showNotif('Lien copié')" style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">📋 Copier le lien</button></div>`).join('');
+  const koLines = ko.length ? `<div style="margin-top:12px;padding:10px;background:#FEF2F2;border-radius:8px;font-size:12px;color:#DC2626">${ko.length} échec(s) : ${ko.map(r => r.nom).join(', ')}</div>` : '';
+  ov.innerHTML = `<div style="background:var(--surface);border-radius:16px;padding:24px;max-width:560px;width:100%;max-height:80vh;overflow:auto">
+    <div style="font-size:16px;font-weight:800;margin-bottom:6px">${ok.length} invitation(s) créée(s)</div>
+    <div style="font-size:12px;color:var(--ink3);margin-bottom:16px">Copiez chaque lien d'activation pour le transmettre au parent (mail, SMS…). Chaque lien est valable une seule fois.</div>
+    ${lines}${koLines}
+    <div style="text-align:right;margin-top:16px"><button onclick="document.querySelector('[data-portail-recap]').remove()" style="padding:8px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Fermer</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
 
 // ── Modal enfant ──────────────────────────────────────────────────
 let famEditingId = null;
