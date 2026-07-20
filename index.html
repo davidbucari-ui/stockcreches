@@ -17190,21 +17190,35 @@ function drOpenDemande() {
   const thSel = document.getElementById('dr-theme');
   if (thSel && !thSel.options.length) thSel.innerHTML = DR_THEMES.map(t=>'<option>'+t+'</option>').join('');
   const dSel = document.getElementById('dr-dest');
-  if (dSel) {
-    const list = (window.SALARIES || []).filter(s => s && s.id && s.statut !== 'archivé');
-    list.sort((a,b) => {
+  if (dSel) dSel.innerHTML = '<option value="">— Non attribuée —</option><option value="" disabled>Chargement…</option>';
+  const m = document.getElementById('modal-demande-new');
+  if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
+  _drFillDestinataires();
+}
+
+// Alimente le select destinataire depuis la table salaries (RH), comme l'annuaire des référents.
+async function _drFillDestinataires() {
+  const dSel = document.getElementById('dr-dest');
+  if (!dSel) return;
+  try {
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/salaries?select=id,data', { headers: SUPA_RH_HEADERS });
+    const raw = await r.json();
+    let rows = (Array.isArray(raw) ? raw : []).map(x => ({ id: x.id, ...(x.data || {}) }))
+                 .filter(s => s && s.id && s.statut !== 'archivé');
+    rows.sort((a,b) => {
       const ra = DR_FONCTIONS_REFERENT.includes(a.fonction)?0:1, rb = DR_FONCTIONS_REFERENT.includes(b.fonction)?0:1;
       if (ra !== rb) return ra - rb;
       return ((a.nom||'')+(a.prenom||'')).localeCompare((b.nom||'')+(b.prenom||''));
     });
-    dSel.innerHTML = '<option value="">— Non attribuée —</option>' + list.map(s => {
-      const nom = ((s.prenom||'')+' '+(s.nom||'')).trim();
+    dSel.innerHTML = '<option value="">— Non attribuée —</option>' + rows.map(s => {
+      const nom = (((s.prenom||'')+' '+(s.nom||'')).trim()) || '(sans nom)';
       const tag = (s.fonction ? ' — '+s.fonction : '') + (s.creche ? ' ('+s.creche+')' : '');
       return '<option value="'+s.id+'" data-nom="'+nom.replace(/"/g,'&quot;')+'">'+nom+tag+'</option>';
     }).join('');
+  } catch(e) {
+    dSel.innerHTML = '<option value="">— Non attribuée —</option>';
+    console.warn('[dr-dest] chargement salariés:', e);
   }
-  const m = document.getElementById('modal-demande-new');
-  if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
 }
 
 async function drSaveDemande() {
