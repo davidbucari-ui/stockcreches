@@ -16834,6 +16834,7 @@ async function drLoadDemandes() {
               '<span class="badge ' + prio.cls + '">' + prio.label + '</span>' +
               '<span class="badge ' + stat.cls + '">' + stat.label + '</span>' +
               (d.theme ? '<span class="badge badge-gray">' + d.theme + '</span>' : '') +
+              (d.destinataire_nom ? '<span class="badge badge-blue">→ À ' + d.destinataire_nom + '</span>' : '') +
               '<span style="color:var(--ink3)">' + (d.creche_id||'') + ' · ' + _drFmt(d.created_at) + '</span>' +
             '</div>' +
             (d.description ? '<div class="dr-card-body">' + d.description + '</div>' : '') +
@@ -16931,8 +16932,12 @@ const DR_EVT_TYPES = [
   { key:'recrutement', label:'Recrutement', icon:'🧑\u200d💼' },
   { key:'formation',   label:'Formation',   icon:'📗' },
   { key:'reunion',      label:'Réunion',     icon:'👥' },
+  { key:'app',         label:'Analyse de la Pratique Pro. (APP)', icon:'🧠' },
+  { key:'rsai',        label:'RSAI (Réf. Santé & Accueil Inclusif)', icon:'🩺' },
+  { key:'pmi',         label:'Visite PMI', icon:'🏥' },
   { key:'visite',       label:'Visite',      icon:'🏠' },
   { key:'entretien',    label:'Entretien',   icon:'🧡' },
+  { key:'intervenant', label:'Intervenant extérieur', icon:'🧑‍🏫' },
   { key:'fete',         label:'Fête',        icon:'🎉' },
   { key:'autre',        label:'Autre',       icon:'⚪' },
 ];
@@ -17184,6 +17189,20 @@ function drOpenDemande() {
   ['dr-titre','dr-desc'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   const thSel = document.getElementById('dr-theme');
   if (thSel && !thSel.options.length) thSel.innerHTML = DR_THEMES.map(t=>'<option>'+t+'</option>').join('');
+  const dSel = document.getElementById('dr-dest');
+  if (dSel) {
+    const list = (window.SALARIES || []).filter(s => s && s.id && s.statut !== 'archivé');
+    list.sort((a,b) => {
+      const ra = DR_FONCTIONS_REFERENT.includes(a.fonction)?0:1, rb = DR_FONCTIONS_REFERENT.includes(b.fonction)?0:1;
+      if (ra !== rb) return ra - rb;
+      return ((a.nom||'')+(a.prenom||'')).localeCompare((b.nom||'')+(b.prenom||''));
+    });
+    dSel.innerHTML = '<option value="">— Non attribuée —</option>' + list.map(s => {
+      const nom = ((s.prenom||'')+' '+(s.nom||'')).trim();
+      const tag = (s.fonction ? ' — '+s.fonction : '') + (s.creche ? ' ('+s.creche+')' : '');
+      return '<option value="'+s.id+'" data-nom="'+nom.replace(/"/g,'&quot;')+'">'+nom+tag+'</option>';
+    }).join('');
+  }
   const m = document.getElementById('modal-demande-new');
   if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
 }
@@ -17194,7 +17213,7 @@ async function drSaveDemande() {
   const btn = document.querySelector('#modal-demande-new .btn-primary');
   if (btn) { btn.disabled=true; btn.textContent='⏳…'; }
   try {
-    await sbInsert('demandes_reseau', {
+    const _base = {
       creche_id:   (currentCreche && currentCreche !== '__all__') ? currentCreche : (_drCreche || 'Réseau'),
       auteur_id:   currentUser?.id || null,
       theme:       document.getElementById('dr-theme')?.value || 'Autre',
@@ -17202,7 +17221,16 @@ async function drSaveDemande() {
       titre,
       description: document.getElementById('dr-desc')?.value.trim() || null,
       statut:      'ouvert'
-    });
+    };
+    const _destSel = document.getElementById('dr-dest');
+    const _destId  = _destSel?.value || null;
+    const _destNom = _destId ? (_destSel.options[_destSel.selectedIndex]?.getAttribute('data-nom') || null) : null;
+    try {
+      await sbInsert('demandes_reseau', _destId ? { ..._base, destinataire_id:_destId, destinataire_nom:_destNom } : _base);
+    } catch(eDest) {
+      if (_destId) { await sbInsert('demandes_reseau', _base); } // repli si colonnes destinataire absentes en base
+      else throw eDest;
+    }
     closeModal('modal-demande-new');
     showNotif('✅ Demande enregistrée');
     drLoadDemandes();
@@ -24231,6 +24259,7 @@ function sendSuiviEmail() {
       <div class="form-grid">
         <div class="form-group"><label>Thème *</label><select id="dr-theme" style="width:100%"></select></div>
         <div class="form-group"><label>Priorité</label><select id="dr-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
+        <div class="form-group full"><label>Destinataire (optionnel)</label><select id="dr-dest" style="width:100%"><option value="">— Non attribuée —</option></select></div>
         <div class="form-group full"><label>Titre *</label><input id="dr-titre" class="form-control" placeholder="Ex : Besoin de tapis de sol" style="width:100%"/></div>
         <div class="form-group full"><label>Description</label><textarea id="dr-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
       </div>
@@ -24281,8 +24310,12 @@ function sendSuiviEmail() {
           <option value="recrutement">🧑‍💼 Recrutement</option>
           <option value="formation">📗 Formation</option>
           <option value="reunion">👥 Réunion</option>
+          <option value="app">🧠 APP</option>
+          <option value="rsai">🩺 RSAI</option>
+          <option value="pmi">🏥 Visite PMI</option>
           <option value="visite">🏠 Visite</option>
           <option value="entretien">🧡 Entretien</option>
+          <option value="intervenant">🧑‍🏫 Intervenant extérieur</option>
           <option value="fete">🎉 Fête</option>
           <option value="autre" selected>⚪ Autre</option>
         </select></div>
