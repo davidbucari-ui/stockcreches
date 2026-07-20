@@ -16609,6 +16609,8 @@ let _drSearch   = '';
 let _drCreche   = '';
 let _drCurrentId = null;
 let _drEvenements = [];
+let _drDemandes = [];
+let _drThreadId = null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function _drGetCreches() {
@@ -16781,6 +16783,7 @@ async function drLoadDemandes() {
 
     const r = await fetch(url, { headers: SUPA_RH_HEADERS });
     const rows = await r.json();
+    _drDemandes = Array.isArray(rows) ? rows : [];
 
     // KPIs
     const total   = rows.length;
@@ -16840,6 +16843,7 @@ async function drLoadDemandes() {
             (d.description ? '<div class="dr-card-body">' + d.description + '</div>' : '') +
             (d.reponse ? '<div class="dr-card-rep"><b>Réponse :</b> ' + d.reponse + '</div>' : '') +
             '</div>' +
+            '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;flex-shrink:0;margin-right:6px" onclick="drOpenThread(\''+d.id+'\')">💬 Discuter</button>' +
             (isCoord ? '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;flex-shrink:0" onclick="drOpenReponse(\'' + d.id + '\',\'' + d.statut + '\')">Répondre</button>' : '') +
             '</div></div>';
         }).join('')}
@@ -17189,6 +17193,11 @@ function drOpenDemande() {
   ['dr-titre','dr-desc'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   const thSel = document.getElementById('dr-theme');
   if (thSel && !thSel.options.length) thSel.innerHTML = DR_THEMES.map(t=>'<option>'+t+'</option>').join('');
+  const cSel = document.getElementById('dr-dest-creche');
+  if (cSel) {
+    const pre = _drCreche || ((currentCreche && currentCreche!=='all' && currentCreche!=='__all__') ? currentCreche : '');
+    cSel.innerHTML = '<option value="">Toutes les crèches</option>' + _drGetCreches().map(c => '<option value="'+c+'"'+(c===pre?' selected':'')+'>'+c+'</option>').join('');
+  }
   const dSel = document.getElementById('dr-dest');
   if (dSel) dSel.innerHTML = '<option value="">— Non attribuée —</option><option value="" disabled>Chargement…</option>';
   const m = document.getElementById('modal-demande-new');
@@ -17196,15 +17205,18 @@ function drOpenDemande() {
   _drFillDestinataires();
 }
 
-// Alimente le select destinataire depuis la table salaries (RH), comme l'annuaire des référents.
+// Alimente le select destinataire depuis la table salaries (RH), filtré par la crèche choisie.
 async function _drFillDestinataires() {
   const dSel = document.getElementById('dr-dest');
   if (!dSel) return;
+  const cre = document.getElementById('dr-dest-creche')?.value || '';
+  const prev = dSel.value;
   try {
     const r = await fetch(SUPA_RH_URL + '/rest/v1/salaries?select=id,data', { headers: SUPA_RH_HEADERS });
     const raw = await r.json();
     let rows = (Array.isArray(raw) ? raw : []).map(x => ({ id: x.id, ...(x.data || {}) }))
                  .filter(s => s && s.id && s.statut !== 'archivé');
+    if (cre) rows = rows.filter(s => s.creche === cre);
     rows.sort((a,b) => {
       const ra = DR_FONCTIONS_REFERENT.includes(a.fonction)?0:1, rb = DR_FONCTIONS_REFERENT.includes(b.fonction)?0:1;
       if (ra !== rb) return ra - rb;
@@ -17212,9 +17224,10 @@ async function _drFillDestinataires() {
     });
     dSel.innerHTML = '<option value="">— Non attribuée —</option>' + rows.map(s => {
       const nom = (((s.prenom||'')+' '+(s.nom||'')).trim()) || '(sans nom)';
-      const tag = (s.fonction ? ' — '+s.fonction : '') + (s.creche ? ' ('+s.creche+')' : '');
+      const tag = (s.fonction ? ' — '+s.fonction : '') + (!cre && s.creche ? ' ('+s.creche+')' : '');
       return '<option value="'+s.id+'" data-nom="'+nom.replace(/"/g,'&quot;')+'">'+nom+tag+'</option>';
     }).join('');
+    if (prev && dSel.querySelector('option[value="'+prev+'"]')) dSel.value = prev;
   } catch(e) {
     dSel.innerHTML = '<option value="">— Non attribuée —</option>';
     console.warn('[dr-dest] chargement salariés:', e);
@@ -17253,6 +17266,66 @@ async function drSaveDemande() {
 }
 
 // ── Modal Consigne ─────────────────────────────────────────────────────────
+// ── Fil de discussion (chat par demande) ───────────────────
+function _drEscHtml(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+async function drOpenThread(id) {
+  _drThreadId = id;
+  let d = (_drDemandes || []).find(x => x.id === id);
+  if (!d) {
+    try { const r = await fetch(SUPA_RH_URL + '/rest/v1/demandes_reseau?select=*&id=eq.' + encodeURIComponent(id), { headers: SUPA_RH_HEADERS }); const a = await r.json(); d = Array.isArray(a) ? a[0] : null; } catch(e) {}
+  }
+  const titEl = document.getElementById('dr-thread-titre');
+  if (titEl) titEl.textContent = d?.titre || 'Discussion';
+  const orig = document.getElementById('dr-thread-orig');
+  if (orig) orig.innerHTML = d
+    ? ('<div style="font-weight:700;margin-bottom:3px">📌 ' + _drEscHtml(d.titre||'') + '</div>' + (d.description ? _drEscHtml(d.description) : '<span style="color:var(--ink3)">(sans description)</span>') + '<div style="color:var(--ink3);font-size:11px;margin-top:5px">' + _drEscHtml(d.creche_id||'') + ' · ' + _drFmtDT(d.created_at) + '</div>')
+    : '';
+  const inp = document.getElementById('dr-thread-input'); if (inp) inp.value = '';
+  const m = document.getElementById('modal-demande-thread');
+  if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
+  drRenderThread();
+}
+async function drRenderThread() {
+  const box = document.getElementById('dr-thread-msgs');
+  if (!box || !_drThreadId) return;
+  box.innerHTML = '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:8px">Chargement…</div>';
+  try {
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/messages_reseau?select=*&demande_id=eq.' + encodeURIComponent(_drThreadId) + '&order=created_at.asc', { headers: SUPA_RH_HEADERS });
+    const msgs = await r.json();
+    if (!Array.isArray(msgs) || !msgs.length) { box.innerHTML = '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:12px">Aucun message. Lancez la discussion 👇</div>'; return; }
+    const myId = currentUser?.id;
+    box.innerHTML = msgs.map(mm => {
+      const mine = mm.auteur_id && mm.auteur_id === myId;
+      const bg = mine ? 'var(--purple,#6D28D9)' : 'var(--surface2,#F1F1F5)';
+      const col = mine ? '#fff' : 'var(--ink)';
+      const align = mine ? 'flex-end' : 'flex-start';
+      return '<div style="display:flex;flex-direction:column;align-items:' + align + '">' +
+        '<div style="font-size:10.5px;color:var(--ink3);margin-bottom:2px">' + _drEscHtml(mm.auteur_nom||'—') + '</div>' +
+        '<div style="max-width:80%;background:' + bg + ';color:' + col + ';padding:7px 11px;border-radius:12px;font-size:13px;white-space:pre-wrap;word-break:break-word">' + _drEscHtml(mm.body||'') + '</div>' +
+        '<div style="font-size:10px;color:var(--ink3);margin-top:2px">' + _drFmtDT(mm.created_at) + '</div>' +
+      '</div>';
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  } catch(e) { box.innerHTML = '<div style="color:var(--red);font-size:12px">Erreur : ' + e.message + '</div>'; }
+}
+async function drSendThreadMsg() {
+  const inp = document.getElementById('dr-thread-input');
+  const body = inp?.value.trim();
+  if (!body || !_drThreadId) return;
+  const btn = document.querySelector('#modal-demande-thread .btn-primary');
+  if (btn) btn.disabled = true;
+  try {
+    await fetch(SUPA_RH_URL + '/rest/v1/messages_reseau', {
+      method: 'POST',
+      headers: { ...SUPA_RH_HEADERS, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ demande_id: _drThreadId, auteur_id: currentUser?.id || null, auteur_nom: currentUser?.email || '—', body })
+    });
+    if (inp) inp.value = '';
+    drRenderThread();
+  } catch(e) { showNotif('⚠ Erreur : ' + e.message); }
+  finally { if (btn) btn.disabled = false; }
+}
+
 function drOpenConsigne() {
   ['cs-sujet','cs-message'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   const sel = document.getElementById('cs-creche');
@@ -17616,6 +17689,7 @@ async function renderCoordDemandes() {
               '<span class="badge ' + prio.cls + '" style="font-size:10px">' + prio.label + '</span>' +
               '<span style="color:var(--ink3);font-size:11px">' + _drFmt(d.created_at) + '</span>' +
             '</div></div>' +
+            '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;flex-shrink:0;margin-right:6px" onclick="drOpenThread(\''+d.id+'\')">💬 Discuter</button>' +
             '<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;flex-shrink:0" onclick="drOpenReponse(\'' + d.id + '\',\'' + d.statut + '\')">Répondre</button>' +
             '</div>';
         }).join('') + '</div>';
@@ -24273,7 +24347,8 @@ function sendSuiviEmail() {
       <div class="form-grid">
         <div class="form-group"><label>Thème *</label><select id="dr-theme" style="width:100%"></select></div>
         <div class="form-group"><label>Priorité</label><select id="dr-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
-        <div class="form-group full"><label>Destinataire (optionnel)</label><select id="dr-dest" style="width:100%"><option value="">— Non attribuée —</option></select></div>
+        <div class="form-group"><label>Filtrer par crèche</label><select id="dr-dest-creche" onchange="_drFillDestinataires()" style="width:100%"><option value="">Toutes les crèches</option></select></div>
+        <div class="form-group"><label>Destinataire (optionnel)</label><select id="dr-dest" style="width:100%"><option value="">— Non attribuée —</option></select></div>
         <div class="form-group full"><label>Titre *</label><input id="dr-titre" class="form-control" placeholder="Ex : Besoin de tapis de sol" style="width:100%"/></div>
         <div class="form-group full"><label>Description</label><textarea id="dr-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
       </div>
@@ -24311,6 +24386,20 @@ function sendSuiviEmail() {
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-demande-rep')">Annuler</button>
       <button class="btn btn-primary" onclick="drSaveReponse()"><i class="ti ti-check"></i> Enregistrer</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-demande-thread" onclick="closeModalClick(event,'modal-demande-thread')">
+  <div class="modal" style="max-width:560px;display:flex;flex-direction:column;max-height:88vh">
+    <div class="modal-header"><h2 style="font-size:16px">💬 <span id="dr-thread-titre">Discussion</span></h2><button class="modal-close" onclick="closeModal('modal-demande-thread')">✕</button></div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;overflow:hidden">
+      <div id="dr-thread-orig" style="background:var(--amber-soft,#FFF7E6);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12.5px"></div>
+      <div id="dr-thread-msgs" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:80px;max-height:40vh;padding-right:4px"></div>
+      <div style="border-top:1px solid var(--border);padding-top:10px"><textarea id="dr-thread-input" class="form-control" rows="2" placeholder="Écrire un message…" style="width:100%;resize:vertical"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-demande-thread')">Fermer</button>
+      <button class="btn btn-primary" onclick="drSendThreadMsg()"><i class="ti ti-send"></i> Envoyer</button>
     </div>
   </div>
 </div>
