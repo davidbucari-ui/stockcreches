@@ -288,6 +288,10 @@ function renderBlocFromDB(type, c) {
     case 'principe':  return principeBlock(c.num||'', c.couleur||'#7B9E87', c.titre||'', c.desc||'');
     case 'erreur':    return erreurBlock(c.items||[]);
     case 'reflexion': return reflexionBlock(c.question||'');
+    case 'retenir':     return retenirBlock(c.titre||'', c.points||[]);
+    case 'citation':    return citationBlock(c.texte||'');
+    case 'comparaison': return comparaisonBlock(c.intro||'', c.plutot||[], c.eviter||[]);
+    case 'essayer':     return essayerBlock(c.label||'', c.titre||'', c.etapes||[], c.note||'');
     default: return '';
   }
 }
@@ -347,6 +351,46 @@ function reflexionBlock(question) {
       <div style="font-weight:800;font-size:0.88rem;margin-bottom:8px;color:var(--purple)">❓ Activité de réflexion</div>
       <p style="font-size:0.84rem;color:var(--ink2);margin:0 0 10px;line-height:1.65;font-style:italic">${question}</p>
       <textarea placeholder="Notez vos réflexions ici…" style="width:100%;border:1px solid var(--purple);border-radius:8px;padding:10px;font-family:'Instrument Sans',sans-serif;font-size:0.83rem;color:var(--ink);background:white;resize:vertical;min-height:70px;outline:none"></textarea>
+    </div>`;
+}
+
+function retenirBlock(titre, points) {
+  return `
+    <div style="background:var(--surface);border-radius:12px;padding:18px 20px;margin-bottom:16px;border-left:4px solid #3D8A7A">
+      <div style="font-weight:800;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;color:#3D8A7A;margin-bottom:10px">${titre||'À retenir'}</div>
+      ${points.map(p => `<div style="display:flex;gap:8px;font-size:0.83rem;color:var(--ink2);margin-bottom:6px;line-height:1.6"><span style="color:#3D8A7A;flex-shrink:0">•</span>${p}</div>`).join('')}
+    </div>`;
+}
+
+function citationBlock(texte) {
+  return `
+    <blockquote style="border-left:4px solid #E07A5F;margin:0 0 16px;padding:6px 0 6px 18px;font-style:italic;font-size:0.95rem;line-height:1.7;color:var(--ink)">${(texte||'').replace(/\n/g,'<br>')}</blockquote>`;
+}
+
+function comparaisonBlock(intro, plutot, eviter) {
+  return `
+    ${intro ? `<p style="font-size:0.85rem;color:var(--ink2);line-height:1.6;margin-bottom:12px">${intro}</p>` : ''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:#3D8A7A12;border:1px solid #3D8A7A30;border-radius:12px;padding:14px 16px">
+        <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#2E6B5E;margin-bottom:8px">Plutôt</div>
+        ${plutot.map(x => `<div style="font-size:0.82rem;color:var(--ink2);margin-bottom:5px;line-height:1.5">✓ ${x}</div>`).join('')}
+      </div>
+      <div style="background:#E07A5F12;border:1px solid #E07A5F30;border-radius:12px;padding:14px 16px">
+        <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#B0492F;margin-bottom:8px">À éviter</div>
+        ${eviter.map(x => `<div style="font-size:0.82rem;color:var(--ink2);margin-bottom:5px;line-height:1.5">✗ ${x}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function essayerBlock(label, titre, etapes, note) {
+  return `
+    <div style="background:#E07A5F10;border:1px solid #E07A5F30;border-radius:14px;padding:20px 22px;margin-bottom:16px">
+      <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#E07A5F;margin-bottom:8px">${label||'À essayer cette semaine'}</div>
+      ${titre ? `<div style="font-weight:800;font-size:0.95rem;color:var(--ink);margin-bottom:12px">${titre}</div>` : ''}
+      <ol style="padding-left:20px;margin:0">
+        ${etapes.map(e => `<li style="font-size:0.83rem;color:var(--ink2);margin-bottom:8px;line-height:1.6">${e.titre ? `<strong style="color:var(--ink)">${e.titre} </strong>` : ''}${e.texte||''}</li>`).join('')}
+      </ol>
+      ${note ? `<p style="font-size:0.8rem;color:var(--ink3);margin-top:12px;font-style:italic">${note}</p>` : ''}
     </div>`;
 }
 
@@ -611,7 +655,7 @@ function adminShowSeq(slug, seqNum, btn) {
   const seqContent = document.getElementById('admin-seq-content');
   seqContent.innerHTML = `
     <div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap">
-      ${['seq','tip','erreur','reflexion','principe'].map(t =>
+      ${['seq','tip','erreur','reflexion','principe','retenir','citation','comparaison','essayer'].map(t =>
         `<button onclick="adminAddBloc('${slug}',${seqNum},'${t}')" style="background:#44403C;color:#D6D3D1;border:none;padding:6px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-family:inherit">+ ${t}</button>`
       ).join('')}
     </div>
@@ -633,7 +677,7 @@ function adminShowQuiz(slug, moduleNum, btn) {
 
 function adminRenderBloc(b, slug) {
   const c = b.contenu || {};
-  const typeColors = { seq:'#3B82F6', tip:'#D97706', principe:'#7C3AED', erreur:'#DC2626', reflexion:'#7C3AED' };
+  const typeColors = { seq:'#3B82F6', tip:'#D97706', principe:'#7C3AED', erreur:'#DC2626', reflexion:'#7C3AED', retenir:'#3D8A7A', citation:'#E07A5F', comparaison:'#3D8A7A', essayer:'#E07A5F' };
   const col = typeColors[b.type] || '#78716C';
   return `
     <div style="background:#1C1917;border-radius:8px;padding:14px;margin-bottom:10px;border-left:3px solid ${col}">
@@ -662,6 +706,20 @@ function adminRenderBloc(b, slug) {
         <input placeholder="Couleur" value="${c.couleur||''}" onchange="adminPatchBloc(${b.id},'${slug}',${b.sequence_num},'couleur',this.value)" style="${adminInputStyle('120px')}">
         <input placeholder="Titre" value="${escA(c.titre||'')}" onchange="adminPatchBloc(${b.id},'${slug}',${b.sequence_num},'titre',this.value)" style="${adminInputStyle()}">
         <textarea placeholder="Description" onchange="adminPatchBloc(${b.id},'${slug}',${b.sequence_num},'desc',this.value)" style="${adminTextareaStyle()}">${escA(c.desc||'')}</textarea>
+      `:b.type==='retenir'?`
+        <input placeholder="Titre (déf. « À retenir »)" value="${escA(c.titre||'')}" onchange="adminPatchBloc(${b.id},'${slug}',${b.sequence_num},'titre',this.value)" style="${adminInputStyle()}">
+        <textarea placeholder="Points (un par ligne)" onchange="adminPatchBlocArray(${b.id},'${slug}',${b.sequence_num},'points',this.value)" style="${adminTextareaStyle('80px')}">${(c.points||[]).join('\n')}</textarea>
+      `:b.type==='citation'?`
+        <textarea placeholder="Texte de la citation" onchange="adminPatchBloc(${b.id},'${slug}',${b.sequence_num},'texte',this.value)" style="${adminTextareaStyle('70px')}">${escA(c.texte||'')}</textarea>
+      `:b.type==='comparaison'?`
+        <textarea placeholder="Intro (optionnel)" onchange="adminPatchBloc(${b.id},'${slug}',${b.sequence_num},'intro',this.value)" style="${adminTextareaStyle('44px')}">${escA(c.intro||'')}</textarea>
+        <textarea placeholder="Plutôt (un par ligne)" onchange="adminPatchBlocArray(${b.id},'${slug}',${b.sequence_num},'plutot',this.value)" style="${adminTextareaStyle('70px')}">${(c.plutot||[]).join('\n')}</textarea>
+        <textarea placeholder="À éviter (un par ligne)" onchange="adminPatchBlocArray(${b.id},'${slug}',${b.sequence_num},'eviter',this.value)" style="${adminTextareaStyle('70px')}">${(c.eviter||[]).join('\n')}</textarea>
+      `:b.type==='essayer'?`
+        <input placeholder="Label (déf. « À essayer cette semaine »)" value="${escA(c.label||'')}" onchange="adminPatchBloc(${b.id},'${slug}',${b.sequence_num},'label',this.value)" style="${adminInputStyle()}">
+        <input placeholder="Titre du défi" value="${escA(c.titre||'')}" onchange="adminPatchBloc(${b.id},'${slug}',${b.sequence_num},'titre',this.value)" style="${adminInputStyle()}">
+        <textarea placeholder="Étapes — une par ligne, format : Titre | texte" onchange="adminPatchBlocEtapes(${b.id},'${slug}',${b.sequence_num},this.value)" style="${adminTextareaStyle('90px')}">${(c.etapes||[]).map(e=>`${e.titre||''} | ${e.texte||''}`).join('\n')}</textarea>
+        <textarea placeholder="Note de bas (optionnel)" onchange="adminPatchBloc(${b.id},'${slug}',${b.sequence_num},'note',this.value)" style="${adminTextareaStyle('44px')}">${escA(c.note||'')}</textarea>
       `:''}
     </div>`;
 }
@@ -701,6 +759,16 @@ async function adminPatchBlocArray(id, slug, seqNum, field, value) {
   await adminPatchBloc(id, slug, seqNum, field, arr);
 }
 
+async function adminPatchBlocEtapes(id, slug, seqNum, value) {
+  const etapes = value.split('\n').filter(Boolean).map(line => {
+    const i = line.indexOf('|');
+    return i === -1
+      ? { titre: '', texte: line.trim() }
+      : { titre: line.slice(0, i).trim(), texte: line.slice(i + 1).trim() };
+  });
+  await adminPatchBloc(id, slug, seqNum, 'etapes', etapes);
+}
+
 async function adminSaveFormationMeta(slug, fId) {
   try {
     const data = {
@@ -737,7 +805,11 @@ async function adminAddBloc(slug, seqNum, type) {
     tip:       { emoji:'💡', titre:'Nouveau conseil', contenu:'' },
     erreur:    { items:['Nouvelle erreur à éviter'] },
     reflexion: { question:'Votre question de réflexion…' },
-    principe:  { num:'1', couleur:'#7B9E87', titre:'Nouveau principe', desc:'' }
+    principe:  { num:'1', couleur:'#7B9E87', titre:'Nouveau principe', desc:'' },
+    retenir:     { titre:'À retenir', points:['Premier point clé'] },
+    citation:    { texte:'Votre citation…' },
+    comparaison: { intro:'', plutot:['Bonne pratique'], eviter:['À éviter'] },
+    essayer:     { label:'À essayer cette semaine', titre:'Nouveau défi', etapes:[{ titre:'Étape 1', texte:'…' }], note:'' }
   };
   try {
     const rows = await fInsert('formation_blocs', { formation_id: fId, sequence_num: seqNum, ordre: maxOrd, type, contenu: defaults[type] || {} });
