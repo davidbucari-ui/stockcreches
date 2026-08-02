@@ -66,6 +66,129 @@ body {
 .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
 
 /* ── SIDEBAR ── */
+
+/* ════════ NAVIGATION V2 — barre supérieure + hub Structures ════════ */
+.app { grid-template-columns: 1fr !important; }
+.sidebar { display: none !important; }
+
+.orv-bar { display:flex; align-items:center; gap:8px; padding:9px 18px; background:var(--surface);
+  border-bottom:1px solid var(--border); position:sticky; top:0; z-index:40; }
+.orv-home { display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer;
+  padding:5px 8px; border-radius:9px; flex:0 0 auto; }
+.orv-home:hover { background:var(--bg); }
+.orv-mark { width:28px; height:28px; border-radius:8px; background:#8FAF8A; display:flex;
+  align-items:center; justify-content:center; flex:0 0 28px; }
+.orv-home .nm { font-size:15px; font-weight:800; letter-spacing:-0.4px; color:var(--ink); }
+.orv-sep { color:var(--ink3); font-size:14px; flex:0 0 auto; }
+
+.orv-dd { position:relative; flex:0 1 auto; min-width:0; }
+.orv-dd > button { display:flex; align-items:center; gap:7px; max-width:100%; background:var(--surface2);
+  border:1px solid var(--border); border-radius:10px; padding:7px 12px; font-size:13px; font-weight:600;
+  color:var(--ink); cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-family:'Instrument Sans',sans-serif; }
+.orv-dd > button:hover { border-color:var(--accent); color:var(--accent); }
+.orv-dd > button .cv { font-size:9px; color:var(--ink3); }
+.orv-dd.dim > button { color:var(--ink2); font-weight:500; }
+.orv-menu { display:none; position:absolute; left:0; top:calc(100% + 6px); min-width:255px;
+  background:var(--surface2); border:1px solid var(--border); border-radius:13px; padding:6px;
+  box-shadow:0 14px 40px rgba(0,0,0,0.13); z-index:60; max-height:70vh; overflow-y:auto; }
+.orv-menu.on { display:block; }
+.orv-mi { display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none;
+  border:none; border-radius:9px; padding:9px 11px; font-size:13px; color:var(--ink); cursor:pointer;
+  font-family:'Instrument Sans',sans-serif; }
+.orv-mi:hover { background:var(--bg); }
+.orv-mi.on { background:var(--accent-lt); color:var(--accent); font-weight:600; }
+.orv-mi .ic { width:20px; text-align:center; font-size:15px; }
+.orv-mi .sub2 { font-size:11px; color:var(--ink3); font-weight:400; margin-left:auto; }
+.orv-hr { height:1px; background:var(--border); margin:6px 4px; }
+.orv-hd { font-size:9.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  color:var(--ink3); padding:8px 11px 5px; }
+.orv-pill { margin-left:auto; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; white-space:nowrap; }
+.orv-pill.u { background:var(--ink); color:#fff; }
+.orv-pill.f { background:#E4E1DC; color:var(--ink); border:1px solid #CFCAC3; }
+
+.orv-right { margin-left:auto; display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+.orv-right select { padding:7px 10px; border:1px solid var(--border); border-radius:10px;
+  background:var(--surface2); font-size:12.5px; color:var(--ink); cursor:pointer; max-width:170px;
+  font-family:'Instrument Sans',sans-serif; }
+.orv-alert { display:flex; align-items:center; gap:6px; background:var(--ink); color:#fff; border:none;
+  border-radius:10px; padding:7px 12px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:'Instrument Sans',sans-serif; }
+.orv-alert.calm { background:var(--surface2); color:var(--ink2); border:1px solid var(--border); font-weight:500; }
+.orv-av { width:30px; height:30px; border-radius:50%; background:#8FAF8A; color:#fff; border:none;
+  font-size:11px; font-weight:700; cursor:pointer; }
+
+/* ── Hub Structures ── */
+.orv-wrap { max-width:1040px; margin:0 auto; padding:26px 22px 60px; }
+.orv-h1 { font-size:26px; font-weight:700; line-height:1.25; margin:0 0 6px; }
+.orv-sub { margin:0; font-size:13.5px; color:var(--ink2); }
+.orv-calm { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:13.5px; color:var(--ink2);
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+.orv-calm.none { border-style:dashed; }
+.orv-needs { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+.orv-need { display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:12px; padding:11px 14px 11px 0; overflow:hidden; }
+.orv-need .bar { width:5px; align-self:stretch; flex:0 0 5px; }
+.orv-need.n1 .bar { background:var(--ink); }
+.orv-need.n2 .bar { background:var(--ink3); }
+.orv-need.n3 .bar { background:repeating-linear-gradient(180deg,var(--border) 0 5px,transparent 5px 10px); }
+.orv-tag { display:inline-flex; align-items:center; font-size:10.5px; font-weight:700; letter-spacing:0.4px;
+  text-transform:uppercase; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+.orv-need.n1 .orv-tag { background:var(--ink); color:#fff; }
+.orv-need.n2 .orv-tag { background:#E4E1DC; color:var(--ink); border:1px solid #CFCAC3; }
+.orv-need.n3 .orv-tag { background:var(--surface); color:var(--ink2); border:1px dashed #CFCAC3; }
+.orv-need .txt { flex:1; min-width:0; }
+.orv-need .t { font-size:13.5px; font-weight:600; line-height:1.3; }
+.orv-need .m { font-size:11.5px; color:var(--ink3); margin-top:2px; }
+.orv-need .go { background:var(--accent-lt); color:var(--accent); border:1px solid #BFD6FE; border-radius:9px;
+  padding:7px 12px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; font-family:'Instrument Sans',sans-serif; }
+.orv-need .go:hover { background:#DCEAFE; }
+.orv-lbl { font-size:10.5px; font-weight:700; letter-spacing:1.1px; text-transform:uppercase; color:var(--ink3);
+  margin:30px 0 12px; }
+.orv-quick { display:flex; gap:9px; flex-wrap:wrap; }
+.orv-qbtn { display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:11px; padding:10px 15px; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer;
+  font-family:'Instrument Sans',sans-serif; }
+.orv-qbtn:hover { border-color:var(--accent); color:var(--accent); }
+.orv-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.orv-dom { text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px; cursor:pointer; transition:transform .12s, box-shadow .12s; display:flex; flex-direction:column; gap:10px;
+  font-family:'Instrument Sans',sans-serif; }
+.orv-dom:hover { transform:translateY(-3px); box-shadow:0 8px 22px rgba(0,0,0,0.07); }
+.orv-dom .head { display:flex; align-items:center; gap:10px; }
+.orv-dom .ico { width:38px; height:38px; border-radius:11px; background:var(--bg); display:flex;
+  align-items:center; justify-content:center; font-size:19px; }
+.orv-dom .nm { font-size:15px; font-weight:700; color:var(--ink); }
+.orv-dom .sub { font-size:11.5px; color:var(--ink3); margin-top:1px; }
+.orv-dom .num { font-size:22px; font-weight:700; line-height:1; color:var(--ink); }
+.orv-dom .numlbl { font-size:11.5px; color:var(--ink2); }
+.orv-state { display:flex; gap:6px; flex-wrap:wrap; margin-top:auto; padding-top:4px; }
+.orv-pilhead { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+.orv-pilhead .ico { width:46px; height:46px; border-radius:13px; background:var(--surface2);
+  border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:23px; }
+.orv-pilhead h2 { font-size:23px; margin:0; font-weight:700; }
+.orv-pilhead .s { font-size:12.5px; color:var(--ink3); margin-top:2px; }
+.orv-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:11px; }
+.orv-kpi { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:13px 15px; }
+.orv-kpi .k { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.7px; color:var(--ink3); margin-bottom:5px; }
+.orv-kpi .v { font-size:21px; font-weight:700; line-height:1; }
+.orv-kpi .s { font-size:11px; color:var(--ink3); margin-top:3px; }
+.orv-pages { display:flex; gap:8px; flex-wrap:wrap; }
+.orv-pagebtn { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:7px 14px;
+  font-size:12.5px; color:var(--ink); cursor:pointer; font-family:'Instrument Sans',sans-serif; }
+.orv-pagebtn:hover { border-color:var(--accent); color:var(--accent); }
+.orv-empty { background:var(--surface); border:1px dashed var(--border); border-radius:var(--radius);
+  padding:24px; text-align:center; font-size:13.5px; color:var(--ink2); }
+.orv-back { background:none; border:none; color:var(--accent); font-size:13px; font-weight:600; cursor:pointer;
+  padding:0; margin-bottom:14px; font-family:'Instrument Sans',sans-serif; }
+.orv-todo { font-size:12px; color:var(--ink3); line-height:1.7; }
+@media (max-width: 860px) {
+  .orv-grid { grid-template-columns:1fr; }
+  .orv-kpis { grid-template-columns:repeat(2,1fr); }
+  .orv-home .nm, .orv-right select { display:none; }
+  .orv-bar { gap:6px; padding:8px 12px; }
+  .orv-wrap { padding:20px 14px 50px; }
+}
+
 .sidebar {
   background: var(--ink);
   padding: 0;
@@ -1274,6 +1397,35 @@ textarea { resize: vertical; min-height: 72px; }
 <!-- ── MAIN ── -->
 <main class="main">
 
+  <!-- ══ BARRE DE NAVIGATION V2 ══ -->
+  <div class="orv-bar" id="orv-bar">
+    <button class="orv-home" onclick="orvRetourHubPrincipal()" title="Revenir au hub Orevy">
+      <span class="orv-mark"><svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#fff" stroke-width="1.6"/><circle cx="10" cy="10" r="2.5" fill="#fff"/></svg></span>
+      <span class="nm">Orevy</span>
+    </button>
+    <span class="orv-sep">&middot;</span>
+    <div class="orv-dd" id="orv-dd-dom">
+      <button onclick="orvTogMenu('orv-dd-dom')"><span id="orv-dom-lbl">Hub Structures</span><span class="cv">&#9662;</span></button>
+      <div class="orv-menu" id="orv-menu-dom"></div>
+    </div>
+    <span class="orv-sep" id="orv-sep2" style="display:none">&middot;</span>
+    <div class="orv-dd dim" id="orv-dd-page" style="display:none">
+      <button onclick="orvTogMenu('orv-dd-page')"><span id="orv-page-lbl">Page</span><span class="cv">&#9662;</span></button>
+      <div class="orv-menu" id="orv-menu-page"></div>
+    </div>
+    <div class="orv-right">
+      <select id="orv-creche" onchange="orvChangeCreche(this.value)">
+        <option value="all">Toutes les cr&egrave;ches</option>
+      </select>
+      <button class="orv-alert calm" id="orv-alert" onclick="orvShowHubStr()">&#8212;</button>
+      <div class="orv-dd" id="orv-dd-me">
+        <button class="orv-av" id="orv-av" onclick="orvTogMenu('orv-dd-me')">--</button>
+        <div class="orv-menu" id="orv-menu-me" style="left:auto;right:0"></div>
+      </div>
+    </div>
+  </div>
+
+
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-row1">
@@ -1303,6 +1455,33 @@ textarea { resize: vertical; min-height: 72px; }
   <div class="content">
 
     <!-- ── PAGE DASHBOARD ── -->
+    <!-- ══ PAGE HUB STRUCTURES ══ -->
+    <div id="page-hubStructures" style="display:none">
+      <div class="orv-wrap">
+        <div id="orv-hub-view">
+          <h1 class="orv-h1" id="orv-greet">Bonjour</h1>
+          <p class="orv-sub" id="orv-greet-sub"></p>
+          <div id="orv-hub-needs"></div>
+          <div class="orv-lbl" id="orv-quick-lbl" style="display:none">Vos pages</div>
+          <div class="orv-quick" id="orv-quick"></div>
+          <div class="orv-lbl">Les domaines d'Orevy Structures</div>
+          <div class="orv-grid" id="orv-hub-grid"></div>
+        </div>
+        <div id="orv-pil-view" style="display:none">
+          <button class="orv-back" onclick="orvShowHubStr()">&larr; Retour au hub</button>
+          <div class="orv-pilhead">
+            <div class="ico" id="orv-p-ico"></div>
+            <div><h2 id="orv-p-nom"></h2><div class="s" id="orv-p-sub"></div></div>
+          </div>
+          <div class="orv-kpis" id="orv-p-kpis"></div>
+          <div class="orv-lbl">Ce qui demande une d&eacute;cision</div>
+          <div id="orv-p-needs"></div>
+          <div class="orv-lbl">Ouvrir</div>
+          <div class="orv-pages" id="orv-p-pages"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="page-dashboard">
       <!-- Dashboard DIRECTRICE/ADMIN -->
       <div id="dash-directrice" style="display:none;padding:24px;max-width:960px;margin:0 auto;width:100%">
@@ -8842,6 +9021,7 @@ function renderSidebarCreches() {
     CRECHES_DATA.map(c => {
       return `<option value="${c.nom}" ${currentCreche === c.nom ? 'selected' : ''}>${c.nom}</option>`;
     }).join('');
+  if (typeof orvSyncCrecheSelect === 'function') orvSyncCrecheSelect();
 }
 // ── FIN PARAMÈTRES ────────────────────────────────────────────────
 // ── FIN HUB ───────────────────────────────────────────────────────
@@ -9836,8 +10016,7 @@ function openReglementaireUpsell() {
 
 function enterStructures() {
   hideHub();
-  currentPage = 'dashboard';
-  renderDashboard();
+  orvShowHubStr();
 }
 
 async function hubLoadKPIs(role) {
@@ -10261,6 +10440,8 @@ function filterCreche(creche, el) {
   currentCreche = creche;
   const sel = document.getElementById('creche-select-sidebar');
   if (sel) sel.value = creche;
+  const selTop = document.getElementById('orv-creche');
+  if (selTop) selTop.value = creche;
   // Sync tous les selects crèche de l'app
   ['pe-creche', 'sal-creche'].forEach(id => {
     const s = document.getElementById(id);
@@ -11318,6 +11499,424 @@ function _syncFullscreenBtn() {
 document.addEventListener('fullscreenchange', _syncFullscreenBtn);
 document.addEventListener('webkitfullscreenchange', _syncFullscreenBtn);
 
+
+/* ══════════════════════════════════════════════════════════════════════
+   NAVIGATION V2 — Hub Structures, vues pilotage, barre supérieure
+   Les pages existantes et showPage() sont inchangées : seule la façon
+   d'y accéder change. La sidebar reste dans le DOM (masquée en CSS).
+   ══════════════════════════════════════════════════════════════════════ */
+
+const ORV_DOMAINES = [
+  { id:'inventaire', ico:'\uD83D\uDCE6', nom:'Inventaire', sub:'Stocks, commandes, fournisseurs',
+    pages:[
+      {id:'inventaire',  nom:'Stocks pédagogiques'},
+      {id:'entretien',   nom:'Stocks entretien'},
+      {id:'commandes',   nom:'Commandes'},
+      {id:'fournisseurs',nom:'Fournisseurs', roles:['admin','directrice','coordinateur']},
+      {id:'statistiques',nom:'Statistiques',  roles:['admin','directrice','coordinateur']},
+      {id:'historique',  nom:'Historique',    roles:['admin','directrice','coordinateur']}
+    ],
+    aBrancher:[] },
+  { id:'familles', ico:'\uD83E\uDDD2', nom:'Familles', sub:'Dossiers, transmissions, portail, facturation',
+    pages:[
+      {id:'familles',     nom:'Familles'},
+      {id:'transmissions',nom:'Transmissions'}
+    ],
+    aBrancher:['dossiers incomplets','documents du portail à valider','contrats arrivant à échéance','factures prêtes à envoyer','transmissions non saisies'] },
+  { id:'rh', ico:'\uD83D\uDC65', nom:'Ressources humaines', sub:'Équipe, planning, pointage, contrats',
+    pages:[
+      {id:'rh',      nom:'Équipe',  roles:['admin','directrice','coordinateur']},
+      {id:'planning',nom:'Planning'},
+      {id:'pointage',nom:'Pointage'}
+    ],
+    aBrancher:['trous d\'encadrement au planning','anomalies de pointage','fins de période d\'essai','visites médicales à programmer'] },
+  { id:'univers', ico:'\uD83C\uDF1F', nom:'Univers ludiques', sub:'Aménagement, rotation, projet pédagogique',
+    pages:[ {id:'univers', nom:'Univers ludiques'} ],
+    aBrancher:['univers à renouveler','observations pédagogiques manquantes','matériel manquant pour un univers'] },
+  { id:'reseau', ico:'\uD83D\uDCAC', nom:'Demandes réseau', sub:'Demandes, consignes, événements, référents',
+    pages:[ {id:'demandesReseau', nom:'Demandes réseau'} ],
+    aBrancher:['demandes qui me sont adressées','messages non lus','consignes non lues'] },
+  { id:'reglementaire', ico:'\u2696\uFE0F', nom:'Réglementaire', sub:'Textes, protocoles, PMI, incidents',
+    pages:[
+      {id:'incidents', nom:'Registre des incidents'},
+      {id:'__docs',    nom:'Base réglementaire'}
+    ],
+    aBrancher:['protocoles à revalider','points de contrôle PMI','nouveaux textes (veille)'] }
+];
+
+let ORV_CUR_DOM = null;      // domaine ouvert en vue pilotage
+let ORV_BESOINS = [];        // cache des besoins collectés
+const ORV_NIV = { 1:'\u25B2 Urgent', 2:'\u25A0 À faire', 3:'\u25CF Pour info' };
+
+function orvRole() { return (typeof currentUserRole !== 'undefined' && currentUserRole) ? currentUserRole.toLowerCase() : 'admin'; }
+function orvDom(id) { return ORV_DOMAINES.find(d => d.id === id); }
+function orvPagesOf(d) { const r = orvRole(); return d.pages.filter(p => !p.roles || p.roles.indexOf(r) !== -1); }
+function orvDomVisibles() { return ORV_DOMAINES.filter(d => orvPagesOf(d).length > 0); }
+function orvEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(x){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]; }); }
+function orvCrecheActive() {
+  if (typeof currentCreche === 'undefined' || !currentCreche) return null;
+  if (currentCreche === 'all' || currentCreche === '__all__') return null;
+  return currentCreche;
+}
+
+/* ── Pages récentes (localStorage, par utilisateur) ── */
+function orvRecKey() {
+  const u = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) ? currentUser.email : 'anon';
+  return 'orevy_recentes_' + u;
+}
+function orvRecentes() {
+  try { const v = JSON.parse(localStorage.getItem(orvRecKey()) || '[]'); return Array.isArray(v) ? v : []; }
+  catch(e) { return []; }
+}
+function orvPushRecente(pageId) {
+  const d = ORV_DOMAINES.find(x => x.pages.some(p => p.id === pageId));
+  if (!d) return;
+  const p = d.pages.find(x => x.id === pageId);
+  let list = orvRecentes().filter(r => r.page !== pageId);
+  list.unshift({ page: pageId, dom: d.id, nom: p.nom });
+  list = list.slice(0, 3);
+  try { localStorage.setItem(orvRecKey(), JSON.stringify(list)); } catch(e) {}
+}
+
+/* ── Menus déroulants ── */
+function orvTogMenu(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const m = el.querySelector('.orv-menu');
+  const was = m.classList.contains('on');
+  orvCloseMenus();
+  if (!was) m.classList.add('on');
+}
+function orvCloseMenus() {
+  document.querySelectorAll('.orv-menu').forEach(m => m.classList.remove('on'));
+}
+document.addEventListener('click', function(e) { if (!e.target.closest('.orv-dd')) orvCloseMenus(); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') orvCloseMenus(); });
+
+/* ── Navigation ── */
+function orvGoPage(pageId) {
+  orvCloseMenus();
+  if (pageId === '__docs') { if (typeof openHubDocs === 'function') openHubDocs(); return; }
+  orvPushRecente(pageId);
+  showPage(pageId, null);
+}
+function orvRetourHubPrincipal() { orvCloseMenus(); if (typeof showHub === 'function') showHub(); }
+function orvChangeCreche(v) {
+  const sel = document.getElementById('creche-select-sidebar');
+  if (sel) sel.value = v;
+  if (typeof filterCrecheFromSelect === 'function') filterCrecheFromSelect(v);
+  if (currentPage === 'hubStructures') { if (ORV_CUR_DOM) orvOpenPilotage(ORV_CUR_DOM); else orvShowHubStr(); }
+}
+function orvSyncCrecheSelect() {
+  const src = document.getElementById('creche-select-sidebar');
+  const dst = document.getElementById('orv-creche');
+  if (!src || !dst) return;
+  dst.innerHTML = src.innerHTML;
+  dst.value = src.value;
+}
+
+/* ── Barre : libellés, menus, compteur ── */
+function orvBuildMenuDom() {
+  const el = document.getElementById('orv-menu-dom');
+  if (!el) return;
+  const rec = orvRecentes().filter(r => !(r.page === currentPage));
+  let html = '<button class="orv-mi' + (currentPage === 'hubStructures' ? ' on' : '') + '" onclick="orvShowHubStr()">'
+    + '<span class="ic">\uD83C\uDFE0</span>Hub Structures</button>';
+  if (rec.length) {
+    html += '<div class="orv-hr"></div><div class="orv-hd">Reprendre</div>';
+    rec.forEach(function(r) {
+      const d = orvDom(r.dom);
+      if (!d) return;
+      html += '<button class="orv-mi" onclick="orvGoPage(\'' + r.page + '\')"><span class="ic">' + d.ico + '</span>'
+        + orvEsc(r.nom) + '<span class="sub2">' + orvEsc(d.nom) + '</span></button>';
+    });
+  }
+  html += '<div class="orv-hr"></div><div class="orv-hd">Domaines</div>';
+  orvDomVisibles().forEach(function(d) {
+    const n = ORV_BESOINS.filter(b => b.dom === d.id);
+    const u = n.filter(b => b.n === 1).length, f = n.filter(b => b.n === 2).length;
+    let pill = u ? '<span class="orv-pill u">\u25B2 ' + u + '</span>' : (f ? '<span class="orv-pill f">\u25A0 ' + f + '</span>' : '');
+    html += '<button class="orv-mi' + (ORV_CUR_DOM === d.id ? ' on' : '') + '" onclick="orvOpenPilotage(\'' + d.id + '\')">'
+      + '<span class="ic">' + d.ico + '</span>' + orvEsc(d.nom) + pill + '</button>';
+  });
+  el.innerHTML = html;
+}
+function orvBuildMenuPage() {
+  const el = document.getElementById('orv-menu-page');
+  const d = orvDom(ORV_CUR_DOM);
+  if (!el || !d) return;
+  let html = '<button class="orv-mi" onclick="orvOpenPilotage(\'' + d.id + '\')"><span class="ic">\uD83D\uDCCA</span>Vue pilotage</button>'
+    + '<div class="orv-hr"></div><div class="orv-hd">Pages</div>';
+  orvPagesOf(d).forEach(function(p) {
+    html += '<button class="orv-mi' + (currentPage === p.id ? ' on' : '') + '" onclick="orvGoPage(\'' + p.id + '\')">'
+      + orvEsc(p.nom) + '</button>';
+  });
+  el.innerHTML = html;
+}
+function orvBuildMenuMe() {
+  const el = document.getElementById('orv-menu-me');
+  if (!el) return;
+  const r = orvRole();
+  const email = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) ? currentUser.email : '';
+  const labels = { admin:'Administrateur', directrice:'Directrice', auxiliaire:'Auxiliaire', stagiaire:'Stagiaire', coordinateur:'Coordinateur' };
+  let html = '<div class="orv-hd">' + orvEsc(email) + ' &mdash; ' + (labels[r] || 'Utilisateur') + '</div>';
+  if (r === 'admin' || r === 'directrice' || r === 'coordinateur') {
+    html += '<button class="orv-mi" onclick="orvGoPage(\'parametres\')"><span class="ic">\u2699\uFE0F</span>Paramètres</button>';
+  }
+  if (r === 'admin') {
+    html += '<button class="orv-mi" onclick="orvGoPage(\'admin\')"><span class="ic">\uD83D\uDD10</span>Administration</button>';
+  }
+  html += '<button class="orv-mi" onclick="window.open(\'notice.html\',\'_blank\')"><span class="ic">\uD83D\uDCD6</span>Notice d\'utilisation</button>'
+    + '<div class="orv-hr"></div>'
+    + '<button class="orv-mi" onclick="toggleFullscreen()"><span class="ic">\u26F6</span>Plein écran</button>'
+    + '<button class="orv-mi" onclick="orvRetourHubPrincipal()"><span class="ic">\uD83C\uDFE0</span>Hub Orevy (Structures, Formations, Documents)</button>'
+    + '<button class="orv-mi" onclick="logoutUser()"><span class="ic">\uD83D\uDEAA</span>Déconnexion</button>';
+  el.innerHTML = html;
+}
+function orvSyncBar() {
+  const d = orvDom(ORV_CUR_DOM);
+  const lbl = document.getElementById('orv-dom-lbl');
+  if (lbl) lbl.textContent = d ? (d.ico + ' ' + d.nom) : 'Hub Structures';
+  const ddp = document.getElementById('orv-dd-page'), sep = document.getElementById('orv-sep2');
+  if (ddp) ddp.style.display = d ? '' : 'none';
+  if (sep) sep.style.display = d ? '' : 'none';
+  if (d) {
+    const p = orvPagesOf(d).find(x => x.id === currentPage);
+    const pl = document.getElementById('orv-page-lbl');
+    if (pl) pl.textContent = p ? p.nom : 'Vue pilotage';
+    orvBuildMenuPage();
+  }
+  orvBuildMenuDom();
+  orvBuildMenuMe();
+  const av = document.getElementById('orv-av');
+  if (av) {
+    const email = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) ? currentUser.email : '';
+    av.textContent = email ? email.substring(0,2).toUpperCase() : '--';
+  }
+  const btn = document.getElementById('orv-alert');
+  if (btn) {
+    const u = ORV_BESOINS.filter(b => b.n === 1).length;
+    if (u) { btn.className = 'orv-alert'; btn.textContent = '\u25B2 ' + u; btn.title = u + ' point(s) urgent(s)'; }
+    else   { btn.className = 'orv-alert calm'; btn.textContent = '\u2713 RAS'; btn.title = 'Rien d\'urgent'; }
+  }
+  orvSyncCrecheSelect();
+}
+
+/* ══ SOURCES DE BESOINS ══
+   Chaque source détecte sa condition et produit une ligne :
+   { dom, n (1=urgent, 2=à faire, 3=info), t, c, q, act, page, src } ── */
+async function orvCollecterBesoins() {
+  const out = [];
+  const cf = orvCrecheActive();
+
+  // ── Inventaire : ruptures et seuils (données déjà en mémoire) ──
+  try {
+    if (typeof ARTICLES !== 'undefined' && Array.isArray(ARTICLES)) {
+      const arts = ARTICLES.filter(a => !cf || a.creche === cf);
+      arts.filter(a => Number(a.stock) === 0).slice(0, 6).forEach(function(a) {
+        out.push({ dom:'inventaire', n:1, t:'Rupture : ' + a.nom, c:a.creche, q:'stock à 0',
+                   act:'Ouvrir les stocks', page:'inventaire', src:'stock.rupture' });
+      });
+      const bas = arts.filter(a => Number(a.stock) > 0 && Number(a.stock) <= Number(a.min));
+      if (bas.length) {
+        out.push({ dom:'inventaire', n:2, t:bas.length + ' référence' + (bas.length > 1 ? 's' : '') + ' sous le seuil d\'alerte',
+                   c:cf || 'Réseau', q:'', act:'Voir la liste', page:'inventaire', src:'stock.seuil_bas' });
+      }
+    }
+  } catch(e) { console.warn('[hub] source stock', e); }
+
+  // ── Demandes réseau : ouvertes / urgentes ──
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/demandes_reseau?select=id,titre,creche_id,statut,priorite,created_at'
+            + '&statut=in.(ouvert,en_cours)&order=created_at.desc&limit=100';
+    if (cf) url += '&creche_id=eq.' + encodeURIComponent(cf);
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (Array.isArray(rows)) {
+      rows.filter(d => d.priorite === 'urgent').slice(0, 5).forEach(function(d) {
+        out.push({ dom:'reseau', n:1, t:'Demande urgente : ' + (d.titre || 'sans titre'), c:d.creche_id || 'Réseau',
+                   q:'', act:'Ouvrir', page:'demandesReseau', src:'demande.urgente_ouverte' });
+      });
+      const autres = rows.filter(d => d.priorite !== 'urgent').length;
+      if (autres) {
+        out.push({ dom:'reseau', n:2, t:autres + ' demande' + (autres > 1 ? 's' : '') + ' ouverte' + (autres > 1 ? 's' : ''),
+                   c:cf || 'Réseau', q:'', act:'Traiter', page:'demandesReseau', src:'demande.ouverte' });
+      }
+    }
+  } catch(e) { console.warn('[hub] source demandes', e); }
+
+  // ── Réglementaire : incidents non traités ──
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/incidents?select=id,creche_id,severity,treated,created_at&treated=is.false'
+            + '&order=created_at.desc&limit=100';
+    if (cf) url += '&creche_id=eq.' + encodeURIComponent(cf);
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (Array.isArray(rows)) {
+      const graves = rows.filter(i => i.severity === 'grave');
+      graves.slice(0, 5).forEach(function(i) {
+        out.push({ dom:'reglementaire', n:1, t:'Incident grave non clôturé', c:i.creche_id || 'Réseau',
+                   q:(i.created_at || '').substring(0, 10), act:'Clôturer', page:'incidents', src:'incident.grave_non_traite' });
+      });
+      const legers = rows.length - graves.length;
+      if (legers > 0) {
+        out.push({ dom:'reglementaire', n:2, t:legers + ' incident' + (legers > 1 ? 's' : '') + ' non clôturé' + (legers > 1 ? 's' : ''),
+                   c:cf || 'Réseau', q:'', act:'Ouvrir le registre', page:'incidents', src:'incident.non_traite' });
+      }
+    }
+  } catch(e) { console.warn('[hub] source incidents', e); }
+
+  ORV_BESOINS = out;
+  return out;
+}
+
+/* ── KPI par domaine (uniquement ceux réellement calculables) ── */
+function orvKpisOf(domId) {
+  const cf = orvCrecheActive();
+  const k = [];
+  try {
+    if (domId === 'inventaire' && typeof ARTICLES !== 'undefined') {
+      const a = ARTICLES.filter(x => !cf || x.creche === cf);
+      k.push({ k:'Références suivies', v:a.length, s:cf || 'réseau' });
+      k.push({ k:'Sous le seuil', v:a.filter(x => Number(x.stock) > 0 && Number(x.stock) <= Number(x.min)).length, s:'à surveiller' });
+      k.push({ k:'Ruptures', v:a.filter(x => Number(x.stock) === 0).length, s:'stock à 0' });
+      if (typeof COMMANDES !== 'undefined' && Array.isArray(COMMANDES)) k.push({ k:'Commandes', v:COMMANDES.length, s:'enregistrées' });
+    }
+    if (domId === 'univers' && typeof UNIVERS !== 'undefined' && Array.isArray(UNIVERS)) {
+      k.push({ k:'Univers', v:UNIVERS.length, s:'enregistrés' });
+    }
+    if (domId === 'rh' && typeof SALARIES !== 'undefined' && Array.isArray(SALARIES)) {
+      const s = SALARIES.filter(x => (!cf || x.creche === cf) && x.statut !== 'archive');
+      k.push({ k:'Professionnels', v:s.length, s:cf || 'réseau' });
+    }
+    if (domId === 'reseau') {
+      const n = ORV_BESOINS.filter(b => b.dom === 'reseau');
+      k.push({ k:'Demandes ouvertes', v:n.filter(b => b.src === 'demande.ouverte').length ? '—' : '0', s:'voir la liste' });
+    }
+  } catch(e) {}
+  return k;
+}
+
+/* ── Rendu des lignes de besoin ── */
+function orvNeedHTML(b, showDom) {
+  const d = orvDom(b.dom);
+  return '<div class="orv-need n' + b.n + '"><div class="bar"></div>'
+    + '<span class="orv-tag">' + ORV_NIV[b.n] + '</span>'
+    + '<div class="txt"><div class="t">' + orvEsc(b.t) + '</div>'
+    + '<div class="m">' + orvEsc(b.c) + (b.q ? ' \u00b7 ' + orvEsc(b.q) : '')
+    + (showDom && d ? ' \u00b7 ' + orvEsc(d.nom) : '') + '</div></div>'
+    + '<button class="go" onclick="orvGoPage(\'' + b.page + '\')">' + orvEsc(b.act) + '</button></div>';
+}
+
+/* ── Hub ── */
+async function orvShowHubStr() {
+  ORV_CUR_DOM = null;
+  orvCloseMenus();
+  if (currentPage !== 'hubStructures') showPage('hubStructures', null);
+  document.getElementById('orv-hub-view').style.display = '';
+  document.getElementById('orv-pil-view').style.display = 'none';
+
+  const email = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) ? currentUser.email : '';
+  const m = email.match(/^([^.@]+)/);
+  const prenom = m ? (m[1].charAt(0).toUpperCase() + m[1].slice(1)) : '';
+  const g = document.getElementById('orv-greet');
+  if (g) g.textContent = 'Bonjour' + (prenom ? ' ' + prenom : '');
+  const cf = orvCrecheActive();
+  const sub = document.getElementById('orv-greet-sub');
+  if (sub) sub.textContent = new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })
+    + ' \u2014 ' + (cf ? cf : 'vue réseau');
+
+  const box = document.getElementById('orv-hub-needs');
+  if (box) box.innerHTML = '<div class="orv-calm">Analyse en cours\u2026</div>';
+
+  await orvCollecterBesoins();
+
+  const all = ORV_BESOINS.slice().sort((a, b) => a.n - b.n);
+  const u = all.filter(b => b.n === 1).length, f = all.filter(b => b.n === 2).length;
+  if (box) {
+    if (!all.length) {
+      box.innerHTML = '<div class="orv-calm none">\u2713 Rien à signaler. Les structures tournent, rien n\'attend votre décision.</div>';
+    } else {
+      const ph = (u ? u + ' point' + (u > 1 ? 's' : '') + ' à traiter aujourd\'hui' : 'Rien d\'urgent')
+               + (f ? ', ' + f + ' à faire cette semaine' : '') + '.';
+      box.innerHTML = '<div class="orv-calm">' + orvEsc(ph) + '</div>'
+        + '<div class="orv-needs">' + all.slice(0, 3).map(b => orvNeedHTML(b, true)).join('') + '</div>'
+        + (all.length > 3 ? '<div style="font-size:12px;color:var(--ink3);margin-top:9px">+ ' + (all.length - 3) + ' autres, par domaine ci-dessous.</div>' : '');
+    }
+  }
+
+  // Reprendre : pages récentes
+  const rec = orvRecentes();
+  const ql = document.getElementById('orv-quick-lbl'), q = document.getElementById('orv-quick');
+  if (q && ql) {
+    if (rec.length) {
+      ql.style.display = '';
+      q.innerHTML = rec.map(function(r) {
+        const d = orvDom(r.dom);
+        return '<button class="orv-qbtn" onclick="orvGoPage(\'' + r.page + '\')">' + (d ? d.ico : '') + ' ' + orvEsc(r.nom) + '</button>';
+      }).join('');
+    } else { ql.style.display = 'none'; q.innerHTML = ''; }
+  }
+
+  const grid = document.getElementById('orv-hub-grid');
+  if (grid) {
+    grid.innerHTML = orvDomVisibles().map(function(d) {
+      const n = ORV_BESOINS.filter(b => b.dom === d.id);
+      const uu = n.filter(b => b.n === 1).length, ff = n.filter(b => b.n === 2).length, ii = n.filter(b => b.n === 3).length;
+      let st = '';
+      if (uu) st += '<span class="orv-tag" style="background:var(--ink);color:#fff">\u25B2 ' + uu + ' urgent' + (uu > 1 ? 's' : '') + '</span>';
+      if (ff) st += '<span class="orv-tag" style="background:#E4E1DC;color:var(--ink);border:1px solid #CFCAC3">\u25A0 ' + ff + ' à faire</span>';
+      if (ii) st += '<span class="orv-tag" style="background:var(--surface);color:var(--ink2);border:1px dashed #CFCAC3">\u25CF ' + ii + ' info</span>';
+      if (!st) st = '<span class="orv-tag" style="background:var(--surface);color:var(--ink2);border:1px solid var(--border)">'
+        + (d.aBrancher && d.aBrancher.length && !n.length ? 'Sources à brancher' : '\u2713 Rien à signaler') + '</span>';
+      const kp = orvKpisOf(d.id);
+      const chiffre = kp.length ? '<div><div class="num">' + kp[0].v + '</div><div class="numlbl">' + orvEsc(kp[0].k.toLowerCase()) + '</div></div>' : '';
+      return '<button class="orv-dom" onclick="orvOpenPilotage(\'' + d.id + '\')">'
+        + '<div class="head"><div class="ico">' + d.ico + '</div><div><div class="nm">' + orvEsc(d.nom) + '</div>'
+        + '<div class="sub">' + orvEsc(d.sub) + '</div></div></div>' + chiffre
+        + '<div class="orv-state">' + st + '</div></button>';
+    }).join('');
+  }
+  orvSyncBar();
+}
+
+/* ── Vue pilotage d'un domaine ── */
+async function orvOpenPilotage(domId) {
+  const d = orvDom(domId);
+  if (!d) return;
+  ORV_CUR_DOM = domId;
+  orvCloseMenus();
+  if (currentPage !== 'hubStructures') showPage('hubStructures', null);
+  document.getElementById('orv-hub-view').style.display = 'none';
+  document.getElementById('orv-pil-view').style.display = '';
+
+  document.getElementById('orv-p-ico').textContent = d.ico;
+  document.getElementById('orv-p-nom').textContent = d.nom;
+  const cf = orvCrecheActive();
+  document.getElementById('orv-p-sub').textContent = 'Vue pilotage \u2014 ' + (cf ? cf : 'toutes les crèches');
+
+  if (!ORV_BESOINS.length) await orvCollecterBesoins();
+
+  const kp = orvKpisOf(domId);
+  document.getElementById('orv-p-kpis').innerHTML = kp.map(function(x) {
+    return '<div class="orv-kpi"><div class="k">' + orvEsc(x.k) + '</div><div class="v">' + orvEsc(x.v) + '</div><div class="s">' + orvEsc(x.s) + '</div></div>';
+  }).join('');
+
+  const n = ORV_BESOINS.filter(b => b.dom === domId);
+  let html;
+  if (n.length) html = '<div class="orv-needs">' + n.map(b => orvNeedHTML(b, false)).join('') + '</div>';
+  else if (d.aBrancher && d.aBrancher.length) {
+    html = '<div class="orv-empty"><div style="margin-bottom:10px">Aucune source de besoins n\'est encore branchée sur ce domaine.</div>'
+      + '<div class="orv-todo">À venir : ' + d.aBrancher.map(orvEsc).join(' \u00b7 ') + '</div></div>';
+  } else html = '<div class="orv-empty">\u2713 Rien à signaler sur ce domaine.</div>';
+  document.getElementById('orv-p-needs').innerHTML = html;
+
+  document.getElementById('orv-p-pages').innerHTML = orvPagesOf(d).map(function(p) {
+    return '<button class="orv-pagebtn" onclick="orvGoPage(\'' + p.id + '\')">' + orvEsc(p.nom) + '</button>';
+  }).join('');
+  orvSyncBar();
+}
+
 function showPage(page, btn, fromPopState) {
   currentPage = page;
   autoOpenGroupForPage(page);
@@ -11325,13 +11924,13 @@ function showPage(page, btn, fromPopState) {
   if (!fromPopState) {
     history.pushState({ page }, '', window.location.pathname + window.location.search);
   }
-  ['dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions','demandesReseau','incidents','pointage'].forEach(p => {
+  ['hubStructures','dashboard','inventaire','entretien','commandes','fournisseurs','historique','statistiques','univers','parametres','admin','rh','planning','salarie','familles','fiche-enfant','transmissions','demandesReseau','incidents','pointage'].forEach(p => {
     const el = document.getElementById(`page-${p}`);
     if (el) el.style.display = p === page ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions', demandesReseau:'Demandes réseau', pointage:'Pointage' };
+  const titles = { hubStructures:'Orevy Structures', dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions', demandesReseau:'Demandes réseau', pointage:'Pointage' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Remonter en haut de page lors du changement
   try { window.scrollTo(0,0); document.querySelector('.content')?.scrollTo?.(0,0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch(_) {}
@@ -11357,6 +11956,15 @@ function showPage(page, btn, fromPopState) {
   // Topbar row2 : visible seulement pour inventaire/entretien
   const topbarRow2 = document.querySelector('.topbar-row2');
   if (topbarRow2) topbarRow2.style.display = ['inventaire','entretien'].includes(page) ? '' : 'none';
+  // Navigation v2 : la topbar historique est inutile sur le hub (en-tête propre)
+  const topbarEl = document.querySelector('.topbar');
+  if (topbarEl) topbarEl.style.display = (page === 'hubStructures') ? 'none' : '';
+  if (page !== 'hubStructures') {
+    const dd = ORV_DOMAINES.find(d => d.pages.some(p => p.id === page));
+    ORV_CUR_DOM = dd ? dd.id : null;
+    if (dd) orvPushRecente(page);
+  }
+  if (typeof orvSyncBar === 'function') orvSyncBar();
 }
 
 function showTab(tab, btn) {
