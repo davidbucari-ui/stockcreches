@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-03 16:57 -->
+<!-- OREVY BUILD 2026-08-03 17:12 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -20046,6 +20046,9 @@ function showImportResult(type, html) {
     </div>
     <div class="ds-sidebar-section">
       <div class="ds-sidebar-title">Actions</div>
+      <button class="ds-filter-btn" id="ddc-add-modele-btn" onclick="dmeOpen(null)" style="color:#1A1208;font-weight:600;background:#F1EEE9">
+        <span>✎</span> Créer un document à remplir
+      </button>
       <button class="ds-filter-btn" id="ddc-add-doc-btn" onclick="dsDocOpenForm()" style="color:#5C7A5E;font-weight:600">
         <span>📄</span> Nouveau document
       </button>
@@ -20151,6 +20154,169 @@ function showImportResult(type, html) {
   </div>
 </div>
 
+
+
+<!-- ══ ÉDITEUR DE MODÈLES DE DOCUMENTS ══ -->
+<div id="dme-modal" style="display:none;position:fixed;inset:0;z-index:9996;background:rgba(28,25,23,.55);
+     align-items:flex-start;justify-content:center;overflow-y:auto;padding:22px 14px;
+     font-family:'Instrument Sans',sans-serif">
+<style>
+#dme-modal *{box-sizing:border-box}
+.dme-sheet{max-width:860px;width:100%;background:#fff;border:1px solid #E7E5E0;border-radius:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;color:#1C1917}
+.dme-head{padding:20px 24px 0;border-bottom:1px solid #E7E5E0;background:#fff}
+.dme-head-r{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.dme-head h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:800}
+.dme-head .s{font-size:12px;color:#A8A29E;margin-top:3px}
+.dme-x{background:none;border:0;font-size:22px;color:#A8A29E;cursor:pointer;line-height:1}
+.dme-tabs{display:flex;gap:2px;margin-top:16px;flex-wrap:wrap}
+.dme-tab{background:none;border:0;border-bottom:2px solid transparent;color:#A8A29E;font-family:inherit;
+  font-size:12.5px;font-weight:600;padding:9px 14px;cursor:pointer;margin-bottom:-1px}
+.dme-tab.on{color:#1C1917;border-bottom-color:#1C1917}
+.dme-body{padding:20px 24px 6px;background:#FAFAF8;min-height:300px}
+#dme-modal label{display:block;font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  color:#A8A29E;margin-bottom:5px}
+#dme-modal input,#dme-modal select,#dme-modal textarea{width:100%;border:1.5px solid #E7E5E0;background:#fff;
+  border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;color:#1C1917;outline:none;resize:vertical}
+#dme-modal input:focus,#dme-modal select:focus,#dme-modal textarea:focus{border-color:#2563EB;box-shadow:0 0 0 3px #EFF6FF}
+#dme-modal select.mini{width:auto;padding:3px 6px;font-size:11.5px;display:inline-block}
+.dme-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 15px;margin-bottom:16px}
+.dme-grid .w2{grid-column:1/-1}
+.dme-add{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.dme-add button{border:1.5px solid #E7E5E0;background:#fff;border-radius:8px;padding:7px 12px;
+  font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.dme-add button:hover{background:#F1EEE9;border-color:#1C1917}
+.dme-c{background:#fff;border:1.5px solid #E7E5E0;border-radius:10px;padding:11px;margin-bottom:9px}
+.dme-c.sec{background:#F1EEE9}
+.dme-c-b{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.dme-c-b2{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:9px;padding-top:8px;
+  border-top:1px solid #F1EEE9}
+.dme-fl label{margin-bottom:4px}
+.dme-nav{display:flex;gap:3px}
+.dme-nav button{width:26px;height:32px;border:1.5px solid #E7E5E0;background:#fff;border-radius:7px;
+  cursor:pointer;font-size:10px;color:#57534E;line-height:1}
+.dme-nav button:hover{background:#F1EEE9}
+.dme-nav button.del{color:#DC2626;font-size:15px}
+.dme-code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#1C1917;color:#fff;
+  padding:2px 7px;border-radius:5px}
+.dme-ck{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#57534E;text-transform:none;
+  letter-spacing:0;font-weight:400;margin:0}
+.dme-ck input{width:auto}
+.dme-vide{padding:22px;text-align:center;font-size:12.5px;color:#A8A29E;border:1.5px dashed #E7E5E0;
+  border-radius:10px;line-height:1.6}
+.dme-hint{font-size:11.5px;color:#A8A29E;line-height:1.5}
+.dme-puces{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;padding:10px;background:#fff;
+  border:1.5px dashed #E7E5E0;border-radius:10px;align-items:center}
+.dme-puce{border:1px solid #E7E5E0;background:#FAFAF8;border-radius:6px;padding:3px 8px;
+  font-family:ui-monospace,Menlo,monospace;font-size:11px;cursor:pointer}
+.dme-puce:hover{background:#1C1917;color:#fff;border-color:#1C1917}
+.dme-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #E7E5E0;padding:13px 24px;
+  display:flex;gap:9px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.dme-btn{border:1.5px solid #E7E5E0;background:#fff;color:#1C1917;border-radius:8px;padding:9px 15px;
+  font-family:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.dme-btn:hover{background:#FAFAF8}
+.dme-btn.pri{background:#2563EB;border-color:#2563EB;color:#fff;font-weight:600}
+.dme-btn.pri:hover{background:#1D4FD8}
+.dme-btn.dgr{color:#DC2626;border-color:#FECACA}
+.dme-btn:disabled{opacity:.5;cursor:default}
+@media(max-width:640px){
+  .dme-grid{grid-template-columns:1fr}
+  .dme-head,.dme-body,.dme-bar{padding-left:16px;padding-right:16px}
+  .dme-c-b{flex-direction:column;align-items:stretch}
+  .dme-nav{justify-content:flex-end}
+}
+</style>
+
+  <div class="dme-sheet">
+    <div class="dme-head">
+      <div class="dme-head-r">
+        <div><h2 id="dme-h">Nouveau document</h2><div class="s" id="dme-sub"></div></div>
+        <button class="dme-x" onclick="dmeClose()" title="Fermer">&times;</button>
+      </div>
+      <div class="dme-tabs">
+        <button class="dme-tab on" id="dme-t1" onclick="dmeTab(1)">1 &middot; Informations</button>
+        <button class="dme-tab"    id="dme-t2" onclick="dmeTab(2)">2 &middot; Champs &agrave; remplir</button>
+        <button class="dme-tab"    id="dme-t3" onclick="dmeTab(3)">3 &middot; Texte &amp; signataires</button>
+        <button class="dme-tab"    id="dme-t4" onclick="dmeTab(4)">4 &middot; Aper&ccedil;u</button>
+      </div>
+    </div>
+
+    <div class="dme-body">
+
+      <div id="dme-p1">
+        <div class="dme-grid">
+          <div class="w2"><label for="dme-titre">Titre du document</label>
+            <input id="dme-titre" oninput="dmeInfo('titre',this)" placeholder="Autorisation de sortie"></div>
+          <div class="w2"><label for="dme-intro">Description courte</label>
+            <textarea id="dme-intro" rows="2" oninput="dmeInfo('intro',this)"
+              placeholder="Phrase affich&eacute;e sous le titre, dans la fiche et dans le formulaire."></textarea></div>
+          <div><label for="dme-cat">Cat&eacute;gorie</label>
+            <select id="dme-cat" onchange="dmeInfo('cat',this)"></select></div>
+          <div><label for="dme-cible">Concerne</label>
+            <select id="dme-cible" onchange="dmeInfo('cible',this)">
+              <option value="enfant">Un enfant</option>
+              <option value="salarie">Un salari&eacute;</option>
+              <option value="structure">La structure</option></select></div>
+          <div><label for="dme-val">Validit&eacute; (mois)</label>
+            <input id="dme-val" type="number" min="0" oninput="dmeInfo('validite_mois',this)"
+              placeholder="vide = sans &eacute;ch&eacute;ance"></div>
+          <div><label for="dme-statut">Statut</label>
+            <select id="dme-statut" onchange="dmeInfo('statut',this)">
+              <option value="en_vigueur">En vigueur</option>
+              <option value="a_valider">&Agrave; valider</option>
+              <option value="archive">Archiv&eacute;</option></select></div>
+        </div>
+        <p class="dme-hint">La validit&eacute; d&eacute;termine la date d&rsquo;expiration inscrite sur chaque document
+        rempli. Une autorisation parentale se renouvelle g&eacute;n&eacute;ralement chaque ann&eacute;e scolaire :
+        12&nbsp;mois est le r&eacute;glage courant.</p>
+      </div>
+
+      <div id="dme-p2" style="display:none">
+        <div class="dme-add">
+          <button onclick="dmeAddChamp('sec')">+ Titre de section</button>
+          <button onclick="dmeAddChamp('texte')">+ Texte</button>
+          <button onclick="dmeAddChamp('liste')">+ Liste de choix</button>
+          <button onclick="dmeAddChamp('date')">+ Date</button>
+          <button onclick="dmeAddChamp('oui_non')">+ Oui / Non</button>
+        </div>
+        <div id="dme-champs"></div>
+        <p class="dme-hint" style="margin-top:10px">Le code entre accolades est l&rsquo;identifiant du champ :
+        c&rsquo;est lui qu&rsquo;on ins&egrave;re dans le texte du document &agrave; l&rsquo;onglet suivant.
+        &laquo;&nbsp;Pr&eacute;-rempli depuis&nbsp;&raquo; &eacute;vite une saisie : la valeur vient de la fiche
+        de l&rsquo;enfant.</p>
+      </div>
+
+      <div id="dme-p3" style="display:none">
+        <label style="margin-bottom:7px">Texte du document</label>
+        <div class="dme-puces" id="dme-puces"></div>
+        <div class="dme-add">
+          <button onclick="dmeAddBloc('p')">+ Paragraphe</button>
+          <button onclick="dmeAddBloc('l')">+ Point de liste</button>
+        </div>
+        <div id="dme-corps"></div>
+        <p class="dme-hint" style="margin:10px 0 22px">Cliquez dans un paragraphe puis sur un champ
+        ci-dessus pour l&rsquo;ins&eacute;rer &agrave; l&rsquo;endroit du curseur.</p>
+
+        <label style="margin-bottom:7px">Signataires</label>
+        <div class="dme-add"><button onclick="dmeAddSig()">+ Signataire</button></div>
+        <div id="dme-sigs"></div>
+      </div>
+
+      <div id="dme-p4" style="display:none">
+        <p class="dme-hint" style="margin-bottom:14px">Aper&ccedil;u avec des valeurs d&rsquo;exemple.
+        Les cartouches de signature apparaissent vides : ils se remplissent au moment de la signature.</p>
+        <div class="dmd" id="dme-doc" style="max-width:none;box-shadow:none;border:1px solid #E7E5E0"></div>
+      </div>
+
+    </div>
+
+    <div class="dme-bar">
+      <button class="dme-btn dgr" style="margin-right:auto" onclick="dmeDelete()">Supprimer</button>
+      <button class="dme-btn" onclick="dmeClose()">Annuler</button>
+      <button class="dme-btn pri" id="dme-save" onclick="dmeSave()">Enregistrer le mod&egrave;le</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ DOCUMENTS REMPLISSABLES : formulaire + signature ══ -->
 <div id="dm-modal" style="display:none;position:fixed;inset:0;z-index:9995;background:rgba(28,25,23,.55);
@@ -22456,7 +22622,8 @@ function dsDocRender(query) {
       const cat = allCats[d.cat] || { color:'#888', bg:'#f5f5f5', text:'#444', label: d.cat };
       const st = statutCfg[d.statut] || statutCfg.en_vigueur;
       const adminBtns = isAdmin ? `
-        <div style="display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid ${cat.bg}" onclick="event.stopPropagation()">
+        <div style="display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid ${cat.bg};flex-wrap:wrap" onclick="event.stopPropagation()">
+          ${d.modele ? `<button onclick="dmeOpen('${d.modele}')" style="padding:3px 9px;background:#1C1917;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">⚙ Modèle</button>` : ''}
           <button onclick="dsDocEdit('${d.id}')" style="padding:3px 9px;background:${cat.bg};color:${cat.text};border:1px solid ${cat.color}33;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Modifier</button>
           <button onclick="dsDocDelete('${d.id}')" style="padding:3px 9px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Supprimer</button>
         </div>` : '';
@@ -22734,18 +22901,73 @@ function dmFr(v) { if(!v) return ''; var a=String(v).split('-'); return a.length
 function dmNewId(p) { return p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 /* ── Init : les modeles apparaissent comme documents de la base ── */
-function dmInit() {
+function dmSyncCatalogue() {
   if (typeof DS_DOCS === 'undefined') return;
   var chg = false;
+  // les fiches d'un modele disparu sont retirees du catalogue
+  var avant = DS_DOCS.length;
+  DS_DOCS = DS_DOCS.filter(function(d) { return !d.modele || !!dmModele(d.modele); });
+  if (DS_DOCS.length !== avant) chg = true;
   DM_MODELES.forEach(function(m) {
-    var found = false;
-    for (var i=0;i<DS_DOCS.length;i++) if (DS_DOCS[i].modele===m.id) { found=true; break; }
-    if (found) return;
-    DS_DOCS.unshift({ id:'dm_'+m.id, cat:m.cat, modele:m.id, name:m.titre,
-      desc:m.intro, tags:['À remplir en ligne','Signature électronique'], statut:'en_vigueur' });
-    chg = true;
+    var f = null;
+    for (var i=0;i<DS_DOCS.length;i++) if (DS_DOCS[i].modele===m.id) { f = DS_DOCS[i]; break; }
+    var tags = ['\u00c0 remplir en ligne','Signature \u00e9lectronique'];
+    if (m.origine === 'client') tags.push('Mod\u00e8le de la structure');
+    if (!f) {
+      DS_DOCS.unshift({ id:'dm_'+m.id, cat:m.cat, modele:m.id, name:m.titre,
+        desc:m.intro, tags:tags, statut: m.statut || 'en_vigueur' });
+      chg = true;
+    } else if (f.name !== m.titre || f.cat !== m.cat || f.desc !== m.intro) {
+      f.name = m.titre; f.cat = m.cat; f.desc = m.intro; f.tags = tags;
+      f.statut = m.statut || 'en_vigueur'; chg = true;
+    }
   });
   if (chg && typeof dsSaveDocsLocal === 'function') dsSaveDocsLocal();
+}
+
+/* Un modele stocke : colonnes plates + definition jsonb */
+function dmRowToModele(r) {
+  var d = r.definition || {};
+  return { id:r.id, cat:r.categorie || 'administratif', titre:r.titre, intro:r.intro || '',
+           cible:r.cible || 'enfant', version:r.modele_version || r.version || 1,
+           statut:r.statut || 'en_vigueur', validite_mois:r.validite_mois || null,
+           origine:r.origine || 'client', creche_id:r.creche_id || null,
+           champs:d.champs || [], corps:d.corps || [], signataires:d.signataires || [] };
+}
+function dmModeleToRow(m) {
+  return { id:m.id, creche_id:m.creche_id || null, categorie:m.cat, titre:m.titre,
+           intro:m.intro || '', cible:m.cible || 'enfant', version:m.version || 1,
+           statut:m.statut || 'en_vigueur', validite_mois:m.validite_mois || null,
+           origine:m.origine || 'client',
+           definition:{ champs:m.champs || [], corps:m.corps || [], signataires:m.signataires || [] },
+           updated_at:new Date().toISOString() };
+}
+
+var DM_LOADED = false;
+async function dmLoadModeles() {
+  var rows = [];
+  try { rows = await sbGet('documents_modeles', 'select=*&order=titre.asc') || []; }
+  catch (e) { console.warn('[documents] modeles non charg\u00e9s', e); return false; }
+  rows.forEach(function(r) {
+    var m = dmRowToModele(r);
+    var i = -1;
+    for (var k=0;k<DM_MODELES.length;k++) if (DM_MODELES[k].id === m.id) { i = k; break; }
+    if (i >= 0) DM_MODELES[i] = m; else DM_MODELES.push(m);
+  });
+  DM_LOADED = true;
+  return true;
+}
+
+function dmInit() {
+  dmSyncCatalogue();
+  if (!DM_LOADED) {
+    dmLoadModeles().then(function(ok) {
+      if (!ok) return;
+      dmSyncCatalogue();
+      if (typeof dsDocUpdateCounts === 'function') dsDocUpdateCounts();
+      if (typeof dsDocRender === 'function') dsDocRender();
+    });
+  }
 }
 
 /* ── Ouverture ── */
@@ -23166,6 +23388,358 @@ async function dmLoadInstance(id) {
       });
     }, 120);
   } catch (e) { console.warn('[documents] load', e); }
+}
+
+
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   \u00c9DITEUR DE MOD\u00c8LES \u2014 cr\u00e9er ou modifier un document \u00e0 remplir
+   sans \u00e9crire une ligne de code. Produit la m\u00eame structure que
+   les mod\u00e8les fournis : champs[], corps[], signataires[].
+   \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+
+var DME = null;          // modele en cours d'edition (copie de travail)
+var DME_NEW = false;
+var DME_TAB = 1;
+
+var DME_TYPES = [
+  { t:'texte',    l:'Texte libre' },
+  { t:'liste',    l:'Liste de choix' },
+  { t:'date',     l:'Date' },
+  { t:'oui_non',  l:'Oui / Non' },
+  { t:'sec',      l:'Titre de section' }
+];
+var DME_AUTOS = [
+  { v:'',              l:'\u2014 saisie manuelle \u2014' },
+  { v:'enfant.nom',    l:"Nom complet de l\u2019enfant" },
+  { v:'enfant.prenom', l:"Pr\u00e9nom de l\u2019enfant" },
+  { v:'parent1.nom',   l:'Nom du parent 1' },
+  { v:'parent1.lien',  l:'Lien de parent\u00e9 du parent 1' },
+  { v:'parent2.nom',   l:'Nom du parent 2' },
+  { v:'parent2.lien',  l:'Lien de parent\u00e9 du parent 2' },
+  { v:'today',         l:'Date du jour' }
+];
+
+function dmeSlug(s, pris) {
+  var b = String(s || 'champ').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 14) || 'champ';
+  var id = b, n = 2;
+  while (pris.indexOf(id) !== -1) { id = b + n; n++; }
+  return id;
+}
+function dmeIds() { return (DME.champs || []).filter(function(c){ return !c.sec; }).map(function(c){ return c.id; }); }
+
+function dmeOpen(modeleId) {
+  var src = modeleId ? dmModele(modeleId) : null;
+  DME_NEW = !src;
+  if (src) {
+    DME = JSON.parse(JSON.stringify(src));
+    if (DME.origine === 'orevy') {
+      // un mod\u00e8le fourni par Orevy n'est jamais \u00e9cras\u00e9 : on en cr\u00e9e une copie
+      DME.id = dmNewId('mod'); DME.origine = 'client'; DME.version = 1;
+      DME.titre = DME.titre + ' (copie de la structure)';
+      DME_NEW = true;
+    }
+  } else {
+    DME = { id:dmNewId('mod'), cat:'administratif', titre:'', intro:'', cible:'enfant',
+            version:1, statut:'en_vigueur', validite_mois:12, origine:'client', creche_id:null,
+            champs:[], corps:[], signataires:[] };
+  }
+  document.getElementById('dme-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  dmeTab(1);
+  dmeRenderInfos();
+  dmeRenderChamps();
+  dmeRenderCorps();
+  dmeRenderSigs();
+  document.getElementById('dme-h').textContent = DME_NEW ? 'Nouveau document \u00e0 remplir' : 'Modifier le mod\u00e8le';
+  var db = document.querySelector('#dme-modal .dme-btn.dgr');
+  if (db) db.style.visibility = DME_NEW ? 'hidden' : '';
+  document.getElementById('dme-sub').textContent = DME_NEW
+    ? 'Les champs d\u00e9finis ici deviendront le formulaire que remplira la directrice.'
+    : 'Mod\u00e8le de la structure \u00b7 version ' + DME.version;
+}
+function dmeClose() {
+  document.getElementById('dme-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+function dmeTab(n) {
+  DME_TAB = n;
+  [1,2,3,4].forEach(function(i) {
+    var p = document.getElementById('dme-p'+i), t = document.getElementById('dme-t'+i);
+    if (p) p.style.display = (i===n) ? '' : 'none';
+    if (t) t.className = 'dme-tab' + (i===n ? ' on' : '');
+  });
+  if (n === 4) dmeApercu();
+}
+
+/* \u2500\u2500 Onglet 1 : informations \u2500\u2500 */
+function dmeRenderInfos() {
+  var cats = (typeof dsDocGetAllCats === 'function') ? dsDocGetAllCats() : { administratif:{label:'Administratif'} };
+  document.getElementById('dme-titre').value = DME.titre || '';
+  document.getElementById('dme-intro').value = DME.intro || '';
+  document.getElementById('dme-val').value = DME.validite_mois == null ? '' : DME.validite_mois;
+  var sc = document.getElementById('dme-cat');
+  sc.innerHTML = Object.keys(cats).map(function(k) {
+    return '<option value="'+dmEsc(k)+'"'+(k===DME.cat?' selected':'')+'>'+dmEsc(cats[k].label)+'</option>';
+  }).join('');
+  document.getElementById('dme-cible').value = DME.cible || 'enfant';
+  document.getElementById('dme-statut').value = DME.statut || 'en_vigueur';
+}
+function dmeInfo(prop, el) {
+  var v = el.value;
+  if (prop === 'validite_mois') v = v === '' ? null : (parseInt(v,10) || null);
+  DME[prop] = v;
+}
+
+/* \u2500\u2500 Onglet 2 : champs \u2500\u2500 */
+function dmeAddChamp(t) {
+  if (t === 'sec') DME.champs.push({ sec:'Nouvelle section' });
+  else {
+    var id = dmeSlug('champ', dmeIds());
+    DME.champs.push({ id:id, type:t, label:'Nouveau champ', w:1, requis:false,
+                      opts: t==='liste' ? ['Option 1','Option 2'] : undefined });
+  }
+  dmeRenderChamps();
+}
+function dmeDelChamp(i) {
+  var c = DME.champs[i];
+  if (c && c.id) {
+    var used = (DME.signataires||[]).some(function(s){ return s.nom===c.id||s.q===c.id||s.civ===c.id; });
+    if (used && !confirm('Ce champ sert \u00e0 un signataire. Le supprimer quand m\u00eame ?')) return;
+  }
+  DME.champs.splice(i,1); dmeRenderChamps(); dmeRenderSigs();
+}
+function dmeMoveChamp(i, d) {
+  var j = i + d; if (j < 0 || j >= DME.champs.length) return;
+  var t = DME.champs[i]; DME.champs[i] = DME.champs[j]; DME.champs[j] = t;
+  dmeRenderChamps();
+}
+function dmeSetChamp(i, prop, el) {
+  var c = DME.champs[i]; if (!c) return;
+  if (prop === 'sec') { c.sec = el.value; return; }
+  if (prop === 'label') {
+    c.label = el.value;
+    if (c._auto_id !== false && (!c.id || c.id.indexOf('champ') === 0)) {
+      var autres = dmeIds().filter(function(x){ return x !== c.id; });
+      c.id = dmeSlug(el.value, autres);
+      dmeRenderChamps(); dmeRenderSigs();
+    }
+    return;
+  }
+  if (prop === 'requis') { c.requis = el.checked; return; }
+  if (prop === 'w')      { c.w = parseInt(el.value,10) || 1; return; }
+  if (prop === 'opts')   { c.opts = el.value.split('\n').map(function(s){return s.trim();}).filter(Boolean); return; }
+  if (prop === 'type')   { c.type = el.value; if (c.type==='liste' && !c.opts) c.opts=['Option 1','Option 2'];
+                           dmeRenderChamps(); return; }
+  c[prop] = el.value;
+  if (prop === 'auto') dmeRenderChamps();
+}
+function dmeRenderChamps() {
+  var box = document.getElementById('dme-champs');
+  if (!DME.champs.length) {
+    box.innerHTML = '<div class="dme-vide">Aucun champ. Ajoutez-en un avec les boutons ci-dessus \u2014 '
+      + 'commencez g\u00e9n\u00e9ralement par un titre de section.</div>';
+    dmeRenderPuces(); return;
+  }
+  box.innerHTML = DME.champs.map(function(c, i) {
+    var nav = '<div class="dme-nav">'
+      + '<button onclick="dmeMoveChamp('+i+',-1)" title="Monter">\u25b2</button>'
+      + '<button onclick="dmeMoveChamp('+i+',1)" title="Descendre">\u25bc</button>'
+      + '<button onclick="dmeDelChamp('+i+')" title="Supprimer" class="del">\u00d7</button></div>';
+    if (c.sec) {
+      return '<div class="dme-c sec"><div class="dme-c-b">'
+        + '<div class="dme-fl" style="flex:1"><label>Titre de section</label>'
+        + '<input value="'+dmEsc(c.sec)+'" oninput="dmeSetChamp('+i+',\'sec\',this)"></div>'
+        + nav + '</div></div>';
+    }
+    var opts = DME_TYPES.filter(function(t){return t.t!=='sec';}).map(function(t) {
+      return '<option value="'+t.t+'"'+(t.t===c.type?' selected':'')+'>'+t.l+'</option>'; }).join('');
+    var autos = DME_AUTOS.map(function(a) {
+      return '<option value="'+a.v+'"'+(a.v===(c.auto||'')?' selected':'')+'>'+a.l+'</option>'; }).join('');
+    return '<div class="dme-c"><div class="dme-c-b">'
+      + '<div class="dme-fl" style="flex:2;min-width:150px"><label>Libell\u00e9 affich\u00e9</label>'
+      + '<input value="'+dmEsc(c.label)+'" oninput="dmeSetChamp('+i+',\'label\',this)"></div>'
+      + '<div class="dme-fl" style="flex:1;min-width:110px"><label>Type</label>'
+      + '<select onchange="dmeSetChamp('+i+',\'type\',this)">'+opts+'</select></div>'
+      + '<div class="dme-fl" style="flex:1.4;min-width:140px"><label>Pr\u00e9-rempli depuis</label>'
+      + '<select onchange="dmeSetChamp('+i+',\'auto\',this)">'+autos+'</select></div>'
+      + nav + '</div>'
+      + '<div class="dme-c-b2">'
+      + '<span class="dme-code">{'+dmEsc(c.id)+'}</span>'
+      + '<label class="dme-ck"><input type="checkbox"'+(c.requis?' checked':'')
+      + ' onchange="dmeSetChamp('+i+',\'requis\',this)"> obligatoire</label>'
+      + '<label class="dme-ck">largeur <select onchange="dmeSetChamp('+i+',\'w\',this)" class="mini">'
+      + '<option value="1"'+(c.w!==2?' selected':'')+'>demi</option>'
+      + '<option value="2"'+(c.w===2?' selected':'')+'>pleine</option></select></label>'
+      + (c.type==='liste'
+          ? '<div style="flex:1 0 100%;margin-top:6px"><label style="font-size:10px">Options (une par ligne)</label>'
+            + '<textarea rows="3" oninput="dmeSetChamp('+i+',\'opts\',this)">'
+            + dmEsc((c.opts||[]).join('\n'))+'</textarea></div>'
+          : '')
+      + '</div></div>';
+  }).join('');
+  dmeRenderPuces();
+}
+
+/* \u2500\u2500 Onglet 3 : corps du document \u2500\u2500 */
+function dmeRenderPuces() {
+  ['dme-puces','dme-puces2'].forEach(function(id) {
+    var el = document.getElementById(id); if (!el) return;
+    var ids = dmeIds();
+    el.innerHTML = ids.length
+      ? ids.map(function(x){ return '<button class="dme-puce" onclick="dmeInsert(\''+x+'\')">{'+dmEsc(x)+'}</button>'; }).join('')
+      : '<span class="dme-hint">D\u00e9finissez d\u2019abord des champs dans l\u2019onglet pr\u00e9c\u00e9dent.</span>';
+  });
+}
+var DME_FOCUS = null;
+function dmeInsert(id) {
+  var ta = DME_FOCUS;
+  if (!ta) { alert('Cliquez d\u2019abord dans le texte o\u00f9 ins\u00e9rer le champ.'); return; }
+  var s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+  ta.value = v.slice(0,s) + '{' + id + '}' + v.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + id.length + 2;
+  ta.focus();
+  ta.dispatchEvent(new Event('input'));
+}
+function dmeAddBloc(t) { DME.corps.push({ t:t, x:'' }); dmeRenderCorps(); }
+function dmeDelBloc(i) { DME.corps.splice(i,1); dmeRenderCorps(); }
+function dmeMoveBloc(i,d) { var j=i+d; if(j<0||j>=DME.corps.length) return;
+  var t=DME.corps[i]; DME.corps[i]=DME.corps[j]; DME.corps[j]=t; dmeRenderCorps(); }
+function dmeSetBloc(i, prop, el) {
+  var b = DME.corps[i]; if (!b) return;
+  if (prop === 'gras') { b.gras = el.checked; return; }
+  b[prop] = el.value || undefined;
+}
+function dmeRenderCorps() {
+  var box = document.getElementById('dme-corps');
+  if (!DME.corps.length) {
+    box.innerHTML = '<div class="dme-vide">Aucun paragraphe. Le corps est le texte du document imprim\u00e9 : '
+      + 'ins\u00e9rez-y les champs entre accolades pour que leurs valeurs apparaissent.</div>';
+    return;
+  }
+  var ids = dmeIds();
+  box.innerHTML = DME.corps.map(function(b, i) {
+    var cond = '<select onchange="dmeSetBloc('+i+',\'si\',this)"><option value="">toujours affich\u00e9</option>'
+      + ids.map(function(x){ return '<option value="'+x+'"'+(b.si===x?' selected':'')+'>si {'+x+'} est rempli</option>'; }).join('')
+      + '</select>';
+    return '<div class="dme-c"><div class="dme-c-b">'
+      + '<div class="dme-fl" style="flex:1"><label>'
+      + (b.t==='l' ? 'Point de liste' : 'Paragraphe') + '</label>'
+      + '<textarea rows="3" onfocus="DME_FOCUS=this" oninput="dmeSetBloc('+i+',\'x\',this)">'+dmEsc(b.x||'')+'</textarea></div>'
+      + '<div class="dme-nav"><button onclick="dmeMoveBloc('+i+',-1)">\u25b2</button>'
+      + '<button onclick="dmeMoveBloc('+i+',1)">\u25bc</button>'
+      + '<button onclick="dmeDelBloc('+i+')" class="del">\u00d7</button></div></div>'
+      + '<div class="dme-c-b2">'+cond
+      + '<label class="dme-ck"><input type="checkbox"'+(b.gras?' checked':'')
+      + ' onchange="dmeSetBloc('+i+',\'gras\',this)"> en gras</label></div></div>';
+  }).join('');
+  dmeRenderPuces();
+}
+
+/* \u2500\u2500 Signataires \u2500\u2500 */
+function dmeAddSig() {
+  DME.signataires.push({ id:'s'+(DME.signataires.length+1), role:'Signataire', nom:'', civ:'', q:'' });
+  dmeRenderSigs();
+}
+function dmeDelSig(i) { DME.signataires.splice(i,1); dmeRenderSigs(); }
+function dmeSetSig(i, prop, el) { if (DME.signataires[i]) DME.signataires[i][prop] = el.value; }
+function dmeRenderSigs() {
+  var box = document.getElementById('dme-sigs');
+  if (!box) return;
+  var ids = dmeIds();
+  var sel = function(cur, vide) {
+    return '<option value="">'+vide+'</option>' + ids.map(function(x) {
+      return '<option value="'+x+'"'+(cur===x?' selected':'')+'>{'+x+'}</option>'; }).join('');
+  };
+  if (!DME.signataires.length) {
+    box.innerHTML = '<div class="dme-vide">Aucun signataire. Un document sans signataire reste un formulaire : '
+      + 'utile pour une fiche interne, insuffisant pour une autorisation parentale.</div>';
+    return;
+  }
+  box.innerHTML = DME.signataires.map(function(s, i) {
+    return '<div class="dme-c"><div class="dme-c-b">'
+      + '<div class="dme-fl" style="flex:1.2;min-width:120px"><label>R\u00f4le affich\u00e9</label>'
+      + '<input value="'+dmEsc(s.role)+'" oninput="dmeSetSig('+i+',\'role\',this)"></div>'
+      + '<div class="dme-fl" style="flex:1;min-width:110px"><label>Champ \u00ab nom \u00bb</label>'
+      + '<select onchange="dmeSetSig('+i+',\'nom\',this)">'+sel(s.nom,'\u2014 aucun \u2014')+'</select></div>'
+      + '<div class="dme-fl" style="flex:1;min-width:110px"><label>Champ \u00ab qualit\u00e9 \u00bb</label>'
+      + '<select onchange="dmeSetSig('+i+',\'q\',this)">'+sel(s.q,'\u2014 aucun \u2014')+'</select></div>'
+      + '<div class="dme-nav"><button onclick="dmeDelSig('+i+')" class="del">\u00d7</button></div></div>'
+      + '<div class="dme-c-b2"><span class="dme-hint">Le cartouche n\u2019appara\u00eet que si le champ \u00ab nom \u00bb '
+      + 'est rempli \u2014 une famille monoparentale ne verra qu\u2019un bloc.</span></div></div>';
+  }).join('');
+}
+
+/* \u2500\u2500 Onglet 4 : aper\u00e7u \u2500\u2500 */
+function dmeApercu() {
+  var sauveC = DM_CUR, sauveV = DM_VALS, sauveP = DM_PADS;
+  DM_CUR = DME; DM_VALS = {}; DM_PADS = {};
+  // valeurs de demonstration pour que l'apercu soit lisible
+  (DME.champs || []).forEach(function(c) {
+    if (c.sec) return;
+    if (c.auto === 'today') DM_VALS[c.id] = dmToday();
+    else if (c.auto === 'enfant.nom')   DM_VALS[c.id] = 'L\u00e9a Exemple';
+    else if (c.auto === 'parent1.nom')  DM_VALS[c.id] = 'Sarah Exemple';
+    else if (c.auto === 'parent2.nom')  DM_VALS[c.id] = 'Karim Exemple';
+    else if (c.auto === 'parent1.lien') DM_VALS[c.id] = 'M\u00e8re';
+    else if (c.auto === 'parent2.lien') DM_VALS[c.id] = 'P\u00e8re';
+    else if (c.type === 'liste')   DM_VALS[c.id] = (c.opts && c.opts[0]) || '';
+    else if (c.type === 'oui_non') DM_VALS[c.id] = 'Oui, j\u2019autorise';
+    else if (c.type === 'date')    DM_VALS[c.id] = dmToday();
+  });
+  var html;
+  try { html = dmApercuHtml(); }
+  catch (e) { html = '<p style="color:#B45309">Aper\u00e7u impossible : '+dmEsc(e.message)+'</p>'; }
+  document.getElementById('dme-doc').innerHTML = html;
+  DM_CUR = sauveC; DM_VALS = sauveV; DM_PADS = sauveP;
+}
+
+/* \u2500\u2500 Enregistrement \u2500\u2500 */
+async function dmeSave() {
+  if (!DME.titre.trim()) { dmeTab(1); alert('Le document a besoin d\u2019un titre.'); return; }
+  var champs = DME.champs.filter(function(c){ return !c.sec; });
+  if (!champs.length && !confirm('Ce document n\u2019a aucun champ \u00e0 remplir. Enregistrer quand m\u00eame ?')) return;
+  // un id de champ en double casse la substitution : on refuse
+  var vus = {}, dbl = null;
+  champs.forEach(function(c){ if (vus[c.id]) dbl = c.id; vus[c.id] = 1; });
+  if (dbl) { dmeTab(2); alert('Deux champs portent le m\u00eame identifiant {'+dbl+'}. Modifiez un libell\u00e9.'); return; }
+
+  if (!DME_NEW) DME.version = (DME.version || 1) + 1;   // toute modification cr\u00e9e une version
+  var btn = document.getElementById('dme-save');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement\u2026'; }
+  try {
+    var row = dmModeleToRow(DME);
+    if (DME_NEW) await sbInsert('documents_modeles', row);
+    else         await sbUpdate('documents_modeles', DME.id, row);
+    var i = -1;
+    for (var k=0;k<DM_MODELES.length;k++) if (DM_MODELES[k].id === DME.id) { i = k; break; }
+    if (i >= 0) DM_MODELES[i] = DME; else DM_MODELES.push(DME);
+    dmSyncCatalogue();
+    if (typeof dsDocUpdateCounts === 'function') dsDocUpdateCounts();
+    if (typeof dsDocRender === 'function') dsDocRender();
+    showNotif('\u2713 Mod\u00e8le enregistr\u00e9 \u2014 version ' + DME.version);
+    dmeClose();
+  } catch (e) {
+    showNotif('\u26a0 Enregistrement impossible : ' + (e.status || '') + ' ' + (e.message || ''));
+    console.error('[documents] modele', e);
+    if (!DME_NEW) DME.version = DME.version - 1;
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer le mod\u00e8le'; }
+}
+
+async function dmeDelete() {
+  if (DME_NEW) { dmeClose(); return; }
+  if (!confirm('Supprimer ce mod\u00e8le ? Les documents d\u00e9j\u00e0 remplis \u00e0 partir de lui sont conserv\u00e9s.')) return;
+  try {
+    await sbDelete('documents_modeles', DME.id);
+    DM_MODELES = DM_MODELES.filter(function(m){ return m.id !== DME.id; });
+    dmSyncCatalogue();
+    if (typeof dsDocUpdateCounts === 'function') dsDocUpdateCounts();
+    if (typeof dsDocRender === 'function') dsDocRender();
+    showNotif('\u2713 Mod\u00e8le supprim\u00e9');
+    dmeClose();
+  } catch (e) { showNotif('\u26a0 Suppression impossible'); }
 }
 
 /* ── Dossier famille : les documents signes dans la fiche enfant ── */
