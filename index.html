@@ -1390,8 +1390,8 @@ textarea { resize: vertical; min-height: 72px; }
   <button class="nav-item" data-roles="admin" onclick="showPage('admin', this)" title="Administration">
     <span class="nav-icon">🔐</span> Administration
   </button>
-  <button class="nav-item" id="nav-demandes-reseau" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('demandesReseau', this)" title="Demandes réseau">
-    <span class="nav-icon">&#x1F4AC;</span> Demandes réseau
+  <button class="nav-item" id="nav-demandes-reseau" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('demandesReseau', this)" title="Messagerie réseau">
+    <span class="nav-icon">&#x1F4AC;</span> Messagerie réseau
     <span id="nav-demandes-badge" style="display:none;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:auto">0</span>
   </button>
   <button class="nav-item" id="nav-incidents" data-roles="admin,directrice,auxiliaire,coordinateur" onclick="showPage('incidents', this)" title="Registre des incidents">
@@ -1643,6 +1643,14 @@ textarea { resize: vertical; min-height: 72px; }
               <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:6px">Couleur perso</label>
               <input type="color" id="param-color-custom" style="width:44px;height:44px;border:none;border-radius:10px;cursor:pointer;padding:0" onchange="setAccentColor(this.value)">
             </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-size:12px;font-weight:600;color:var(--ink2)">Fonctions consid&eacute;r&eacute;es comme direction</label>
+            <div style="font-size:12px;color:var(--ink3)">Utilis&eacute; par la Messagerie r&eacute;seau pour identifier les r&eacute;f&eacute;rents. Une fonction par ligne, telle qu'elle est saisie dans les fiches salari&eacute;s.</div>
+            <textarea id="param-fonctions-referent" rows="3" placeholder="Directeur / Directrice&#10;Coordinateur / Coordinatrice EJE"
+              style="padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:13.5px;font-family:inherit;outline:none;background:var(--bg);resize:vertical"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
           </div>
 
           <button onclick="sauverPersonnalisation()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;align-self:flex-start">
@@ -8806,6 +8814,8 @@ function renderParametres() {
   const seuilInput = document.getElementById('param-seuil-stock');
   const peremptionInput = document.getElementById('param-seuil-peremption');
   if (nomInput) nomInput.value = prefs.nomReseau || '';
+  const foncInput = document.getElementById('param-fonctions-referent');
+  if (foncInput && typeof drFonctionsReferent === 'function') foncInput.value = drFonctionsReferent().join('\n');
   if (seuilInput) seuilInput.value = prefs.seuilStock || 2;
   if (peremptionInput) peremptionInput.value = prefs.seuilPeremption || 30;
 
@@ -8885,6 +8895,12 @@ function sauverPersonnalisation() {
   if (color) {
     prefs.accent = color;
     document.documentElement.style.setProperty('--accent', color);
+  }
+  const foncEl = document.getElementById('param-fonctions-referent');
+  if (foncEl) {
+    const liste = foncEl.value.split('\n').map(function(x) { return x.trim(); }).filter(Boolean);
+    if (liste.length) prefs.fonctionsReferent = liste;
+    else delete prefs.fonctionsReferent;   // vide = retour aux valeurs par d\u00e9faut
   }
   localStorage.setItem('orevy_prefs', JSON.stringify(prefs));
   sbUpsertParametre('orevy_prefs', prefs).catch(e => console.warn('[Params] sync prefs:', e));
@@ -11587,8 +11603,8 @@ const ORV_DOMAINES = [
   { id:'univers', ico:'\uD83C\uDF1F', nom:'Univers ludiques', sub:'Aménagement, rotation, projet pédagogique',
     pages:[ {id:'univers', nom:'Univers ludiques'} ],
     aBrancher:['observations pédagogiques manquantes'] },
-  { id:'reseau', ico:'\uD83D\uDCAC', nom:'Demandes réseau', sub:'Demandes, consignes, événements, référents',
-    pages:[ {id:'demandesReseau', nom:'Demandes réseau'} ],
+  { id:'reseau', ico:'\uD83D\uDCAC', nom:'Messagerie réseau', sub:'Messages, consignes, événements, référents',
+    pages:[ {id:'demandesReseau', nom:'Messagerie réseau'} ],
     aBrancher:['demandes qui me sont adressées','messages non lus','consignes non lues'] },
   { id:'reglementaire', ico:'\u2696\uFE0F', nom:'Réglementaire', sub:'Textes, protocoles, PMI, incidents',
     pages:[
@@ -12515,7 +12531,7 @@ function showPage(page, btn, fromPopState) {
   });
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  const titles = { hubStructures:'Orevy Structures', dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions', demandesReseau:'Demandes réseau', pointage:'Pointage' };
+  const titles = { hubStructures:'Orevy Structures', dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions', demandesReseau:'Messagerie réseau', pointage:'Pointage' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   // Remonter en haut de page lors du changement
   try { window.scrollTo(0,0); document.querySelector('.content')?.scrollTo?.(0,0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch(_) {}
@@ -17904,8 +17920,8 @@ function renderPageDemandesReseau() {
   page.innerHTML = `<div id="dr-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
       <div>
-        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ink)">💬 Demandes réseau</div>
-        <div style="font-size:12px;color:var(--ink3);margin-top:2px">Communication inter-structures</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ink)">💬 Messagerie réseau</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:2px">Échanges entre les structures du réseau</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${isCoord ? '<button class="btn btn-secondary" onclick="drOpenConsigne()"><i class="ti ti-send"></i> Envoyer une consigne</button>' : ''}
@@ -18045,8 +18061,22 @@ async function drLoadDemandes() {
 }
 
 // ── RÉFÉRENTS ──────────────────────────────────────────────────────────────
-// Fonctions considérées comme "référents réseau" (rôle d'encadrement/coordination)
-const DR_FONCTIONS_REFERENT = ['Directeur / Directrice', 'Coordinateur / Coordinatrice EJE'];
+// Fonctions considérées comme "référents réseau" (rôle d'encadrement/coordination).
+// Réglable par réseau dans Paramètres > Personnalisation ; repli sur les valeurs
+// par défaut si rien n'est configuré.
+const DR_FONCTIONS_REFERENT_DEFAUT = ['Directeur / Directrice', 'Coordinateur / Coordinatrice EJE'];
+function drFonctionsReferent() {
+  try {
+    const p = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+    if (p && Array.isArray(p.fonctionsReferent) && p.fonctionsReferent.length) return p.fonctionsReferent;
+  } catch(_) {}
+  return DR_FONCTIONS_REFERENT_DEFAUT;
+}
+function drEstReferent(fonction) {
+  const f = String(fonction == null ? '' : fonction).trim().toLowerCase();
+  if (!f) return false;
+  return drFonctionsReferent().some(function(x) { return String(x).trim().toLowerCase() === f; });
+}
 let _drRefFilter = 'tous'; // 'tous' | 'direction' | 'autres'
 
 async function drLoadReferents() {
@@ -18063,12 +18093,12 @@ async function drLoadReferents() {
     if (_drCreche) rows = rows.filter(s => s.creche === _drCreche);
 
     let visible = rows;
-    if (_drRefFilter === 'direction') visible = rows.filter(s => DR_FONCTIONS_REFERENT.includes(s.fonction));
-    else if (_drRefFilter === 'autres') visible = rows.filter(s => !DR_FONCTIONS_REFERENT.includes(s.fonction));
+    if (_drRefFilter === 'direction') visible = rows.filter(s => drEstReferent(s.fonction));
+    else if (_drRefFilter === 'autres') visible = rows.filter(s => !drEstReferent(s.fonction));
 
     const isCoord = ['admin','coordinateur'].includes(currentUserRole);
     const total = rows.length;
-    const direction = rows.filter(s => DR_FONCTIONS_REFERENT.includes(s.fonction)).length;
+    const direction = rows.filter(s => drEstReferent(s.fonction)).length;
 
     const filterBar = `
       <div class="dr-toolbar">
@@ -18092,7 +18122,7 @@ async function drLoadReferents() {
       visible.map(s => {
         const initiales = ((s.prenom||'').charAt(0) + (s.nom||'').charAt(0)).toUpperCase();
         const nomComplet = (s.prenom||'') + ' ' + (s.nom||'');
-        const isDirection = DR_FONCTIONS_REFERENT.includes(s.fonction);
+        const isDirection = drEstReferent(s.fonction);
         const avatarBg = isDirection ? 'var(--amber)' : 'var(--purple)';
         return `<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid ${isDirection?'var(--amber)':'var(--purple)'};border-radius:var(--radius);padding:14px 16px">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
@@ -18411,7 +18441,7 @@ async function _drFillDestinataires() {
                  .filter(s => s && s.id && s.statut !== 'archivé');
     if (cre) rows = rows.filter(s => s.creche === cre);
     rows.sort((a,b) => {
-      const ra = DR_FONCTIONS_REFERENT.includes(a.fonction)?0:1, rb = DR_FONCTIONS_REFERENT.includes(b.fonction)?0:1;
+      const ra = drEstReferent(a.fonction)?0:1, rb = drEstReferent(b.fonction)?0:1;
       if (ra !== rb) return ra - rb;
       return ((a.nom||'')+(a.prenom||'')).localeCompare((b.nom||'')+(b.prenom||''));
     });
