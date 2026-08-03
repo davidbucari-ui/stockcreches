@@ -158,6 +158,9 @@ body {
   background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
 .orv-calm.none { border-style:dashed; }
 .orv-needs { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+.orv-plus { margin-top:10px; background:none; border:1px dashed var(--border); color:var(--ink2);
+  font-family:inherit; font-size:12.5px; font-weight:600; padding:8px 14px; border-radius:10px; cursor:pointer; }
+.orv-plus:hover { background:var(--surface2); color:var(--ink); }
 .orv-need { display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border);
   border-radius:12px; padding:11px 14px 11px 0; overflow:hidden; }
 .orv-need .bar { width:5px; align-self:stretch; flex:0 0 5px; }
@@ -11761,6 +11764,53 @@ function orvSyncBar() {
   orvSyncCrecheSelect();
 }
 
+/* ══ VISIBILITÉ PAR RÔLE ══
+   Chaque source de besoin est rattachée aux rôles pour lesquels elle appelle
+   une décision. Une source absente de la table est visible par tout le monde. */
+const ORV_DIR = ['admin','directrice','coordinateur'];
+const ORV_TERRAIN = ['admin','directrice','coordinateur','auxiliaire'];
+const ORV_TOUS = ['admin','directrice','coordinateur','auxiliaire','stagiaire'];
+const ORV_SRC_ROLES = {
+  'stock.rupture': ORV_TOUS, 'stock.seuil_bas': ORV_TERRAIN,
+  'rh.conge_imminent': ORV_DIR, 'rh.conge_attente': ORV_DIR,
+  'rh.formation_echue': ORV_DIR, 'rh.formation_proche': ORV_DIR,
+  'rh.contrat_non_signe': ORV_DIR, 'rh.contrat_fin': ORV_DIR,
+  'rh.honorabilite_manquante': ORV_DIR, 'rh.entretien_proche': ORV_DIR,
+  'rh.pointage_anomalie': ORV_DIR, 'rh.pointage_anomalie_reste': ORV_DIR,
+  'famille.vaccin_retard': ORV_TERRAIN, 'famille.vaccin_retard_reste': ORV_TERRAIN,
+  'famille.doc_portail': ORV_DIR, 'famille.doc_portail_reste': ORV_DIR,
+  'famille.dossier_incomplet': ORV_DIR, 'famille.dossier_incomplet_reste': ORV_DIR,
+  'famille.fin_accueil': ORV_TERRAIN,
+  'famille.transmission_manquante': ORV_TOUS,
+  'famille.anniversaire': ORV_TOUS,
+  'univers.a_renouveler': ORV_TERRAIN, 'univers.a_renouveler_reste': ORV_TERRAIN,
+  'univers.materiel_manquant': ORV_TERRAIN, 'univers.materiel_manquant_reste': ORV_TERRAIN,
+  'univers.creche_vide': ORV_DIR, 'univers.sans_photo': ORV_TERRAIN,
+  'demande.urgente_ouverte': ORV_TERRAIN, 'demande.ouverte': ORV_TERRAIN,
+  'incident.grave_non_traite': ORV_TERRAIN, 'incident.non_traite': ORV_TERRAIN,
+  'pmi.non_conforme': ORV_DIR, 'pmi.jamais_fait': ORV_DIR,
+  'reglementaire.evenement_controle': ORV_TERRAIN
+};
+function orvBesoinVisible(b) {
+  const r = orvRole();
+  const allowed = ORV_SRC_ROLES[b.src];
+  if (!allowed) return true;
+  return allowed.indexOf(r) !== -1;
+}
+/* Tri de la worklist : urgence d'abord, puis ordre des domaines, puis
+   ordre de détection (les lignes nominatives avant les agrégats). */
+function orvTrier(arr) {
+  const ordreDom = {};
+  ORV_DOMAINES.forEach(function(d, i) { ordreDom[d.id] = i; });
+  return arr.map(function(b, i) { b._i = i; return b; }).sort(function(a, b) {
+    if (a.n !== b.n) return a.n - b.n;
+    const da = ordreDom[a.dom] === undefined ? 99 : ordreDom[a.dom];
+    const db = ordreDom[b.dom] === undefined ? 99 : ordreDom[b.dom];
+    if (da !== db) return da - db;
+    return a._i - b._i;
+  });
+}
+
 /* ══ SOURCES DE BESOINS ══
    Chaque source détecte sa condition et produit une ligne :
    { dom, n (1=urgent, 2=à faire, 3=info), t, c, q, act, page, src } ── */
@@ -12248,8 +12298,8 @@ async function orvCollecterBesoins() {
     });
   } catch(e) { console.warn('[hub] source reglementaire', e); }
 
-  ORV_BESOINS = out;
-  return out;
+  ORV_BESOINS = orvTrier(out.filter(orvBesoinVisible));
+  return ORV_BESOINS;
 }
 
 /* ── KPI par domaine (uniquement ceux réellement calculables) ── */
@@ -12306,6 +12356,60 @@ function orvNeedHTML(b, showDom) {
         : ('orvGoPage(\'' + b.page + '\')')) + '">' + orvEsc(b.act) + '</button></div>';
 }
 
+/* ── Worklist : plafonnement et dépliage ── */
+let ORV_HUB_TOUT = false;      // hub : worklist complète dépliée
+let ORV_PIL_TOUT = false;      // vue pilotage : worklist complète dépliée
+const ORV_HUB_MAX = 5;
+const ORV_PIL_MAX = 8;
+
+function orvPlusBtn(reste, fn) {
+  return '<button class="orv-plus" onclick="' + fn + '">+ ' + reste + ' autre' + (reste > 1 ? 's' : '')
+    + ' · tout afficher</button>';
+}
+function orvMoinsBtn(fn) {
+  return '<button class="orv-plus" onclick="' + fn + '">Réduire la liste</button>';
+}
+
+function orvRenderHubNeeds() {
+  const box = document.getElementById('orv-hub-needs');
+  if (!box) return;
+  const all = ORV_BESOINS;
+  if (!all.length) {
+    box.innerHTML = '<div class="orv-calm none">\u2713 Rien à signaler. Les structures tournent, rien n\'attend votre décision.</div>';
+    return;
+  }
+  const u = all.filter(b => b.n === 1).length, f = all.filter(b => b.n === 2).length;
+  const ph = (u ? u + ' point' + (u > 1 ? 's' : '') + ' à traiter aujourd\'hui' : 'Rien d\'urgent')
+           + (f ? ', ' + f + ' à faire cette semaine' : '') + '.';
+  const vus = ORV_HUB_TOUT ? all : all.slice(0, ORV_HUB_MAX);
+  const reste = all.length - vus.length;
+  box.innerHTML = '<div class="orv-calm">' + orvEsc(ph) + '</div>'
+    + '<div class="orv-needs">' + vus.map(b => orvNeedHTML(b, true)).join('') + '</div>'
+    + (reste > 0 ? orvPlusBtn(reste, 'orvToggleHubNeeds()')
+                 : (ORV_HUB_TOUT && all.length > ORV_HUB_MAX ? orvMoinsBtn('orvToggleHubNeeds()') : ''));
+}
+function orvToggleHubNeeds() { ORV_HUB_TOUT = !ORV_HUB_TOUT; orvRenderHubNeeds(); }
+
+function orvRenderPilNeeds(domId) {
+  const el = document.getElementById('orv-p-needs');
+  const d = orvDom(domId);
+  if (!el || !d) return;
+  const n = ORV_BESOINS.filter(b => b.dom === domId);
+  if (!n.length) {
+    el.innerHTML = '<div class="orv-empty"><div style="margin-bottom:10px">\u2713 Rien à signaler sur ce domaine.</div>'
+      + ((d.aBrancher && d.aBrancher.length)
+          ? '<div class="orv-todo">À venir : ' + d.aBrancher.map(orvEsc).join(' \u00b7 ') + '</div>' : '')
+      + '</div>';
+    return;
+  }
+  const vus = ORV_PIL_TOUT ? n : n.slice(0, ORV_PIL_MAX);
+  const reste = n.length - vus.length;
+  el.innerHTML = '<div class="orv-needs">' + vus.map(b => orvNeedHTML(b, false)).join('') + '</div>'
+    + (reste > 0 ? orvPlusBtn(reste, 'orvTogglePilNeeds()')
+                 : (ORV_PIL_TOUT && n.length > ORV_PIL_MAX ? orvMoinsBtn('orvTogglePilNeeds()') : ''));
+}
+function orvTogglePilNeeds() { ORV_PIL_TOUT = !ORV_PIL_TOUT; orvRenderPilNeeds(ORV_CUR_DOM); }
+
 /* ── Hub ── */
 async function orvShowHubStr() {
   ORV_CUR_DOM = null;
@@ -12329,19 +12433,8 @@ async function orvShowHubStr() {
 
   await orvCollecterBesoins();
 
-  const all = ORV_BESOINS.slice().sort((a, b) => a.n - b.n);
-  const u = all.filter(b => b.n === 1).length, f = all.filter(b => b.n === 2).length;
-  if (box) {
-    if (!all.length) {
-      box.innerHTML = '<div class="orv-calm none">\u2713 Rien à signaler. Les structures tournent, rien n\'attend votre décision.</div>';
-    } else {
-      const ph = (u ? u + ' point' + (u > 1 ? 's' : '') + ' à traiter aujourd\'hui' : 'Rien d\'urgent')
-               + (f ? ', ' + f + ' à faire cette semaine' : '') + '.';
-      box.innerHTML = '<div class="orv-calm">' + orvEsc(ph) + '</div>'
-        + '<div class="orv-needs">' + all.slice(0, 3).map(b => orvNeedHTML(b, true)).join('') + '</div>'
-        + (all.length > 3 ? '<div style="font-size:12px;color:var(--ink3);margin-top:9px">+ ' + (all.length - 3) + ' autres, par domaine ci-dessous.</div>' : '');
-    }
-  }
+  ORV_HUB_TOUT = false;
+  orvRenderHubNeeds();
 
   // Reprendre : pages récentes
   const rec = orvRecentes();
@@ -12366,7 +12459,7 @@ async function orvShowHubStr() {
       if (ff) st += '<span class="orv-tag" style="background:#E4E1DC;color:var(--ink);border:1px solid #CFCAC3">\u25A0 ' + ff + ' à faire</span>';
       if (ii) st += '<span class="orv-tag" style="background:var(--surface);color:var(--ink2);border:1px dashed #CFCAC3">\u25CF ' + ii + ' info</span>';
       if (!st) st = '<span class="orv-tag" style="background:var(--surface);color:var(--ink2);border:1px solid var(--border)">'
-        + (d.aBrancher && d.aBrancher.length && !n.length ? 'Sources à brancher' : '\u2713 Rien à signaler') + '</span>';
+        + '\u2713 Rien à signaler' + '</span>';
       const kp = orvKpisOf(d.id);
       const chiffre = kp.length ? '<div><div class="num">' + kp[0].v + '</div><div class="numlbl">' + orvEsc(kp[0].k.toLowerCase()) + '</div></div>' : '';
       return '<button class="orv-dom" onclick="orvOpenPilotage(\'' + d.id + '\')">'
@@ -12400,14 +12493,8 @@ async function orvOpenPilotage(domId) {
     return '<div class="orv-kpi"><div class="k">' + orvEsc(x.k) + '</div><div class="v">' + orvEsc(x.v) + '</div><div class="s">' + orvEsc(x.s) + '</div></div>';
   }).join('');
 
-  const n = ORV_BESOINS.filter(b => b.dom === domId);
-  let html;
-  if (n.length) html = '<div class="orv-needs">' + n.map(b => orvNeedHTML(b, false)).join('') + '</div>';
-  else if (d.aBrancher && d.aBrancher.length) {
-    html = '<div class="orv-empty"><div style="margin-bottom:10px">Aucune source de besoins n\'est encore branchée sur ce domaine.</div>'
-      + '<div class="orv-todo">À venir : ' + d.aBrancher.map(orvEsc).join(' \u00b7 ') + '</div></div>';
-  } else html = '<div class="orv-empty">\u2713 Rien à signaler sur ce domaine.</div>';
-  document.getElementById('orv-p-needs').innerHTML = html;
+  ORV_PIL_TOUT = false;
+  orvRenderPilNeeds(domId);
 
   document.getElementById('orv-p-pages').innerHTML = orvPagesOf(d).map(function(p) {
     return '<button class="orv-pagebtn" onclick="orvGoPage(\'' + p.id + '\')">' + orvEsc(p.nom) + '</button>';
