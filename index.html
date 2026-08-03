@@ -11522,17 +11522,17 @@ const ORV_DOMAINES = [
       {id:'familles',     nom:'Familles'},
       {id:'transmissions',nom:'Transmissions'}
     ],
-    aBrancher:['dossiers incomplets','documents du portail à valider','contrats arrivant à échéance','factures prêtes à envoyer','transmissions non saisies'] },
+    aBrancher:['factures prêtes à envoyer (module à venir)'] },
   { id:'rh', ico:'\uD83D\uDC65', nom:'Ressources humaines', sub:'Équipe, planning, pointage, contrats',
     pages:[
       {id:'rh',      nom:'Équipe',  roles:['admin','directrice','coordinateur']},
       {id:'planning',nom:'Planning'},
       {id:'pointage',nom:'Pointage'}
     ],
-    aBrancher:['trous d\'encadrement au planning','anomalies de pointage','fins de période d\'essai','visites médicales à programmer'] },
+    aBrancher:['trous d\'encadrement au planning','fins de période d\'essai','visites médicales à programmer'] },
   { id:'univers', ico:'\uD83C\uDF1F', nom:'Univers ludiques', sub:'Aménagement, rotation, projet pédagogique',
     pages:[ {id:'univers', nom:'Univers ludiques'} ],
-    aBrancher:['univers à renouveler','observations pédagogiques manquantes','matériel manquant pour un univers'] },
+    aBrancher:['observations pédagogiques manquantes'] },
   { id:'reseau', ico:'\uD83D\uDCAC', nom:'Demandes réseau', sub:'Demandes, consignes, événements, référents',
     pages:[ {id:'demandesReseau', nom:'Demandes réseau'} ],
     aBrancher:['demandes qui me sont adressées','messages non lus','consignes non lues'] },
@@ -11541,11 +11541,13 @@ const ORV_DOMAINES = [
       {id:'incidents', nom:'Registre des incidents'},
       {id:'__docs',    nom:'Base réglementaire'}
     ],
-    aBrancher:['protocoles à revalider','points de contrôle PMI','nouveaux textes (veille)'] }
+    aBrancher:['protocoles à revalider','nouveaux textes (veille)'] }
 ];
 
 let ORV_CUR_DOM = null;      // domaine ouvert en vue pilotage
 let ORV_BESOINS = [];        // cache des besoins collectés
+let ORV_RH_KPI = null;       // compteurs RH calculés pendant la collecte
+let ORV_FAM_KPI = null;      // compteurs Familles calculés pendant la collecte
 const ORV_NIV = { 1:'\u25B2 Urgent', 2:'\u25A0 À faire', 3:'\u25CF Pour info' };
 
 function orvRole() { return (typeof currentUserRole !== 'undefined' && currentUserRole) ? currentUserRole.toLowerCase() : 'admin'; }
@@ -11597,8 +11599,14 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') orvCl
 function orvGoPage(pageId) {
   orvCloseMenus();
   if (pageId === '__docs') { if (typeof openHubDocs === 'function') openHubDocs(); return; }
+  if (pageId === '__pmi') { if (typeof openPmiScreen === 'function') { openPmiScreen(); return; }
+                            if (typeof openHubDocs === 'function') openHubDocs(); return; }
   orvPushRecente(pageId);
   showPage(pageId, null);
+}
+function orvGoPageTab(pageId, tab) {
+  if (tab && pageId === 'rh') { try { rhCurrentTab = tab; } catch(_) {} }
+  orvGoPage(pageId);
 }
 function orvRetourHubPrincipal() { orvCloseMenus(); if (typeof showHub === 'function') showHub(); }
 function orvChangeCreche(v) {
@@ -11766,6 +11774,429 @@ async function orvCollecterBesoins() {
     }
   } catch(e) { console.warn('[hub] source incidents', e); }
 
+  // ── Ressources humaines : congés, recyclages, contrats, recrutement, pointage ──
+  try {
+    const _iso = function(d) { return d.toISOString().split('T')[0]; };
+    const _now = new Date();
+    const jToday = _iso(_now);
+    const _plus = function(n) { const d = new Date(_now); d.setDate(d.getDate() + n); return _iso(d); };
+    const j7 = _plus(7), j45 = _plus(45), j90 = _plus(90), jM7 = _plus(-7);
+    const fd = function(x) { return (typeof fmtDate === 'function' && x) ? fmtDate(x) : (x || ''); };
+    const q = function(t, qs) {
+      return fetch(SUPA_RH_URL + '/rest/v1/' + t + '?' + qs, { headers: SUPA_RH_HEADERS })
+        .then(function(r) { return r.json(); })
+        .then(function(j) { return Array.isArray(j) ? j : []; })
+        .catch(function() { return []; });
+    };
+
+    const res = await Promise.all([
+      q('salaries', 'select=id,data'),
+      q('conges', 'select=id,salarie_id,type,date_debut,date_fin,statut&statut=eq.en_attente&order=date_debut.asc&limit=200'),
+      q('formations_rh', 'select=id,salarie_id,titre,renouvellement,obligatoire&renouvellement=not.is.null&renouvellement=lte.' + j90 + '&order=renouvellement.asc&limit=200'),
+      q('contrats', 'select=id,salarie_id,candidat_nom,poste,type_contrat,date_debut,date_fin,statut&limit=300'),
+      q('recrutements', 'select=id,poste,statut,candidat_nom,date_entretien,honor_url&limit=200'),
+      q('pointages', 'select=user_id,type,horodatage,creche_id&horodatage=gte.' + jM7 + 'T00:00:00&horodatage=lt.' + jToday + 'T00:00:00&order=horodatage.asc&limit=1500')
+    ]);
+    const salRows = res[0], conges = res[1], forma = res[2], contrats = res[3], recrus = res[4], pts = res[5];
+
+    const sMap = {};
+    salRows.forEach(function(r) {
+      const d = r.data || {};
+      sMap[r.id] = {
+        nom: ((d.prenom || '') + ' ' + (d.nom || '')).trim() || r.id,
+        creche: d.creche || '',
+        statut: d.statut || ''
+      };
+    });
+    // souple = on garde la ligne quand le salarié n'est pas identifié (contrat/candidat)
+    const inCreche = function(sid, souple) {
+      if (!cf) return true;
+      const s = sMap[sid];
+      if (!s) return !!souple;
+      return s.creche === cf;
+    };
+    const actif = function(sid) {
+      const s = sMap[sid];
+      return !s || (s.statut !== 'archive' && s.statut !== 'inactif');
+    };
+    const nomDe = function(sid) { return sMap[sid] ? sMap[sid].nom : 'Collaborateur'; };
+    const crecheDe = function(sid) { return (sMap[sid] && sMap[sid].creche) || cf || 'R\u00e9seau'; };
+    const kpi = { conges: 0, recyclages: 0, recrutOuverts: 0, anomalies: 0 };
+
+    // Congés en attente de validation
+    const cg = conges.filter(function(c) { return inCreche(c.salarie_id) && actif(c.salarie_id); });
+    kpi.conges = cg.length;
+    const cgProches = cg.filter(function(c) { return c.date_debut && c.date_debut <= j7; });
+    cgProches.slice(0, 4).forEach(function(c) {
+      out.push({ dom:'rh', n:1, t:'Cong\u00e9 \u00e0 valider : ' + nomDe(c.salarie_id), c:crecheDe(c.salarie_id),
+                 q:'d\u00e9bute le ' + fd(c.date_debut), act:'Valider', page:'rh', tab:'conges', src:'rh.conge_imminent' });
+    });
+    const cgRest = cg.length - cgProches.length;
+    if (cgRest > 0) {
+      out.push({ dom:'rh', n:2, t:cgRest + ' demande' + (cgRest > 1 ? 's' : '') + ' de cong\u00e9s en attente',
+                 c:cf || 'R\u00e9seau', q:'', act:'Traiter', page:'rh', tab:'conges', src:'rh.conge_attente' });
+    }
+
+    // Recyclages / formations obligatoires
+    const fm = forma.filter(function(f) { return f.renouvellement && inCreche(f.salarie_id) && actif(f.salarie_id); });
+    const fmEchus = fm.filter(function(f) { return f.renouvellement < jToday; });
+    kpi.recyclages = fm.length;
+    fmEchus.slice(0, 4).forEach(function(f) {
+      out.push({ dom:'rh', n:1, t:'Recyclage d\u00e9pass\u00e9 : ' + (f.titre || 'formation') + ' \u2014 ' + nomDe(f.salarie_id),
+                 c:crecheDe(f.salarie_id), q:'\u00e9ch\u00e9ance ' + fd(f.renouvellement),
+                 act:'Reprogrammer', page:'rh', tab:'formations', src:'rh.formation_echue' });
+    });
+    const fmSoon = fm.length - fmEchus.length;
+    if (fmSoon > 0) {
+      out.push({ dom:'rh', n:2, t:fmSoon + ' recyclage' + (fmSoon > 1 ? 's' : '') + ' \u00e0 programmer sous 90 jours',
+                 c:cf || 'R\u00e9seau', q:'', act:'Voir les formations', page:'rh', tab:'formations', src:'rh.formation_proche' });
+    }
+
+    // Contrats : non signés dont la prise de poste approche, CDD arrivant à échéance
+    const ct = contrats.filter(function(c) { return inCreche(c.salarie_id, true); });
+    ct.filter(function(c) { return c.statut !== 'signe' && c.date_debut && c.date_debut <= j7; })
+      .slice(0, 3).forEach(function(c) {
+        out.push({ dom:'rh', n:1, t:'Contrat non sign\u00e9 : ' + (c.candidat_nom || nomDe(c.salarie_id)),
+                   c:crecheDe(c.salarie_id), q:'d\u00e9but pr\u00e9vu le ' + fd(c.date_debut),
+                   act:'Ouvrir le contrat', page:'rh', tab:'contrats', src:'rh.contrat_non_signe' });
+      });
+    ct.filter(function(c) { return c.statut === 'signe' && c.date_fin && c.date_fin >= jToday && c.date_fin <= j45; })
+      .slice(0, 4).forEach(function(c) {
+        out.push({ dom:'rh', n:2, t:'Fin de contrat : ' + (c.candidat_nom || nomDe(c.salarie_id)),
+                   c:crecheDe(c.salarie_id), q:'le ' + fd(c.date_fin) + (c.type_contrat ? ' \u00b7 ' + c.type_contrat : ''),
+                   act:'Anticiper', page:'rh', tab:'contrats', src:'rh.contrat_fin' });
+      });
+
+    // Recrutement : honorabilité, entretiens, postes ouverts
+    const rc = recrus.filter(function(r) {
+      const st = (r.statut || '').toLowerCase();
+      return st !== 'archiv\u00e9' && st !== 'archive';
+    });
+    rc.filter(function(r) {
+      const st = (r.statut || '').toLowerCase();
+      return (st === 'valid\u00e9' || st === 'valide' || st === 'pourvu') && !r.honor_url;
+    }).slice(0, 3).forEach(function(r) {
+      out.push({ dom:'rh', n:1, t:'Attestation d\'honorabilit\u00e9 manquante : ' + (r.candidat_nom || r.poste || 'candidat'),
+                 c:cf || 'R\u00e9seau', q:'obligatoire avant la prise de poste',
+                 act:'Compl\u00e9ter', page:'rh', tab:'recrutement', src:'rh.honorabilite_manquante' });
+    });
+    const ent = rc.filter(function(r) { return r.date_entretien && r.date_entretien >= jToday && r.date_entretien <= j7; });
+    if (ent.length) {
+      out.push({ dom:'rh', n:3, t:ent.length + ' entretien' + (ent.length > 1 ? 's' : '') + ' de recrutement cette semaine',
+                 c:cf || 'R\u00e9seau', q:fd(ent[0].date_entretien), act:'Voir', page:'rh', tab:'recrutement', src:'rh.entretien_proche' });
+    }
+    kpi.recrutOuverts = rc.filter(function(r) { return (r.statut || '').toLowerCase() === 'ouvert'; }).length;
+
+    // Pointage : journées clôturées avec une arrivée sans sortie (7 derniers jours)
+    const jours = {};
+    pts.forEach(function(p) {
+      if (cf && p.creche_id && p.creche_id !== cf) return;
+      const j = (p.horodatage || '').substring(0, 10);
+      if (!j) return;
+      const k = p.user_id + '|' + j;
+      if (!jours[k]) jours[k] = { a:0, d:0, u:p.user_id, j:j };
+      if (p.type === 'arrivee') jours[k].a++;
+      else if (p.type === 'depart') jours[k].d++;
+    });
+    const anos = Object.keys(jours).map(function(k) { return jours[k]; })
+      .filter(function(x) { return x.a > x.d; })
+      .sort(function(a, b) { return a.j < b.j ? 1 : -1; });
+    kpi.anomalies = anos.length;
+    anos.slice(0, 3).forEach(function(x) {
+      out.push({ dom:'rh', n:2, t:'Pointage sans sortie : ' + nomDe(x.u), c:crecheDe(x.u),
+                 q:fd(x.j), act:'Corriger', page:'pointage', src:'rh.pointage_anomalie' });
+    });
+    if (anos.length > 3) {
+      out.push({ dom:'rh', n:2, t:(anos.length - 3) + ' autre' + (anos.length - 3 > 1 ? 's' : '') + ' pointage' + (anos.length - 3 > 1 ? 's' : '') + ' incomplet' + (anos.length - 3 > 1 ? 's' : ''),
+                 c:cf || 'R\u00e9seau', q:'7 derniers jours', act:'Ouvrir le pointage', page:'pointage', src:'rh.pointage_anomalie_reste' });
+    }
+
+    ORV_RH_KPI = kpi;
+  } catch(e) { console.warn('[hub] source RH', e); }
+
+  // ── Familles : dossiers, santé, portail, transmissions ──
+  try {
+    const _isoF = function(d) { return d.toISOString().split('T')[0]; };
+    const _nowF = new Date();
+    const jTodayF = _isoF(_nowF);
+    const jF45 = _isoF(new Date(_nowF.getTime() + 45 * 86400000));
+    const fdF = function(x) { return (typeof fmtDate === 'function' && x) ? fmtDate(x) : (x || ''); };
+    const qF = function(t, qs) {
+      return fetch(SUPA_RH_URL + '/rest/v1/' + t + '?' + qs, { headers: SUPA_RH_HEADERS })
+        .then(function(r) { return r.json(); })
+        .then(function(j) { return Array.isArray(j) ? j : []; })
+        .catch(function() { return []; });
+    };
+
+    const resF = await Promise.all([
+      qF('enfants', 'select=id,creche_id,prenom,nom,ddn,sortie,data&limit=800'),
+      qF('portail_documents', 'select=id,enfant_id,nom,categorie,source,vu_par_pro,created_at&source=eq.parent&order=created_at.desc&limit=300'),
+      qF('vaccinations_enfant', 'select=enfant_id,vaccin_ref_id,date_realisee&limit=3000'),
+      qF('transmissions', 'select=enfant_id,creche,date&date=eq.' + jTodayF + '&limit=500')
+    ]);
+    const enfRows = resF[0], pdocs = resF[1], vacc = resF[2], transJour = resF[3];
+
+    const eMap = {};
+    enfRows.forEach(function(r) {
+      const d = r.data || {};
+      eMap[r.id] = {
+        nom: ((r.prenom || d.prenom || '') + ' ' + (r.nom || d.nom || '')).trim() || 'Enfant',
+        creche: r.creche_id || d._creche || '',
+        ddn: r.ddn || d.ddn || '',
+        sortie: r.sortie || d.sortie || '',
+        d: d
+      };
+    });
+    const enfActifs = Object.keys(eMap).map(function(k) { return Object.assign({ id:k }, eMap[k]); })
+      .filter(function(e) {
+        if (cf && e.creche !== cf) return false;
+        if (e.sortie && e.sortie < jTodayF) return false;   // accueil terminé
+        return true;
+      });
+    const kpiF = { enfants: enfActifs.length, docsPortail: 0, vaccinsRetard: 0, dossiersIncomplets: 0 };
+
+    // Documents déposés par les parents et non consultés
+    const pdNew = pdocs.filter(function(p) {
+      if (p.vu_par_pro) return false;
+      const e = eMap[p.enfant_id];
+      if (!e) return !cf;
+      return !cf || e.creche === cf;
+    });
+    kpiF.docsPortail = pdNew.length;
+    pdNew.slice(0, 3).forEach(function(p) {
+      const e = eMap[p.enfant_id];
+      out.push({ dom:'familles', n:2, t:'Document \u00e0 consulter : ' + (p.nom || 'document') + ' \u2014 ' + (e ? e.nom : 'famille'),
+                 c:(e && e.creche) || cf || 'R\u00e9seau', q:'d\u00e9pos\u00e9 le ' + fdF((p.created_at || '').substring(0, 10)),
+                 act:'Ouvrir la fiche', page:'familles', src:'famille.doc_portail' });
+    });
+    if (pdNew.length > 3) {
+      out.push({ dom:'familles', n:2, t:(pdNew.length - 3) + ' autre' + (pdNew.length - 3 > 1 ? 's' : '') + ' document' + (pdNew.length - 3 > 1 ? 's' : '') + ' d\u00e9pos\u00e9' + (pdNew.length - 3 > 1 ? 's' : '') + ' par les familles',
+                 c:cf || 'R\u00e9seau', q:'non consult\u00e9s', act:'Voir les familles', page:'familles', src:'famille.doc_portail_reste' });
+    }
+
+    // Vaccinations obligatoires en retard (tolérance 30 jours)
+    if (typeof VACC_CALENDAR !== 'undefined' && Array.isArray(VACC_CALENDAR)) {
+      const faits = {};
+      vacc.forEach(function(v) { if (v.date_realisee) faits[v.enfant_id + '|' + v.vaccin_ref_id] = true; });
+      const retards = [];
+      enfActifs.forEach(function(e) {
+        if (!e.ddn) return;
+        const dob = new Date(e.ddn + 'T00:00:00');
+        if (isNaN(dob.getTime())) return;
+        let n = 0, dernier = '';
+        VACC_CALENDAR.forEach(function(g) {
+          if (!g.obligatoire) return;
+          (g.doses || []).forEach(function(dose, i) {
+            const due = new Date(dob.getTime() + dose.offset * 86400000);
+            if ((_nowF - due) / 86400000 < 30) return;         // pas encore en retard
+            if (faits[e.id + '|' + g.id + '_' + i]) return;    // dose realisee
+            n++; dernier = g.nom + ' \u2014 ' + dose.label;
+          });
+        });
+        if (n) retards.push({ e:e, n:n, dernier:dernier });
+      });
+      kpiF.vaccinsRetard = retards.length;
+      retards.slice(0, 4).forEach(function(r) {
+        out.push({ dom:'familles', n:1, t:'Vaccination obligatoire en retard : ' + r.e.nom,
+                   c:r.e.creche || cf || 'R\u00e9seau', q:r.n + ' dose' + (r.n > 1 ? 's' : '') + ' \u00b7 ' + r.dernier,
+                   act:'Ouvrir la fiche', page:'familles', src:'famille.vaccin_retard' });
+      });
+      if (retards.length > 4) {
+        out.push({ dom:'familles', n:1, t:(retards.length - 4) + ' autre' + (retards.length - 4 > 1 ? 's' : '') + ' enfant' + (retards.length - 4 > 1 ? 's' : '') + ' avec un retard vaccinal',
+                   c:cf || 'R\u00e9seau', q:'vaccins obligatoires', act:'Voir les familles', page:'familles', src:'famille.vaccin_retard_reste' });
+      }
+    }
+
+    // Dossiers incomplets (données indispensables au contrôle PMI)
+    const manques = [];
+    enfActifs.forEach(function(e) {
+      const d = e.d || {};
+      const p1 = d.parent1 || {}, p2 = d.parent2 || {};
+      const m = [];
+      if (!e.ddn) m.push('date de naissance');
+      if (!(p1.tel || p1.telephone || p2.tel || p2.telephone)) m.push('t\u00e9l\u00e9phone parent');
+      if (!(p1.email || p2.email)) m.push('e-mail parent');
+      if (m.length) manques.push({ e:e, m:m });
+    });
+    kpiF.dossiersIncomplets = manques.length;
+    manques.slice(0, 3).forEach(function(x) {
+      out.push({ dom:'familles', n:2, t:'Dossier incomplet : ' + x.e.nom, c:x.e.creche || cf || 'R\u00e9seau',
+                 q:x.m.join(', ') + ' manquant' + (x.m.length > 1 ? 's' : ''),
+                 act:'Compl\u00e9ter', page:'familles', src:'famille.dossier_incomplet' });
+    });
+    if (manques.length > 3) {
+      out.push({ dom:'familles', n:2, t:(manques.length - 3) + ' autre' + (manques.length - 3 > 1 ? 's' : '') + ' dossier' + (manques.length - 3 > 1 ? 's' : '') + ' incomplet' + (manques.length - 3 > 1 ? 's' : ''),
+                 c:cf || 'R\u00e9seau', q:'coordonn\u00e9es ou \u00e9tat civil', act:'Voir les familles', page:'familles', src:'famille.dossier_incomplet_reste' });
+    }
+
+    // Fins d'accueil proches
+    enfActifs.filter(function(e) { return e.sortie && e.sortie >= jTodayF && e.sortie <= jF45; })
+      .slice(0, 4).forEach(function(e) {
+        out.push({ dom:'familles', n:2, t:'Fin d\'accueil : ' + e.nom, c:e.creche || cf || 'R\u00e9seau',
+                   q:'le ' + fdF(e.sortie), act:'Pr\u00e9parer le d\u00e9part', page:'familles', src:'famille.fin_accueil' });
+      });
+
+    // Transmissions du jour non saisies (signalé seulement en fin de journée)
+    if (_nowF.getHours() >= 15) {
+      const saisis = {};
+      transJour.forEach(function(t) {
+        if (cf && t.creche && t.creche !== cf) return;
+        saisis[String(t.enfant_id)] = true;
+      });
+      const jourSem = _nowF.getDay();
+      if (jourSem >= 1 && jourSem <= 5) {
+        const manquantes = enfActifs.filter(function(e) { return !saisis[String(e.id)]; }).length;
+        if (manquantes > 0) {
+          out.push({ dom:'familles', n:2, t:manquantes + ' transmission' + (manquantes > 1 ? 's' : '') + ' non saisie' + (manquantes > 1 ? 's' : '') + ' aujourd\'hui',
+                     c:cf || 'R\u00e9seau', q:'\u00e0 finaliser avant les d\u00e9parts', act:'Ouvrir les transmissions',
+                     page:'transmissions', src:'famille.transmission_manquante' });
+        }
+      }
+    }
+
+    // Anniversaires de la semaine
+    const anniv = enfActifs.filter(function(e) {
+      if (!e.ddn) return false;
+      const md = e.ddn.substring(5);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(_nowF.getTime() + i * 86400000);
+        if (_isoF(d).substring(5) === md) return true;
+      }
+      return false;
+    });
+    if (anniv.length) {
+      out.push({ dom:'familles', n:3, t:anniv.length + ' anniversaire' + (anniv.length > 1 ? 's' : '') + ' cette semaine',
+                 c:cf || 'R\u00e9seau', q:anniv.slice(0, 3).map(function(e) { return e.nom; }).join(', '),
+                 act:'Voir les familles', page:'familles', src:'famille.anniversaire' });
+    }
+
+    ORV_FAM_KPI = kpiF;
+  } catch(e) { console.warn('[hub] source Familles', e); }
+
+  // ── Univers ludiques : renouvellement, matériel, couverture ──
+  try {
+    if (typeof UNIVERS !== 'undefined' && Array.isArray(UNIVERS)) {
+      const nowU = Date.now();
+      const fdU = function(x) { return (typeof fmtDate === 'function' && x) ? fmtDate(x) : (x || ''); };
+      const uns = UNIVERS.filter(function(u) { return !cf || u.creche === cf; });
+
+      // Univers en place depuis plus de 60 jours (dernière création / mise à jour)
+      const vieux = uns.filter(function(u) {
+        if (!u.created_at) return false;
+        const t = new Date(u.created_at).getTime();
+        if (isNaN(t)) return false;
+        return (nowU - t) / 86400000 > 60;
+      }).sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+      vieux.slice(0, 3).forEach(function(u) {
+        const j = Math.round((nowU - new Date(u.created_at).getTime()) / 86400000);
+        out.push({ dom:'univers', n:2, t:'Univers \u00e0 renouveler : ' + (u.nom || 'sans nom'),
+                   c:u.creche || cf || 'R\u00e9seau', q:'en place depuis ' + j + ' jours',
+                   act:'Ouvrir', page:'univers', src:'univers.a_renouveler' });
+      });
+      if (vieux.length > 3) {
+        out.push({ dom:'univers', n:2, t:(vieux.length - 3) + ' autre' + (vieux.length - 3 > 1 ? 's' : '') + ' univers install\u00e9' + (vieux.length - 3 > 1 ? 's' : '') + ' depuis plus de 60 jours',
+                   c:cf || 'R\u00e9seau', q:'rotation \u00e0 pr\u00e9voir', act:'Voir les univers', page:'univers', src:'univers.a_renouveler_reste' });
+      }
+
+      // Matériel d'un univers en rupture de stock
+      if (typeof ARTICLES !== 'undefined' && Array.isArray(ARTICLES)) {
+        const enRupture = {};
+        ARTICLES.forEach(function(a) { if (Number(a.stock) === 0) enRupture[a.id] = a; });
+        const touches = [];
+        uns.forEach(function(u) {
+          let ids = u.articles;
+          try { if (typeof ids === 'string') ids = JSON.parse(ids || '[]'); } catch(_) { ids = []; }
+          if (!Array.isArray(ids)) return;
+          const ko = ids.filter(function(id) { return enRupture[id]; });
+          if (ko.length) touches.push({ u:u, n:ko.length, ex:(enRupture[ko[0]].nom || '').replace(/\s*\([^)]*\)\s*/g, '').trim() });
+        });
+        touches.slice(0, 3).forEach(function(x) {
+          out.push({ dom:'univers', n:2, t:'Mat\u00e9riel manquant : ' + (x.u.nom || 'univers'),
+                     c:x.u.creche || cf || 'R\u00e9seau', q:x.n + ' article' + (x.n > 1 ? 's' : '') + ' en rupture \u00b7 ' + x.ex,
+                     act:'Commander', page:'commandes', src:'univers.materiel_manquant' });
+        });
+        if (touches.length > 3) {
+          out.push({ dom:'univers', n:2, t:(touches.length - 3) + ' autre' + (touches.length - 3 > 1 ? 's' : '') + ' univers touch\u00e9' + (touches.length - 3 > 1 ? 's' : '') + ' par une rupture',
+                     c:cf || 'R\u00e9seau', q:'', act:'Voir les univers', page:'univers', src:'univers.materiel_manquant_reste' });
+        }
+      }
+
+      // Structure sans aucun univers déclaré
+      const listeCreches = cf ? [cf]
+        : ((typeof CRECHES_DATA !== 'undefined' && Array.isArray(CRECHES_DATA) && CRECHES_DATA.length)
+            ? CRECHES_DATA.map(function(c) { return c.nom; })
+            : ((typeof CRECHES !== 'undefined' && Array.isArray(CRECHES)) ? CRECHES : []));
+      const sansUnivers = listeCreches.filter(function(nomC) {
+        return !UNIVERS.some(function(u) { return u.creche === nomC; });
+      });
+      sansUnivers.slice(0, 3).forEach(function(nomC) {
+        out.push({ dom:'univers', n:2, t:'Aucun univers d\u00e9clar\u00e9 : ' + nomC, c:nomC, q:'am\u00e9nagement \u00e0 documenter',
+                   act:'Cr\u00e9er un univers', page:'univers', src:'univers.creche_vide' });
+      });
+
+      // Univers sans photo (traçabilité du projet pédagogique)
+      const sansPhoto = uns.filter(function(u) { return !u.photo && !(u.photos && u.photos.length); }).length;
+      if (sansPhoto) {
+        out.push({ dom:'univers', n:3, t:sansPhoto + ' univers sans photo', c:cf || 'R\u00e9seau',
+                   q:'utile pour le projet p\u00e9dagogique', act:'Compl\u00e9ter', page:'univers', src:'univers.sans_photo' });
+      }
+    }
+  } catch(e) { console.warn('[hub] source univers', e); }
+
+  // ── Réglementaire : auto-contrôle PMI, événements de contrôle ──
+  try {
+    const fdR = function(x) { return (typeof fmtDate === 'function' && x) ? fmtDate(x) : (x || ''); };
+    const crechesR = cf ? [cf]
+      : ((typeof CRECHES_DATA !== 'undefined' && Array.isArray(CRECHES_DATA) && CRECHES_DATA.length)
+          ? CRECHES_DATA.map(function(c) { return c.nom; })
+          : ((typeof CRECHES !== 'undefined' && Array.isArray(CRECHES)) ? CRECHES : []));
+    const compteNon = function(o) {
+      let n = 0;
+      if (!o || typeof o !== 'object') return 0;
+      Object.keys(o).forEach(function(k) {
+        const v = o[k];
+        if (v === 'non') n++;
+        else if (v && typeof v === 'object') n += compteNon(v);
+      });
+      return n;
+    };
+    let jamais = [];
+    crechesR.forEach(function(nomC) {
+      let raw = null;
+      try { raw = localStorage.getItem('orevy_pmi_' + nomC); } catch(_) {}
+      if (!raw) { jamais.push(nomC); return; }
+      let data = null;
+      try { data = JSON.parse(raw); } catch(_) { return; }
+      const nb = compteNon(data);
+      if (nb) {
+        out.push({ dom:'reglementaire', n:2, t:nb + ' point' + (nb > 1 ? 's' : '') + ' non conforme' + (nb > 1 ? 's' : '') + ' au contr\u00f4le PMI',
+                   c:nomC, q:'auto-\u00e9valuation \u00e0 reprendre', act:'Ouvrir le contr\u00f4le PMI', page:'__pmi', src:'pmi.non_conforme' });
+      }
+    });
+    if (jamais.length) {
+      out.push({ dom:'reglementaire', n:3, t:(jamais.length === 1 ? 'Auto-contr\u00f4le PMI jamais r\u00e9alis\u00e9' : jamais.length + ' structures sans auto-contr\u00f4le PMI'),
+                 c:jamais.slice(0, 3).join(', '), q:'pr\u00e9paration d\'une visite', act:'D\u00e9marrer', page:'__pmi', src:'pmi.jamais_fait' });
+    }
+
+    // Événements de contrôle à venir (PMI, RSAI, APP)
+    const jNow = new Date().toISOString().split('T')[0];
+    const j30 = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+    let urlEv = SUPA_RH_URL + '/rest/v1/evenements_reseau?select=id,titre,type,creche_id,date_debut'
+              + '&date_debut=gte.' + jNow + '&date_debut=lte.' + j30 + '&order=date_debut.asc&limit=100';
+    if (cf) urlEv += '&creche_id=eq.' + encodeURIComponent(cf);
+    const evs = await fetch(urlEv, { headers: SUPA_RH_HEADERS })
+      .then(function(r) { return r.json(); })
+      .then(function(j) { return Array.isArray(j) ? j : []; })
+      .catch(function() { return []; });
+    const LBL_EV = { pmi:'Visite PMI', rsai:'Intervention RSAI', app:'Analyse de pratiques' };
+    evs.filter(function(e) { return LBL_EV[e.type]; }).slice(0, 4).forEach(function(e) {
+      const proche = (new Date(e.date_debut) - new Date()) / 86400000 <= 7;
+      out.push({ dom:'reglementaire', n:proche ? 1 : 2, t:LBL_EV[e.type] + ' : ' + (e.titre || 'programm\u00e9e'),
+                 c:e.creche_id || cf || 'R\u00e9seau', q:'le ' + fdR(e.date_debut),
+                 act:'Pr\u00e9parer', page:'demandesReseau', src:'reglementaire.evenement_controle' });
+    });
+  } catch(e) { console.warn('[hub] source reglementaire', e); }
+
   ORV_BESOINS = out;
   return out;
 }
@@ -11782,12 +12213,26 @@ function orvKpisOf(domId) {
       k.push({ k:'Ruptures', v:a.filter(x => Number(x.stock) === 0).length, s:'stock à 0' });
       if (typeof COMMANDES !== 'undefined' && Array.isArray(COMMANDES)) k.push({ k:'Commandes', v:COMMANDES.length, s:'enregistrées' });
     }
+    if (domId === 'familles' && ORV_FAM_KPI) {
+      k.push({ k:'Enfants accueillis', v:ORV_FAM_KPI.enfants, s:cf || 'réseau' });
+      k.push({ k:'Documents à lire', v:ORV_FAM_KPI.docsPortail, s:'déposés par les familles' });
+      k.push({ k:'Retards vaccinaux', v:ORV_FAM_KPI.vaccinsRetard, s:'vaccins obligatoires' });
+      k.push({ k:'Dossiers incomplets', v:ORV_FAM_KPI.dossiersIncomplets, s:'à compléter' });
+    }
     if (domId === 'univers' && typeof UNIVERS !== 'undefined' && Array.isArray(UNIVERS)) {
       k.push({ k:'Univers', v:UNIVERS.length, s:'enregistrés' });
     }
-    if (domId === 'rh' && typeof SALARIES !== 'undefined' && Array.isArray(SALARIES)) {
-      const s = SALARIES.filter(x => (!cf || x.creche === cf) && x.statut !== 'archive');
-      k.push({ k:'Professionnels', v:s.length, s:cf || 'réseau' });
+    if (domId === 'rh') {
+      if (typeof SALARIES !== 'undefined' && Array.isArray(SALARIES)) {
+        const s = SALARIES.filter(x => (!cf || x.creche === cf) && x.statut !== 'archive');
+        k.push({ k:'Professionnels', v:s.length, s:cf || 'réseau' });
+      }
+      if (ORV_RH_KPI) {
+        k.push({ k:'Congés à valider', v:ORV_RH_KPI.conges, s:'en attente' });
+        k.push({ k:'Recyclages', v:ORV_RH_KPI.recyclages, s:'sous 90 jours' });
+        k.push({ k:'Pointages incomplets', v:ORV_RH_KPI.anomalies, s:'7 derniers jours' });
+        if (ORV_RH_KPI.recrutOuverts) k.push({ k:'Postes ouverts', v:ORV_RH_KPI.recrutOuverts, s:'en recrutement' });
+      }
     }
     if (domId === 'reseau') {
       const n = ORV_BESOINS.filter(b => b.dom === 'reseau');
@@ -11805,7 +12250,9 @@ function orvNeedHTML(b, showDom) {
     + '<div class="txt"><div class="t">' + orvEsc(b.t) + '</div>'
     + '<div class="m">' + orvEsc(b.c) + (b.q ? ' \u00b7 ' + orvEsc(b.q) : '')
     + (showDom && d ? ' \u00b7 ' + orvEsc(d.nom) : '') + '</div></div>'
-    + '<button class="go" onclick="orvGoPage(\'' + b.page + '\')">' + orvEsc(b.act) + '</button></div>';
+    + '<button class="go" onclick="' + (b.tab
+        ? ('orvGoPageTab(\'' + b.page + '\',\'' + b.tab + '\')')
+        : ('orvGoPage(\'' + b.page + '\')')) + '">' + orvEsc(b.act) + '</button></div>';
 }
 
 /* ── Hub ── */
