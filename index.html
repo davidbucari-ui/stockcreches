@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-03 12:08 -->
+<!-- OREVY BUILD 2026-08-03 12:12 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17895,11 +17895,23 @@ async function _drEnsureMe() {
     const norm = function(v) { return v ? String(v).trim().toLowerCase() : ''; };
     const rows = (Array.isArray(raw) ? raw : []);
     // 1) email professionnel (= identifiant de connexion)
-    let hit = rows.find(function(x) { return x && x.data && norm(x.data.email) === em; });
+    let hits = rows.filter(function(x) { return x && x.data && norm(x.data.email) === em; });
     // 2) repli : email personnel renseigne sur la fiche
-    if (!hit) hit = rows.find(function(x) { return x && x.data && norm(x.data.email_perso) === em; });
-    _drMeSalId = hit ? hit.id : null;
-    if (!_drMeSalId) console.warn('[dr] aucun salarie ne porte l email ' + em + ' : les demandes qui vous sont adressees ne seront pas reconnues.');
+    if (!hits.length) hits = rows.filter(function(x) { return x && x.data && norm(x.data.email_perso) === em; });
+
+    if (hits.length === 1) {
+      _drMeSalId = hits[0].id;
+    } else if (hits.length > 1) {
+      // Ambigu : le meme email figure sur plusieurs fiches salarie.
+      // On refuse de resoudre plutot que de risquer d'ouvrir les fils
+      // prives d'une autre personne. A corriger dans les fiches.
+      _drMeSalId = null;
+      const qui = hits.map(function(x){ return (x.data.prenom||'') + ' ' + (x.data.nom||'') + ' [' + x.id + ']'; }).join(', ');
+      console.error('[dr] EMAIL AMBIGU : ' + em + ' figure sur ' + hits.length + ' fiches salarie (' + qui + '). Resolution refusee par securite \u2014 corrigez les fiches.');
+    } else {
+      _drMeSalId = null;
+      console.warn('[dr] aucun salarie ne porte l email ' + em + ' : les demandes qui vous sont adressees ne seront pas reconnues.');
+    }
   } catch(e) { console.warn('[dr] resolution salarie :', e); }
   return _drMeSalId;
 }
