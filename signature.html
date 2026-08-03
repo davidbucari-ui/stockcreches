@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1C1917">
+<title>Signature — Orevy</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Instrument+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F0EDE8; --surface:#FAFAF8; --surface2:#FFFFFF;
+  --ink:#1C1917; --ink2:#57534E; --ink3:#A8A29E;
+  --border:#E7E5E0; --accent:#2563EB; --accent-lt:#EFF6FF;
+  --green:#16A34A; --green-lt:#F0FDF4;
+  --radius:12px; --radius-sm:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;
+  min-height:100vh;min-height:100dvh}
+
+.top{background:var(--ink);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:11px;
+  position:sticky;top:0;z-index:10}
+.mark{width:26px;height:26px;border-radius:50%;border:1.6px solid #fff;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.mark i{width:8px;height:8px;background:#fff;border-radius:50%;display:block}
+.top .n{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;letter-spacing:.01em}
+.top .s{font-size:11px;opacity:.6;margin-top:1px}
+
+.wrap{max-width:600px;margin:0 auto;padding:18px 16px 40px}
+.card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;
+  margin-bottom:14px}
+h1{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;line-height:1.3}
+.sub{font-size:13px;color:var(--ink3);margin-top:5px;line-height:1.5}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:9px}
+
+/* document en lecture */
+.doc{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 18px;
+  font-size:13.5px;line-height:1.75;max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  position:relative}
+.doc h2{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+  text-align:center;border:1.5px solid var(--ink);padding:9px;margin-bottom:18px}
+.doc p{margin-bottom:11px;text-align:justify}
+.doc p.li{margin:0 0 5px 14px;text-align:left}
+.doc p.g{font-weight:600}
+.doc .v{font-weight:600;border-bottom:1px solid var(--ink);padding:0 4px}
+.doc .vide{color:var(--ink3);border-bottom:1px dotted var(--ink3);padding:0 4px}
+.scrollnote{font-size:11.5px;color:var(--ink3);text-align:center;margin-top:9px;line-height:1.5}
+.scrollnote.done{color:#15803D;font-weight:600}
+
+/* signature */
+.padbox{border:1.5px solid var(--ink);border-radius:2px;overflow:hidden;background:var(--surface2);position:relative}
+.padhead{background:var(--surface);border-bottom:1px solid var(--ink);padding:7px 11px;display:flex;
+  justify-content:space-between;align-items:center}
+.padhead .t{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.padhead button{background:none;border:0;font-family:inherit;font-size:12px;color:var(--accent);cursor:pointer;padding:4px 0}
+#pad{display:block;width:100%;height:170px;background:var(--surface2);touch-action:none;cursor:crosshair}
+.padhint{position:absolute;left:0;right:0;top:96px;text-align:center;font-size:12.5px;color:var(--ink3);pointer-events:none}
+.padfoot{border-top:1px solid var(--ink);padding:8px 11px;font-size:11px;color:var(--ink2);line-height:1.5}
+.padfoot b{color:var(--ink);font-weight:600}
+
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.55;margin-top:16px;
+  padding:13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.consent input{width:20px;height:20px;flex-shrink:0;margin-top:1px;accent-color:var(--accent)}
+
+.btn{width:100%;border:0;border-radius:var(--radius-sm);padding:15px;font-family:inherit;font-size:15px;
+  font-weight:600;cursor:pointer;background:var(--accent);color:#fff;margin-top:14px}
+.btn:disabled{background:var(--border);color:var(--ink3);cursor:default}
+.btn.sec{background:var(--surface2);color:var(--ink);border:1.5px solid var(--border);font-weight:500}
+
+.mention{font-size:11px;color:var(--ink3);line-height:1.6;margin-top:16px}
+
+.state{text-align:center;padding:44px 20px}
+.state .ic{width:58px;height:58px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;
+  justify-content:center;font-size:26px;border:2px solid var(--ink)}
+.state.ok .ic{border-color:#15803D;color:#15803D;background:var(--green-lt)}
+.state h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:9px}
+.state p{font-size:13.5px;color:var(--ink2);line-height:1.6;max-width:380px;margin:0 auto}
+.recap{margin-top:22px;text-align:left;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px;font-size:12.5px}
+.recap .r{display:flex;justify-content:space-between;gap:14px;padding:5px 0;border-bottom:1px solid var(--border)}
+.recap .r:last-child{border:0}
+.recap .k{color:var(--ink3)}
+.recap .v{font-weight:600;text-align:right;word-break:break-all}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:11px}
+.hide{display:none}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <span class="mark"><i></i></span>
+  <div><div class="n">Orevy</div><div class="s">Signature électronique</div></div>
+</div>
+
+<div class="wrap">
+
+  <!-- chargement -->
+  <div id="v-load" class="state">
+    <div class="ic">⏳</div>
+    <h2>Ouverture du document…</h2>
+    <p>Un instant.</p>
+  </div>
+
+  <!-- erreur -->
+  <div id="v-err" class="state hide">
+    <div class="ic">✕</div>
+    <h2 id="err-t">Lien invalide</h2>
+    <p id="err-m"></p>
+  </div>
+
+  <!-- signature -->
+  <div id="v-sign" class="hide">
+    <div class="card">
+      <h1 id="s-titre">Document</h1>
+      <div class="sub" id="s-sub"></div>
+    </div>
+
+    <div class="lbl">Le document que vous signez</div>
+    <div class="doc" id="s-doc" onscroll="onScroll()"></div>
+    <div class="scrollnote" id="s-scroll">Faites défiler jusqu'en bas pour lire l'intégralité du document.</div>
+
+    <div class="lbl" style="margin-top:22px">Votre signature</div>
+    <div class="padbox">
+      <div class="padhead"><span class="t" id="s-role">Signataire</span>
+        <button type="button" onclick="clr()">Effacer</button></div>
+      <canvas id="pad"></canvas>
+      <div class="padhint" id="s-hint">Signez avec votre doigt</div>
+      <div class="padfoot"><b id="s-nom">—</b><br><span id="s-qual"></span></div>
+    </div>
+
+    <label class="consent">
+      <input type="checkbox" id="cb" onchange="maj()">
+      <span id="s-consent">J'ai lu l'intégralité du document ci-dessus et j'en accepte les termes.</span>
+    </label>
+
+    <button class="btn" id="btn" disabled onclick="envoyer()">Signer le document</button>
+    <p class="mention">Signature électronique simple au sens du règlement eIDAS n° 910/2014. Votre nom, votre qualité,
+    la date, l'heure, votre adresse IP approximative et l'empreinte du document sont conservés comme éléments de preuve
+    et joints au document. Ce lien est à usage unique et expire automatiquement.</p>
+  </div>
+
+  <!-- confirmation -->
+  <div id="v-ok" class="state ok hide">
+    <div class="ic">✓</div>
+    <h2>Document signé</h2>
+    <p id="ok-m">Votre signature a bien été enregistrée. La structure en est informée. Vous retrouverez ce document
+    dans votre portail famille.</p>
+    <div class="recap" id="ok-recap"></div>
+  </div>
+
+</div>
+
+<script>
+/* ═══ Connexion directe Supabase RH (même modèle que pointage.html) ═══ */
+var SUPA_URL = 'https://gokfxejoffzttzvdkoll.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTY0NDQsImV4cCI6MjA5NTg5MjQ0NH0.2oghhJNpqeh-zLUjHE0iAJLK_eJX40_ZRuQTaQFGzhw';
+var H = { 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY, 'Content-Type':'application/json' };
+
+function $(i){ return document.getElementById(i); }
+function show(id){ ['v-load','v-err','v-sign','v-ok'].forEach(function(v){ $(v).classList.toggle('hide', v!==id); }); }
+function erreur(t,m){ $('err-t').textContent=t; $('err-m').textContent=m; show('v-err'); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+function fr(v){ if(!v) return ''; var a=String(v).slice(0,10).split('-'); return a.length===3?a[2]+'/'+a[1]+'/'+a[0]:v; }
+
+var SESSION = null, LU = false;
+
+/* ═══ Chargement de la session ═══ */
+async function init(){
+  var t = new URLSearchParams(location.search).get('t');
+  if (!t) { erreur('Lien incomplet', "Ce lien ne contient pas de jeton de signature. Demandez à la structure de vous en envoyer un nouveau."); return; }
+
+  var r, rows;
+  try {
+    r = await fetch(SUPA_URL+'/rest/v1/signature_sessions?token=eq.'+encodeURIComponent(t)+'&select=*', { headers:H });
+    rows = await r.json();
+  } catch(e) {
+    erreur('Connexion impossible', "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.");
+    return;
+  }
+  if (!Array.isArray(rows) || !rows.length) {
+    erreur('Lien inconnu', "Ce lien de signature n'existe pas ou a été annulé par la structure.");
+    return;
+  }
+  var s = rows[0];
+
+  if (s.statut === 'signe') {
+    $('ok-m').textContent = "Ce document a déjà été signé le "+fr(s.signe_le)+". Aucune action supplémentaire n'est nécessaire.";
+    $('ok-recap').innerHTML = '';
+    show('v-ok'); return;
+  }
+  if (s.statut === 'annule') {
+    erreur('Lien annulé', "La structure a annulé cette demande de signature."); return;
+  }
+  if (s.expire_le && new Date(s.expire_le) < new Date()) {
+    erreur('Lien expiré', "Ce lien de signature a expiré. Pour des raisons de sécurité, il n'est valable que quelques minutes. Demandez à la structure d'en générer un nouveau.");
+    return;
+  }
+
+  SESSION = s;
+  $('s-titre').textContent = s.titre || 'Document';
+  $('s-sub').textContent = (s.structure ? s.structure+' · ' : '')
+    + (s.concerne ? 'concerne '+s.concerne : '');
+  $('s-role').textContent = s.signataire_role || 'Signataire';
+  $('s-nom').textContent = s.signataire_nom || '—';
+  $('s-qual').textContent = s.signataire_qualite ? 'en qualité de '+s.signataire_qualite : '';
+  if (s.consentement) $('s-consent').textContent = s.consentement;
+  $('s-doc').innerHTML = s.document_html || '<p>Contenu indisponible.</p>';
+
+  show('v-sign');
+  setTimeout(initPad, 60);
+  setTimeout(onScroll, 200);
+}
+
+/* ═══ Lecture effective : preuve d'affichage ═══ */
+function onScroll(){
+  var d = $('s-doc');
+  if (LU) return;
+  if (d.scrollTop + d.clientHeight >= d.scrollHeight - 24) {
+    LU = true;
+    var n = $('s-scroll');
+    n.textContent = '✓ Document parcouru en entier';
+    n.classList.add('done');
+    maj();
+  }
+}
+
+/* ═══ Pavé ═══ */
+var cv, cx, dr=false, any=false, debut=null;
+function initPad(){
+  cv = $('pad');
+  var r = cv.getBoundingClientRect();
+  if (!r.width) { setTimeout(initPad, 80); return; }
+  cv.width = r.width*2; cv.height = 170*2;
+  cx = cv.getContext('2d'); cx.scale(2,2);
+  cx.lineWidth = 2.2; cx.lineCap='round'; cx.lineJoin='round'; cx.strokeStyle='#1C1917';
+  function pt(e){ var b=cv.getBoundingClientRect(); var t=e.touches?e.touches[0]:e;
+                  return { x:t.clientX-b.left, y:t.clientY-b.top }; }
+  function dn(e){ e.preventDefault(); dr=true; var p=pt(e); cx.beginPath(); cx.moveTo(p.x,p.y);
+    if(!any){ any=true; debut=new Date().toISOString(); $('s-hint').style.display='none'; maj(); } }
+  function mv(e){ if(!dr) return; e.preventDefault(); var p=pt(e); cx.lineTo(p.x,p.y); cx.stroke(); }
+  function up(){ dr=false; }
+  cv.addEventListener('mousedown',dn); cv.addEventListener('mousemove',mv);
+  cv.addEventListener('mouseup',up);   cv.addEventListener('mouseleave',up);
+  cv.addEventListener('touchstart',dn,{passive:false});
+  cv.addEventListener('touchmove',mv,{passive:false});
+  cv.addEventListener('touchend',up);
+}
+function clr(){ if(!cx) return; cx.clearRect(0,0,cv.width,cv.height); any=false; debut=null;
+  $('s-hint').style.display=''; maj(); }
+function maj(){ $('btn').disabled = !(any && $('cb').checked && LU); }
+
+/* ═══ Envoi ═══ */
+var ENVOI = false;
+async function envoyer(){
+  if (ENVOI || !SESSION) return;
+  ENVOI = true;
+  var b = $('btn'); b.disabled = true; b.textContent = 'Enregistrement…';
+
+  var png = cv.toDataURL('image/png');
+  var maintenant = new Date().toISOString();
+  var patch = {
+    statut: 'signe',
+    signe_le: maintenant,
+    signature_png: png,
+    consentement_le: maintenant,
+    lu_integralement: true,
+    user_agent: navigator.userAgent.slice(0, 250),
+    trace: { debut_trace: debut, ecran: screen.width+'x'+screen.height,
+             langue: navigator.language, fuseau: Intl.DateTimeFormat().resolvedOptions().timeZone }
+  };
+
+  try {
+    var r = await fetch(SUPA_URL+'/rest/v1/signature_sessions?token=eq.'+encodeURIComponent(SESSION.token),
+      { method:'PATCH', headers:H, body:JSON.stringify(patch) });
+    if (!r.ok) throw new Error(await r.text());
+  } catch(e) {
+    ENVOI = false; b.disabled = false; b.textContent = 'Signer le document';
+    erreur('Enregistrement impossible', "Votre signature n'a pas pu être enregistrée. Vérifiez votre connexion puis rouvrez le lien.");
+    return;
+  }
+
+  $('ok-recap').innerHTML =
+     '<div class="r"><span class="k">Document</span><span class="v">'+esc(SESSION.titre||'—')+'</span></div>'
+    +'<div class="r"><span class="k">Signataire</span><span class="v">'+esc(SESSION.signataire_nom||'—')+'</span></div>'
+    +(SESSION.signataire_qualite?'<div class="r"><span class="k">Qualité</span><span class="v">'+esc(SESSION.signataire_qualite)+'</span></div>':'')
+    +'<div class="r"><span class="k">Signé le</span><span class="v">'+fr(maintenant)+' à '+maintenant.slice(11,16)+'</span></div>'
+    +'<div class="r"><span class="k">Empreinte</span><span class="v mono">'+esc(SESSION.hash||'—')+'</span></div>'
+    +'<div class="r"><span class="k">Référence</span><span class="v mono">'+esc(String(SESSION.token).slice(0,13))+'…</span></div>';
+  show('v-ok');
+}
+
+init();
+</script>
+</body>
+</html>
