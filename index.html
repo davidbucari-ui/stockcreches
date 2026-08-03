@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-03 12:12 -->
+<!-- OREVY BUILD 2026-08-03 12:21 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17803,11 +17803,9 @@ function drOpenDemande() {
   ['dr-titre','dr-desc'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   const thSel = document.getElementById('dr-theme');
   if (thSel && !thSel.options.length) thSel.innerHTML = DR_THEMES.map(t=>'<option>'+t+'</option>').join('');
-  const cSel = document.getElementById('dr-dest-creche');
-  if (cSel) {
-    const pre = _drCreche || ((currentCreche && currentCreche!=='all' && currentCreche!=='__all__') ? currentCreche : '');
-    cSel.innerHTML = '<option value="">Toutes les crèches</option>' + _drGetCreches().map(c => '<option value="'+c+'"'+(c===pre?' selected':'')+'>'+c+'</option>').join('');
-  }
+  const sIn = document.getElementById('dr-dest-search');
+  if (sIn) sIn.value = '';
+  _drDestRows = null;
   const dSel = document.getElementById('dr-dest');
   if (dSel) dSel.innerHTML = '<option value="">— Non attribuée —</option><option value="" disabled>Chargement…</option>';
   const m = document.getElementById('modal-demande-new');
@@ -17815,32 +17813,82 @@ function drOpenDemande() {
   _drFillDestinataires();
 }
 
-// Alimente le select destinataire depuis la table salaries (RH), filtré par la crèche choisie.
+// Alimente le select destinataire depuis la table salaries (RH).
+// Les salaries sont charges une seule fois par ouverture de modale, puis
+// filtres localement par le champ de recherche (nom, fonction ou creche).
+let _drDestRows = null;
+
+async function _drLoadDestRows() {
+  if (_drDestRows) return _drDestRows;
+  const r = await fetch(SUPA_RH_URL + '/rest/v1/salaries?select=id,data', { headers: SUPA_RH_HEADERS });
+  const raw = await r.json();
+  _drDestRows = (Array.isArray(raw) ? raw : [])
+    .map(function(x) { return Object.assign({ id: x.id }, x.data || {}); })
+    .filter(function(s) { return s && s.id && s.statut !== 'archiv\u00e9'; });
+  return _drDestRows;
+}
+
 async function _drFillDestinataires() {
   const dSel = document.getElementById('dr-dest');
   if (!dSel) return;
-  const cre = document.getElementById('dr-dest-creche')?.value || '';
   const prev = dSel.value;
+  const q = (document.getElementById('dr-dest-search')?.value || '').trim().toLowerCase();
   try {
-    const r = await fetch(SUPA_RH_URL + '/rest/v1/salaries?select=id,data', { headers: SUPA_RH_HEADERS });
-    const raw = await r.json();
-    let rows = (Array.isArray(raw) ? raw : []).map(x => ({ id: x.id, ...(x.data || {}) }))
-                 .filter(s => s && s.id && s.statut !== 'archivé');
-    if (cre) rows = rows.filter(s => s.creche === cre);
-    rows.sort((a,b) => {
-      const ra = DR_FONCTIONS_REFERENT.includes(a.fonction)?0:1, rb = DR_FONCTIONS_REFERENT.includes(b.fonction)?0:1;
-      if (ra !== rb) return ra - rb;
-      return ((a.nom||'')+(a.prenom||'')).localeCompare((b.nom||'')+(b.prenom||''));
+    let rows = await _drLoadDestRows();
+
+    // Recherche libre sur nom, prenom, fonction et creche
+    if (q) {
+      const mots = q.split(/\s+/).filter(Boolean);
+      rows = rows.filter(function(s) {
+        const hay = ((s.prenom||'') + ' ' + (s.nom||'') + ' ' + (s.fonction||'') + ' ' + (s.creche||'')).toLowerCase();
+        return mots.every(function(m) { return hay.indexOf(m) !== -1; });
+      });
+    }
+
+    // Ma creche d'abord, puis les autres par ordre alphabetique
+    const maCreche = _drCreche || ((currentCreche && currentCreche !== 'all' && currentCreche !== '__all__') ? currentCreche : '');
+    const groupes = {};
+    rows.forEach(function(s) {
+      const c = s.creche || 'Sans cr\u00e8che';
+      (groupes[c] = groupes[c] || []).push(s);
     });
-    dSel.innerHTML = '<option value="">— Non attribuée —</option>' + rows.map(s => {
-      const nom = (((s.prenom||'')+' '+(s.nom||'')).trim()) || '(sans nom)';
-      const tag = (s.fonction ? ' — '+s.fonction : '') + (!cre && s.creche ? ' ('+s.creche+')' : '');
-      return '<option value="'+s.id+'" data-nom="'+nom.replace(/"/g,'&quot;')+'">'+nom+tag+'</option>';
-    }).join('');
-    if (prev && dSel.querySelector('option[value="'+prev+'"]')) dSel.value = prev;
+    const noms = Object.keys(groupes).sort(function(a, b) {
+      if (a === maCreche) return -1;
+      if (b === maCreche) return 1;
+      return a.localeCompare(b);
+    });
+
+    // Dans chaque groupe : direction / coordination en tete
+    const optionOf = function(s) {
+      const nom = (((s.prenom||'') + ' ' + (s.nom||'')).trim()) || '(sans nom)';
+      const tag = s.fonction ? ' \u2014 ' + s.fonction : '';
+      return '<option value="' + s.id + '" data-nom="' + nom.replace(/"/g, '&quot;') + '">' + nom + tag + '</option>';
+    };
+
+    let html = '<option value="">\u2014 Non attribu\u00e9e \u2014</option>';
+    if (!rows.length) {
+      html += '<option value="" disabled>Aucun r\u00e9sultat</option>';
+    } else {
+      noms.forEach(function(c) {
+        const list = groupes[c].sort(function(a, b) {
+          const ra = DR_FONCTIONS_REFERENT.includes(a.fonction) ? 0 : 1;
+          const rb = DR_FONCTIONS_REFERENT.includes(b.fonction) ? 0 : 1;
+          if (ra !== rb) return ra - rb;
+          return ((a.nom||'') + (a.prenom||'')).localeCompare((b.nom||'') + (b.prenom||''));
+        });
+        const label = (c === maCreche ? c + ' (ma structure)' : c);
+        html += '<optgroup label="' + label.replace(/"/g, '&quot;') + '">' + list.map(optionOf).join('') + '</optgroup>';
+      });
+    }
+    dSel.innerHTML = html;
+
+    // Conserve la selection precedente si elle est toujours proposee
+    if (prev && dSel.querySelector('option[value="' + prev + '"]')) dSel.value = prev;
+    // Si un seul resultat pertinent, on le presente d'emblee
+    else if (q && rows.length === 1) dSel.value = rows[0].id;
   } catch(e) {
-    dSel.innerHTML = '<option value="">— Non attribuée —</option>';
-    console.warn('[dr-dest] chargement salariés:', e);
+    dSel.innerHTML = '<option value="">\u2014 Non attribu\u00e9e \u2014</option>';
+    console.warn('[dr-dest] chargement salari\u00e9s :', e);
   }
 }
 
@@ -25021,7 +25069,7 @@ function sendSuiviEmail() {
       <div class="form-grid">
         <div class="form-group"><label>Thème *</label><select id="dr-theme" style="width:100%"></select></div>
         <div class="form-group"><label>Priorité</label><select id="dr-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
-        <div class="form-group"><label>Filtrer par crèche</label><select id="dr-dest-creche" onchange="_drFillDestinataires()" style="width:100%"><option value="">Toutes les crèches</option></select></div>
+        <div class="form-group"><label>Rechercher un destinataire <span style="font-weight:400;color:var(--ink3);font-size:11px">— nom, fonction ou crèche</span></label><input type="text" id="dr-dest-search" oninput="_drFillDestinataires()" placeholder="ex. Detrell, directrice, Brunet…" autocomplete="off" style="width:100%"></div>
         <div class="form-group"><label>Destinataire (optionnel)</label><select id="dr-dest" style="width:100%"><option value="">— Non attribuée —</option></select></div>
         <div class="form-group full"><label>Titre *</label><input id="dr-titre" class="form-control" placeholder="Ex : Besoin de tapis de sol" style="width:100%"/></div>
         <div class="form-group full"><label>Description</label><textarea id="dr-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
