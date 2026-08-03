@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-03 12:31 -->
+<!-- OREVY BUILD 2026-08-03 15:43 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -11540,7 +11540,7 @@ const ORV_DOMAINES = [
   { id:'reglementaire', ico:'\u2696\uFE0F', nom:'Réglementaire', sub:'Textes, protocoles, PMI, incidents',
     pages:[
       {id:'incidents', nom:'Registre des incidents'},
-      {id:'__docs',    nom:'Base réglementaire'}
+      {id:'__docs',    nom:'Orevy Documents \u2014 protocoles & textes'}
     ],
     aBrancher:['protocoles à revalider','points de contrôle PMI','nouveaux textes (veille)'] }
 ];
@@ -11551,7 +11551,15 @@ const ORV_NIV = { 1:'\u25B2 Urgent', 2:'\u25A0 À faire', 3:'\u25CF Pour info' }
 
 function orvRole() { return (typeof currentUserRole !== 'undefined' && currentUserRole) ? currentUserRole.toLowerCase() : 'admin'; }
 function orvDom(id) { return ORV_DOMAINES.find(d => d.id === id); }
-function orvPagesOf(d) { const r = orvRole(); return d.pages.filter(p => !p.roles || p.roles.indexOf(r) !== -1); }
+function orvPagesOf(d) {
+  const r = orvRole();
+  let ps = d.pages.filter(p => !p.roles || p.roles.indexOf(r) !== -1);
+  // Orevy Documents = module en option : retiré des pages si non souscrit.
+  if (typeof hasModuleReglementaire === 'function' && !hasModuleReglementaire()) {
+    ps = ps.filter(p => p.id !== '__docs');
+  }
+  return ps;
+}
 function orvDomVisibles() { return ORV_DOMAINES.filter(d => orvPagesOf(d).length > 0); }
 function orvEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(x){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]; }); }
 function orvCrecheActive() {
@@ -11597,7 +11605,14 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') orvCl
 /* ── Navigation ── */
 function orvGoPage(pageId) {
   orvCloseMenus();
-  if (pageId === '__docs') { if (typeof openHubDocs === 'function') openHubDocs(); return; }
+  if (pageId === '__docs') {
+    if (typeof hasModuleReglementaire === 'function' && !hasModuleReglementaire()) {
+      if (typeof openReglementaireUpsell === 'function') openReglementaireUpsell();
+      return;
+    }
+    if (typeof openHubDocs === 'function') openHubDocs();
+    return;
+  }
   orvPushRecente(pageId);
   showPage(pageId, null);
 }
@@ -19609,7 +19624,7 @@ function showImportResult(type, html) {
         <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span><span class="hub-s-tag">Attestations</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
-      <div class="hub-s-card doc" onclick="openHubDocs()">
+      <div class="hub-s-card doc" style="display:none" onclick="openHubDocs()">
         <div class="hub-docs-badge-count" id="hub-docs-badge-admin"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
         <div class="hub-s-name">Orevy Documents</div>
@@ -19654,7 +19669,7 @@ function showImportResult(type, html) {
         <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
-      <div class="hub-s-card doc" onclick="openHubDocs()">
+      <div class="hub-s-card doc" style="display:none" onclick="openHubDocs()">
         <div class="hub-docs-badge-count" id="hub-docs-badge-dir"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
         <div class="hub-s-name">Orevy Documents</div>
@@ -19695,7 +19710,7 @@ function showImportResult(type, html) {
         <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Attestations</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
-      <div class="hub-s-card doc" onclick="openHubDocs()" style="grid-column:1/-1">
+      <div class="hub-s-card doc" onclick="openHubDocs()" style="grid-column:1/-1;display:none">
         <div class="hub-docs-badge-count" id="hub-docs-badge-aux"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
         <div class="hub-s-name">Orevy Documents</div>
@@ -19919,7 +19934,7 @@ function showImportResult(type, html) {
 <!-- HEADER DOCS SCREEN -->
 <div class="ds-header">
   <div class="ds-header-inner">
-    <button class="ds-back" onclick="closeDocsScreen()">← Hub</button>
+    <button class="ds-back" onclick="closeDocsScreen()">← Retour</button>
     <div class="ds-logo">
       <div class="ds-logo-icon">📁</div>
       <div class="ds-logo-text">
