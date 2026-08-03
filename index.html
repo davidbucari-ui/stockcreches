@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-03 15:43 -->
+<!-- OREVY BUILD 2026-08-03 16:57 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -6474,7 +6474,9 @@ async function renderFiDocs(enfantId) {
     <div style="font-size:12px;font-weight:700;color:var(--ink3);margin:0 0 8px">📥 Déposés par les parents</div>
     ${parentDocs.length ? parentDocs.map(d => rowHtml(d, true)).join('') : `<div style="padding:20px;text-align:center;color:var(--ink3);font-size:13px;border:1.5px dashed var(--border);border-radius:12px;margin-bottom:8px">Aucun document déposé par les parents pour l'instant.</div>`}
     ${proDocs.length ? `<div style="font-size:12px;font-weight:700;color:var(--ink3);margin:20px 0 8px">📤 Documents de la crèche</div>${proDocs.map(d => rowHtml(d, false)).join('')}` : ''}
+    <div id="fi-docs-signes"></div>
   `;
+  if (typeof dmRenderFicheEnfant === 'function') dmRenderFicheEnfant(enfantId);
 }
 
 async function marquerDocVu(docId) {
@@ -11537,12 +11539,13 @@ const ORV_DOMAINES = [
   { id:'reseau', ico:'\uD83D\uDCAC', nom:'Demandes réseau', sub:'Demandes, consignes, événements, référents',
     pages:[ {id:'demandesReseau', nom:'Demandes réseau'} ],
     aBrancher:['demandes qui me sont adressées','messages non lus','consignes non lues'] },
-  { id:'reglementaire', ico:'\u2696\uFE0F', nom:'Réglementaire', sub:'Textes, protocoles, PMI, incidents',
+  { id:'reglementaire', ico:'\u2696\uFE0F', nom:'Conformité & documents', sub:'Documents de la structure, ressources réglementaires, incidents',
     pages:[
-      {id:'incidents', nom:'Registre des incidents'},
-      {id:'__docs',    nom:'Orevy Documents \u2014 protocoles & textes'}
+      {id:'incidents',     nom:'Registre des incidents'},
+      {id:'__docsstruct',  nom:'Documents de la structure'},
+      {id:'__docsref',     nom:'Ressources réglementaires'}
     ],
-    aBrancher:['protocoles à revalider','points de contrôle PMI','nouveaux textes (veille)'] }
+    aBrancher:['documents à revalider','documents en attente de signature','points de contrôle PMI','nouveaux textes (veille)'] }
 ];
 
 let ORV_CUR_DOM = null;      // domaine ouvert en vue pilotage
@@ -11554,9 +11557,10 @@ function orvDom(id) { return ORV_DOMAINES.find(d => d.id === id); }
 function orvPagesOf(d) {
   const r = orvRole();
   let ps = d.pages.filter(p => !p.roles || p.roles.indexOf(r) !== -1);
-  // Orevy Documents = module en option : retiré des pages si non souscrit.
+  // Ressources réglementaires = fonds fourni par Orevy, module en option.
+  // Les documents de la structure appartiennent au client : toujours accessibles.
   if (typeof hasModuleReglementaire === 'function' && !hasModuleReglementaire()) {
-    ps = ps.filter(p => p.id !== '__docs');
+    ps = ps.filter(p => p.id !== '__docsref');
   }
   return ps;
 }
@@ -11605,12 +11609,16 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') orvCl
 /* ── Navigation ── */
 function orvGoPage(pageId) {
   orvCloseMenus();
-  if (pageId === '__docs') {
+  if (pageId === '__docsstruct') {
+    if (typeof openHubDocs === 'function') openHubDocs('documentaire');
+    return;
+  }
+  if (pageId === '__docsref') {
     if (typeof hasModuleReglementaire === 'function' && !hasModuleReglementaire()) {
       if (typeof openReglementaireUpsell === 'function') openReglementaireUpsell();
       return;
     }
-    if (typeof openHubDocs === 'function') openHubDocs();
+    if (typeof openHubDocs === 'function') openHubDocs('reglementaire');
     return;
   }
   orvPushRecente(pageId);
@@ -13350,7 +13358,8 @@ const RH_TABLES = new Set([
   'vaccins_ref','vaccinations_enfant',
   'suivi_pedagogique',
   'demandes_reseau','consignes_reseau','evenements_reseau',
-  'incidents','portail_documents'
+  'incidents','portail_documents',
+  'documents_modeles','documents_instances','documents_categories'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -13496,7 +13505,8 @@ async function sbGet(table, params='') {
 // Sans cette distinction, sbInsert supprimait l'id pour TOUTES les tables, et
 // Postgres rejetait l'insert avec une erreur 23502 ("null value in column id")
 // pour enfants/berceaux dès que le body JSON était correctement formé.
-const CLIENT_ID_TABLES = new Set(['enfants', 'berceaux']);
+const CLIENT_ID_TABLES = new Set(['enfants', 'berceaux',
+  'documents_modeles', 'documents_instances', 'documents_categories']);
 
 async function sbInsert(table, data) {
   // data peut être un objet unique OU un tableau (insert multiple) : dans ce
@@ -19947,14 +19957,14 @@ function showImportResult(type, html) {
       <input type="text" id="ds-search-input" placeholder="Rechercher un document, une règle…" oninput="dsOnSearch(this.value)">
     </div>
     <div class="ds-header-stats">
-      <div class="ds-stat"><span class="num" id="ds-stat-docs">6</span><span class="lbl">Protocoles</span></div>
-      <div class="ds-stat"><span class="num" id="ds-stat-regl">35</span><span class="lbl">Fiches régl.</span></div>
+      <div class="ds-stat"><span class="num" id="ds-stat-docs">6</span><span class="lbl">Docs structure</span></div>
+      <div class="ds-stat"><span class="num" id="ds-stat-regl">35</span><span class="lbl">Fiches ressources</span></div>
       <div class="ds-stat"><span class="num">2026</span><span class="lbl">Mis à jour</span></div>
     </div>
   </div>
   <div class="ds-section-tabs">
-    <button class="ds-section-tab ds-tab-active" id="ds-tab-regl" onclick="dsSwitchSection('reglementaire')">⚖️ Base réglementaire</button>
-    <button class="ds-section-tab" id="ds-tab-docs" onclick="dsSwitchSection('documentaire')">📂 Base documentaire</button>
+    <button class="ds-section-tab ds-tab-active" id="ds-tab-docs" onclick="dsSwitchSection('documentaire')">📂 Documents de la structure</button>
+    <button class="ds-section-tab" id="ds-tab-regl" onclick="dsSwitchSection('reglementaire')">⚖️ Ressources réglementaires</button>
       <button class="ds-section-tab" id="ds-tab-veille" onclick="dsSwitchSection('veille')">🔔 Veille <span id="ds-veille-badge" style="display:none;background:#DC2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px"></span></button>
   </div>
 </div>
@@ -20138,6 +20148,162 @@ function showImportResult(type, html) {
         <button onclick="dsDocSaveCat()" style="padding:9px 18px;background:#7C3AED;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Créer</button>
       </div>
     </div>
+  </div>
+</div>
+
+
+<!-- ══ DOCUMENTS REMPLISSABLES : formulaire + signature ══ -->
+<div id="dm-modal" style="display:none;position:fixed;inset:0;z-index:9995;background:rgba(28,25,23,.55);
+     align-items:flex-start;justify-content:center;overflow-y:auto;padding:22px 14px;
+     font-family:'Instrument Sans',sans-serif">
+<style>
+#dm-modal *{box-sizing:border-box}
+.dm-sheet{max-width:680px;width:100%;background:#FAFAF8;border:1px solid #E7E5E0;border-radius:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;color:#1C1917}
+.dm-head{padding:20px 24px 16px;border-bottom:1px solid #E7E5E0;background:#fff;display:flex;
+  justify-content:space-between;align-items:flex-start;gap:14px}
+.dm-head h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;line-height:1.25}
+.dm-head .s{font-size:12px;color:#A8A29E;margin-top:3px}
+.dm-x{background:none;border:0;font-size:22px;color:#A8A29E;cursor:pointer;line-height:1;padding:0 2px}
+.dm-body{padding:20px 24px 4px;background:#fff}
+.dm-ctx{background:#FAFAF8;border:1px solid #E7E5E0;border-radius:12px;padding:15px;margin-bottom:18px;
+  display:grid;grid-template-columns:1fr 1fr;gap:13px 14px}
+.dm-ctx .full{grid-column:1/-1}
+#dm-modal label{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  color:#A8A29E;margin-bottom:6px}
+#dm-modal input,#dm-modal select{width:100%;border:1.5px solid #E7E5E0;background:#FAFAF8;border-radius:8px;
+  padding:10px 12px;font-family:inherit;font-size:14px;color:#1C1917;outline:none}
+#dm-modal input:focus,#dm-modal select:focus{border-color:#2563EB;box-shadow:0 0 0 3px #EFF6FF;background:#fff}
+.dm-band{background:#1C1917;color:#fff;border-radius:8px;padding:13px 16px;font-family:'Syne',sans-serif;
+  font-size:13.5px;font-weight:700;line-height:1.35}
+.dm-intro{font-size:12.5px;color:#57534E;line-height:1.6;margin:12px 2px 20px}
+.dm-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 15px}
+.dm-f.w2{grid-column:1/-1}
+.dm-sec{grid-column:1/-1;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;margin:12px 0 2px;display:flex;align-items:center;gap:10px}
+.dm-sec::after{content:'';flex:1;height:1px;background:#E7E5E0}
+.dm-auto{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;background:#F0FDF4;
+  color:#14532D;border:1px solid #BBF7D0;border-radius:20px;padding:1px 7px;margin-left:6px;text-transform:none}
+.dm-req{font-size:9.5px;font-weight:600;color:#A8A29E;margin-left:6px;text-transform:none;letter-spacing:0}
+.dm-cart{border:1px solid #1C1917;border-radius:2px;background:#fff;position:relative;overflow:hidden}
+.dm-cart-h{background:#FAFAF8;border-bottom:1px solid #1C1917;padding:7px 11px;display:flex;
+  justify-content:space-between;align-items:center;gap:8px}
+.dm-cart-h .t{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.dm-cart-h button{background:none;border:0;font-family:inherit;font-size:11px;color:#2563EB;cursor:pointer;padding:0}
+.dm-cart-b{padding:10px 11px 0;position:relative}
+.dm-pad{display:block;width:100%;height:96px;background:#fff;touch-action:none;cursor:crosshair}
+.dm-padhint{position:absolute;left:11px;right:11px;top:38px;text-align:center;font-size:11px;color:#A8A29E;
+  pointer-events:none}
+.dm-rule{border-top:1px solid #1C1917;margin:0 11px}
+.dm-cart-f{padding:6px 11px 9px;font-size:10.5px;color:#57534E;line-height:1.45;min-height:38px}
+.dm-cart-f b{color:#1C1917;font-weight:600}
+.dm-cart.signed .dm-cart-h{background:#F0FDF4}
+.dm-stamp{position:absolute;right:9px;bottom:44px;font-size:9.5px;font-weight:600;color:#14532D;
+  border:1px solid #86C79E;border-radius:3px;padding:2px 6px;transform:rotate(-6deg);
+  background:rgba(240,253,244,.92);display:none}
+.dm-cart.signed .dm-stamp{display:block}
+.dm-vide{grid-column:1/-1;padding:18px;text-align:center;font-size:12.5px;color:#A8A29E;
+  border:1.5px dashed #E7E5E0;border-radius:12px}
+.dm-mention{font-size:11px;color:#A8A29E;line-height:1.55;margin:12px 2px 0}
+.dm-stat{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px}
+.dm-stat.prep{background:#fff;color:#57534E;border:1px dashed #A8A29E}
+.dm-stat.part{background:#1C1917;color:#fff}
+.dm-stat.ok{background:#F0FDF4;color:#14532D;border:1px solid #BBF7D0}
+.dm-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #E7E5E0;padding:13px 24px;display:flex;
+  flex-wrap:wrap;gap:9px;justify-content:flex-end;align-items:center}
+.dm-btn{border:1.5px solid #E7E5E0;background:#fff;color:#1C1917;border-radius:8px;padding:9px 15px;
+  font-family:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.dm-btn:hover{background:#FAFAF8}
+.dm-btn.pri{background:#2563EB;border-color:#2563EB;color:#fff;font-weight:600}
+.dm-btn.pri:hover{background:#1D4FD8}
+.dm-btn:disabled{opacity:.5;cursor:default}
+.dm-btn.ghost{border-color:transparent;background:none;color:#A8A29E}
+/* apercu */
+#dm-preview{display:none;position:fixed;inset:0;z-index:9997;background:rgba(28,25,23,.6);
+  align-items:flex-start;justify-content:center;overflow-y:auto;padding:22px 14px}
+.dmd{background:#fff;max-width:700px;width:100%;padding:46px 50px;box-shadow:0 18px 50px rgba(0,0,0,.32);
+  font-family:'Instrument Sans',sans-serif;font-size:12.5px;line-height:1.8;color:#1C1917}
+.dmd-h{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1C1917;
+  padding-bottom:10px;margin-bottom:22px}
+.dmd-h .org{font-family:'Syne',sans-serif;font-weight:800;font-size:13px}
+.dmd-h .sub{font-size:10px;color:#57534E;margin-top:2px}
+.dmd-h .meta{font-size:10px;color:#57534E;text-align:right;line-height:1.6}
+.dmd h2{font-family:'Syne',sans-serif;text-align:center;font-size:13.5px;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;border:1.5px solid #1C1917;padding:9px;margin-bottom:22px}
+.dmd p{margin-bottom:11px;text-align:justify}
+.dmd p.li{margin:0 0 5px 14px;text-align:left}
+.dmd p.g{font-weight:600}
+.dmd p.fait{margin-top:18px}
+.dmd-v{font-weight:600;border-bottom:1px solid #1C1917;padding:0 5px}
+.dmd-vide{color:#A8A29E;border-bottom:1px dotted #A8A29E;padding:0 5px}
+.dmd-sigs{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:20px}
+.dmd-sc{border:1px solid #1C1917}
+.dmd-sc .h{border-bottom:1px solid #1C1917;background:#FAFAF8;padding:5px 9px;font-size:9.5px;font-weight:600;
+  letter-spacing:.07em;text-transform:uppercase}
+.dmd-sc .b{height:76px;display:flex;align-items:center;justify-content:center;padding:5px}
+.dmd-sc img{max-height:66px;max-width:100%}
+.dmd-sc .f{border-top:1px solid #E7E5E0;padding:5px 9px;font-size:9.5px;color:#57534E;line-height:1.5;min-height:34px}
+.dmd-foot{margin-top:24px;border-top:1px solid #E7E5E0;padding-top:10px;font-size:9.5px;color:#A8A29E;
+  display:flex;justify-content:space-between;gap:16px;line-height:1.6}
+.dmd-mono{font-family:ui-monospace,Menlo,monospace}
+@media(max-width:600px){
+  .dm-ctx,.dm-grid{grid-template-columns:1fr}
+  .dm-head,.dm-body,.dm-bar{padding-left:16px;padding-right:16px}
+  .dmd{padding:26px 20px}.dmd-sigs{grid-template-columns:1fr}
+}
+</style>
+
+  <div class="dm-sheet">
+    <div class="dm-head">
+      <div><h2 id="dm-titre">Document</h2><div class="s" id="dm-sous"></div></div>
+      <button class="dm-x" onclick="dmClose()" title="Fermer">&times;</button>
+    </div>
+
+    <div class="dm-body">
+      <div class="dm-ctx">
+        <div>
+          <label for="dm-creche">Cr&egrave;che</label>
+          <select id="dm-creche" onchange="dmFillEnfants()"></select>
+        </div>
+        <div>
+          <label for="dm-enfant">Enfant concern&eacute;</label>
+          <select id="dm-enfant" onchange="dmPickEnfant()"></select>
+        </div>
+        <div class="full">
+          <label>Statut</label>
+          <span class="dm-stat prep" id="dm-statut">&#9676; Brouillon</span>
+        </div>
+      </div>
+
+      <div class="dm-band" id="dm-band">Document</div>
+      <p class="dm-intro" id="dm-intro"></p>
+
+      <div class="dm-grid" id="dm-champs"></div>
+
+      <div class="dm-sec" style="margin-top:24px">Signatures</div>
+      <div class="dm-grid" id="dm-sigs"></div>
+      <p class="dm-mention">Signature &eacute;lectronique simple au sens du r&egrave;glement eIDAS. Le nom du signataire,
+      sa qualit&eacute;, la date, l&rsquo;heure et l&rsquo;empreinte du document sont conserv&eacute;s comme
+      &eacute;l&eacute;ments de preuve et joints au document final.</p>
+      <div style="height:18px"></div>
+    </div>
+
+    <div class="dm-bar">
+      <button class="dm-btn ghost" style="margin-right:auto" onclick="dmClose()">Fermer</button>
+      <button class="dm-btn" onclick="dmApercu()">Aper&ccedil;u</button>
+      <button class="dm-btn" onclick="dmPdf()">PDF</button>
+      <button class="dm-btn pri" id="dm-save" onclick="dmSave()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="dm-preview" onclick="if(event.target===this)dmFermerApercu()">
+  <div style="max-width:700px;width:100%">
+    <div style="display:flex;gap:9px;justify-content:flex-end;margin-bottom:12px">
+      <button class="dm-btn" onclick="dmFermerApercu()">Fermer</button>
+      <button class="dm-btn pri" onclick="dmPdf()">T&eacute;l&eacute;charger le PDF</button>
+    </div>
+    <div class="dmd" id="dm-doc"></div>
   </div>
 </div>
 
@@ -22305,7 +22471,9 @@ function dsDocRender(query) {
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${(d.tags||[]).map(t => `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:${cat.bg};color:${cat.text};font-weight:500">${t}</span>`).join('')}</div>
           <div class="ds-card-footer">
             <span style="font-size:10px;padding:3px 8px;border-radius:10px;background:${st.bg};color:${st.color};font-weight:600">${st.label}</span>
-            <button class="ds-expand-btn" onclick="${d.id === 'p13' ? 'openPmiScreen()' : `alert('Fichier à venir — ${d.name.replace(/'/g,"\'")}')`}">${d.id === 'p13' ? '🩺 Lancer le contrôle →' : 'Consulter →'}</button>
+            ${d.modele
+              ? `<button class="ds-expand-btn" onclick="dmOpen('${d.modele}')">✎ Remplir &amp; faire signer →</button>`
+              : `<button class="ds-expand-btn" onclick="${d.id === 'p13' ? 'openPmiScreen()' : `alert('Fichier à venir — ${d.name.replace(/'/g,"\'")}')`}">${d.id === 'p13' ? '🩺 Lancer le contrôle →' : 'Consulter →'}</button>`}
           </div>
           ${adminBtns}
         </div></div>`;
@@ -22440,6 +22608,7 @@ function dsDocSaveCat() {
 
 // ── Init documentaire ──────────────────────────────────────────
 function dsDocInit() {
+  if (typeof dmInit === 'function') dmInit();
   dsDocUpdateCounts();
   dsDocRenderExtraCats();
   dsDocRender();
@@ -22449,10 +22618,589 @@ function dsDocInit() {
   if (addBtn) addBtn.style.display = isAdmin ? 'flex' : 'none';
 }
 
+
+/* ════════════════════════════════════════════════════════
+   MOTEUR DE DOCUMENTS REMPLISSABLES ET SIGNABLES
+   Un modele = une definition JSON (champs + corps + signataires).
+   Une instance = les valeurs saisies + les signatures, classee dans
+   le dossier de l'enfant. Le PDF est regenere a la demande depuis
+   les valeurs : on stocke de la donnee, pas un binaire.
+   ═══════════════════════════════════════════════════════ */
+
+var DM_QUALITES = ['P\u00e8re','M\u00e8re','Titulaire de l\u2019autorit\u00e9 parentale','Tuteur / tutrice'];
+
+var DM_MODELES = [
+{
+  id:'mod_antipyretique', cat:'sante', cible:'enfant', version:1, validite_mois:12,
+  titre:"Autorisation d\u2019administrer un antipyr\u00e9tique",
+  intro:"Autorise le personnel de la structure \u00e0 administrer \u00e0 l\u2019enfant un antipyr\u00e9tique en cas de temp\u00e9rature sup\u00e9rieure \u00e0 38,5\u00a0\u00b0C, selon la prescription \u00e9tablie par le m\u00e9decin de l\u2019enfant, puis \u00e0 pr\u00e9venir les parents dans les plus brefs d\u00e9lais.",
+  champs:[
+    {sec:"Titulaires de l\u2019autorit\u00e9 parentale"},
+    {id:'p1civ', type:'liste', label:'Parent 1 \u2014 civilit\u00e9', opts:['Madame','Monsieur'], w:1},
+    {id:'p1nom', type:'texte', label:'Parent 1 \u2014 nom', auto:'parent1.nom', w:1, requis:true},
+    {id:'p1q',   type:'liste', label:'Parent 1 \u2014 en qualit\u00e9 de', opts:DM_QUALITES, auto:'parent1.lien', w:2, requis:true},
+    {id:'p2civ', type:'liste', label:'Parent 2 \u2014 civilit\u00e9', opts:['Madame','Monsieur'], w:1},
+    {id:'p2nom', type:'texte', label:'Parent 2 \u2014 nom', auto:'parent2.nom', w:1},
+    {id:'p2q',   type:'liste', label:'Parent 2 \u2014 en qualit\u00e9 de', opts:DM_QUALITES, auto:'parent2.lien', w:2},
+    {sec:"Enfant"},
+    {id:'enf',   type:'texte', label:"Nom de l\u2019enfant", auto:'enfant.nom', w:1, requis:true},
+    {id:'dt',    type:'date',  label:'Date', auto:'today', w:1, requis:true},
+    {sec:"Contre-indication \u00e9ventuelle"},
+    {id:'ci',    type:'texte', label:'M\u00e9dicament contre-indiqu\u00e9 pour cet enfant', ph:'Aucune contre-indication connue', w:2}
+  ],
+  signataires:[
+    {id:'s1', role:'Parent 1', nom:'p1nom', civ:'p1civ', q:'p1q'},
+    {id:'s2', role:'Parent 2', nom:'p2nom', civ:'p2civ', q:'p2q'}
+  ],
+  corps:[
+    {t:'p', x:"Je soussign\u00e9(e) {p1civ} {p1nom}, en ma qualit\u00e9 de {p1q},"},
+    {t:'p', x:"Je soussign\u00e9(e) {p2civ} {p2nom}, en ma qualit\u00e9 de {p2q},", si:'p2nom'},
+    {t:'p', x:"autorise (autorisons) en cas de temp\u00e9rature sup\u00e9rieure \u00e0 38,5\u00a0\u00b0C la directrice ou le personnel de la structure \u00e0 administrer \u00e0 mon (notre) enfant {enf} un antipyr\u00e9tique selon la prescription \u00e9tablie par le m\u00e9decin de mon (notre) enfant, puis \u00e0 me (nous) pr\u00e9venir dans les plus brefs d\u00e9lais."},
+    {t:'p', x:"Contre-indication \u00e0 un antipyr\u00e9tique : {ci}", si:'ci', gras:true}
+  ]
+},
+{
+  id:'mod_image', cat:'administratif', cible:'enfant', version:1, validite_mois:12,
+  titre:"Autorisation de droit \u00e0 l\u2019image",
+  intro:"Consentement des titulaires de l\u2019autorit\u00e9 parentale \u00e0 la captation et \u00e0 l\u2019utilisation de l\u2019image de l\u2019enfant. Le consentement est libre, sp\u00e9cifique et r\u00e9vocable \u00e0 tout moment.",
+  champs:[
+    {sec:"Titulaires de l\u2019autorit\u00e9 parentale"},
+    {id:'p1nom', type:'texte', label:'Parent 1 \u2014 nom', auto:'parent1.nom', w:1, requis:true},
+    {id:'p1q',   type:'liste', label:'Parent 1 \u2014 en qualit\u00e9 de', opts:DM_QUALITES, auto:'parent1.lien', w:1, requis:true},
+    {id:'p2nom', type:'texte', label:'Parent 2 \u2014 nom', auto:'parent2.nom', w:1},
+    {id:'p2q',   type:'liste', label:'Parent 2 \u2014 en qualit\u00e9 de', opts:DM_QUALITES, auto:'parent2.lien', w:1},
+    {sec:"Enfant et p\u00e9rim\u00e8tre du consentement"},
+    {id:'enf',   type:'texte', label:"Nom de l\u2019enfant", auto:'enfant.nom', w:1, requis:true},
+    {id:'dt',    type:'date',  label:'Date', auto:'today', w:1, requis:true},
+    {id:'u1',    type:'oui_non', label:'Photos affich\u00e9es dans les locaux de la structure', w:1, requis:true},
+    {id:'u2',    type:'oui_non', label:'Photos transmises aux familles (album, portail)', w:1, requis:true},
+    {id:'u3',    type:'oui_non', label:'Photos publi\u00e9es sur les supports de communication', w:1, requis:true},
+    {id:'u4',    type:'oui_non', label:'Photos publi\u00e9es sur les r\u00e9seaux sociaux', w:1, requis:true}
+  ],
+  signataires:[
+    {id:'s1', role:'Parent 1', nom:'p1nom', q:'p1q'},
+    {id:'s2', role:'Parent 2', nom:'p2nom', q:'p2q'}
+  ],
+  corps:[
+    {t:'p', x:"Je soussign\u00e9(e) {p1nom}, en ma qualit\u00e9 de {p1q}, et {p2nom}, en qualit\u00e9 de {p2q},"},
+    {t:'p', x:"autorise (autorisons) la structure \u00e0 photographier ou filmer mon (notre) enfant {enf} dans le cadre de ses activit\u00e9s, et \u00e0 utiliser ces images dans les seules conditions accept\u00e9es ci-dessous :"},
+    {t:'l', x:"Affichage dans les locaux de la structure : {u1}"},
+    {t:'l', x:"Transmission aux familles (album, portail) : {u2}"},
+    {t:'l', x:"Supports de communication de la structure : {u3}"},
+    {t:'l', x:"R\u00e9seaux sociaux : {u4}"},
+    {t:'p', x:"Ce consentement est donn\u00e9 pour la dur\u00e9e de l\u2019accueil. Il peut \u00eatre retir\u00e9 \u00e0 tout moment par simple demande \u00e9crite aupr\u00e8s de la direction, sans avoir \u00e0 le justifier et sans cons\u00e9quence sur l\u2019accueil de l\u2019enfant."}
+  ]
+},
+{
+  id:'mod_recuperation', cat:'administratif', cible:'enfant', version:1, validite_mois:12,
+  titre:"Personnes autoris\u00e9es \u00e0 venir chercher l\u2019enfant",
+  intro:"Liste nominative des personnes majeures autoris\u00e9es par les titulaires de l\u2019autorit\u00e9 parentale \u00e0 venir chercher l\u2019enfant. Une pi\u00e8ce d\u2019identit\u00e9 sera demand\u00e9e.",
+  champs:[
+    {sec:"Enfant"},
+    {id:'enf',  type:'texte', label:"Nom de l\u2019enfant", auto:'enfant.nom', w:1, requis:true},
+    {id:'dt',   type:'date',  label:'Date', auto:'today', w:1, requis:true},
+    {sec:"Personnes autoris\u00e9es"},
+    {id:'a1n',  type:'texte', label:'Personne 1 \u2014 nom et pr\u00e9nom', w:1, requis:true},
+    {id:'a1l',  type:'texte', label:'Personne 1 \u2014 lien avec l\u2019enfant', w:1},
+    {id:'a2n',  type:'texte', label:'Personne 2 \u2014 nom et pr\u00e9nom', w:1},
+    {id:'a2l',  type:'texte', label:'Personne 2 \u2014 lien avec l\u2019enfant', w:1},
+    {id:'a3n',  type:'texte', label:'Personne 3 \u2014 nom et pr\u00e9nom', w:1},
+    {id:'a3l',  type:'texte', label:'Personne 3 \u2014 lien avec l\u2019enfant', w:1},
+    {sec:"Signataire"},
+    {id:'p1nom',type:'texte', label:'Parent \u2014 nom', auto:'parent1.nom', w:1, requis:true},
+    {id:'p1q',  type:'liste', label:'Parent \u2014 en qualit\u00e9 de', opts:DM_QUALITES, auto:'parent1.lien', w:1, requis:true}
+  ],
+  signataires:[ {id:'s1', role:'Le parent', nom:'p1nom', q:'p1q'} ],
+  corps:[
+    {t:'p', x:"Je soussign\u00e9(e) {p1nom}, en ma qualit\u00e9 de {p1q}, autorise les personnes majeures d\u00e9sign\u00e9es ci-apr\u00e8s \u00e0 venir chercher mon enfant {enf} au sein de la structure :"},
+    {t:'l', x:"{a1n} \u2014 {a1l}"},
+    {t:'l', x:"{a2n} \u2014 {a2l}", si:'a2n'},
+    {t:'l', x:"{a3n} \u2014 {a3l}", si:'a3n'},
+    {t:'p', x:"Une pi\u00e8ce d\u2019identit\u00e9 sera syst\u00e9matiquement demand\u00e9e. Toute modification de cette liste doit faire l\u2019objet d\u2019une nouvelle autorisation \u00e9crite."}
+  ]
+}
+];
+
+var DM_CUR = null;        // modele ouvert
+var DM_VALS = {};         // valeurs saisies
+var DM_PADS = {};         // pavas de signature
+var DM_INST = null;       // instance en cours d'edition (id)
+var DM_ENFANT = null;     // enfant selectionne (objet)
+
+function dmModele(id) { for (var i=0;i<DM_MODELES.length;i++) if (DM_MODELES[i].id===id) return DM_MODELES[i]; return null; }
+function dmEsc(s) { return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function dmToday() { var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function dmFr(v) { if(!v) return ''; var a=String(v).split('-'); return a.length===3 ? a[2]+'/'+a[1]+'/'+a[0] : v; }
+function dmNewId(p) { return p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ── Init : les modeles apparaissent comme documents de la base ── */
+function dmInit() {
+  if (typeof DS_DOCS === 'undefined') return;
+  var chg = false;
+  DM_MODELES.forEach(function(m) {
+    var found = false;
+    for (var i=0;i<DS_DOCS.length;i++) if (DS_DOCS[i].modele===m.id) { found=true; break; }
+    if (found) return;
+    DS_DOCS.unshift({ id:'dm_'+m.id, cat:m.cat, modele:m.id, name:m.titre,
+      desc:m.intro, tags:['À remplir en ligne','Signature électronique'], statut:'en_vigueur' });
+    chg = true;
+  });
+  if (chg && typeof dsSaveDocsLocal === 'function') dsSaveDocsLocal();
+}
+
+/* ── Ouverture ── */
+function dmOpen(modeleId, instanceId) {
+  var m = dmModele(modeleId);
+  if (!m) { if (typeof showNotif==='function') showNotif('⚠ Modèle introuvable'); return; }
+  DM_CUR = m; DM_VALS = {}; DM_PADS = {}; DM_INST = instanceId || null; DM_ENFANT = null;
+
+  document.getElementById('dm-titre').textContent = m.titre;
+  document.getElementById('dm-sous').textContent = 'Modèle Orevy · version ' + m.version
+    + (m.validite_mois ? ' · valable ' + m.validite_mois + ' mois' : '');
+  document.getElementById('dm-intro').textContent = m.intro || '';
+  document.getElementById('dm-band').textContent = m.titre;
+
+  // crèches : on recopie les options de la barre laterale
+  var src = document.getElementById('creche-select-sidebar');
+  var sel = document.getElementById('dm-creche');
+  sel.innerHTML = src ? src.innerHTML : '<option value="all">— Toutes les crèches —</option>';
+  if (typeof currentCreche !== 'undefined' && currentCreche) sel.value = currentCreche;
+  dmFillEnfants();
+
+  dmRenderForm();
+  var mo = document.getElementById('dm-modal');
+  mo.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  if (instanceId) dmLoadInstance(instanceId);
+}
+function dmClose() {
+  document.getElementById('dm-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+/* ── Enfants ── */
+function dmFillEnfants() {
+  var c = document.getElementById('dm-creche').value;
+  var sel = document.getElementById('dm-enfant');
+  var list = [];
+  try { list = (typeof getFamilles==='function') ? (getFamilles(c==='all'?'__all__':c) || []) : []; } catch(e) {}
+  list = list.filter(function(e){ return e && (e.prenom || e.nom); });
+  list.sort(function(a,b){ return (a.prenom+' '+a.nom).localeCompare(b.prenom+' '+b.nom); });
+  sel.innerHTML = '<option value="">— Aucun enfant —</option>' + list.map(function(e){
+    return '<option value="'+dmEsc(e.id)+'">'+dmEsc(((e.prenom||'')+' '+(e.nom||'')).trim())+'</option>';
+  }).join('');
+  sel._list = list;
+}
+function dmPickEnfant() {
+  var sel = document.getElementById('dm-enfant');
+  var id = sel.value; DM_ENFANT = null;
+  if (id && sel._list) for (var i=0;i<sel._list.length;i++) if (sel._list[i].id===id) DM_ENFANT = sel._list[i];
+  dmPrefill();
+}
+function dmAutoVal(src) {
+  var e = DM_ENFANT;
+  if (src === 'today') return dmToday();
+  if (!e) return '';
+  var p1 = e.parent1 || {}, p2 = e.parent2 || {};
+  switch (src) {
+    case 'enfant.nom':     return ((e.prenom||'')+' '+(e.nom||'')).trim();
+    case 'enfant.prenom':  return e.prenom || '';
+    case 'parent1.nom':    return ((p1.prenom||'')+' '+(p1.nom||'')).trim();
+    case 'parent1.lien':   return p1.lien || '';
+    case 'parent2.nom':    return ((p2.prenom||'')+' '+(p2.nom||'')).trim();
+    case 'parent2.lien':   return p2.lien || '';
+  }
+  return '';
+}
+function dmPrefill() {
+  if (!DM_CUR) return;
+  var n = 0;
+  DM_CUR.champs.forEach(function(c) {
+    if (c.sec || !c.auto) return;
+    var v = dmAutoVal(c.auto);
+    if (!v) return;
+    DM_VALS[c.id] = v; n++;
+    var el = document.getElementById('dmf-'+c.id);
+    if (el) { el.value = v; el.dataset.auto = '1'; }
+    var b = document.getElementById('dma-'+c.id);
+    if (b) b.style.display = '';
+  });
+  dmSyncCartouches();
+  if (typeof showNotif === 'function' && DM_ENFANT) {
+    showNotif(n ? '✓ ' + n + ' champ(s) pré-remplis depuis la fiche' : 'Fiche sans données exploitables');
+  }
+}
+
+/* ── Rendu du formulaire ── */
+function dmRenderForm() {
+  var m = DM_CUR, h = '';
+  m.champs.forEach(function(c) {
+    if (c.sec) { h += '<div class="dm-sec">'+dmEsc(c.sec)+'</div>'; return; }
+    var badge = c.auto ? '<span class="dm-auto" id="dma-'+c.id+'" style="display:none">⚡ auto</span>' : '';
+    var req = c.requis ? '<span class="dm-req">requis</span>' : '';
+    var ctl;
+    if (c.type === 'liste') {
+      ctl = '<select id="dmf-'+c.id+'" onchange="dmSet(\''+c.id+'\',this)"><option></option>'
+          + (c.opts||[]).map(function(o){ return '<option>'+dmEsc(o)+'</option>'; }).join('') + '</select>';
+    } else if (c.type === 'oui_non') {
+      ctl = '<select id="dmf-'+c.id+'" onchange="dmSet(\''+c.id+'\',this)">'
+          + '<option></option><option>Oui, j\u2019autorise</option><option>Non, je refuse</option></select>';
+    } else if (c.type === 'date') {
+      ctl = '<input type="date" id="dmf-'+c.id+'" oninput="dmSet(\''+c.id+'\',this)">';
+    } else {
+      ctl = '<input type="text" id="dmf-'+c.id+'" placeholder="'+dmEsc(c.ph||'')+'" oninput="dmSet(\''+c.id+'\',this)">';
+    }
+    h += '<div class="dm-f'+(c.w===2?' w2':'')+'"><label>'+dmEsc(c.label)+badge+req+'</label>'+ctl+'</div>';
+  });
+  document.getElementById('dm-champs').innerHTML = h;
+  dmRenderSignataires();
+  dmStatut();
+}
+
+function dmSet(id, el) {
+  DM_VALS[id] = el.value;
+  if (el.dataset.auto === '1') {           // une valeur auto modifiee n'est plus celle d'Orevy
+    el.dataset.auto = '';
+    var b = document.getElementById('dma-'+id); if (b) b.style.display = 'none';
+  }
+  dmSyncCartouches();
+  dmRenderSignataires();
+  dmStatut();
+}
+function dmV(id) { return (DM_VALS[id]||'').trim(); }
+
+/* ── Signataires (certains conditionnels : pas de nom = pas de cartouche) ── */
+function dmSignatairesActifs() {
+  if (!DM_CUR) return [];
+  return DM_CUR.signataires.filter(function(s){ return !s.nom || dmV(s.nom); });
+}
+function dmRenderSignataires() {
+  var act = dmSignatairesActifs(), box = document.getElementById('dm-sigs');
+  if (!box) return;
+  var ids = act.map(function(s){ return s.id; }).join(',');
+  if (box.dataset.ids === ids) { dmSyncCartouches(); return; }
+  box.dataset.ids = ids;
+  if (!act.length) {
+    box.innerHTML = '<div class="dm-vide">Renseignez le nom d’au moins un signataire pour faire apparaître les cartouches de signature.</div>';
+    return;
+  }
+  box.innerHTML = act.map(function(s) {
+    return '<div class="dm-cart" id="dmc-'+s.id+'">'
+      + '<div class="dm-cart-h"><span class="t">'+dmEsc(s.role)+'</span>'
+      + '<button type="button" onclick="dmClrSig(\''+s.id+'\')">Effacer</button></div>'
+      + '<div class="dm-cart-b"><canvas class="dm-pad" id="dmp-'+s.id+'"></canvas>'
+      + '<div class="dm-padhint" id="dmh-'+s.id+'">Signez ci-dessus</div></div>'
+      + '<div class="dm-rule"></div>'
+      + '<div class="dm-cart-f"><b id="dmn-'+s.id+'">—</b><br><span id="dmq-'+s.id+'">qualité non renseignée</span>'
+      + '<span class="dm-stamp">Signé</span></div></div>';
+  }).join('');
+  act.forEach(function(s){ dmInitPad(s.id); });
+  dmSyncCartouches();
+}
+function dmSyncCartouches() {
+  dmSignatairesActifs().forEach(function(s) {
+    var n = document.getElementById('dmn-'+s.id), q = document.getElementById('dmq-'+s.id);
+    if (!n) return;
+    var nom = ((s.civ ? dmV(s.civ)+' ' : '') + dmV(s.nom||'')).trim();
+    n.textContent = nom || '—';
+    q.textContent = (s.q && dmV(s.q)) ? 'en qualité de ' + dmV(s.q) : 'qualité non renseignée';
+  });
+}
+
+/* ── Pave de signature ── */
+function dmInitPad(sid) {
+  var cv = document.getElementById('dmp-'+sid);
+  if (!cv || DM_PADS[sid]) return;
+  var r = cv.getBoundingClientRect();
+  if (!r.width) { setTimeout(function(){ dmInitPad(sid); }, 60); return; }
+  cv.width = r.width*2; cv.height = r.height*2;
+  var cx = cv.getContext('2d'); cx.scale(2,2);
+  cx.lineWidth = 2; cx.lineCap = 'round'; cx.lineJoin = 'round'; cx.strokeStyle = '#1C1917';
+  var st = { cv:cv, cx:cx, dr:false, any:false }; DM_PADS[sid] = st;
+  function pt(e) { var b = cv.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e;
+                   return { x:t.clientX-b.left, y:t.clientY-b.top }; }
+  function dn(e) { e.preventDefault(); st.dr = true; var p = pt(e); cx.beginPath(); cx.moveTo(p.x,p.y);
+    if (!st.any) { st.any = true;
+      var hh = document.getElementById('dmh-'+sid); if (hh) hh.style.display = 'none';
+      var cc = document.getElementById('dmc-'+sid); if (cc) cc.classList.add('signed');
+      st.signe_le = new Date().toISOString(); dmStatut(); } }
+  function mv(e) { if (!st.dr) return; e.preventDefault(); var p = pt(e); cx.lineTo(p.x,p.y); cx.stroke(); }
+  function up() { st.dr = false; }
+  cv.addEventListener('mousedown',dn); cv.addEventListener('mousemove',mv);
+  cv.addEventListener('mouseup',up);   cv.addEventListener('mouseleave',up);
+  cv.addEventListener('touchstart',dn,{passive:false}); cv.addEventListener('touchmove',mv,{passive:false});
+  cv.addEventListener('touchend',up);
+}
+function dmClrSig(sid) {
+  var st = DM_PADS[sid]; if (!st) return;
+  st.cx.clearRect(0,0,st.cv.width,st.cv.height); st.any = false; st.signe_le = null;
+  var hh = document.getElementById('dmh-'+sid); if (hh) hh.style.display = '';
+  var cc = document.getElementById('dmc-'+sid); if (cc) cc.classList.remove('signed');
+  dmStatut();
+}
+
+/* ── Statut : forme + texte, jamais la couleur seule ── */
+function dmStatut() {
+  var act = dmSignatairesActifs();
+  var ok = act.filter(function(s){ return DM_PADS[s.id] && DM_PADS[s.id].any; }).length;
+  var e = document.getElementById('dm-statut'); if (!e) return;
+  if (!act.length)      { e.className = 'dm-stat prep'; e.textContent = '◌ Brouillon'; }
+  else if (!ok)         { e.className = 'dm-stat prep'; e.textContent = '◌ Préparé — à faire signer'; }
+  else if (ok < act.length) { e.className = 'dm-stat part'; e.textContent = '⏳ ' + ok + ' signature' + (ok>1?'s':'') + ' sur ' + act.length; }
+  else                  { e.className = 'dm-stat ok';   e.textContent = '✓ Signé par tous les signataires attendus'; }
+  return { total: act.length, signes: ok };
+}
+function dmEtat() { var a = dmSignatairesActifs();
+  var ok = a.filter(function(s){ return DM_PADS[s.id] && DM_PADS[s.id].any; }).length;
+  return !a.length ? 'brouillon' : (ok === 0 ? 'a_signer' : (ok < a.length ? 'partiel' : 'signe')); }
+
+/* ── Corps du document : substitution {champ} ── */
+function dmSubst(x) {
+  return x.replace(/\{([a-z0-9_]+)\}/gi, function(_, k) {
+    var v = dmV(k);
+    if (!v) return '<span class="dmd-vide">…………</span>';
+    if (DM_CUR) { for (var i=0;i<DM_CUR.champs.length;i++) {
+      var c = DM_CUR.champs[i];
+      if (c.id === k && c.type === 'date') return '<span class="dmd-v">'+dmEsc(dmFr(v))+'</span>';
+    } }
+    return '<span class="dmd-v">'+dmEsc(v)+'</span>';
+  });
+}
+function dmCartouchePdf(s) {
+  var st = DM_PADS[s.id];
+  var img = (st && st.any) ? '<img src="'+st.cv.toDataURL('image/png')+'">' : '';
+  var nom = ((s.civ ? dmV(s.civ)+' ' : '') + dmV(s.nom||'')).trim() || '—';
+  var q = (s.q && dmV(s.q)) ? 'en qualité de ' + dmV(s.q) : '';
+  var when = (st && st.any) ? 'Signé le ' + dmFr(dmV('dt') || dmToday())
+             + ' à ' + new Date().toTimeString().slice(0,5) : 'Non signé';
+  return '<div class="dmd-sc"><div class="h">'+dmEsc(s.role)+'</div><div class="b">'+img+'</div>'
+       + '<div class="f"><b>'+dmEsc(nom)+'</b><br>'+dmEsc(q)+'<br>'+when+'</div></div>';
+}
+function dmApercuHtml() {
+  var m = DM_CUR, cre = document.getElementById('dm-creche');
+  var lieu = (cre && cre.value && cre.value !== 'all') ? cre.value : '—';
+  var h = '<div class="dmd-h"><div><div class="org">Micro-crèche '+dmEsc(lieu)+'</div>'
+    + '<div class="sub">Établissement d’accueil du jeune enfant</div></div>'
+    + '<div class="meta">Document Orevy · version '+m.version+'<br>Réf. '+dmEsc((DM_INST||'—')).slice(0,18)+'<br>Page 1 / 1</div></div>'
+    + '<h2>'+dmEsc(m.titre)+'</h2>';
+  m.corps.forEach(function(b) {
+    if (b.si && !dmV(b.si)) return;
+    if (b.t === 'l') h += '<p class="li">• '+dmSubst(b.x)+'</p>';
+    else h += '<p'+(b.gras?' class="g"':'')+'>'+dmSubst(b.x)+'</p>';
+  });
+  h += '<p class="fait">Fait à '+dmEsc(lieu)+', le '
+     + (dmV('dt') ? '<span class="dmd-v">'+dmFr(dmV('dt'))+'</span>' : '<span class="dmd-vide">……</span>')+'</p>';
+  var act = dmSignatairesActifs();
+  if (act.length) h += '<div class="dmd-sigs">'+act.map(dmCartouchePdf).join('')+'</div>';
+  h += '<div class="dmd-foot"><div>Document généré par Orevy le '+dmFr(dmToday())
+     + '<br>Signature électronique simple — règlement eIDAS n° 910/2014</div>'
+     + '<div style="text-align:right">Empreinte <span class="dmd-mono">'+dmHash()+'</span></div></div>';
+  return h;
+}
+function dmHash() {
+  // empreinte de contenu (non cryptographique cote client : le hash de reference
+  // est recalcule cote serveur a l'enregistrement)
+  var s = JSON.stringify(DM_VALS) + (DM_CUR ? DM_CUR.id + DM_CUR.version : '');
+  var x = 0; for (var i=0;i<s.length;i++) { x = ((x<<5)-x + s.charCodeAt(i)) | 0; }
+  return (x>>>0).toString(16).padStart(8,'0') + '…';
+}
+function dmApercu() {
+  document.getElementById('dm-doc').innerHTML = dmApercuHtml();
+  document.getElementById('dm-preview').style.display = 'flex';
+}
+function dmFermerApercu() { document.getElementById('dm-preview').style.display = 'none'; }
+
+/* ── PDF ── */
+function dmPdf() {
+  if (typeof jspdf === 'undefined' || !jspdf.jsPDF) { showNotif('⚠ jsPDF non disponible'); return; }
+  var jsPDF = jspdf.jsPDF, doc = new jsPDF({ unit:'mm', format:'a4' });
+  var m = DM_CUR, cre = document.getElementById('dm-creche');
+  var lieu = (cre && cre.value && cre.value !== 'all') ? cre.value : '';
+  var L = 20, R = 190, y = 20;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('Micro-crèche ' + lieu, L, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(90);
+  doc.text('Établissement d’accueil du jeune enfant', L, y+4.5);
+  doc.text('Document Orevy · version ' + m.version, R, y, { align:'right' });
+  doc.setTextColor(0); doc.setLineWidth(0.5); doc.line(L, y+8, R, y+8);
+  y += 18;
+
+  doc.setLineWidth(0.4); doc.rect(L, y-6, R-L, 11);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text(m.titre.toUpperCase(), (L+R)/2, y+1, { align:'center' });
+  y += 16;
+
+  var plain = function(x) { return x.replace(/\{([a-z0-9_]+)\}/gi, function(_,k) {
+    var v = dmV(k); if (!v) return '…………';
+    for (var i=0;i<m.champs.length;i++) if (m.champs[i].id===k && m.champs[i].type==='date') return dmFr(v);
+    return v; }); };
+
+  doc.setFontSize(10);
+  m.corps.forEach(function(b) {
+    if (b.si && !dmV(b.si)) return;
+    doc.setFont('helvetica', b.gras ? 'bold' : 'normal');
+    var txt = (b.t === 'l' ? '•  ' : '') + plain(b.x);
+    var lines = doc.splitTextToSize(txt, R-L);
+    if (y + lines.length*5 > 260) { doc.addPage(); y = 20; }
+    doc.text(lines, L, y); y += lines.length*5 + 3;
+  });
+
+  y += 4;
+  doc.setFont('helvetica','normal');
+  doc.text('Fait à ' + lieu + ', le ' + (dmV('dt') ? dmFr(dmV('dt')) : '……'), L, y);
+  y += 8;
+
+  var act = dmSignatairesActifs(), cw = (R-L-6)/2;
+  act.forEach(function(s, i) {
+    var col = i % 2, cx0 = L + col*(cw+6);
+    if (col === 0 && i > 0) y += 40;
+    if (y + 40 > 275) { doc.addPage(); y = 20; }
+    doc.setLineWidth(0.3); doc.rect(cx0, y, cw, 36);
+    doc.setFillColor(248,247,244); doc.rect(cx0, y, cw, 6, 'F');
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(s.role.toUpperCase(), cx0+2, y+4);
+    var st = DM_PADS[s.id];
+    if (st && st.any) { try { doc.addImage(st.cv.toDataURL('image/png'), 'PNG', cx0+3, y+8, cw-6, 14); } catch(e) {} }
+    doc.setLineWidth(0.2); doc.line(cx0+2, y+24, cx0+cw-2, y+24);
+    var nom = ((s.civ ? dmV(s.civ)+' ' : '') + dmV(s.nom||'')).trim() || '—';
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.text(nom, cx0+2, y+28);
+    doc.setFont('helvetica','normal'); doc.setTextColor(90);
+    doc.text((s.q && dmV(s.q)) ? 'en qualité de ' + dmV(s.q) : '', cx0+2, y+31.5);
+    doc.text((st && st.any) ? 'Signé le ' + dmFr(dmV('dt')||dmToday()) : 'Non signé', cx0+2, y+34.5);
+    doc.setTextColor(0);
+  });
+  y += 44;
+
+  if (y > 265) { doc.addPage(); y = 20; }
+  doc.setLineWidth(0.2); doc.setDrawColor(200); doc.line(L, y, R, y); doc.setDrawColor(0);
+  doc.setFontSize(7); doc.setTextColor(120);
+  doc.text('Document généré par Orevy le ' + dmFr(dmToday())
+    + ' · signature électronique simple — règlement eIDAS n° 910/2014', L, y+5);
+  doc.text('Empreinte ' + dmHash(), R, y+5, { align:'right' });
+
+  var nomF = m.titre.replace(/[^a-zA-Z0-9]+/g,'_').slice(0,40)
+    + (dmV('enf') ? '_' + dmV('enf').replace(/[^a-zA-Z0-9]+/g,'_') : '') + '.pdf';
+  doc.save(nomF);
+}
+
+/* ── Enregistrement ── */
+async function dmSave() {
+  if (!DM_CUR) return;
+  var manque = DM_CUR.champs.filter(function(c){ return !c.sec && c.requis && !dmV(c.id); });
+  if (manque.length) {
+    showNotif('⚠ À compléter : ' + manque.map(function(c){ return c.label; }).slice(0,3).join(', '));
+    var f = document.getElementById('dmf-'+manque[0].id); if (f) f.focus();
+    return;
+  }
+  var cre = document.getElementById('dm-creche').value;
+  var sigs = dmSignatairesActifs().map(function(s) {
+    var st = DM_PADS[s.id];
+    return { role:s.role,
+             nom:((s.civ?dmV(s.civ)+' ':'')+dmV(s.nom||'')).trim(),
+             qualite: s.q ? dmV(s.q) : '',
+             signe: !!(st && st.any),
+             signe_le: (st && st.signe_le) || null,
+             png: (st && st.any) ? st.cv.toDataURL('image/png') : null };
+  });
+  var etat = dmEtat();
+  var val = null;
+  if (DM_CUR.validite_mois) {
+    var d = new Date(dmV('dt') || dmToday());
+    d.setMonth(d.getMonth() + DM_CUR.validite_mois);
+    val = d.toISOString().slice(0,10);
+  }
+  var row = {
+    id: DM_INST || dmNewId('doc'),
+    modele_id: DM_CUR.id, modele_version: DM_CUR.version,
+    creche_id: cre || 'all',
+    enfant_id: DM_ENFANT ? DM_ENFANT.id : null,
+    titre: DM_CUR.titre,
+    valeurs: DM_VALS, signatures: sigs,
+    statut: etat, valable_jusqu_au: val, hash: dmHash(),
+    updated_at: new Date().toISOString()
+  };
+  var btn = document.getElementById('dm-save'); if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+  try {
+    if (DM_INST) await sbUpdate('documents_instances', DM_INST, row);
+    else { await sbInsert('documents_instances', row); DM_INST = row.id; }
+    var n = sigs.filter(function(s){ return !s.signe; }).length;
+    showNotif(n ? '✓ Enregistré — ' + n + ' signature(s) attendue(s)'
+                : '✓ Enregistré et classé dans le dossier de l’enfant');
+    if (typeof ficheEnfantId !== 'undefined' && ficheEnfantId && DM_ENFANT && ficheEnfantId === DM_ENFANT.id
+        && typeof renderFiDocs === 'function') renderFiDocs(ficheEnfantId);
+  } catch (e) {
+    showNotif('⚠ Enregistrement impossible : ' + (e.status || '') + ' ' + (e.message || ''));
+    console.error('[documents] save', e);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; }
+}
+
+async function dmLoadInstance(id) {
+  try {
+    var r = await sbGet('documents_instances', 'id=eq.' + encodeURIComponent(id) + '&select=*');
+    if (!r || !r.length) return;
+    var inst = r[0];
+    DM_VALS = inst.valeurs || {};
+    document.getElementById('dm-creche').value = inst.creche_id || 'all';
+    dmFillEnfants();
+    if (inst.enfant_id) { document.getElementById('dm-enfant').value = inst.enfant_id; dmPickEnfant(); }
+    DM_VALS = inst.valeurs || {};
+    Object.keys(DM_VALS).forEach(function(k) {
+      var el = document.getElementById('dmf-'+k); if (el) el.value = DM_VALS[k];
+    });
+    dmRenderSignataires(); dmStatut();
+    setTimeout(function() {
+      (inst.signatures||[]).forEach(function(s, i) {
+        var sig = DM_CUR.signataires[i]; if (!sig || !s.png) return;
+        var st = DM_PADS[sig.id]; if (!st) return;
+        var img = new Image();
+        img.onload = function() {
+          st.cx.drawImage(img, 0, 0, st.cv.width/2, st.cv.height/2);
+          st.any = true; st.signe_le = s.signe_le;
+          var hh = document.getElementById('dmh-'+sig.id); if (hh) hh.style.display = 'none';
+          var cc = document.getElementById('dmc-'+sig.id); if (cc) cc.classList.add('signed');
+          dmStatut();
+        };
+        img.src = s.png;
+      });
+    }, 120);
+  } catch (e) { console.warn('[documents] load', e); }
+}
+
+/* ── Dossier famille : les documents signes dans la fiche enfant ── */
+async function dmRenderFicheEnfant(enfantId) {
+  var box = document.getElementById('fi-docs-signes');
+  if (!box || !enfantId) return;
+  var list = [];
+  try { list = await sbGet('documents_instances',
+    'enfant_id=eq.' + encodeURIComponent(enfantId) + '&order=updated_at.desc&select=*') || []; } catch(e) { return; }
+  if (!list.length) return;
+  var auj = dmToday();
+  box.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--ink3);margin:20px 0 8px">'
+    + '✎ Documents remplis et signés</div>' + list.map(function(d) {
+    var exp = d.valable_jusqu_au && d.valable_jusqu_au < auj;
+    var st = exp ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--ink2);border:1.5px solid var(--ink3)">▲ EXPIRÉ</span>'
+      : d.statut === 'signe' ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#DCFCE7;color:#15803D">✓ SIGNÉ</span>'
+      : '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--ink2);border:1px dashed var(--ink3)">⏳ À SIGNER</span>';
+    var val = d.valable_jusqu_au
+      ? (exp ? 'Expiré le ' : 'Valable jusqu’au ') + dmFr(d.valable_jusqu_au) : '';
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--border);'
+      + 'border-radius:12px;margin-bottom:8px;background:var(--surface2)">'
+      + '<div style="font-size:22px">✍</div>'
+      + '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">' + dmEsc(d.titre) + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap">' + st
+      + '<span style="font-size:11px;color:var(--ink3)">' + dmEsc(val) + '</span></div></div>'
+      + '<button onclick="dmOpen(\'' + d.modele_id + '\',\'' + d.id + '\')" '
+      + 'style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);'
+      + 'font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Ouvrir</button></div>';
+  }).join('');
+}
+
 // ─── NAVIGATION ENTRE SECTIONS ──────────────────────────
 let dsFilter_current = 'all';
 let dsView = 'grid';
-let dsCurrentSection = 'reglementaire';
+let dsCurrentSection = 'documentaire';
 
 function dsSwitchSection(section) {
   dsCurrentSection = section;
@@ -22477,11 +23225,14 @@ function dsOnSearch(val) {
 }
 
 // ─── OPEN / CLOSE DOCS SCREEN ────────────────────────────
-function openHubDocs() {
+function openHubDocs(section) {
   document.getElementById('docs-screen').style.display = 'block';
   document.body.style.overflow = 'hidden';
   dsInit();
   dsVeilleLoad();
+  // 'documentaire' = documents produits par la structure
+  // 'reglementaire' = fonds de référence fourni par Orevy
+  if (typeof dsSwitchSection === 'function') dsSwitchSection(section || 'documentaire');
 }
 function closeDocsScreen() {
   document.getElementById('docs-screen').style.display = 'none';
