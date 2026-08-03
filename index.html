@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-03 17:12 -->
+<!-- OREVY BUILD 2026-08-03 17:30 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -13359,7 +13359,7 @@ const RH_TABLES = new Set([
   'suivi_pedagogique',
   'demandes_reseau','consignes_reseau','evenements_reseau',
   'incidents','portail_documents',
-  'documents_modeles','documents_instances','documents_categories'
+  'documents_modeles','documents_instances','documents_categories','signature_sessions'
 ]);
 
 function _sbUrl(table)     { return RH_TABLES.has(table) ? SUPA_RH_URL     : SUPA_URL; }
@@ -20318,6 +20318,55 @@ function showImportResult(type, html) {
   </div>
 </div>
 
+
+<!-- ══ SIGNATURE À DISTANCE : QR + attente ══ -->
+<div id="dm-qr" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(28,25,23,.62);
+     align-items:center;justify-content:center;padding:22px 14px;overflow-y:auto;
+     font-family:'Instrument Sans',sans-serif" onclick="if(event.target===this)dmFermerQr()">
+<style>
+.dmq{background:#fff;max-width:360px;width:100%;border-radius:12px;padding:24px;text-align:center;
+  box-shadow:0 18px 50px rgba(0,0,0,.3);color:#1C1917}
+.dmq h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:3px}
+.dmq .who{font-size:12.5px;color:#57534E}
+.dmq .role{font-size:11px;color:#A8A29E;letter-spacing:.06em;text-transform:uppercase;margin:2px 0 16px}
+.dmq-code{width:196px;height:196px;margin:0 auto 14px;background:#fff;border:1px solid #E7E5E0;
+  border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:center}
+.dmq-code img,.dmq-code canvas{display:block;max-width:100%;max-height:100%}
+.dmq-help{font-size:12px;color:#57534E;line-height:1.55;margin-bottom:14px}
+.dmq-url{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#A8A29E;word-break:break-all;
+  background:#FAFAF8;border:1px solid #E7E5E0;border-radius:6px;padding:7px 9px;margin-bottom:10px;
+  max-height:54px;overflow:hidden}
+.dmq-exp{font-size:11px;color:#A8A29E;margin-bottom:14px}
+.dmq-etat{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12.5px;font-weight:600;
+  padding:10px;border-radius:8px;background:#FAFAF8;border:1px solid #E7E5E0;color:#57534E;margin-bottom:14px}
+.dmq-etat.ok{background:#F0FDF4;border-color:#BBF7D0;color:#14532D}
+.dmq-etat.off{background:#fff;border:1.5px solid #1C1917;color:#1C1917}
+.dmq-dot{width:7px;height:7px;border-radius:50%;background:#1C1917;animation:dmqP 1.3s infinite;flex-shrink:0}
+@keyframes dmqP{0%,100%{opacity:.18}50%{opacity:1}}
+.dmq-btns{display:flex;gap:8px}
+.dmq-btns button{flex:1;border:1.5px solid #E7E5E0;background:#fff;color:#1C1917;border-radius:8px;
+  padding:9px 6px;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+.dmq-btns button:hover{background:#FAFAF8}
+.dmq-btns button.pri{background:#1C1917;border-color:#1C1917;color:#fff;font-weight:600}
+</style>
+  <div class="dmq">
+    <h3>Signature sur le téléphone</h3>
+    <div class="who" id="dmq-who">&mdash;</div>
+    <div class="role" id="dmq-role">Signataire</div>
+    <div class="dmq-code" id="dmq-code"></div>
+    <div class="dmq-help">Faites scanner ce code avec l&rsquo;appareil photo du t&eacute;l&eacute;phone du
+    signataire. Le document s&rsquo;ouvrira sur son &eacute;cran.</div>
+    <div class="dmq-url" id="dmq-url"></div>
+    <div class="dmq-exp" id="dmq-exp"></div>
+    <div class="dmq-etat" id="dmq-etat"><span class="dmq-dot"></span> En attente de la signature&hellip;</div>
+    <div class="dmq-btns">
+      <button onclick="dmCopierLien()">Copier</button>
+      <button onclick="dmAnnulerLien()">Annuler</button>
+      <button class="pri" onclick="dmFermerQr()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ DOCUMENTS REMPLISSABLES : formulaire + signature ══ -->
 <div id="dm-modal" style="display:none;position:fixed;inset:0;z-index:9995;background:rgba(28,25,23,.55);
      align-items:flex-start;justify-content:center;overflow-y:auto;padding:22px 14px;
@@ -22996,6 +23045,7 @@ function dmOpen(modeleId, instanceId) {
   if (instanceId) dmLoadInstance(instanceId);
 }
 function dmClose() {
+  if (typeof dmPollStop === 'function') dmPollStop();
   document.getElementById('dm-modal').style.display = 'none';
   document.body.style.overflow = '';
 }
@@ -23109,7 +23159,9 @@ function dmRenderSignataires() {
   box.innerHTML = act.map(function(s) {
     return '<div class="dm-cart" id="dmc-'+s.id+'">'
       + '<div class="dm-cart-h"><span class="t">'+dmEsc(s.role)+'</span>'
-      + '<button type="button" onclick="dmClrSig(\''+s.id+'\')">Effacer</button></div>'
+      + '<span style="display:flex;gap:11px">'
+      + '<button type="button" onclick="dmSignerADistance(\''+s.id+'\')" title="Faire signer sur le t\u00e9l\u00e9phone du signataire">\u25a3 QR</button>'
+      + '<button type="button" onclick="dmClrSig(\''+s.id+'\')">Effacer</button></span></div>'
       + '<div class="dm-cart-b"><canvas class="dm-pad" id="dmp-'+s.id+'"></canvas>'
       + '<div class="dm-padhint" id="dmh-'+s.id+'">Signez ci-dessus</div></div>'
       + '<div class="dm-rule"></div>'
@@ -23740,6 +23792,169 @@ async function dmeDelete() {
     showNotif('\u2713 Mod\u00e8le supprim\u00e9');
     dmeClose();
   } catch (e) { showNotif('\u26a0 Suppression impossible'); }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   SIGNATURE À DISTANCE — jeton à usage unique + QR
+   Le QR n'encode jamais l'identifiant du document ni celui de l'enfant :
+   uniquement un jeton opaque, à usage unique et à durée courte. Le HTML
+   du document est figé dans la session : le signataire voit exactement
+   ce qui lui a été présenté, et cette copie sert de preuve d'affichage.
+   ══════════════════════════════════════════════════════════════════ */
+
+var DM_SIG_MINUTES = 15;
+var DM_POLL = null;
+
+function dmSignatureUrl(token) {
+  var base = location.origin + location.pathname.replace(/[^\/]*$/, '');
+  return base + 'signature.html?t=' + encodeURIComponent(token);
+}
+function dmUuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random()*16|0; return (c === 'x' ? r : (r&0x3|0x8)).toString(16);
+  });
+}
+
+/* ── Ouverture : enregistre, crée la session, affiche le QR ── */
+async function dmSignerADistance(sid) {
+  var sig = null;
+  dmSignatairesActifs().forEach(function(s) { if (s.id === sid) sig = s; });
+  if (!sig) return;
+
+  var nom = ((sig.civ ? dmV(sig.civ)+' ' : '') + dmV(sig.nom||'')).trim();
+  if (!nom) { showNotif('\u26a0 Renseignez le nom du signataire avant de créer le lien'); return; }
+
+  // le document doit exister en base : le signataire le charge depuis son téléphone
+  if (!DM_INST) { await dmSave(); if (!DM_INST) return; }
+
+  var token = dmUuid();
+  var exp = new Date(Date.now() + DM_SIG_MINUTES*60000).toISOString();
+  var cre = document.getElementById('dm-creche');
+  var row = {
+    id: dmNewId('sig'),
+    token: token,
+    instance_id: DM_INST,
+    modele_id: DM_CUR.id,
+    modele_version: DM_CUR.version,
+    signataire_ref: sid,
+    signataire_role: sig.role,
+    signataire_nom: nom,
+    signataire_qualite: (sig.q && dmV(sig.q)) ? dmV(sig.q) : '',
+    titre: DM_CUR.titre,
+    structure: (cre && cre.value && cre.value !== 'all') ? cre.value : '',
+    concerne: dmV('enf') || (DM_ENFANT ? ((DM_ENFANT.prenom||'')+' '+(DM_ENFANT.nom||'')).trim() : ''),
+    document_html: dmApercuHtml(),
+    hash: dmHash(),
+    statut: 'ouvert',
+    expire_le: exp,
+    cree_par: (typeof currentUser !== 'undefined' && currentUser) ? (currentUser.email || '') : '',
+    created_at: new Date().toISOString()
+  };
+
+  try { await sbInsert('signature_sessions', row); }
+  catch (e) {
+    showNotif('\u26a0 Lien impossible à créer : ' + (e.status || '') + ' ' + (e.message || ''));
+    console.error('[signature] session', e); return;
+  }
+
+  var url = dmSignatureUrl(token);
+  document.getElementById('dmq-who').textContent = nom
+    + (row.signataire_qualite ? ' \u00b7 ' + row.signataire_qualite : '');
+  document.getElementById('dmq-role').textContent = sig.role;
+  document.getElementById('dmq-url').textContent = url;
+  document.getElementById('dmq-exp').textContent = 'Valable ' + DM_SIG_MINUTES + ' minutes \u00b7 usage unique';
+  var et = document.getElementById('dmq-etat');
+  et.className = 'dmq-etat';
+  et.innerHTML = '<span class="dmq-dot"></span> En attente de la signature\u2026';
+
+  var holder = document.getElementById('dmq-code');
+  holder.innerHTML = '';
+  var fallback = '<div style="font-size:11.5px;color:#A8A29E;padding:16px;line-height:1.5">QR indisponible hors ligne \u2014 utilisez le lien ci-dessous</div>';
+  if (typeof QRCode !== 'undefined') {
+    try {
+      new QRCode(holder, { text:url, width:180, height:180,
+        colorDark:'#1C1917', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M });
+    } catch (e) { holder.innerHTML = fallback; }
+  } else { holder.innerHTML = fallback; }
+
+  document.getElementById('dm-qr').style.display = 'flex';
+  dmPollStart(token, sid);
+}
+
+function dmFermerQr() {
+  document.getElementById('dm-qr').style.display = 'none';
+  dmPollStop();
+}
+function dmPollStop() { if (DM_POLL) { clearInterval(DM_POLL); DM_POLL = null; } }
+
+/* ── Attente de la signature ── */
+function dmPollStart(token, sid) {
+  dmPollStop();
+  var fin = Date.now() + (DM_SIG_MINUTES+1)*60000;
+  DM_POLL = setInterval(async function() {
+    if (Date.now() > fin) {
+      dmPollStop();
+      var e = document.getElementById('dmq-etat');
+      if (e) { e.className = 'dmq-etat off'; e.textContent = '\u25b2 Lien expiré \u2014 générez-en un nouveau'; }
+      return;
+    }
+    var rows = [];
+    try { rows = await sbGet('signature_sessions',
+      'token=eq.' + encodeURIComponent(token) + '&select=statut,signature_png,signe_le') || []; }
+    catch (e) { return; }
+    if (!rows.length || rows[0].statut !== 'signe') return;
+    dmPollStop();
+    dmAppliquerSignature(sid, rows[0].signature_png, rows[0].signe_le);
+  }, 3000);
+}
+
+/* ── La signature vient se poser dans le cartouche ── */
+function dmAppliquerSignature(sid, png, signe_le) {
+  var st = DM_PADS[sid];
+  var fini = function() {
+    var e = document.getElementById('dmq-etat');
+    if (e) { e.className = 'dmq-etat ok'; e.textContent = '\u2713 Signé \u2014 vous pouvez fermer cette fenêtre'; }
+    var hh = document.getElementById('dmh-'+sid); if (hh) hh.style.display = 'none';
+    var cc = document.getElementById('dmc-'+sid); if (cc) cc.classList.add('signed');
+    dmStatut();
+    showNotif('\u2713 Signature reçue');
+    dmSave();
+  };
+  if (!st || !png) { fini(); return; }
+  var img = new Image();
+  img.onload = function() {
+    st.cx.clearRect(0, 0, st.cv.width, st.cv.height);
+    var w = st.cv.width/2, hg = st.cv.height/2;
+    var r = Math.min(w/img.width, hg/img.height);
+    st.cx.drawImage(img, (w-img.width*r)/2, (hg-img.height*r)/2, img.width*r, img.height*r);
+    st.any = true; st.signe_le = signe_le || new Date().toISOString();
+    fini();
+  };
+  img.onerror = fini;
+  img.src = png;
+}
+
+function dmCopierLien() {
+  var t = document.getElementById('dmq-url').textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ showNotif('\u2713 Lien copié'); });
+  else showNotif('Copie manuelle : ' + t);
+}
+async function dmAnnulerLien() {
+  var url = document.getElementById('dmq-url').textContent;
+  var m = url.match(/[?&]t=([^&]+)/);
+  if (m) {
+    try {
+      await fetch(SUPA_RH_URL + '/rest/v1/signature_sessions?token=eq.' + m[1], {
+        method: 'PATCH',
+        headers: Object.assign({}, SUPA_RH_HEADERS, { 'Content-Type':'application/json' }),
+        body: JSON.stringify({ statut:'annule' })
+      });
+    } catch (e) { console.warn('[signature] annulation', e); }
+  }
+  showNotif('Lien annulé');
+  dmFermerQr();
 }
 
 /* ── Dossier famille : les documents signes dans la fiche enfant ── */
