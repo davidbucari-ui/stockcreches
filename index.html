@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-03 12:21 -->
+<!-- OREVY BUILD 2026-08-03 12:29 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17803,11 +17803,9 @@ function drOpenDemande() {
   ['dr-titre','dr-desc'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   const thSel = document.getElementById('dr-theme');
   if (thSel && !thSel.options.length) thSel.innerHTML = DR_THEMES.map(t=>'<option>'+t+'</option>').join('');
-  const sIn = document.getElementById('dr-dest-search');
-  if (sIn) sIn.value = '';
   _drDestRows = null;
-  const dSel = document.getElementById('dr-dest');
-  if (dSel) dSel.innerHTML = '<option value="">— Non attribuée —</option><option value="" disabled>Chargement…</option>';
+  drClearDest();
+
   const m = document.getElementById('modal-demande-new');
   if (m) { m.classList.add('open'); document.body.style.overflow='hidden'; }
   _drFillDestinataires();
@@ -17829,23 +17827,39 @@ async function _drLoadDestRows() {
 }
 
 async function _drFillDestinataires() {
-  const dSel = document.getElementById('dr-dest');
-  if (!dSel) return;
-  const prev = dSel.value;
-  const q = (document.getElementById('dr-dest-search')?.value || '').trim().toLowerCase();
-  try {
-    let rows = await _drLoadDestRows();
+  const box   = document.getElementById('dr-dest-results');
+  const hint  = document.getElementById('dr-dest-hint');
+  const inp   = document.getElementById('dr-dest-search');
+  if (!box || !inp) return;
 
-    // Recherche libre sur nom, prenom, fonction et creche
-    if (q) {
-      const mots = q.split(/\s+/).filter(Boolean);
-      rows = rows.filter(function(s) {
-        const hay = ((s.prenom||'') + ' ' + (s.nom||'') + ' ' + (s.fonction||'') + ' ' + (s.creche||'')).toLowerCase();
-        return mots.every(function(m) { return hay.indexOf(m) !== -1; });
-      });
+  const q = (inp.value || '').trim().toLowerCase();
+
+  // Toute frappe annule la selection en cours : ce qui est affiche fait foi.
+  drClearDestValue();
+
+  if (!q) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    if (hint) hint.textContent = '';
+    return;
+  }
+
+  try {
+    const all = await _drLoadDestRows();
+    const mots = q.split(/\s+/).filter(Boolean);
+    const rows = all.filter(function(s) {
+      const hay = ((s.prenom||'') + ' ' + (s.nom||'') + ' ' + (s.fonction||'') + ' ' + (s.creche||'')).toLowerCase();
+      return mots.every(function(m) { return hay.indexOf(m) !== -1; });
+    });
+
+    if (!rows.length) {
+      box.style.display = 'none';
+      box.innerHTML = '';
+      if (hint) hint.textContent = '\u2205 Aucune personne ne correspond';
+      return;
     }
 
-    // Ma creche d'abord, puis les autres par ordre alphabetique
+    // Ma structure d'abord, puis les autres par ordre alphabetique
     const maCreche = _drCreche || ((currentCreche && currentCreche !== 'all' && currentCreche !== '__all__') ? currentCreche : '');
     const groupes = {};
     rows.forEach(function(s) {
@@ -17858,38 +17872,78 @@ async function _drFillDestinataires() {
       return a.localeCompare(b);
     });
 
-    // Dans chaque groupe : direction / coordination en tete
-    const optionOf = function(s) {
-      const nom = (((s.prenom||'') + ' ' + (s.nom||'')).trim()) || '(sans nom)';
-      const tag = s.fonction ? ' \u2014 ' + s.fonction : '';
-      return '<option value="' + s.id + '" data-nom="' + nom.replace(/"/g, '&quot;') + '">' + nom + tag + '</option>';
-    };
-
-    let html = '<option value="">\u2014 Non attribu\u00e9e \u2014</option>';
-    if (!rows.length) {
-      html += '<option value="" disabled>Aucun r\u00e9sultat</option>';
-    } else {
-      noms.forEach(function(c) {
-        const list = groupes[c].sort(function(a, b) {
-          const ra = DR_FONCTIONS_REFERENT.includes(a.fonction) ? 0 : 1;
-          const rb = DR_FONCTIONS_REFERENT.includes(b.fonction) ? 0 : 1;
-          if (ra !== rb) return ra - rb;
-          return ((a.nom||'') + (a.prenom||'')).localeCompare((b.nom||'') + (b.prenom||''));
-        });
-        const label = (c === maCreche ? c + ' (ma structure)' : c);
-        html += '<optgroup label="' + label.replace(/"/g, '&quot;') + '">' + list.map(optionOf).join('') + '</optgroup>';
+    let html = '';
+    noms.forEach(function(c) {
+      const list = groupes[c].sort(function(a, b) {
+        const ra = DR_FONCTIONS_REFERENT.includes(a.fonction) ? 0 : 1;
+        const rb = DR_FONCTIONS_REFERENT.includes(b.fonction) ? 0 : 1;
+        if (ra !== rb) return ra - rb;
+        return ((a.nom||'') + (a.prenom||'')).localeCompare((b.nom||'') + (b.prenom||''));
       });
-    }
-    dSel.innerHTML = html;
+      const label = (c === maCreche ? c + ' \u2014 ma structure' : c);
+      html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink3);padding:6px 10px 3px;background:var(--bg2)">' + _drEscHtml(label) + '</div>';
+      html += list.map(function(s) {
+        const nom = (((s.prenom||'') + ' ' + (s.nom||'')).trim()) || '(sans nom)';
+        const dir = DR_FONCTIONS_REFERENT.includes(s.fonction);
+        return '<div onclick="drPickDest(\'' + s.id + '\')" style="padding:7px 10px;cursor:pointer;border-top:1px solid var(--border);display:flex;align-items:baseline;gap:6px" onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'transparent\'">' +
+               '<span style="font-size:13px;font-weight:' + (dir ? '700' : '500') + '">' + _drEscHtml(nom) + '</span>' +
+               (s.fonction ? '<span style="font-size:11px;color:var(--ink3)">' + _drEscHtml(s.fonction) + '</span>' : '') +
+               '</div>';
+      }).join('');
+    });
 
-    // Conserve la selection precedente si elle est toujours proposee
-    if (prev && dSel.querySelector('option[value="' + prev + '"]')) dSel.value = prev;
-    // Si un seul resultat pertinent, on le presente d'emblee
-    else if (q && rows.length === 1) dSel.value = rows[0].id;
+    box.innerHTML = html;
+    box.style.display = 'block';
+    if (hint) hint.textContent = rows.length === 1
+      ? '\u25B8 1 personne \u2014 cliquez pour choisir'
+      : '\u25B8 ' + rows.length + ' personnes \u2014 cliquez pour choisir';
   } catch(e) {
-    dSel.innerHTML = '<option value="">\u2014 Non attribu\u00e9e \u2014</option>';
+    box.style.display = 'none';
+    if (hint) hint.textContent = '\u26A0 Chargement impossible';
     console.warn('[dr-dest] chargement salari\u00e9s :', e);
   }
+}
+
+// Selection d'un destinataire dans la liste de propositions
+function drPickDest(id) {
+  const s = (_drDestRows || []).find(function(x) { return x.id === id; });
+  if (!s) return;
+  const nom = (((s.prenom||'') + ' ' + (s.nom||'')).trim()) || '(sans nom)';
+  document.getElementById('dr-dest-id').value  = s.id;
+  document.getElementById('dr-dest-nom').value = nom;
+
+  const lbl = document.getElementById('dr-dest-chosen-lbl');
+  if (lbl) lbl.textContent = '\u2713 ' + nom + (s.fonction ? ' \u2014 ' + s.fonction : '') + (s.creche ? ' (' + s.creche + ')' : '');
+  const chosen = document.getElementById('dr-dest-chosen');
+  if (chosen) chosen.style.display = 'flex';
+
+  const box = document.getElementById('dr-dest-results');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+  const inp = document.getElementById('dr-dest-search');
+  if (inp) inp.style.display = 'none';
+  const hint = document.getElementById('dr-dest-hint');
+  if (hint) hint.textContent = '';
+}
+
+// Efface uniquement la valeur retenue (sans toucher au champ de saisie)
+function drClearDestValue() {
+  const idEl = document.getElementById('dr-dest-id');
+  const nmEl = document.getElementById('dr-dest-nom');
+  if (idEl) idEl.value = '';
+  if (nmEl) nmEl.value = '';
+  const chosen = document.getElementById('dr-dest-chosen');
+  if (chosen) chosen.style.display = 'none';
+}
+
+// Bouton "Changer" : on repart d'une recherche vierge
+function drClearDest() {
+  drClearDestValue();
+  const inp = document.getElementById('dr-dest-search');
+  if (inp) { inp.style.display = ''; inp.value = ''; inp.focus(); }
+  const box = document.getElementById('dr-dest-results');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+  const hint = document.getElementById('dr-dest-hint');
+  if (hint) hint.textContent = '';
 }
 
 async function drSaveDemande() {
@@ -17907,9 +17961,8 @@ async function drSaveDemande() {
       description: document.getElementById('dr-desc')?.value.trim() || null,
       statut:      'ouvert'
     };
-    const _destSel = document.getElementById('dr-dest');
-    const _destId  = _destSel?.value || null;
-    const _destNom = _destId ? (_destSel.options[_destSel.selectedIndex]?.getAttribute('data-nom') || null) : null;
+    const _destId  = (document.getElementById('dr-dest-id')?.value || '').trim() || null;
+    const _destNom = _destId ? ((document.getElementById('dr-dest-nom')?.value || '').trim() || null) : null;
     try {
       await sbInsert('demandes_reseau', _destId ? { ..._base, destinataire_id:_destId, destinataire_nom:_destNom } : _base);
     } catch(eDest) {
@@ -25069,8 +25122,18 @@ function sendSuiviEmail() {
       <div class="form-grid">
         <div class="form-group"><label>Thème *</label><select id="dr-theme" style="width:100%"></select></div>
         <div class="form-group"><label>Priorité</label><select id="dr-prio" style="width:100%"><option value="normal">Normale</option><option value="urgent">Urgente</option><option value="info">Information</option></select></div>
-        <div class="form-group"><label>Rechercher un destinataire <span style="font-weight:400;color:var(--ink3);font-size:11px">— nom, fonction ou crèche</span></label><input type="text" id="dr-dest-search" oninput="_drFillDestinataires()" placeholder="ex. Detrell, directrice, Brunet…" autocomplete="off" style="width:100%"></div>
-        <div class="form-group"><label>Destinataire (optionnel)</label><select id="dr-dest" style="width:100%"><option value="">— Non attribuée —</option></select></div>
+        <div class="form-group full">
+          <label>Destinataire <span style="font-weight:400;color:var(--ink3);font-size:11px">— optionnel : laisser vide pour une demande au réseau</span></label>
+          <input type="text" id="dr-dest-search" oninput="_drFillDestinataires()" placeholder="Taper un nom, une fonction ou une crèche…" autocomplete="off" style="width:100%">
+          <div id="dr-dest-chosen" style="display:none;align-items:center;gap:8px;margin-top:6px;padding:6px 10px;border:1px solid var(--ink);border-radius:6px;background:var(--bg2)">
+            <span style="font-size:12px;font-weight:600;flex:1" id="dr-dest-chosen-lbl"></span>
+            <button type="button" class="btn btn-secondary" style="font-size:11px;padding:2px 8px" onclick="drClearDest()">Changer</button>
+          </div>
+          <div id="dr-dest-results" style="display:none;margin-top:4px;max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:6px"></div>
+          <div id="dr-dest-hint" style="font-size:11px;color:var(--ink3);margin-top:3px;min-height:14px"></div>
+          <input type="hidden" id="dr-dest-id" value="">
+          <input type="hidden" id="dr-dest-nom" value="">
+        </div>
         <div class="form-group full"><label>Titre *</label><input id="dr-titre" class="form-control" placeholder="Ex : Besoin de tapis de sol" style="width:100%"/></div>
         <div class="form-group full"><label>Description</label><textarea id="dr-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
       </div>
