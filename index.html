@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 18:24 -->
+<!-- OREVY BUILD 2026-08-04 18:34 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -16162,7 +16162,7 @@ function peCouvertureJour(week, jour, creche, mini) {
     if (n < min) min = n;
     if (n < seuil) {
       const last = trous[trous.length - 1];
-      if (last && last.fin === a && last.n === n) last.fin = b;
+      if (last && last.fin === a) { last.fin = b; last.n = Math.min(last.n, n); }
       else trous.push({ debut: a, fin: b, n });
     }
   }
@@ -16187,9 +16187,14 @@ function peBadgeCouverture(cv) {
       + peHmStr(cv.ouv[0]) + '\u2013' + peHmStr(cv.ouv[1]));
   }
   const plages = cv.trous.map(t => peHmStr(t.debut) + '\u2013' + peHmStr(t.fin));
-  const court  = plages.slice(0, 2).join(' ') + (plages.length > 2 ? ' +' + (plages.length - 2) : '');
-  return box('\u25b3', court, true,
-    'Moins de ' + cv.seuil + ' professionnels sur : ' + plages.join(', '));
+  const titre  = 'Moins de ' + cv.seuil + ' professionnels sur : ' + plages.join(', ');
+  // Un seul trou couvrant l'amplitude entiere : l'enoncer, plutot que de
+  // faire relire deux horaires pour aboutir a la meme conclusion.
+  if (cv.trous.length === 1 && cv.trous[0].debut <= cv.ouv[0] && cv.trous[0].fin >= cv.ouv[1]) {
+    return box('\u25b3', 'jamais ' + cv.seuil + ' pros', true, titre);
+  }
+  const court = plages.slice(0, 2).join(' \u00b7 ') + (plages.length > 2 ? ' \u00b7 +' + (plages.length - 2) : '');
+  return box('\u25b3', court, true, titre);
 }
 
 // ── Initialisation pages ───────────────────────────────────────────
@@ -17852,6 +17857,9 @@ function plgParamDelHoraire(i) {
   if (!confirm('Supprimer l\'horaire "' + nom + '" ?\n\n' + portee
     + '\n\nLes cr\u00e9neaux d\u00e9j\u00e0 saisis sur cet horaire seront supprim\u00e9s, et les horaires suivants remont\u00e9s d\'un rang.')) return;
   st[cible].splice(i, 1);
+  st[cible].forEach((hr, k) => {
+    if (/^Horaire \d+$/.test(String(hr.name || '').trim())) hr.name = 'Horaire ' + (k + 1);
+  });
   plgSaveStore(st);
   const n = plgReindexCreneaux(cible, i);
   renderPlanningParamHoraires();
