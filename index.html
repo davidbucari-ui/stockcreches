@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 06:16 -->
+<!-- OREVY BUILD 2026-08-04 06:23 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -23030,10 +23030,20 @@ function dmDetachModals() {
   });
 }
 
-function dmOpen(modeleId, instanceId) {
+async function dmOpen(modeleId, instanceId) {
   dmDetachModals();
   var m = dmModele(modeleId);
-  if (!m) { if (typeof showNotif==='function') showNotif('⚠ Modèle introuvable'); return; }
+  if (!m && !DM_LOADED) {
+    try { await dmLoadModeles(); } catch (e) {}
+    m = dmModele(modeleId);
+  }
+  if (!m) {
+    if (typeof showNotif === 'function')
+      showNotif('\u26a0 Mod\u00e8le introuvable (' + (modeleId || 'id vide') + ')');
+    console.warn('[documents] modele introuvable', modeleId,
+      'catalogue:', DM_MODELES.map(function(x){ return x.id; }));
+    return;
+  }
   DM_CUR = m; DM_VALS = {}; DM_PADS = {}; DM_INST = instanceId || null; DM_ENFANT = null;
 
   document.getElementById('dm-titre').textContent = m.titre;
@@ -23296,9 +23306,44 @@ function dmApercu() {
 function dmFermerApercu() { document.getElementById('dm-preview').style.display = 'none'; }
 
 /* ── PDF ── */
-function dmPdf() {
-  if (typeof jspdf === 'undefined' || !jspdf.jsPDF) { showNotif('⚠ jsPDF non disponible'); return; }
-  var jsPDF = jspdf.jsPDF, doc = new jsPDF({ unit:'mm', format:'a4' });
+/* Chargeur jsPDF a la demande : le tag <script> peut echouer
+   (CDN bloque, reseau de la creche, ordre de chargement). */
+var _orvPdfP = null;
+function orvJsPDF() {
+  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+  if (_orvPdfP) return _orvPdfP;
+  var urls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
+    'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'
+  ];
+  _orvPdfP = new Promise(function(res, rej) {
+    var i = 0;
+    (function next() {
+      if (i >= urls.length) {
+        _orvPdfP = null;
+        rej(new Error('aucun CDN jsPDF joignable')); return;
+      }
+      var s = document.createElement('script');
+      s.src = urls[i++];
+      s.onload = function() {
+        if (window.jspdf && window.jspdf.jsPDF) res(window.jspdf.jsPDF); else next();
+      };
+      s.onerror = next;
+      document.head.appendChild(s);
+    })();
+  });
+  return _orvPdfP;
+}
+
+async function dmPdf() {
+  var jsPDF;
+  try { jsPDF = await orvJsPDF(); }
+  catch (e) {
+    showNotif('\u26a0 PDF indisponible \u2014 ' + (e.message || 'librairie non chargee'));
+    console.error('[pdf]', e); return;
+  }
+  var doc = new jsPDF({ unit:'mm', format:'a4' });
   var m = DM_CUR, cre = document.getElementById('dm-creche');
   var lieu = (cre && cre.value && cre.value !== 'all') ? cre.value : '';
   var L = 20, R = 190, y = 20;
@@ -23973,6 +24018,9 @@ async function dmAnnulerLien() {
 async function dmRenderFicheEnfant(enfantId) {
   var box = document.getElementById('fi-docs-signes');
   if (!box || !enfantId) return;
+  if (!DM_LOADED && typeof dmLoadModeles === 'function') {
+    try { await dmLoadModeles(); } catch (e) {}
+  }
   var list = [];
   try { list = await sbGet('documents_instances',
     'enfant_id=eq.' + encodeURIComponent(enfantId) + '&order=updated_at.desc&select=*') || []; } catch(e) { return; }
@@ -26580,9 +26628,14 @@ function renderSuiviCarnetPreview() {
       '</div></div>';
 }
 
-function exportSuiviPDF() {
-  if (typeof jspdf === 'undefined' || !jspdf.jsPDF) { showNotif('⚠ jsPDF non disponible'); return; }
-  const { jsPDF } = jspdf;
+async function exportSuiviPDF() {
+  var jsPDF;
+  try { jsPDF = await orvJsPDF(); }
+  catch (e) {
+    showNotif('\u26a0 PDF indisponible \u2014 ' + (e.message || 'librairie non chargee'));
+    console.error('[pdf]', e); return;
+  }
+
   const enfant  = SUIVI_ENFANT || {};
   const periode = suiviGetPeriode();
   const [year, month] = periode.split('-');
