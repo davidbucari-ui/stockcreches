@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 08:26 -->
+<!-- OREVY BUILD 2026-08-04 08:35 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -8928,8 +8928,39 @@ async function resoudreMaCreche(force) {
         + ' : le cloisonnement ne peut pas s\'appliquer, le réseau reste visible.');
     }
     if (typeof renderSidebarCreches === 'function') renderSidebarCreches();
+    if (!accesReseauAutorise() && MA_CRECHE && currentCreche !== MA_CRECHE) {
+      // Le compte était déjà positionné ailleurs (ex. 'all') avant résolution.
+      if (typeof filterCreche === 'function') filterCreche(MA_CRECHE, null);
+    }
   } catch(e) { console.warn('[Accès] resoudreMaCreche', e); }
   return MA_CRECHE;
+}
+
+/* Diagnostic : à lancer dans la console si le cloisonnement ne s'applique pas.
+   Affiche chaque maillon de la chaîne et désigne le maillon fautif. */
+async function orvDiagAcces() {
+  const em = (currentUser && currentUser.email) ? String(currentUser.email).trim().toLowerCase() : '(non connecté)';
+  let override = '(non lu)';
+  try {
+    const u = await sbGet('utilisateurs', `email=ilike.${encodeURIComponent(em)}&select=creche_id,role,actif`);
+    override = (Array.isArray(u) && u.length) ? JSON.stringify(u[0]) : '(aucune ligne utilisateurs)';
+  } catch(e) { override = 'erreur : ' + e.message; }
+  const idx = await crecheIndexSalaries(true);
+  const fiche = idx[em] ? JSON.stringify(idx[em]) : '(aucune fiche salarié pour cet e-mail)';
+  const autorise = accesReseauAutorise();
+  console.log('─── Diagnostic périmètre ───');
+  console.log('e-mail connecté      :', em);
+  console.log('rôle courant         :', currentUserRole);
+  console.log('ligne utilisateurs   :', override);
+  console.log('fiche salarié (index):', fiche);
+  console.log('rôles réseau réglés  :', JSON.stringify(ORV_ACCES.reseauRoles));
+  console.log('accès réseau         :', autorise ? 'OUI (rôle autorisé)' : 'non');
+  console.log('MA_CRECHE résolue    :', MA_CRECHE);
+  console.log('currentCreche        :', currentCreche);
+  if (autorise)        console.log('=> Non cloisonné : le rôle « ' + currentUserRole + ' » est coché dans Administration.');
+  else if (!MA_CRECHE) console.log('=> Non cloisonné : structure introuvable. Vérifiez que l e-mail du compte figure sur une fiche salarié (champ email ou email_perso) avec une crèche renseignée.');
+  else                 console.log('=> Cloisonné sur ' + MA_CRECHE + '.');
+  return { em, role: currentUserRole, autorise, MA_CRECHE, currentCreche };
 }
 
 async function sbUpsertParametre(cle, valeur) {
@@ -9996,6 +10027,8 @@ function startApp() {
     .catch(function() { resoudreMaCreche(true); });
   // Charger salariés depuis Supabase (async — répare les nouveaux appareils)
   chargerSalariesSupabase();
+  // Seconde tentative : la fiche salarié peut n'être disponible qu'après ce chargement.
+  setTimeout(function() { if (!MA_CRECHE) resoudreMaCreche(true); }, 2500);
   setTimeout(checkDemandesBadge, 1500);
 }
 
@@ -10528,6 +10561,12 @@ function filterCat(cat, el) {
 }
 
 function filterCreche(creche, el) {
+  // Garde-fou : un rôle cloisonné ne peut pas changer de structure, quel que
+  // soit le chemin emprunté (sélecteur, barre du hub, appel direct).
+  if (!accesReseauAutorise() && MA_CRECHE && creche !== MA_CRECHE) {
+    console.warn('[Accès] changement de crèche refusé (' + creche + ') : compte cloisonné sur ' + MA_CRECHE);
+    creche = MA_CRECHE;
+  }
   currentCreche = creche;
   const sel = document.getElementById('creche-select-sidebar');
   if (sel) sel.value = creche;
