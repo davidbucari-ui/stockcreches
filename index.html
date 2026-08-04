@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 18:01 -->
+<!-- OREVY BUILD 2026-08-04 18:15 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -2401,6 +2401,8 @@ textarea { resize: vertical; min-height: 72px; }
             <button class="btn btn-secondary" onclick="exportPlanningPDF()">🖨 PDF</button>
           </div>
         </div>
+
+        <div id="pe-horaires-etat" style="margin-bottom:12px"></div>
 
         <!-- Onglets -->
         <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
@@ -16160,6 +16162,7 @@ let peGanttDay = -1; // -1 = jour courant ou lundi
 
 function switchPlanningTab(tab) {
   pePlanningTab = tab;
+  peRenderEtatHoraires();
   const tabs = ['gantt','hebdo','gantt2','coord','ik'];
   tabs.forEach(t => {
     const btn  = document.getElementById('pe-tab-' + t);
@@ -16176,7 +16179,56 @@ function switchPlanningTab(tab) {
   else if (tab === 'ik')     renderPlanningIK();
 }
 
+function peRenderEtatHoraires() {
+  const el = document.getElementById('pe-horaires-etat');
+  if (!el) return;
+  const creche = document.getElementById('pe-creche')?.value || '';
+  if (!creche) { el.innerHTML = ''; return; }
+
+  const st     = plgLoadStore();
+  const propre = plgHorairesPropres(creche);
+  const liste  = getPlanningHoraires(creche);
+  const suivent = (CRECHES_DATA || []).map(c => c.nom)
+    .filter(n => n !== creche && !(Array.isArray(st[n]) && st[n].length));
+
+  let glyph, txt;
+  if (propre) {
+    glyph = '\u25cf';
+    txt = '<b>Horaires propres \u00e0 ' + creche + '</b> \u2014 ' + liste.length + ' horaire(s). '
+        + 'Les modifier ne touche aucune autre structure.';
+  } else {
+    glyph = '\u25cb';
+    txt = '<b>Horaires communs</b> \u2014 ' + liste.length + ' horaire(s), partag\u00e9s avec '
+        + (suivent.length ? suivent.join(', ') : 'aucune autre structure') + '.';
+  }
+
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);'
+    + 'border-left:4px solid ' + (propre ? 'var(--ink)' : 'var(--ink3)') + ';border-radius:0 10px 10px 0;'
+    + 'background:var(--surface2);padding:9px 14px;font-size:12.5px;line-height:1.45;color:var(--ink2)">'
+    + '<span style="font-size:16px;font-weight:700;color:var(--ink);line-height:1">' + glyph + '</span>'
+    + '<div style="flex:1">' + txt + '</div>'
+    + '<button onclick="peOuvrirParamHoraires()" style="border:1.5px solid var(--border);background:var(--surface);'
+    + 'border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;'
+    + 'color:var(--accent);white-space:nowrap">Modifier</button></div>';
+}
+
+// Ouvre les Parametres directement sur le jeu qui s'applique a la grille
+// affichee : c'est le geste que l'utilisateur veut faire, pas "trouver le
+// bon onglet puis la bonne pilule".
+function peOuvrirParamHoraires() {
+  const creche = document.getElementById('pe-creche')?.value || '';
+  plgParamCreche = (creche && plgHorairesPropres(creche)) ? creche : '_commun';
+  showPage('parametres');
+  setTimeout(() => {
+    if (typeof renderPlanningParamHoraires === 'function') renderPlanningParamHoraires();
+    const el = document.getElementById('planning-horaires-config');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 260);
+}
+
 function renderActiveTab() {
+  peRenderEtatHoraires();
   if (pePlanningTab === 'gantt')  renderPlanningEquipe();
   else if (pePlanningTab === 'hebdo')  renderPlanningHebdo();
   else if (pePlanningTab === 'gantt2') renderPlanningGantt();
@@ -17644,13 +17696,20 @@ function renderPlanningParamHoraires() {
   let glyph, texte;
   if (cur === '_commun') {
     glyph = '\u25c7';
-    texte = '<b>Horaires communs.</b> Appliqu\u00e9s \u00e0 toute structure qui n\'a pas les siens \u2014 rep\u00e9r\u00e9e par \u25cb ci-dessus.';
+    const suivent = plgStructuresCommunes();
+    texte = '<b>Horaires communs.</b> ' + (suivent.length
+      ? 'Appliqu\u00e9s \u00e0 ' + suivent.length + ' structure(s) : ' + suivent.join(', ') + '.'
+      : 'Aucune structure ne les applique actuellement \u2014 toutes ont les leurs.');
   } else if (propre) {
     glyph = '\u25cf';
     texte = '<b>' + cur + ' a ses propres horaires.</b> Les modifications ici ne touchent aucune autre structure.';
   } else {
     glyph = '\u25cb';
-    texte = '<b>' + cur + ' reprend les horaires communs.</b> Les champs ci-dessous sont ceux du jeu commun : les modifier changerait toutes les structures en \u25cb.';
+    const autres = plgStructuresCommunes().filter(n => n !== cur);
+    texte = '<b>' + cur + ' reprend les horaires communs.</b> Les champs ci-dessous sont ceux du jeu commun : '
+      + (autres.length
+          ? 'les modifier changerait aussi ' + autres.join(', ') + '.'
+          : 'aucune autre structure ne les partage actuellement.');
   }
 
   const lignes = liste.map((hr, i) => {
