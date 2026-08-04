@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 18:56 -->
+<!-- OREVY BUILD 2026-08-04 19:05 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -2438,13 +2438,13 @@ textarea { resize: vertical; min-height: 72px; }
             <div id="pe-grid"></div>
           </div>
           <!-- Légende de la ligne Couverture -->
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11px;color:var(--ink3)">
-            <span><b style="color:var(--ink)">✓</b> au moins 2 professionnels sur toute l'amplitude</span>
-            <span><b style="color:var(--ink)">△</b> plages à moins de 2 professionnels</span>
-            <span><b style="color:var(--ink)">△</b> non renseigné — jour ouvré sans créneau</span>
-            <span><b style="color:var(--ink)">—</b> structure fermée</span>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;margin-top:12px;font-size:12.5px;color:var(--ink2);line-height:1.5">
+            <span style="display:inline-flex;align-items:center;gap:6px"><b style="font-size:15px;color:var(--ink);line-height:1">✓</b> au moins 2 professionnels sur toute l'amplitude</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><b style="font-size:15px;color:var(--ink);line-height:1">△</b> plages à moins de 2 professionnels</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><b style="font-size:15px;color:var(--ink);line-height:1">△</b> non renseigné — jour ouvré sans créneau</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><b style="font-size:15px;color:var(--ink);line-height:1">—</b> structure fermée</span>
           </div>
-          <div style="margin-top:6px;font-size:11px;color:var(--ink3)">
+          <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:12px;color:var(--ink3);line-height:1.5">
             Calculé sur l'amplitude d'ouverture déclarée dans les Paramètres. Le plancher de 2 professionnels ne tient pas compte des effectifs enfants.
           </div>
         </div>
@@ -16161,7 +16161,7 @@ function peCouvertureJour(week, jour, creche, mini) {
     if (n < min) min = n;
     if (n < seuil) {
       const last = trous[trous.length - 1];
-      if (last && last.fin === a) { last.fin = b; last.n = Math.min(last.n, n); }
+      if (last && last.fin === a && last.n === n) last.fin = b;
       else trous.push({ debut: a, fin: b, n });
     }
   }
@@ -16181,19 +16181,35 @@ function peBadgeCouverture(cv) {
   if (cv.indetermine) return box('?', 'ouverture non r\u00e9gl\u00e9e', false, 'Renseignez l\'amplitude dans les Param\u00e8tres');
   if (cv.vide)        return box('\u25b3', 'non renseign\u00e9', true, 'Aucun cr\u00e9neau saisi sur ce jour ouvr\u00e9');
   if (!cv.trous.length) {
-    return box('\u2713', cv.min + ' pro' + (cv.min > 1 ? 's' : '') + ' mini', false,
+    return box('\u2713', cv.min + ' pro' + (cv.min > 1 ? 's' : '') + ' en continu', false,
       'Au moins ' + cv.seuil + ' professionnels sur toute l\'amplitude '
       + peHmStr(cv.ouv[0]) + '\u2013' + peHmStr(cv.ouv[1]));
   }
   const plages = cv.trous.map(t => peHmStr(t.debut) + '\u2013' + peHmStr(t.fin));
-  const titre  = 'Moins de ' + cv.seuil + ' professionnels sur : ' + plages.join(', ');
-  // Un seul trou couvrant l'amplitude entiere : l'enoncer, plutot que de
-  // faire relire deux horaires pour aboutir a la meme conclusion.
-  if (cv.trous.length === 1 && cv.trous[0].debut <= cv.ouv[0] && cv.trous[0].fin >= cv.ouv[1]) {
-    return box('\u25b3', 'jamais ' + cv.seuil + ' pros', true, titre);
+  const detail = cv.trous
+    .map(t => peHmStr(t.debut) + '\u2013' + peHmStr(t.fin) + ' : ' + t.n + ' pro' + (t.n > 1 ? 's' : ''))
+    .join(', ');
+  const titre  = 'Moins de ' + cv.seuil + ' professionnels \u2014 ' + detail
+    + '. Amplitude d\'ouverture ' + peHmStr(cv.ouv[0]) + '\u2013' + peHmStr(cv.ouv[1]) + '.';
+
+  // Effectif le plus bas constate : c'est ce qu'il faut lire en premier.
+  const bas = cv.trous.reduce((m, t) => Math.min(m, t.n), Infinity);
+  const qui = (bas === 0) ? 'personne' : (bas + ' pro' + (bas > 1 ? 's' : ''));
+
+  // Les trous couvrent-ils l'amplitude entiere ? On enchaine les plages
+  // contigues : a aucun moment le seuil n'est atteint.
+  let bout = cv.ouv[0];
+  cv.trous.forEach(t => { if (t.debut <= bout && t.fin > bout) bout = t.fin; });
+  if (bout >= cv.ouv[1]) {
+    // Tout l'horaire est en dessous du seuil : dire l'effectif seulement
+    // s'il est le meme partout, sinon le detail est au survol.
+    const uniforme = cv.trous.every(t => t.n === bas);
+    return box('\u25b3',
+      uniforme ? (qui + ' toute la journ\u00e9e') : ('jamais ' + cv.seuil + ' pros'),
+      true, titre);
   }
   const court = plages.slice(0, 2).join(' \u00b7 ') + (plages.length > 2 ? ' \u00b7 +' + (plages.length - 2) : '');
-  return box('\u25b3', court, true, titre);
+  return box('\u25b3', qui + ' \u00e0 ' + court, true, titre);
 }
 
 // ── Initialisation pages ───────────────────────────────────────────
@@ -16955,7 +16971,10 @@ function renderPlanningEquipe() {
       </div>`;
     }).join('');
     return `<div style="display:grid;grid-template-columns:110px repeat(5,1fr);background:var(--bg)">
-      <div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center" title="Plages où moins de 2 professionnels se chevauchent, dans l'amplitude d'ouverture">Couverture</div>
+      <div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--ink3);letter-spacing:0.4px;display:flex;flex-direction:column;justify-content:center" title="Plages où moins de 2 professionnels se chevauchent, dans l'amplitude d'ouverture">
+        <span style="text-transform:uppercase">Couverture</span>
+        <span style="font-weight:500;text-transform:none;letter-spacing:0">2 pros minimum</span>
+      </div>
       ${cells}
     </div>`;
   })();
