@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 06:23 -->
+<!-- OREVY BUILD 2026-08-04 06:40 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -20294,6 +20294,7 @@ function showImportResult(type, html) {
         <div class="dme-add">
           <button onclick="dmeAddBloc('p')">+ Paragraphe</button>
           <button onclick="dmeAddBloc('l')">+ Point de liste</button>
+          <button onclick="dmeAddBloc('rep')">+ Liste r&eacute;p&eacute;t&eacute;e</button>
         </div>
         <div id="dme-corps"></div>
         <p class="dme-hint" style="margin:10px 0 22px">Cliquez dans un paragraphe puis sur un champ
@@ -20403,6 +20404,15 @@ function showImportResult(type, html) {
 .dm-auto{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;background:#F0FDF4;
   color:#14532D;border:1px solid #BBF7D0;border-radius:20px;padding:1px 7px;margin-left:6px;text-transform:none}
 .dm-req{font-size:9.5px;font-weight:600;color:#A8A29E;margin-left:6px;text-transform:none;letter-spacing:0}
+.dm-lig{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.dm-lig-n{flex:0 0 20px;font-size:10.5px;font-weight:700;color:#A8A29E;text-align:right}
+.dm-lig input{flex:1;min-width:0}
+.dm-lig-x{flex:0 0 28px;height:28px;border:1.5px solid #E7E5E0;background:#fff;border-radius:7px;
+  font-family:inherit;font-size:12px;color:#57534E;cursor:pointer;line-height:1}
+.dm-lig-x:disabled{opacity:.35;cursor:default}
+.dm-lig-add{margin-top:2px;padding:7px 13px;border:1.5px dashed #A8A29E;background:#fff;border-radius:8px;
+  font-family:inherit;font-size:12px;font-weight:600;color:#1C1917;cursor:pointer}
+.dm-lig-add:hover{border-style:solid;border-color:#2563EB;color:#2563EB}
 .dm-cart{border:1px solid #1C1917;border-radius:2px;background:#fff;position:relative;overflow:hidden}
 .dm-cart-h{background:#FAFAF8;border-bottom:1px solid #1C1917;padding:7px 11px;display:flex;
   justify-content:space-between;align-items:center;gap:8px}
@@ -22911,7 +22921,7 @@ var DM_MODELES = [
   ]
 },
 {
-  id:'mod_recuperation', cat:'administratif', cible:'enfant', version:1, validite_mois:12,
+  id:'mod_recuperation', cat:'administratif', cible:'enfant', version:2, validite_mois:12,
   titre:"Personnes autoris\u00e9es \u00e0 venir chercher l\u2019enfant",
   intro:"Liste nominative des personnes majeures autoris\u00e9es par les titulaires de l\u2019autorit\u00e9 parentale \u00e0 venir chercher l\u2019enfant. Une pi\u00e8ce d\u2019identit\u00e9 sera demand\u00e9e.",
   champs:[
@@ -22919,12 +22929,9 @@ var DM_MODELES = [
     {id:'enf',  type:'texte', label:"Nom de l\u2019enfant", auto:'enfant.nom', w:1, requis:true},
     {id:'dt',   type:'date',  label:'Date', auto:'today', w:1, requis:true},
     {sec:"Personnes autoris\u00e9es"},
-    {id:'a1n',  type:'texte', label:'Personne 1 \u2014 nom et pr\u00e9nom', w:1, requis:true},
-    {id:'a1l',  type:'texte', label:'Personne 1 \u2014 lien avec l\u2019enfant', w:1},
-    {id:'a2n',  type:'texte', label:'Personne 2 \u2014 nom et pr\u00e9nom', w:1},
-    {id:'a2l',  type:'texte', label:'Personne 2 \u2014 lien avec l\u2019enfant', w:1},
-    {id:'a3n',  type:'texte', label:'Personne 3 \u2014 nom et pr\u00e9nom', w:1},
-    {id:'a3l',  type:'texte', label:'Personne 3 \u2014 lien avec l\u2019enfant', w:1},
+    {id:'pers', type:'lignes', requis:true,
+     label:'Personnes majeures autoris\u00e9es', ajout:'Ajouter une personne',
+     cols:[{k:'nom', l:'Nom et pr\u00e9nom'}, {k:'lien', l:'Lien avec l\u2019enfant'}]},
     {sec:"Signataire"},
     {id:'p1nom',type:'texte', label:'Parent \u2014 nom', auto:'parent1.nom', w:1, requis:true},
     {id:'p1q',  type:'liste', label:'Parent \u2014 en qualit\u00e9 de', opts:DM_QUALITES, auto:'parent1.lien', w:1, requis:true}
@@ -22932,9 +22939,7 @@ var DM_MODELES = [
   signataires:[ {id:'s1', role:'Le parent', nom:'p1nom', q:'p1q'} ],
   corps:[
     {t:'p', x:"Je soussign\u00e9(e) {p1nom}, en ma qualit\u00e9 de {p1q}, autorise les personnes majeures d\u00e9sign\u00e9es ci-apr\u00e8s \u00e0 venir chercher mon enfant {enf} au sein de la structure :"},
-    {t:'l', x:"{a1n} \u2014 {a1l}"},
-    {t:'l', x:"{a2n} \u2014 {a2l}", si:'a2n'},
-    {t:'l', x:"{a3n} \u2014 {a3l}", si:'a3n'},
+    {t:'rep', src:'pers', x:"{nom} \u2014 {lien}"},
     {t:'p', x:"Une pi\u00e8ce d\u2019identit\u00e9 sera syst\u00e9matiquement demand\u00e9e. Toute modification de cette liste doit faire l\u2019objet d\u2019une nouvelle autorisation \u00e9crite."}
   ]
 }
@@ -23160,7 +23165,72 @@ function dmSet(id, el) {
   dmRenderSignataires();
   dmStatut();
 }
-function dmV(id) { return (DM_VALS[id]||'').trim(); }
+function dmV(id) {
+  var v = DM_VALS[id];
+  if (Array.isArray(v)) return '';        // un champ repetable n'a pas de valeur scalaire
+  return (v || '').trim();
+}
+
+/* \u2500\u2500 Champs repetables (type 'lignes') \u2500\u2500
+   DM_VALS[id] contient un tableau d'objets, une entree par ligne :
+   [{nom:'...', lien:'...'}, ...]. Le corps du document les parcourt
+   via un bloc {t:'rep', src:id}. */
+function dmChamp(id) {
+  if (!DM_CUR) return null;
+  for (var i = 0; i < DM_CUR.champs.length; i++)
+    if (DM_CUR.champs[i].id === id) return DM_CUR.champs[i];
+  return null;
+}
+function dmRows(id) { var v = DM_VALS[id]; return Array.isArray(v) ? v : []; }
+function dmRowsPleines(id) {
+  return dmRows(id).filter(function(r) {
+    return r && Object.keys(r).some(function(k){ return String(r[k] || '').trim(); });
+  });
+}
+function dmRowVide(c) {
+  var r = {}; (c.cols || []).forEach(function(col){ r[col.k] = ''; }); return r;
+}
+function dmRenderLignes(c) {
+  var rows = dmRows(c.id);
+  if (!rows.length) { rows = [dmRowVide(c)]; DM_VALS[c.id] = rows; }
+  var cols = c.cols || [{ k:'v', l:c.label }];
+  var req = c.requis ? '<span class="dm-req">requis</span>' : '';
+  var h = '<label>' + dmEsc(c.label) + req + '</label>';
+  h += rows.map(function(r, i) {
+    return '<div class="dm-lig"><span class="dm-lig-n">' + (i + 1) + '</span>'
+      + cols.map(function(col) {
+          return '<input type="text" placeholder="' + dmEsc(col.l) + '" value="'
+            + dmEsc(r[col.k] || '') + '" oninput="dmRowSet(\'' + c.id + '\',' + i
+            + ',\'' + col.k + '\',this)">';
+        }).join('')
+      + '<button type="button" class="dm-lig-x" title="Retirer cette ligne"'
+      + (rows.length <= 1 ? ' disabled' : '')
+      + ' onclick="dmRowDel(\'' + c.id + '\',' + i + ')">\u2715</button></div>';
+  }).join('');
+  h += '<button type="button" class="dm-lig-add" onclick="dmRowAdd(\'' + c.id + '\')">'
+     + '+ ' + dmEsc(c.ajout || 'Ajouter une ligne') + '</button>';
+  return h;
+}
+function dmRefreshLignes(c) {
+  var box = document.getElementById('dmr-' + c.id);
+  if (box) box.innerHTML = dmRenderLignes(c);
+  dmStatut();
+}
+function dmRowSet(id, i, k, el) {
+  var rows = dmRows(id); if (!rows[i]) return;
+  rows[i][k] = el.value; DM_VALS[id] = rows; dmStatut();
+}
+function dmRowAdd(id) {
+  var c = dmChamp(id); if (!c) return;
+  var rows = dmRows(id); rows.push(dmRowVide(c)); DM_VALS[id] = rows;
+  dmRefreshLignes(c);
+}
+function dmRowDel(id, i) {
+  var c = dmChamp(id); if (!c) return;
+  var rows = dmRows(id); if (rows.length <= 1) return;
+  rows.splice(i, 1); DM_VALS[id] = rows;
+  dmRefreshLignes(c);
+}
 
 /* ── Signataires (certains conditionnels : pas de nom = pas de cartouche) ── */
 function dmSignatairesActifs() {
@@ -23271,6 +23341,23 @@ function dmCartouchePdf(s) {
   return '<div class="dmd-sc"><div class="h">'+dmEsc(s.role)+'</div><div class="b">'+img+'</div>'
        + '<div class="f"><b>'+dmEsc(nom)+'</b><br>'+dmEsc(q)+'<br>'+when+'</div></div>';
 }
+/* Substitution dans une ligne repetable : les cles de la ligne
+   priment, sinon on retombe sur les champs simples du document. */
+function dmSubstRow(x, r) {
+  return x.replace(/\{([a-z0-9_]+)\}/gi, function(_, k) {
+    var v = (r && r[k] != null) ? String(r[k]).trim() : '';
+    if (!v) v = dmV(k);
+    if (!v) return '<span class="dmd-vide">……</span>';
+    return '<span class="dmd-v">' + dmEsc(v) + '</span>';
+  });
+}
+function dmRepHtml(b) {
+  var rows = dmRowsPleines(b.src);
+  if (!rows.length) return '<p class="li">• <span class="dmd-vide">…………</span></p>';
+  return rows.map(function(r) {
+    return '<p class="li">• ' + dmSubstRow(b.x, r) + '</p>';
+  }).join('');
+}
 function dmApercuHtml() {
   var m = DM_CUR, cre = document.getElementById('dm-creche');
   var lieu = (cre && cre.value && cre.value !== 'all') ? cre.value : '—';
@@ -23279,6 +23366,7 @@ function dmApercuHtml() {
     + '<div class="meta">Document Orevy · version '+m.version+'<br>Réf. '+dmEsc((DM_INST||'—')).slice(0,18)+'<br>Page 1 / 1</div></div>'
     + '<h2>'+dmEsc(m.titre)+'</h2>';
   m.corps.forEach(function(b) {
+    if (b.t === 'rep') { h += dmRepHtml(b); return; }
     if (b.si && !dmV(b.si)) return;
     if (b.t === 'l') h += '<p class="li">• '+dmSubst(b.x)+'</p>';
     else h += '<p'+(b.gras?' class="g"':'')+'>'+dmSubst(b.x)+'</p>';
@@ -23368,6 +23456,22 @@ async function dmPdf() {
 
   doc.setFontSize(10);
   m.corps.forEach(function(b) {
+    if (b.t === 'rep') {
+      var rows = dmRowsPleines(b.src);
+      if (!rows.length) rows = [{}];
+      doc.setFont('helvetica', 'normal');
+      rows.forEach(function(r) {
+        var txt = '•  ' + b.x.replace(/\{([a-z0-9_]+)\}/gi, function(_, k) {
+          var v = (r && r[k] != null) ? String(r[k]).trim() : '';
+          if (!v) v = dmV(k);
+          return v || '…………';
+        });
+        var ls = doc.splitTextToSize(txt, R-L);
+        if (y + ls.length*5 > 260) { doc.addPage(); y = 20; }
+        doc.text(ls, L, y); y += ls.length*5 + 3;
+      });
+      return;
+    }
     if (b.si && !dmV(b.si)) return;
     doc.setFont('helvetica', b.gras ? 'bold' : 'normal');
     var txt = (b.t === 'l' ? '•  ' : '') + plain(b.x);
@@ -23417,7 +23521,11 @@ async function dmPdf() {
 /* ── Enregistrement ── */
 async function dmSave() {
   if (!DM_CUR) return;
-  var manque = DM_CUR.champs.filter(function(c){ return !c.sec && c.requis && !dmV(c.id); });
+  var manque = DM_CUR.champs.filter(function(c) {
+    if (c.sec || !c.requis) return false;
+    if (c.type === 'lignes') return !dmRowsPleines(c.id).length;
+    return !dmV(c.id);
+  });
   if (manque.length) {
     showNotif('⚠ À compléter : ' + manque.map(function(c){ return c.label; }).slice(0,3).join(', '));
     var f = document.getElementById('dmf-'+manque[0].id); if (f) f.focus();
@@ -23476,7 +23584,9 @@ async function dmLoadInstance(id) {
     dmFillEnfants();
     if (inst.enfant_id) { document.getElementById('dm-enfant').value = inst.enfant_id; dmPickEnfant(); }
     DM_VALS = inst.valeurs || {};
+    dmRenderForm();                           // rejoue les lignes repetables
     Object.keys(DM_VALS).forEach(function(k) {
+      if (Array.isArray(DM_VALS[k])) return;  // gere par dmRenderLignes
       var el = document.getElementById('dmf-'+k); if (el) el.value = DM_VALS[k];
     });
     dmRenderSignataires(); dmStatut();
@@ -23511,6 +23621,7 @@ var DME_TAB = 1;
 
 var DME_TYPES = [
   { t:'texte',    l:'Texte libre' },
+  { t:'lignes',   l:'Liste r\u00e9p\u00e9table' },
   { t:'liste',    l:'Liste de choix' },
   { t:'date',     l:'Date' },
   { t:'oui_non',  l:'Oui / Non' },
@@ -23607,7 +23718,10 @@ function dmeAddChamp(t) {
   else {
     var id = dmeSlug('champ', dmeIds());
     DME.champs.push({ id:id, type:t, label:'Nouveau champ', w:1, requis:false,
-                      opts: t==='liste' ? ['Option 1','Option 2'] : undefined });
+                      opts: t==='liste' ? ['Option 1','Option 2'] : undefined,
+                      cols: t==='lignes' ? [{k:'nom', l:'Nom et pr\u00e9nom'},
+                                            {k:'lien', l:'Pr\u00e9cision'}] : undefined,
+                      ajout: t==='lignes' ? 'Ajouter une ligne' : undefined });
   }
   dmeRenderChamps();
 }
@@ -23639,7 +23753,22 @@ function dmeSetChamp(i, prop, el) {
   if (prop === 'requis') { c.requis = el.checked; return; }
   if (prop === 'w')      { c.w = parseInt(el.value,10) || 1; return; }
   if (prop === 'opts')   { c.opts = el.value.split('\n').map(function(s){return s.trim();}).filter(Boolean); return; }
-  if (prop === 'type')   { c.type = el.value; if (c.type==='liste' && !c.opts) c.opts=['Option 1','Option 2'];
+  if (prop === 'cols')   {
+    // une colonne par ligne, au format  cle|Libelle affiche
+    c.cols = el.value.split('\n').map(function(s) {
+      var p = s.split('|');
+      var k = (p[0] || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      if (!k) return null;
+      return { k:k, l:(p[1] || p[0] || '').trim() };
+    }).filter(Boolean);
+    return;
+  }
+  if (prop === 'type')   { c.type = el.value;
+                           if (c.type==='liste' && !c.opts) c.opts=['Option 1','Option 2'];
+                           if (c.type==='lignes' && !c.cols) {
+                             c.cols = [{k:'nom', l:'Nom et pr\u00e9nom'}, {k:'lien', l:'Pr\u00e9cision'}];
+                             c.ajout = c.ajout || 'Ajouter une ligne';
+                           }
                            dmeRenderChamps(); return; }
   c[prop] = el.value;
   if (prop === 'auto') dmeRenderChamps();
@@ -23686,6 +23815,18 @@ function dmeRenderChamps() {
             + '<textarea rows="3" oninput="dmeSetChamp('+i+',\'opts\',this)">'
             + dmEsc((c.opts||[]).join('\n'))+'</textarea></div>'
           : '')
+      + (c.type==='lignes'
+          ? '<div style="flex:1 0 100%;margin-top:6px">'
+            + '<label style="font-size:10px">Colonnes \u2014 une par ligne, format <b>cle|Libell\u00e9</b></label>'
+            + '<textarea rows="3" oninput="dmeSetChamp('+i+',\'cols\',this)">'
+            + dmEsc((c.cols||[]).map(function(x){ return x.k+'|'+x.l; }).join('\n'))+'</textarea>'
+            + '<label style="font-size:10px;margin-top:6px">Libell\u00e9 du bouton d\u2019ajout</label>'
+            + '<input value="'+dmEsc(c.ajout||'Ajouter une ligne')+'" '
+            + 'oninput="dmeSetChamp('+i+',\'ajout\',this)">'
+            + '<div class="dme-hint" style="margin-top:6px">Dans le corps, utilisez un bloc '
+            + '\u00ab Liste r\u00e9p\u00e9t\u00e9e \u00bb et \u00e9crivez '
+            + (c.cols||[]).map(function(x){ return '{'+x.k+'}'; }).join(' \u2014 ') + '</div></div>'
+          : '')
       + '</div></div>';
   }).join('');
   dmeRenderPuces();
@@ -23711,7 +23852,17 @@ function dmeInsert(id) {
   ta.focus();
   ta.dispatchEvent(new Event('input'));
 }
-function dmeAddBloc(t) { DME.corps.push({ t:t, x:'' }); dmeRenderCorps(); }
+function dmeAddBloc(t) {
+  var b = { t:t, x:'' };
+  if (t === 'rep') {
+    var src = DME.champs.filter(function(c){ return c.type === 'lignes'; })[0];
+    if (!src) { alert('Cr\u00e9ez d\u2019abord un champ de type \u00ab Liste r\u00e9p\u00e9table \u00bb '
+      + 'dans l\u2019onglet Champs.'); return; }
+    b.src = src.id;
+    b.x = (src.cols || []).map(function(c){ return '{' + c.k + '}'; }).join(' \u2014 ');
+  }
+  DME.corps.push(b); dmeRenderCorps();
+}
 function dmeDelBloc(i) { DME.corps.splice(i,1); dmeRenderCorps(); }
 function dmeMoveBloc(i,d) { var j=i+d; if(j<0||j>=DME.corps.length) return;
   var t=DME.corps[i]; DME.corps[i]=DME.corps[j]; DME.corps[j]=t; dmeRenderCorps(); }
@@ -23728,7 +23879,27 @@ function dmeRenderCorps() {
     return;
   }
   var ids = dmeIds();
+  var srcs = DME.champs.filter(function(c){ return c.type === 'lignes'; });
   box.innerHTML = DME.corps.map(function(b, i) {
+    if (b.t === 'rep') {
+      var src = srcs.filter(function(c){ return c.id === b.src; })[0];
+      var opts = srcs.map(function(c) {
+        return '<option value="'+c.id+'"'+(c.id===b.src?' selected':'')+'>'+dmEsc(c.label)+'</option>';
+      }).join('');
+      var puces = src ? (src.cols||[]).map(function(c){ return '{'+c.k+'}'; }).join(' ') : '';
+      return '<div class="dme-c"><div class="dme-c-b">'
+        + '<div class="dme-fl" style="flex:1"><label>Liste r\u00e9p\u00e9t\u00e9e \u2014 une puce par ligne saisie</label>'
+        + '<textarea rows="2" onfocus="DME_FOCUS=this" oninput="dmeSetBloc('+i+',\'x\',this)">'
+        + dmEsc(b.x||'')+'</textarea></div>'
+        + '<div class="dme-nav"><button onclick="dmeMoveBloc('+i+',-1)">\u25b2</button>'
+        + '<button onclick="dmeMoveBloc('+i+',1)">\u25bc</button>'
+        + '<button onclick="dmeDelBloc('+i+')" class="del">\u00d7</button></div></div>'
+        + '<div class="dme-c-b2">'
+        + '<label class="dme-ck">source <select class="mini" onchange="dmeSetBloc('+i+',\'src\',this)">'
+        + opts + '</select></label>'
+        + '<span class="dme-hint">colonnes disponibles : ' + dmEsc(puces || '\u2014') + '</span>'
+        + '</div></div>';
+    }
     var cond = '<select onchange="dmeSetBloc('+i+',\'si\',this)"><option value="">toujours affich\u00e9</option>'
       + ids.map(function(x){ return '<option value="'+x+'"'+(b.si===x?' selected':'')+'>si {'+x+'} est rempli</option>'; }).join('')
       + '</select>';
@@ -24015,6 +24186,39 @@ async function dmAnnulerLien() {
 }
 
 /* ── Dossier famille : les documents signes dans la fiche enfant ── */
+/* Suppression d'un document rempli. Un document signe est une piece
+   de preuve : la confirmation le dit explicitement. Les sessions de
+   signature rattachees partent avec lui (sinon elles restent orphelines). */
+async function dmSupprimerInstance(id) {
+  var box = document.getElementById('fi-docs-signes');
+  var enfantId = box ? box.dataset.enfant : '';
+  var inst = null;
+  try {
+    var r = await sbGet('documents_instances',
+      'id=eq.' + encodeURIComponent(id) + '&select=titre,statut');
+    inst = (r && r[0]) || null;
+  } catch (e) {}
+  var titre = (inst && inst.titre) ? inst.titre : 'ce document';
+  var signe = inst && inst.statut === 'signe';
+  var msg = 'Supprimer \u00ab\u00a0' + titre + '\u00a0\u00bb ?'
+    + (signe
+       ? '\n\nCe document est SIGN\u00c9 : sa suppression fait dispara\u00eetre la signature '
+         + 'et l\u2019empreinte qui en constituent la preuve. Cette action est d\u00e9finitive.'
+       : '\n\nCette action est d\u00e9finitive.');
+  if (!confirm(msg)) return;
+  try {
+    await fetch(SUPA_RH_URL + '/rest/v1/signature_sessions?instance_id=eq.' + encodeURIComponent(id),
+      { method: 'DELETE', headers: SUPA_RH_HEADERS });
+  } catch (e) { console.warn('[documents] sessions orphelines', e); }
+  try { await sbDelete('documents_instances', id); }
+  catch (e) {
+    showNotif('\u26a0 Suppression impossible \u2014 ' + (e.status || '') + ' ' + (e.message || ''));
+    console.error('[documents] delete', e); return;
+  }
+  showNotif('\u2713 Document supprim\u00e9');
+  if (enfantId) dmRenderFicheEnfant(enfantId);
+}
+
 async function dmRenderFicheEnfant(enfantId) {
   var box = document.getElementById('fi-docs-signes');
   if (!box || !enfantId) return;
@@ -24042,7 +24246,11 @@ async function dmRenderFicheEnfant(enfantId) {
       + '<span style="font-size:11px;color:var(--ink3)">' + dmEsc(val) + '</span></div></div>'
       + '<button onclick="dmOpen(\'' + d.modele_id + '\',\'' + d.id + '\')" '
       + 'style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);'
-      + 'font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Ouvrir</button></div>';
+      + 'font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Ouvrir</button>'
+      + '<button onclick="dmSupprimerInstance(\'' + d.id + '\')" '
+      + 'style="padding:5px 10px;border-radius:7px;border:1.5px solid var(--ink3);background:var(--surface2);'
+      + 'color:var(--ink2);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">'
+      + '\u2715 Supprimer</button></div>';
   }).join('');
 }
 
