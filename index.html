@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 08:45 -->
+<!-- OREVY BUILD 2026-08-04 12:08 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -11655,14 +11655,14 @@ const ORV_DOMAINES = [
       {id:'familles',     nom:'Familles', roles:['admin','directrice','coordinateur','auxiliaire']},
       {id:'transmissions',nom:'Transmissions', roles:['admin','directrice','coordinateur','auxiliaire']}
     ],
-    aBrancher:['dossiers incomplets','contrats arrivant à échéance','factures prêtes à envoyer','transmissions non saisies'] },
+    aBrancher:['factures prêtes à envoyer','places disponibles à pourvoir'] },
   { id:'rh', ico:'\uD83D\uDC65', nom:'Ressources humaines', sub:'Équipe, planning, pointage, contrats',
     pages:[
       {id:'rh',      nom:'Équipe',  roles:['admin','directrice','coordinateur']},
       {id:'planning',nom:'Planning', roles:['admin','directrice','coordinateur','auxiliaire']},
       {id:'pointage',nom:'Pointage', roles:['admin','directrice','coordinateur','auxiliaire']}
     ],
-    aBrancher:['trous d\'encadrement au planning','fins de période d\'essai','visites médicales à programmer'] },
+    aBrancher:["trous d'encadrement au planning","visites médicales à programmer"] },
   { id:'univers', ico:'\uD83C\uDF1F', nom:'Univers ludiques', sub:'Aménagement, rotation, projet pédagogique',
     pages:[ {id:'univers', nom:'Univers ludiques', roles:['admin','directrice','coordinateur','auxiliaire']} ],
     aBrancher:['univers à renouveler','observations pédagogiques manquantes','matériel manquant pour un univers'] },
@@ -11675,7 +11675,7 @@ const ORV_DOMAINES = [
       {id:'__docsstruct',  nom:'Documents de la structure'},
       {id:'__docsref',     nom:'Ressources réglementaires'}
     ],
-    aBrancher:['documents à revalider','documents en attente de signature','points de contrôle PMI','nouveaux textes (veille)'] }
+    aBrancher:['points de contrôle PMI','nouveaux textes (veille)'] }
 ];
 
 let ORV_CUR_DOM = null;      // domaine ouvert en vue pilotage
@@ -11860,6 +11860,13 @@ function orvSyncBar() {
 /* ══ SOURCES DE BESOINS ══
    Chaque source détecte sa condition et produit une ligne :
    { dom, n (1=urgent, 2=à faire, 3=info), t, c, q, act, page, src } ── */
+function _orvJour(d) {
+  const x = d ? new Date(d) : new Date();
+  if (isNaN(x)) return '';
+  return new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+}
+function _orvJourFr(iso) { return iso ? String(iso).substring(0,10).split('-').reverse().join('/') : ''; }
+
 async function orvCollecterBesoins() {
   const out = [];
   const cf = orvCrecheActive();
@@ -12083,6 +12090,190 @@ async function orvCollecterBesoins() {
     }
   } catch(e) { console.warn('[hub] source pointage', e); }
 
+  // ══ LOT 2 ══════════════════════════════════════════════════════════════
+
+  // ── Familles : dossiers incomplets (champs essentiels manquants) ──
+  try {
+    const enf = (typeof getFamilles === 'function') ? (getFamilles(cf || '__all__') || []) : [];
+    const j0 = new Date(); j0.setHours(0,0,0,0);
+    const actifs = enf.filter(e => !e.sortie || new Date(e.sortie) >= j0);
+    const manque = actifs.filter(function(e) {
+      const p1 = e.parent1 || {};
+      const contact = String(p1.tel || p1.telephone || p1.mobile || p1.email || '').trim();
+      return !e.ddn || !contact || !e.entree;
+    });
+    ORV_STATS.dossiersIncomplets = manque.length;
+    if (manque.length) {
+      const noms = manque.slice(0, 3)
+        .map(e => ((e.prenom || '') + ' ' + (e.nom || '')).trim()).filter(Boolean).join(', ');
+      out.push({ dom:'familles', n:2,
+                 t:manque.length + ' dossier' + (manque.length > 1 ? 's' : '') + ' enfant incomplet' + (manque.length > 1 ? 's' : ''),
+                 c:cf || 'Réseau', q:noms + (manque.length > 3 ? ' + ' + (manque.length - 3) + ' autre(s)' : ''),
+                 act:'Compléter', page:'familles', src:'famille.dossier_incomplet' });
+    }
+  } catch(e) { console.warn('[hub] source dossiers incomplets', e); }
+
+  // ── Familles : transmissions du jour non saisies ──
+  //   Ne se déclenche qu'en fin de journée, un jour ouvré, et sur une crèche
+  //   précise : en vue réseau la question n'a pas de sens opérationnel.
+  try {
+    const now = new Date();
+    const jour = now.getDay();
+    if (cf && jour >= 1 && jour <= 5 && now.getHours() >= 15) {
+      const jStr = _orvJour(now);
+      const rows = await sbGet('transmissions',
+        'creche=eq.' + encodeURIComponent(cf) + '&date=eq.' + jStr + '&select=enfant_id');
+      const saisis = new Set((rows || []).map(r => String(r.enfant_id)));
+      const j0 = new Date(); j0.setHours(0,0,0,0);
+      const enf = (typeof getFamilles === 'function') ? (getFamilles(cf) || []) : [];
+      const attendus = enf.filter(function(e) {
+        if (e.sortie && new Date(e.sortie) < j0) return false;
+        if (e.entree && new Date(e.entree) > now) return false;
+        return true;
+      });
+      const sans = attendus.filter(e => !saisis.has(String(e.id)));
+      ORV_STATS.transmissionsManquantes = sans.length;
+      if (sans.length) {
+        out.push({ dom:'familles', n:2,
+                   t:sans.length + ' transmission' + (sans.length > 1 ? 's' : '') + ' non saisie' + (sans.length > 1 ? 's' : ''),
+                   c:cf, q:"journée du " + _orvJourFr(jStr),
+                   act:'Saisir', page:'transmissions', src:'famille.transmission_non_saisie' });
+      }
+    }
+  } catch(e) { console.warn('[hub] source transmissions', e); }
+
+  // ── RH : congés, périodes d'essai, fins de contrat, recyclages ──
+  //   Un seul chargement des salariés sert au filtrage par structure.
+  try {
+    const salRows = await fetch(SUPA_RH_URL + '/rest/v1/salaries?select=id,data',
+      { headers: SUPA_RH_HEADERS }).then(r => r.json());
+    const crecheDe = {}, nomDe = {};
+    if (Array.isArray(salRows)) salRows.forEach(function(r) {
+      const d = r.data || {};
+      crecheDe[r.id] = d.creche || null;
+      nomDe[r.id] = ((d.prenom || '') + ' ' + (d.nom || '')).trim();
+    });
+    // Un salarié sans structure (volant ou réseau) reste visible partout.
+    const gardeSal = function(id) { return !cf || !id || !crecheDe[id] || crecheDe[id] === cf; };
+    const nomSal = function(c) { return nomDe[c.salarie_id] || c.candidat_nom || 'un collaborateur'; };
+    const auj = new Date(); auj.setHours(0,0,0,0);
+    const dans = function(nbj) { return new Date(auj.getTime() + nbj * 86400000); };
+
+    // Congés en attente de validation
+    try {
+      const cg = await sbGet('conges', 'statut=eq.en_attente&select=id,salarie_id,type,date_debut,date_fin');
+      const mine = (cg || []).filter(c => gardeSal(c.salarie_id));
+      ORV_STATS.congesAValider = mine.length;
+      if (mine.length) {
+        const proch = mine.map(c => c.date_debut).filter(Boolean).sort()[0];
+        out.push({ dom:'rh', n:2,
+                   t:mine.length + ' demande' + (mine.length > 1 ? 's' : '') + " de congé en attente",
+                   c:cf || 'Réseau', q:proch ? 'premier départ le ' + _orvJourFr(proch) : '',
+                   act:'Répondre', page:'rh', src:'rh.conge_a_valider' });
+      }
+    } catch(e) { console.warn('[hub] source congés', e); }
+
+    // Contrats : fins de période d'essai et fins de CDD
+    try {
+      const ct = await sbGet('contrats',
+        'statut=eq.signe&select=id,salarie_id,candidat_nom,poste,type,date_debut,date_fin');
+      const mine = (ct || []).filter(c => gardeSal(c.salarie_id));
+      const lim21 = dans(21);
+      const essais = [];
+      mine.forEach(function(c) {
+        if (!c.date_debut) return;
+        const d = new Date(c.date_debut);
+        if (isNaN(d)) return;
+        const fin = new Date(d.getTime());
+        fin.setMonth(fin.getMonth() + (c.type === 'CDI' ? 2 : 1));   // repère indicatif CCN
+        if (fin >= auj && fin <= lim21) essais.push({ c:c, fin:fin });
+      });
+      ORV_STATS.periodesEssai = essais.length;
+      essais.slice(0, 4).forEach(function(x) {
+        out.push({ dom:'rh', n:2,
+                   t:"Fin de période d'essai : " + nomSal(x.c),
+                   c:(crecheDe[x.c.salarie_id] || cf || 'Réseau'),
+                   q:'échéance indicative le ' + _orvJourFr(_orvJour(x.fin)) + ' — à confirmer sur le contrat',
+                   act:'Ouvrir le contrat', page:'rh', src:'rh.fin_periode_essai' });
+      });
+      const lim30 = dans(30);
+      const termes = mine.filter(function(c) {
+        if (!c.date_fin) return false;
+        const d = new Date(c.date_fin);
+        return !isNaN(d) && d >= auj && d <= lim30;
+      });
+      ORV_STATS.contratsFinProche = termes.length;
+      if (termes.length) {
+        const noms = termes.slice(0, 3).map(nomSal).join(', ');
+        out.push({ dom:'rh', n:2,
+                   t:termes.length + ' contrat' + (termes.length > 1 ? 's' : '') + ' arrivant à terme sous 30 jours',
+                   c:cf || 'Réseau', q:noms + (termes.length > 3 ? ' + ' + (termes.length - 3) + ' autre(s)' : ''),
+                   act:'Anticiper', page:'rh', src:'rh.contrat_fin_proche' });
+      }
+    } catch(e) { console.warn('[hub] source contrats', e); }
+
+    // Formations obligatoires : recyclages échus ou proches
+    try {
+      const fo = await sbGet('formations_rh',
+        'select=id,salarie_id,titre,renouvellement,obligatoire&order=renouvellement.asc');
+      const echus = [], proches = [];
+      const lim60 = dans(60);
+      (fo || []).forEach(function(f) {
+        if (!f.renouvellement || !gardeSal(f.salarie_id)) return;
+        const d = new Date(f.renouvellement);
+        if (isNaN(d)) return;
+        if (d < auj) { if (f.obligatoire) echus.push(f); }
+        else if (d <= lim60) proches.push(f);
+      });
+      ORV_STATS.recyclagesEchus = echus.length;
+      echus.slice(0, 4).forEach(function(f) {
+        out.push({ dom:'rh', n:1,
+                   t:'Recyclage échu : ' + (f.titre || 'formation obligatoire'),
+                   c:(crecheDe[f.salarie_id] || cf || 'Réseau'),
+                   q:(nomDe[f.salarie_id] || '') + ' — échu le ' + _orvJourFr(f.renouvellement),
+                   act:'Programmer', page:'rh', src:'rh.recyclage_echu' });
+      });
+      if (proches.length) {
+        out.push({ dom:'rh', n:2,
+                   t:proches.length + ' formation' + (proches.length > 1 ? 's' : '') + ' à renouveler sous 60 jours',
+                   c:cf || 'Réseau', q:'', act:'Planifier', page:'rh', src:'rh.recyclage_proche' });
+      }
+    } catch(e) { console.warn('[hub] source formations RH', e); }
+  } catch(e) { console.warn('[hub] sources RH', e); }
+
+  // ── Conformité : documents à revalider et en attente de signature ──
+  try {
+    const enf = (typeof getFamilles === 'function') ? (getFamilles(cf || '__all__') || []) : [];
+    const set = new Set(enf.map(e => String(e.id)));
+    const di = await sbGet('documents_instances',
+      'select=id,titre,statut,enfant_id,valable_jusqu_au&limit=400');
+    // Un document non rattaché à un enfant relève de la structure : toujours visible.
+    const garde = function(d) { return !cf || !d.enfant_id || set.has(String(d.enfant_id)); };
+    const ajd = _orvJour(new Date());
+    const j30 = _orvJour(new Date(Date.now() + 30 * 86400000));
+    const rows = (di || []).filter(garde);
+    const expires = rows.filter(d => d.valable_jusqu_au && d.valable_jusqu_au < ajd);
+    const bientot = rows.filter(d => d.valable_jusqu_au && d.valable_jusqu_au >= ajd && d.valable_jusqu_au <= j30);
+    const aSigner = rows.filter(d => d.statut !== 'signe');
+    ORV_STATS.docsExpires = expires.length;
+    ORV_STATS.docsASigner = aSigner.length;
+    expires.slice(0, 4).forEach(function(d) {
+      out.push({ dom:'reglementaire', n:2, t:'Document expiré : ' + (d.titre || 'sans titre'),
+                 c:cf || 'Réseau', q:'validité dépassée le ' + _orvJourFr(d.valable_jusqu_au),
+                 act:'Revalider', page:'__docsstruct', src:'document.expire' });
+    });
+    if (bientot.length) {
+      out.push({ dom:'reglementaire', n:3,
+                 t:bientot.length + ' document' + (bientot.length > 1 ? 's' : '') + ' à revalider sous 30 jours',
+                 c:cf || 'Réseau', q:'', act:'Anticiper', page:'__docsstruct', src:'document.a_revalider' });
+    }
+    if (aSigner.length) {
+      out.push({ dom:'reglementaire', n:2,
+                 t:aSigner.length + ' document' + (aSigner.length > 1 ? 's' : '') + " en attente de signature",
+                 c:cf || 'Réseau', q:'', act:'Ouvrir', page:'__docsstruct', src:'document.a_signer' });
+    }
+  } catch(e) { console.warn('[hub] source documents', e); }
+
   ORV_BESOINS = out;
   return out;
 }
@@ -12115,9 +12306,13 @@ function orvKpisOf(domId) {
     if (domId === 'univers' && typeof UNIVERS !== 'undefined' && Array.isArray(UNIVERS)) {
       k.push({ k:'Univers', v:UNIVERS.length, s:'enregistrés' });
     }
-    if (domId === 'rh' && typeof SALARIES !== 'undefined' && Array.isArray(SALARIES)) {
-      const s = SALARIES.filter(x => (!cf || x.creche === cf) && x.statut !== 'archive');
-      k.push({ k:'Professionnels', v:s.length, s:cf || 'réseau' });
+    if (domId === 'rh') {
+      if (typeof SALARIES !== 'undefined' && Array.isArray(SALARIES)) {
+        const s = SALARIES.filter(x => (!cf || x.creche === cf) && x.statut !== 'archive');
+        k.push({ k:'Professionnels', v:s.length, s:cf || 'réseau' });
+      }
+      k.push({ k:'Congés à valider',  v:Number(ORV_STATS.congesAValider || 0), s:'en attente' });
+      k.push({ k:'Recyclages échus',  v:Number(ORV_STATS.recyclagesEchus || 0), s:'formations obligatoires' });
     }
     if (domId === 'reseau') {
       k.push({ k:'Demandes ouvertes', v:Number(ORV_STATS.demandesOuvertes || 0), s:cf || 'réseau' });
