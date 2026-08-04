@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 12:08 -->
+<!-- OREVY BUILD 2026-08-04 12:18 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -12097,19 +12097,32 @@ async function orvCollecterBesoins() {
     const enf = (typeof getFamilles === 'function') ? (getFamilles(cf || '__all__') || []) : [];
     const j0 = new Date(); j0.setHours(0,0,0,0);
     const actifs = enf.filter(e => !e.sortie || new Date(e.sortie) >= j0);
-    const manque = actifs.filter(function(e) {
+    // Deux manques seulement, mais qui bloquent réellement le travail :
+    // sans date de naissance, ni tranche d'âge ni échéances ; sans contact,
+    // personne à joindre en cas d'urgence. La date d'entrée n'en fait pas
+    // partie : rarement saisie, sans conséquence sur l'accueil.
+    const sansDdn = actifs.filter(e => !e.ddn);
+    const sansContact = actifs.filter(function(e) {
       const p1 = e.parent1 || {};
-      const contact = String(p1.tel || p1.telephone || p1.mobile || p1.email || '').trim();
-      return !e.ddn || !contact || !e.entree;
+      return !String(p1.tel || p1.telephone || p1.mobile || p1.email || '').trim();
     });
-    ORV_STATS.dossiersIncomplets = manque.length;
-    if (manque.length) {
-      const noms = manque.slice(0, 3)
-        .map(e => ((e.prenom || '') + ' ' + (e.nom || '')).trim()).filter(Boolean).join(', ');
+    ORV_STATS.dossiersIncomplets = new Set(
+      sansDdn.concat(sansContact).map(e => String(e.id))).size;
+    const _noms = function(arr) {
+      const n = arr.slice(0, 3).map(e => ((e.prenom || '') + ' ' + (e.nom || '')).trim()).filter(Boolean).join(', ');
+      return n + (arr.length > 3 ? ' + ' + (arr.length - 3) + ' autre(s)' : '');
+    };
+    if (sansContact.length) {
+      out.push({ dom:'familles', n:1,
+                 t:sansContact.length + ' enfant' + (sansContact.length > 1 ? 's' : '') + ' sans contact parent joignable',
+                 c:cf || 'Réseau', q:_noms(sansContact),
+                 act:'Renseigner', page:'familles', src:'famille.contact_manquant' });
+    }
+    if (sansDdn.length) {
       out.push({ dom:'familles', n:2,
-                 t:manque.length + ' dossier' + (manque.length > 1 ? 's' : '') + ' enfant incomplet' + (manque.length > 1 ? 's' : ''),
-                 c:cf || 'Réseau', q:noms + (manque.length > 3 ? ' + ' + (manque.length - 3) + ' autre(s)' : ''),
-                 act:'Compléter', page:'familles', src:'famille.dossier_incomplet' });
+                 t:sansDdn.length + ' dossier' + (sansDdn.length > 1 ? 's' : '') + ' sans date de naissance',
+                 c:cf || 'Réseau', q:_noms(sansDdn),
+                 act:'Compléter', page:'familles', src:'famille.ddn_manquante' });
     }
   } catch(e) { console.warn('[hub] source dossiers incomplets', e); }
 
