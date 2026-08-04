@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 08:35 -->
+<!-- OREVY BUILD 2026-08-04 08:45 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -2606,7 +2606,10 @@ textarea { resize: vertical; min-height: 72px; }
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;overflow:hidden">
           <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
             <div style="font-size:15px;font-weight:700;font-family:'Syne',sans-serif">👥 Utilisateurs</div>
-            <button class="btn btn-secondary" onclick="renderAdminUsers()" style="font-size:12px;padding:6px 12px">🔄 Actualiser</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-secondary" onclick="alignerToutesCreches()" style="font-size:12px;padding:6px 12px" title="Supprime les surcharges qui contredisent les fiches salarié">↺ Aligner les crèches sur la RH</button>
+              <button class="btn btn-secondary" onclick="renderAdminUsers()" style="font-size:12px;padding:6px 12px">🔄 Actualiser</button>
+            </div>
           </div>
           <div id="admin-users-list">
             <div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Chargement…</div>
@@ -14457,7 +14460,11 @@ async function crecheIndexSalaries(force) {
 // origine : 'surcharge' | 'fiche' | 'volante' | 'ambigu' | 'aucune'
 function crecheEffective(email, override, idx) {
   const ov = (override || '').trim();
-  if (ov && ov !== 'all' && ov !== '__all__') return { creche: ov, origine: 'surcharge' };
+  if (ov && ov !== 'all' && ov !== '__all__') {
+    const src = idx ? idx[(email || '').trim().toLowerCase()] : null;
+    const her = (src && !src.ambigu && src.creche && src.creche !== 'Réseau') ? src.creche : '';
+    return { creche: ov, origine: 'surcharge', heritee: her, divergente: !!her && her !== ov };
+  }
   const f = idx ? idx[(email || '').trim().toLowerCase()] : null;
   if (!f) return { creche: '', origine: 'aucune' };
   if (f.ambigu) return { creche: '', origine: 'ambigu' };
@@ -14469,7 +14476,14 @@ function crecheEffective(email, override, idx) {
 
 // Libellé lisible sans recours à la couleur (forme + texte).
 function crecheLibelle(e) {
-  if (e.origine === 'surcharge') return '◆ ' + orvEsc(e.creche) + ' <span style="font-size:11px;color:var(--ink3)">(surcharge)</span>';
+  if (e.origine === 'surcharge') {
+    if (e.divergente) {
+      return '◆ ' + orvEsc(e.creche)
+        + ' <span style="font-size:11px;color:var(--ink3)">(surcharge)</span>'
+        + '<div style="font-size:11px;margin-top:3px">△ fiche RH : <strong>' + orvEsc(e.heritee) + '</strong></div>';
+    }
+    return '◆ ' + orvEsc(e.creche) + ' <span style="font-size:11px;color:var(--ink3)">(surcharge, conforme à la fiche)</span>';
+  }
   if (e.origine === 'fiche')     return '● ' + orvEsc(e.creche) + ' <span style="font-size:11px;color:var(--ink3)">(fiche salarié)</span>';
   if (e.origine === 'fiche_perso') return '● ' + orvEsc(e.creche) + ' <span style="font-size:11px;color:var(--ink3)">(fiche — e-mail perso)</span>';
   if (e.origine === 'volante')   return '○ ' + orvEsc(e.creche || 'Volante') + ' <span style="font-size:11px;color:var(--ink3)">(volante)</span>';
@@ -14479,6 +14493,35 @@ function crecheLibelle(e) {
 }
 
 // Définit ou efface la surcharge de crèche d'un compte.
+// Supprime la surcharge d'un compte : la crèche redevient celle de la fiche RH.
+async function alignerCrecheSurRH(id) {
+  try {
+    await sbUpdate('utilisateurs', id, { creche_id: null });
+    showNotif('✅ Crèche alignée sur la fiche salarié');
+    await renderAdminUsers();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+// Aligne d'un coup tous les comptes dont la surcharge contredit la fiche RH.
+async function alignerToutesCreches() {
+  try {
+    const users = await sbGet('utilisateurs', 'select=id,email,creche_id');
+    const idx = await crecheIndexSalaries(true);
+    const ko = (users || []).filter(function(u) {
+      return crecheEffective(u.email, u.creche_id, idx).divergente;
+    });
+    if (!ko.length) { showNotif('✅ Aucune divergence : tout est déjà aligné'); return; }
+    const liste = ko.map(function(u) {
+      const e = crecheEffective(u.email, u.creche_id, idx);
+      return '\u2022 ' + u.email + ' : ' + e.creche + ' \u2192 ' + e.heritee;
+    }).join('\n');
+    if (!confirm('Aligner ' + ko.length + ' compte(s) sur la fiche salari\u00e9 ?\n\n' + liste)) return;
+    for (const u of ko) { await sbUpdate('utilisateurs', u.id, { creche_id: null }); }
+    showNotif('\u2705 ' + ko.length + ' compte(s) align\u00e9(s)');
+    await renderAdminUsers();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
 async function changeAdminUserCreche(id, email, current) {
   const idx = await crecheIndexSalaries(true);
   const eff = crecheEffective(email, current, idx);
@@ -14549,6 +14592,13 @@ async function renderAdminUsers() {
                 title="Hérite de la fiche salarié ; surcharge possible">
                 📍 Crèche
               </button>
+              ${crecheEffective(u.email, u.creche_id, _cidx).divergente
+                ? `<button class="btn btn-secondary btn-sm" style="color:var(--accent)"
+                     onclick="alignerCrecheSurRH('${u.id}')"
+                     title="Supprimer la surcharge et suivre la fiche salarié">
+                     ↺ Aligner sur la RH
+                   </button>`
+                : ''}
               <button class="btn btn-secondary btn-sm" style="color:${u.actif?'var(--red)':'var(--green)'}"
                 onclick="toggleAdminUser('${u.id}', ${u.actif})">
                 ${u.actif?'Désactiver':'Réactiver'}
