@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 19:20 -->
+<!-- OREVY BUILD 2026-08-04 19:28 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -16128,6 +16128,37 @@ function peHmStr(v) {
   return String(Math.floor(v / 60)).padStart(2, '0') + ':' + String(v % 60).padStart(2, '0');
 }
 
+// Une professionnelle inscrite sur plusieurs horaires le meme jour couvre en
+// general l'absence d'une collegue : son amplitude s'etend. Ce n'est pas une
+// erreur a corriger, c'est une decision a rendre lisible. On calcule donc sa
+// presence continue reelle. Les heures effectivement faites, elles, sont
+// suivies au pointage — pas ici.
+// Renvoie { <idCreneau>: { debut, fin, n } } pour les pros a plusieurs
+// creneaux dans la journee.
+function peAmplitudesEtendues(week, jour, creche) {
+  const hs = getPlanningHoraires(creche);
+  const parPro = {};
+  ((week && week.creneaux) || []).filter(c => Number(c.jour) === jour).forEach(c => {
+    const hr = hs[plgCreneauIdx(c)] || {};
+    const a = peHm(hr.debut), b = peHm(hr.fin);
+    if (a === null || b === null || b <= a) return;
+    const k = c.pro || '';
+    (parPro[k] = parPro[k] || []).push({ id: c.id, d: a, f: b });
+  });
+  const out = {};
+  Object.keys(parPro).forEach(pro => {
+    const l = parPro[pro];
+    if (l.length < 2) return;
+    const info = {
+      debut: l.reduce((m, x) => Math.min(m, x.d), Infinity),
+      fin:   l.reduce((m, x) => Math.max(m, x.f), -Infinity),
+      n: l.length
+    };
+    l.forEach(x => { out[x.id] = info; });
+  });
+  return out;
+}
+
 function peCouvertureJour(week, jour, creche, mini) {
   const seuil = mini || 2;
   if (creche && !estJourOuvert(creche, jour)) return { ferme: true, seuil };
@@ -16142,14 +16173,14 @@ function peCouvertureJour(week, jour, creche, mini) {
       const hr = hs[plgCreneauIdx(c)] || {};
       const a = peHm(hr.debut), b = peHm(hr.fin);
       if (a === null || b === null || b <= a) return null;
-      return [Math.max(a, o0), Math.min(b, o1)];
+      return { d: Math.max(a, o0), f: Math.min(b, o1), pro: c.pro || '' };
     })
-    .filter(s => s && s[1] > s[0]);
+    .filter(s => s && s.f > s.d);
 
   if (!segs.length) return { vide: true, trous: [{ debut: o0, fin: o1, n: 0 }], min: 0, seuil, ouv: [o0, o1] };
 
   const pts = new Set([o0, o1]);
-  segs.forEach(s => { pts.add(s[0]); pts.add(s[1]); });
+  segs.forEach(s => { pts.add(s.d); pts.add(s.f); });
   const bornes = Array.from(pts).filter(p => p >= o0 && p <= o1).sort((a, b) => a - b);
 
   const trous = [];
@@ -16157,7 +16188,9 @@ function peCouvertureJour(week, jour, creche, mini) {
   for (let i = 0; i < bornes.length - 1; i++) {
     const a = bornes[i], b = bornes[i + 1];
     if (b <= a) continue;
-    const n = segs.filter(s => s[0] <= a && s[1] >= b).length;
+    // Personnes distinctes, pas creneaux : une pro inscrite deux fois sur la
+    // meme tranche reste une seule paire de bras.
+    const n = new Set(segs.filter(s => s.d <= a && s.f >= b).map(s => s.pro)).size;
     if (n < min) min = n;
     if (n < seuil) {
       const last = trous[trous.length - 1];
@@ -16921,6 +16954,7 @@ function renderPlanningEquipe() {
       const creneaux = (week.creneaux||[]).filter(cr => cr.horaire_idx === hi && cr.jour === di);
       const dt = new Date(monday); dt.setDate(monday.getDate()+di);
       const isToday = dt.getTime() === today.getTime();
+      const etendues = peAmplitudesEtendues(week, di, crecheId);
 
       const proTags = creneaux.map(cr => `
         <div onclick="openModalPE(${hi},${di},'${cr.id}')"
@@ -16933,6 +16967,7 @@ function renderPlanningEquipe() {
           </div>
           <span style="font-size:11px;font-weight:700;color:${c.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px">${cr.pro.split(' ')[0]}</span>
           ${cr.pause ? `<span style="font-size:9px;color:var(--ink3);opacity:0.8">⏸</span>` : ''}
+          ${etendues[cr.id] ? `<span title="${cr.pro} est sur ${etendues[cr.id].n} horaires ce jour-là — présence continue ${peHmStr(etendues[cr.id].debut)}–${peHmStr(etendues[cr.id].fin)}. Les heures réellement effectuées sont suivies au pointage." style="font-size:9px;font-weight:700;color:var(--ink3);background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:0 4px;line-height:1.6;white-space:nowrap">${peHmStr(etendues[cr.id].debut)}–${peHmStr(etendues[cr.id].fin)}</span>` : ''}
         </div>`).join('');
 
       // Effectif de la ligne : information brute, sans verdict. Le respect de
