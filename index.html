@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 12:37 -->
+<!-- OREVY BUILD 2026-08-04 12:45 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -11789,6 +11789,36 @@ function orvOuvrirFormation(id) {
   if (id && typeof openModalRh === 'function') setTimeout(function(){ openModalRh('formation', id); }, 160);
 }
 
+/* Familles : la fiche enfant, directement. */
+function orvOuvrirEnfant(id) {
+  if (id && typeof openFicheEnfant === 'function') openFicheEnfant(id);
+}
+
+/* Conformité : une instance de document. dmOpen attend deux arguments,
+   transportés dans un seul via une paire "modele|instance". */
+function orvOuvrirDocument(paire) {
+  if (!paire || typeof dmOpen !== 'function') return;
+  const p = String(paire).split('|');
+  if (p.length === 2 && p[0] && p[1]) dmOpen(p[0], p[1]);
+}
+
+/* Réseau : le fil de discussion, ou l'onglet Demandes à défaut. */
+function orvOuvrirDemande(id) {
+  if (typeof drSwitchTab === 'function') drSwitchTab('demandes');
+  if (id && typeof drOpenThread === 'function') setTimeout(function(){ drOpenThread(id); }, 200);
+}
+function orvOuvrirConsignes() {
+  if (typeof drSwitchTab === 'function') drSwitchTab('consignes');
+}
+
+/* Incidents : le registre filtré sur les non traités, ce qui est
+   exactement la question posée par la ligne du hub. */
+function orvOuvrirIncidents() {
+  if (typeof incSetFilter !== 'function') return;
+  const btns = document.querySelectorAll('#inc-filters .dr-filter');
+  incSetFilter('non-traite', btns.length ? btns[btns.length - 1] : null);
+}
+
 function orvRetourHubPrincipal() { orvCloseMenus(); if (typeof showHub === 'function') showHub(); }
 function orvChangeCreche(v) {
   const sel = document.getElementById('creche-select-sidebar');
@@ -11934,7 +11964,8 @@ async function orvCollecterBesoins() {
       rows.forEach(function(d) { if (d.creche_id === 'all' || d.creche_id === '__all__') d.creche_id = 'Réseau'; });
       rows.filter(d => d.priorite === 'urgent').slice(0, 5).forEach(function(d) {
         out.push({ dom:'reseau', n:1, t:'Demande urgente : ' + (d.titre || 'sans titre'), c:d.creche_id || 'Réseau',
-                   q:'', act:'Ouvrir', page:'demandesReseau', src:'demande.urgente_ouverte' });
+                   q:'', act:'Ouvrir', page:'demandesReseau',
+                   fn:'orvOuvrirDemande', arg:d.id, src:'demande.urgente_ouverte' });
       });
       const autres = rows.filter(d => d.priorite !== 'urgent').length;
       ORV_STATS.demandesOuvertes = rows.length;
@@ -11956,12 +11987,14 @@ async function orvCollecterBesoins() {
       const graves = rows.filter(i => i.severity === 'grave');
       graves.slice(0, 5).forEach(function(i) {
         out.push({ dom:'reglementaire', n:1, t:'Incident grave non clôturé', c:i.creche_id || 'Réseau',
-                   q:(i.created_at || '').substring(0, 10), act:'Clôturer', page:'incidents', src:'incident.grave_non_traite' });
+                   q:(i.created_at || '').substring(0, 10), act:'Clôturer', page:'incidents',
+                   fn:'orvOuvrirIncidents', arg:null, src:'incident.grave_non_traite' });
       });
       const legers = rows.length - graves.length;
       if (legers > 0) {
         out.push({ dom:'reglementaire', n:2, t:legers + ' incident' + (legers > 1 ? 's' : '') + ' non clôturé' + (legers > 1 ? 's' : ''),
-                   c:cf || 'Réseau', q:'', act:'Ouvrir le registre', page:'incidents', src:'incident.non_traite' });
+                   c:cf || 'Réseau', q:'', act:'Ouvrir le registre', page:'incidents',
+                   fn:'orvOuvrirIncidents', arg:null, src:'incident.non_traite' });
       }
     }
   } catch(e) { console.warn('[hub] source incidents', e); }
@@ -11984,7 +12017,8 @@ async function orvCollecterBesoins() {
           out.push({ dom:'reseau', n:(d.priorite === 'urgent' ? 1 : 2),
                      t:'Pour vous : ' + (d.titre || 'sans titre'),
                      c:d.creche_id || 'Réseau', q:'demande adressée',
-                     act:'Répondre', page:'demandesReseau', src:'demande.adressee_a_moi' });
+                     act:'Répondre', page:'demandesReseau',
+                     fn:'orvOuvrirDemande', arg:d.id, src:'demande.adressee_a_moi' });
         });
       }
     }
@@ -12029,7 +12063,8 @@ async function orvCollecterBesoins() {
                      t:nb + ' nouveau' + (nb > 1 ? 'x' : '') + ' message' + (nb > 1 ? 's' : '')
                        + ' — ' + (d.titre || 'discussion'),
                      c:(parFil[k][0].auteur_nom || 'un collègue'), q:'',
-                     act:'Lire', page:'demandesReseau', src:'message.non_lu' });
+                     act:'Lire', page:'demandesReseau',
+                     fn:'orvOuvrirDemande', arg:k, src:'message.non_lu' });
         });
       }
     }
@@ -12046,12 +12081,14 @@ async function orvCollecterBesoins() {
       const urg = rows.filter(c => c.priorite === 'urgent');
       urg.slice(0, 3).forEach(function(c) {
         out.push({ dom:'reseau', n:1, t:'Consigne urgente : ' + (c.sujet || 'sans sujet'),
-                   c:cf || 'Réseau', q:'non lue', act:'Lire', page:'demandesReseau', src:'consigne.urgente_non_lue' });
+                   c:cf || 'Réseau', q:'non lue', act:'Lire', page:'demandesReseau',
+                   fn:'orvOuvrirConsignes', arg:null, src:'consigne.urgente_non_lue' });
       });
       const reste = rows.length - urg.length;
       if (reste > 0) {
         out.push({ dom:'reseau', n:2, t:reste + ' consigne' + (reste > 1 ? 's' : '') + ' non lue' + (reste > 1 ? 's' : ''),
-                   c:cf || 'Réseau', q:'', act:'Ouvrir', page:'demandesReseau', src:'consigne.non_lue' });
+                   c:cf || 'Réseau', q:'', act:'Ouvrir', page:'demandesReseau',
+                   fn:'orvOuvrirConsignes', arg:null, src:'consigne.non_lue' });
       }
     }
   } catch(e) { console.warn('[hub] source consignes', e); }
@@ -12150,13 +12187,19 @@ async function orvCollecterBesoins() {
       out.push({ dom:'familles', n:1,
                  t:sansContact.length + ' enfant' + (sansContact.length > 1 ? 's' : '') + ' sans contact parent joignable',
                  c:cf || 'Réseau', q:_noms(sansContact),
-                 act:'Renseigner', page:'familles', src:'famille.contact_manquant' });
+                 act:'Renseigner', page:'familles',
+                 fn:(sansContact.length === 1 ? 'orvOuvrirEnfant' : null),
+                 arg:(sansContact.length === 1 ? sansContact[0].id : null),
+                 src:'famille.contact_manquant' });
     }
     if (sansDdn.length) {
       out.push({ dom:'familles', n:2,
                  t:sansDdn.length + ' dossier' + (sansDdn.length > 1 ? 's' : '') + ' sans date de naissance',
                  c:cf || 'Réseau', q:_noms(sansDdn),
-                 act:'Compléter', page:'familles', src:'famille.ddn_manquante' });
+                 act:'Compléter', page:'familles',
+                 fn:(sansDdn.length === 1 ? 'orvOuvrirEnfant' : null),
+                 arg:(sansDdn.length === 1 ? sansDdn[0].id : null),
+                 src:'famille.ddn_manquante' });
     }
   } catch(e) { console.warn('[hub] source dossiers incomplets', e); }
 
@@ -12298,7 +12341,7 @@ async function orvCollecterBesoins() {
     const enf = (typeof getFamilles === 'function') ? (getFamilles(cf || '__all__') || []) : [];
     const set = new Set(enf.map(e => String(e.id)));
     const di = await sbGet('documents_instances',
-      'select=id,titre,statut,enfant_id,valable_jusqu_au&limit=400');
+      'select=id,titre,statut,enfant_id,modele_id,valable_jusqu_au&limit=400');
     // Un document non rattaché à un enfant relève de la structure : toujours visible.
     const garde = function(d) { return !cf || !d.enfant_id || set.has(String(d.enfant_id)); };
     const ajd = _orvJour(new Date());
@@ -12312,7 +12355,10 @@ async function orvCollecterBesoins() {
     expires.slice(0, 4).forEach(function(d) {
       out.push({ dom:'reglementaire', n:2, t:'Document expiré : ' + (d.titre || 'sans titre'),
                  c:cf || 'Réseau', q:'validité dépassée le ' + _orvJourFr(d.valable_jusqu_au),
-                 act:'Revalider', page:'__docsstruct', src:'document.expire' });
+                 act:'Revalider', page:'__docsstruct',
+                 fn:(d.modele_id ? 'orvOuvrirDocument' : null),
+                 arg:(d.modele_id ? (d.modele_id + '|' + d.id) : null),
+                 src:'document.expire' });
     });
     if (bientot.length) {
       out.push({ dom:'reglementaire', n:3,
@@ -12322,7 +12368,10 @@ async function orvCollecterBesoins() {
     if (aSigner.length) {
       out.push({ dom:'reglementaire', n:2,
                  t:aSigner.length + ' document' + (aSigner.length > 1 ? 's' : '') + " en attente de signature",
-                 c:cf || 'Réseau', q:'', act:'Ouvrir', page:'__docsstruct', src:'document.a_signer' });
+                 c:cf || 'Réseau', q:'', act:'Ouvrir', page:'__docsstruct',
+                 fn:((aSigner.length === 1 && aSigner[0].modele_id) ? 'orvOuvrirDocument' : null),
+                 arg:((aSigner.length === 1 && aSigner[0].modele_id) ? (aSigner[0].modele_id + '|' + aSigner[0].id) : null),
+                 src:'document.a_signer' });
     }
   } catch(e) { console.warn('[hub] source documents', e); }
 
