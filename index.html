@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 07:54 -->
+<!-- OREVY BUILD 2026-08-04 08:11 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -14299,6 +14299,7 @@ function crecheEffective(email, override, idx) {
   const f = idx ? idx[(email || '').trim().toLowerCase()] : null;
   if (!f) return { creche: '', origine: 'aucune' };
   if (f.ambigu) return { creche: '', origine: 'ambigu' };
+  if (f.creche === 'Réseau') return { creche: '', origine: 'reseau' };
   if (f.volante) return { creche: f.creche, origine: 'volante' };
   if (f.creche)  return { creche: f.creche, origine: (f.via === 'email_perso' ? 'fiche_perso' : 'fiche') };
   return { creche: '', origine: 'aucune' };
@@ -14310,6 +14311,7 @@ function crecheLibelle(e) {
   if (e.origine === 'fiche')     return '● ' + orvEsc(e.creche) + ' <span style="font-size:11px;color:var(--ink3)">(fiche salarié)</span>';
   if (e.origine === 'fiche_perso') return '● ' + orvEsc(e.creche) + ' <span style="font-size:11px;color:var(--ink3)">(fiche — e-mail perso)</span>';
   if (e.origine === 'volante')   return '○ ' + orvEsc(e.creche || 'Volante') + ' <span style="font-size:11px;color:var(--ink3)">(volante)</span>';
+  if (e.origine === 'reseau')    return '◇ Réseau <span style="font-size:11px;color:var(--ink3)">(fiche — sans rattachement)</span>';
   if (e.origine === 'ambigu')    return '△ <span style="font-size:12px">e-mail sur plusieurs fiches</span>';
   return '— <span style="font-size:11px;color:var(--ink3)">non rattaché</span>';
 }
@@ -21131,8 +21133,8 @@ function showImportResult(type, html) {
           </select>
         </div>
         <div class="form-group">
-          <label>Structure *</label>
-          <select id="sal-creche"></select>
+          <label>Structure * <span style="font-weight:400;color:var(--ink3);font-size:12px">— choisir « Réseau » pour une fonction non rattachée à une crèche</span></label>
+          <select id="sal-creche" onchange="_salToggleCoordStructures()"></select>
         </div>
         <div class="form-group full" id="sal-structures-coord-block" style="display:none">
           <label>Structures coordonnées <span style="font-weight:400;color:var(--ink3);font-size:12px">— périmètre de coordination réseau (distinct de la structure de rattachement ci-dessus)</span></label>
@@ -21369,7 +21371,8 @@ function _salPopulateCreche() {
   const sel = document.getElementById('sal-creche');
   if (!sel) return;
   sel.innerHTML = '<option value="">— Choisir —</option>' +
-    CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('');
+    CRECHES_DATA.map(c => `<option value="${c.nom}">${c.nom}</option>`).join('') +
+    '<option value="Réseau">Réseau — aucune structure de rattachement</option>';
 }
 
 function _salPopulateCoordStructures(selected) {
@@ -21387,7 +21390,11 @@ function _salToggleCoordStructures() {
   const fonctionEl = document.getElementById('sal-fonction');
   const block = document.getElementById('sal-structures-coord-block');
   if (!fonctionEl || !block) return;
-  block.style.display = (fonctionEl.value === 'Coordinateur / Coordinatrice EJE') ? '' : 'none';
+  const crecheEl = document.getElementById('sal-creche');
+  const estReseau = crecheEl && crecheEl.value === 'Réseau';
+  const estCoord  = fonctionEl.value === 'Coordinateur / Coordinatrice EJE'
+                 || fonctionEl.value === 'Directeur / Directrice';
+  block.style.display = (estCoord || estReseau) ? '' : 'none';
 }
 
 function openModalSalarie() {
