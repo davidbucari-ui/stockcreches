@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 17:32 -->
+<!-- OREVY BUILD 2026-08-04 18:01 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17539,20 +17539,38 @@ function plgParamCible() {
 // Les creneaux du planning referencent un horaire par son index. Retirer un
 // horaire decale donc tous les suivants : sans reindexation, les creneaux
 // deja saisis glisseraient silencieusement d'une ligne.
-function plgReindexCreneaux(creches, idxSup) {
+function plgCreneauIdx(c) {
+  const v = (c && c.horaire_idx !== undefined && c.horaire_idx !== null) ? c.horaire_idx : (c ? c.horaireIdx : null);
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+// cible : '_commun' (toute structure qui suit le jeu commun) ou un nom de
+// structure. On ne se fie pas a CRECHES_DATA pour reconnaitre les cles : une
+// semaine enregistree sous un ancien nom de structure doit etre corrigee elle
+// aussi, sans quoi le decalage survivrait, invisible.
+function plgReindexCreneaux(cible, idxSup) {
   let data;
-  try { data = peLoad(); } catch { return 0; }
-  const cibles = new Set(creches);
+  try { data = peLoad(); } catch (e) { console.warn('[planning] reindex :', e && e.message); return 0; }
+  const st = plgLoadStore();
+  const concernee = nom => (cible === '_commun')
+    ? !(Array.isArray(st[nom]) && st[nom].length)   // suit le jeu commun
+    : (nom === cible);
+
   let touchees = 0;
   Object.keys(data).forEach(key => {
     const m = key.match(/^(\d{4})-W(\d{2})-(.*)$/);
-    if (!m || !cibles.has(m[3])) return;
+    if (!m || !concernee(m[3])) return;
     const w = data[key];
     if (!w || !Array.isArray(w.creneaux)) return;
     const avant = JSON.stringify(w.creneaux);
     const apres = w.creneaux
-      .filter(c => Number(c.horaire_idx) !== idxSup)
-      .map(c => Number(c.horaire_idx) > idxSup ? {...c, horaire_idx: Number(c.horaire_idx) - 1} : c);
+      .filter(c => plgCreneauIdx(c) !== idxSup)
+      .map(c => {
+        const i = plgCreneauIdx(c);
+        if (i === null || i <= idxSup) return {...c, horaire_idx: i, horaireIdx: i};
+        return {...c, horaire_idx: i - 1, horaireIdx: i - 1};
+      });
     if (JSON.stringify(apres) === avant) return;
     w.creneaux = apres;
     w._ts = Date.now();
@@ -17560,7 +17578,36 @@ function plgReindexCreneaux(creches, idxSup) {
     pePushWeekKey(key, w).catch(() => peMarquerEnAttente(key));
   });
   if (touchees) peSave(data);
+  console.log('[planning] reindex apres suppression horaire ' + idxSup + ' (' + cible + ') : ' + touchees + ' semaine(s)');
   return touchees;
+}
+
+// Diagnostic console : etat reel du magasin d'horaires et des semaines saisies.
+function orvDiagPlanning() {
+  const st = plgLoadStore();
+  console.log('Jeux d\'horaires :');
+  Object.keys(st).forEach(k => console.log('  ' + k + ' : ' + st[k].map((x,i) => (i+1)+'.'+x.debut+'-'+x.fin).join('  ')));
+  console.log('Structures connues :', (CRECHES_DATA||[]).map(c => c.nom).join(', '));
+  let data = {};
+  try { data = peLoad(); } catch {}
+  const lignes = [];
+  Object.keys(data).forEach(key => {
+    const m = key.match(/^(\d{4})-W(\d{2})-(.*)$/);
+    const w = data[key] || {};
+    const cr = Array.isArray(w.creneaux) ? w.creneaux : [];
+    if (!cr.length) return;
+    const idx = {};
+    cr.forEach(c => { const i = plgCreneauIdx(c); idx[i] = (idx[i]||0) + 1; });
+    lignes.push({
+      cle: key,
+      structure: m ? m[3] : '(cle non reconnue)',
+      connue: m ? (CRECHES_DATA||[]).some(c => c.nom === m[3]) : false,
+      creneaux: cr.length,
+      par_horaire: Object.keys(idx).sort().map(i => 'h' + (Number(i)+1) + ':' + idx[i]).join(' ')
+    });
+  });
+  console.table(lignes);
+  return lignes.length + ' semaine(s) avec des creneaux';
 }
 
 // Structures qui suivent le jeu commun (donc concernees par une modification
@@ -17683,7 +17730,7 @@ function plgParamDelHoraire(i) {
     + '\n\nLes cr\u00e9neaux d\u00e9j\u00e0 saisis sur cet horaire seront supprim\u00e9s, et les horaires suivants remont\u00e9s d\'un rang.')) return;
   st[cible].splice(i, 1);
   plgSaveStore(st);
-  const n = plgReindexCreneaux(concernees, i);
+  const n = plgReindexCreneaux(cible, i);
   renderPlanningParamHoraires();
   if (typeof renderActiveTab === 'function' && document.getElementById('pe-grid')) renderActiveTab();
   showNotif('\ud83d\uddd1 Horaire supprim\u00e9' + (n ? ' \u00b7 ' + n + ' semaine(s) r\u00e9ajust\u00e9e(s)' : ''));
