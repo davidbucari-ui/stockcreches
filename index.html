@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 18:34 -->
+<!-- OREVY BUILD 2026-08-04 18:42 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17660,6 +17660,54 @@ function plgParamCible() {
 // Les creneaux du planning referencent un horaire par son index. Retirer un
 // horaire decale donc tous les suivants : sans reindexation, les creneaux
 // deja saisis glisseraient silencieusement d'une ligne.
+// mapFn : ancien index -> nouvel index, ou null pour retirer le creneau.
+function plgRemapCreneaux(cible, mapFn, libelle) {
+  let data;
+  try { data = peLoad(); } catch (e) { console.warn('[planning] remap :', e && e.message); return 0; }
+  const st = plgLoadStore();
+  const concernee = nom => (cible === '_commun')
+    ? !(Array.isArray(st[nom]) && st[nom].length)
+    : (nom === cible);
+
+  let touchees = 0;
+  Object.keys(data).forEach(key => {
+    const m = key.match(/^(\d{4})-W(\d{2})-(.*)$/);
+    if (!m || !concernee(m[3])) return;
+    const w = data[key];
+    if (!w || !Array.isArray(w.creneaux)) return;
+    const avant = JSON.stringify(w.creneaux);
+    const apres = [];
+    w.creneaux.forEach(c => {
+      const i = plgCreneauIdx(c);
+      const j = (i === null) ? null : mapFn(i);
+      if (j === null || j === undefined) return;
+      apres.push({...c, horaire_idx: j, horaireIdx: j});
+    });
+    if (JSON.stringify(apres) === avant) return;
+    w.creneaux = apres;
+    w._ts = Date.now();
+    touchees++;
+    pePushWeekKey(key, w).catch(() => peMarquerEnAttente(key));
+  });
+  if (touchees) peSave(data);
+  console.log('[planning] ' + (libelle || 'remap') + ' (' + cible + ') : ' + touchees + ' semaine(s)');
+  return touchees;
+}
+
+// Les horaires sont-ils deja en ordre chronologique ?
+function plgHorairesTries(liste) {
+  for (let i = 1; i < liste.length; i++) {
+    const a = peHm(liste[i-1].debut), b = peHm(liste[i].debut);
+    if (a === null || b === null) continue;
+    if (b < a) return false;
+    if (b === a) {
+      const fa = peHm(liste[i-1].fin), fb = peHm(liste[i].fin);
+      if (fa !== null && fb !== null && fb < fa) return false;
+    }
+  }
+  return true;
+}
+
 function plgCreneauIdx(c) {
   const v = (c && c.horaire_idx !== undefined && c.horaire_idx !== null) ? c.horaire_idx : (c ? c.horaireIdx : null);
   const n = Number(v);
@@ -17671,36 +17719,9 @@ function plgCreneauIdx(c) {
 // semaine enregistree sous un ancien nom de structure doit etre corrigee elle
 // aussi, sans quoi le decalage survivrait, invisible.
 function plgReindexCreneaux(cible, idxSup) {
-  let data;
-  try { data = peLoad(); } catch (e) { console.warn('[planning] reindex :', e && e.message); return 0; }
-  const st = plgLoadStore();
-  const concernee = nom => (cible === '_commun')
-    ? !(Array.isArray(st[nom]) && st[nom].length)   // suit le jeu commun
-    : (nom === cible);
-
-  let touchees = 0;
-  Object.keys(data).forEach(key => {
-    const m = key.match(/^(\d{4})-W(\d{2})-(.*)$/);
-    if (!m || !concernee(m[3])) return;
-    const w = data[key];
-    if (!w || !Array.isArray(w.creneaux)) return;
-    const avant = JSON.stringify(w.creneaux);
-    const apres = w.creneaux
-      .filter(c => plgCreneauIdx(c) !== idxSup)
-      .map(c => {
-        const i = plgCreneauIdx(c);
-        if (i === null || i <= idxSup) return {...c, horaire_idx: i, horaireIdx: i};
-        return {...c, horaire_idx: i - 1, horaireIdx: i - 1};
-      });
-    if (JSON.stringify(apres) === avant) return;
-    w.creneaux = apres;
-    w._ts = Date.now();
-    touchees++;
-    pePushWeekKey(key, w).catch(() => peMarquerEnAttente(key));
-  });
-  if (touchees) peSave(data);
-  console.log('[planning] reindex apres suppression horaire ' + idxSup + ' (' + cible + ') : ' + touchees + ' semaine(s)');
-  return touchees;
+  return plgRemapCreneaux(cible,
+    i => (i === idxSup) ? null : (i > idxSup ? i - 1 : i),
+    'suppression horaire ' + idxSup);
 }
 
 // Diagnostic console : etat reel du magasin d'horaires et des semaines saisies.
@@ -17797,6 +17818,8 @@ function renderPlanningParamHoraires() {
       + '</div>';
   }).join('');
 
+  const btnRanger = !plgHorairesTries(liste)
+    ? '<button onclick="plgParamRanger()" style="border:1.5px solid var(--ink);background:var(--surface);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--ink)">\u2195 Ranger par heure de d\u00e9but</button>' : '';
   const btnDetach = (cur !== '_commun' && !propre)
     ? '<button onclick="plgParamDetach()" style="border:1.5px solid var(--border);background:var(--surface);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--ink2)">Cr\u00e9er des horaires propres \u00e0 cette structure</button>' : '';
   const btnReattach = propre
@@ -17809,7 +17832,7 @@ function renderPlanningParamHoraires() {
     + '<div>' + lignes + '</div>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">'
       + '<button onclick="plgParamAddHoraire()" style="border:1.5px dashed var(--border);background:var(--surface);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--ink2)">+ Ajouter un horaire</button>'
-      + btnDetach + btnReattach
+      + btnRanger + btnDetach + btnReattach
     + '</div>'
     + '<div style="font-size:12.5px;color:var(--ink3);margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">'
       + '<span style="font-size:15px;color:var(--ink)">\u25cf</span> horaires propres &nbsp;\u00b7&nbsp; '
@@ -17839,10 +17862,66 @@ function plgParamSetHeure(i, field, val) {
 function plgParamAddHoraire() {
   const st = plgLoadStore(), cible = plgParamCible();
   if (!Array.isArray(st[cible])) return;
-  st[cible].push({ name: 'Horaire ' + (st[cible].length + 1), debut: '09:00', fin: '17:00' });
+  const nouv = { name: 'Horaire ' + (st[cible].length + 1), debut: '09:00', fin: '17:00' };
+
+  // Insertion a la place chronologique quand la liste est deja rangee. Si
+  // elle ne l'est pas, on ajoute en fin : reordonner d'autorite deplacerait
+  // des creneaux sans que personne ne l'ait demande.
+  let pos = st[cible].length;
+  if (plgHorairesTries(st[cible])) {
+    const d = peHm(nouv.debut);
+    pos = st[cible].findIndex(x => { const v = peHm(x.debut); return v !== null && d !== null && v > d; });
+    if (pos === -1) pos = st[cible].length;
+  }
+  st[cible].splice(pos, 0, nouv);
+  plgParamRenumeroter(st[cible]);
   plgSaveStore(st);
+  if (pos < st[cible].length - 1) plgRemapCreneaux(cible, i => (i >= pos ? i + 1 : i), 'insertion horaire ' + pos);
   renderPlanningParamHoraires();
-  showNotif('\u2705 Horaire ajout\u00e9');
+  if (typeof renderActiveTab === 'function' && document.getElementById('pe-grid')) renderActiveTab();
+  showNotif('\u2705 Horaire ajout\u00e9 en position ' + (pos + 1));
+}
+
+// Ne renumerote que les intitules laisses au format par defaut : un nom
+// choisi est une decision, pas un rang.
+function plgParamRenumeroter(liste) {
+  liste.forEach((hr, k) => {
+    if (/^Horaire \d+$/.test(String(hr.name || '').trim())) hr.name = 'Horaire ' + (k + 1);
+  });
+}
+
+// Rangement explicite d'une liste devenue desordonnee (heures modifiees
+// apres coup). Les creneaux suivent leur horaire.
+function plgParamRanger() {
+  const st = plgLoadStore(), cible = plgParamCible();
+  const liste = st[cible];
+  if (!Array.isArray(liste) || plgHorairesTries(liste)) return;
+
+  const ordre = liste.map((hr, i) => ({ hr, i }));
+  ordre.sort((a, b) => {
+    const da = peHm(a.hr.debut), db = peHm(b.hr.debut);
+    if (da === null) return 1;
+    if (db === null) return -1;
+    if (da !== db) return da - db;
+    const fa = peHm(a.hr.fin), fb = peHm(b.hr.fin);
+    return (fa === null ? 0 : fa) - (fb === null ? 0 : fb);
+  });
+
+  const portee = (cible === '_commun')
+    ? ('Ces horaires sont communs \u00e0 : ' + (plgStructuresCommunes().join(', ') || 'aucune structure'))
+    : ('Ces horaires ne concernent que ' + cible);
+  if (!confirm('Ranger les horaires par heure de d\u00e9but ?\n\n' + portee
+    + '.\n\nLes cr\u00e9neaux d\u00e9j\u00e0 saisis suivront leur horaire : personne ne changera d\'heure.')) return;
+
+  const mapping = {};
+  ordre.forEach((o, nouv) => { mapping[o.i] = nouv; });
+  st[cible] = ordre.map(o => o.hr);
+  plgParamRenumeroter(st[cible]);
+  plgSaveStore(st);
+  const n = plgRemapCreneaux(cible, i => (mapping[i] === undefined ? null : mapping[i]), 'rangement chronologique');
+  renderPlanningParamHoraires();
+  if (typeof renderActiveTab === 'function' && document.getElementById('pe-grid')) renderActiveTab();
+  showNotif('\u2705 Horaires rang\u00e9s' + (n ? ' \u00b7 ' + n + ' semaine(s) suivie(s)' : ''));
 }
 
 function plgParamDelHoraire(i) {
@@ -17857,9 +17936,7 @@ function plgParamDelHoraire(i) {
   if (!confirm('Supprimer l\'horaire "' + nom + '" ?\n\n' + portee
     + '\n\nLes cr\u00e9neaux d\u00e9j\u00e0 saisis sur cet horaire seront supprim\u00e9s, et les horaires suivants remont\u00e9s d\'un rang.')) return;
   st[cible].splice(i, 1);
-  st[cible].forEach((hr, k) => {
-    if (/^Horaire \d+$/.test(String(hr.name || '').trim())) hr.name = 'Horaire ' + (k + 1);
-  });
+  plgParamRenumeroter(st[cible]);
   plgSaveStore(st);
   const n = plgReindexCreneaux(cible, i);
   renderPlanningParamHoraires();
