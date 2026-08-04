@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 18:15 -->
+<!-- OREVY BUILD 2026-08-04 18:24 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -16101,28 +16101,96 @@ async function pePlanningSyncCloud() {
 }
 
 // ── Taux d'encadrement ─────────────────────────────────────────────
-function getStructureType() {
+// Micro-creche ou structure classique : c'est un attribut de la structure,
+// pas du poste de consultation. L'ancien reglage local sert encore de repli
+// tant que les fiches n'ont pas ete renseignees.
+function getStructureType(crecheNom) {
+  const nom = crecheNom
+    || (typeof currentCreche !== 'undefined' && currentCreche !== 'all' && currentCreche !== '__all__' ? currentCreche : null);
+  const c = (typeof CRECHES_DATA !== 'undefined' ? CRECHES_DATA : []).find(x => x.nom === nom);
+  if (c && c.type) return c.type;
   try { return localStorage.getItem('orevy_structure_type') || 'classique'; } catch { return 'classique'; }
 }
 
-function calcTaux(nbPros) {
-  // Retourne { label, ok } en logique simplifiée (sans distinction NM/marcheurs ici)
-  const type = getStructureType();
-  if (nbPros === 0) return { label: '—', state: 'empty' };
-  if (type === 'micro') {
-    // 1 pro / 6 enfants max — on affiche juste le nombre de pros
-    return { label: `${nbPros} pro${nbPros>1?'s':''}`, state: 'ok' };
-  }
-  // Classique: on affiche le nombre de pros présents
-  return { label: `${nbPros} pro${nbPros>1?'s':''}`, state: nbPros >= 2 ? 'ok' : nbPros === 1 ? 'limit' : 'bad' };
+// ── Couverture d'une journee ────────────────────────────────────────
+// L'ancien badge comptait les pros ligne par ligne : deux pros sur deux
+// horaires differents s'affichaient chacune comme "1 pro" en alerte, alors
+// que la journee etait couverte. Un effectif ne se juge pas par ligne mais a
+// un instant donne. On balaie donc l'amplitude d'ouverture et on releve les
+// plages ou moins de `mini` professionnels se chevauchent.
+// Le plancher de 2 professionnels des qu'un enfant est present ne depend pas
+// des effectifs : c'est le seul critere exploitable avant d'avoir les
+// presences enfants par creneau.
+function peHm(s) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s || '');
+  return m ? (Number(m[1]) * 60 + Number(m[2])) : null;
+}
+function peHmStr(v) {
+  return String(Math.floor(v / 60)).padStart(2, '0') + ':' + String(v % 60).padStart(2, '0');
 }
 
-const TAUX_COLORS = {
-  ok:    { bg:'#F0FDF4', color:'#16A34A', icon:'✓' },
-  limit: { bg:'#FFFBEB', color:'#D97706', icon:'!' },
-  bad:   { bg:'#FEF2F2', color:'#DC2626', icon:'✗' },
-  empty: { bg:'var(--bg)', color:'var(--ink3)', icon:'' },
-};
+function peCouvertureJour(week, jour, creche, mini) {
+  const seuil = mini || 2;
+  if (creche && !estJourOuvert(creche, jour)) return { ferme: true, seuil };
+  const ouv = getOuvertureStructure(creche);
+  const o0 = peHm(ouv.debut), o1 = peHm(ouv.fin);
+  if (o0 === null || o1 === null || o1 <= o0) return { indetermine: true, seuil };
+
+  const hs = getPlanningHoraires(creche);
+  const segs = ((week && week.creneaux) || [])
+    .filter(c => Number(c.jour) === jour)
+    .map(c => {
+      const hr = hs[plgCreneauIdx(c)] || {};
+      const a = peHm(hr.debut), b = peHm(hr.fin);
+      if (a === null || b === null || b <= a) return null;
+      return [Math.max(a, o0), Math.min(b, o1)];
+    })
+    .filter(s => s && s[1] > s[0]);
+
+  if (!segs.length) return { vide: true, trous: [{ debut: o0, fin: o1, n: 0 }], min: 0, seuil, ouv: [o0, o1] };
+
+  const pts = new Set([o0, o1]);
+  segs.forEach(s => { pts.add(s[0]); pts.add(s[1]); });
+  const bornes = Array.from(pts).filter(p => p >= o0 && p <= o1).sort((a, b) => a - b);
+
+  const trous = [];
+  let min = Infinity;
+  for (let i = 0; i < bornes.length - 1; i++) {
+    const a = bornes[i], b = bornes[i + 1];
+    if (b <= a) continue;
+    const n = segs.filter(s => s[0] <= a && s[1] >= b).length;
+    if (n < min) min = n;
+    if (n < seuil) {
+      const last = trous[trous.length - 1];
+      if (last && last.fin === a && last.n === n) last.fin = b;
+      else trous.push({ debut: a, fin: b, n });
+    }
+  }
+  return { trous, min: (min === Infinity ? 0 : min), seuil, ouv: [o0, o1] };
+}
+
+// Rendu compact d'une couverture. Etat encode par glyphe + texte.
+function peBadgeCouverture(cv) {
+  const box = (glyph, txt, fort, titre) =>
+    '<span title="' + String(titre || txt).replace(/"/g, '&quot;') + '" '
+    + 'style="display:inline-flex;align-items:center;gap:4px;border-radius:10px;padding:2px 8px;font-size:11px;'
+    + 'font-weight:700;background:' + (fort ? 'var(--ink)' : 'var(--surface2)') + ';'
+    + 'color:' + (fort ? '#fff' : 'var(--ink3)') + ';border:1px solid ' + (fort ? 'var(--ink)' : 'var(--border)') + '">'
+    + '<span style="font-size:12px;line-height:1">' + glyph + '</span>' + txt + '</span>';
+
+  if (cv.ferme)       return box('\u2014', 'ferm\u00e9', false, 'Structure ferm\u00e9e ce jour');
+  if (cv.indetermine) return box('?', 'ouverture non r\u00e9gl\u00e9e', false, 'Renseignez l\'amplitude dans les Param\u00e8tres');
+  if (cv.vide)        return box('\u25b3', 'non renseign\u00e9', true, 'Aucun cr\u00e9neau saisi sur ce jour ouvr\u00e9');
+  if (!cv.trous.length) {
+    return box('\u2713', cv.min + ' pro' + (cv.min > 1 ? 's' : '') + ' mini', false,
+      'Au moins ' + cv.seuil + ' professionnels sur toute l\'amplitude '
+      + peHmStr(cv.ouv[0]) + '\u2013' + peHmStr(cv.ouv[1]));
+  }
+  const plages = cv.trous.map(t => peHmStr(t.debut) + '\u2013' + peHmStr(t.fin));
+  const court  = plages.slice(0, 2).join(' ') + (plages.length > 2 ? ' +' + (plages.length - 2) : '');
+  return box('\u25b3', court, true,
+    'Moins de ' + cv.seuil + ' professionnels sur : ' + plages.join(', '));
+}
 
 // ── Initialisation pages ───────────────────────────────────────────
 function pePopulateCreches(selId) {
@@ -16847,14 +16915,11 @@ function renderPlanningEquipe() {
           ${cr.pause ? `<span style="font-size:9px;color:var(--ink3);opacity:0.8">⏸</span>` : ''}
         </div>`).join('');
 
-      // Taux d'encadrement badge
+      // Effectif de la ligne : information brute, sans verdict. Le respect de
+      // l'encadrement se lit sur la journee (ligne Couverture), pas ici.
       const nb = creneaux.length;
-      const taux = calcTaux(nb);
-      const tc = TAUX_COLORS[taux.state];
-      const tauxBadge = nb > 0 ? `<div style="margin-top:4px;display:inline-flex;align-items:center;gap:3px;
-        background:${tc.bg};color:${tc.color};border-radius:10px;padding:2px 7px;font-size:10px;font-weight:700">
-        ${tc.icon} ${taux.label}
-      </div>` : '';
+      const tauxBadge = nb > 1 ? `<div style="margin-top:4px;display:inline-block;
+        color:var(--ink3);font-size:10px;font-weight:600">${nb} pros</div>` : '';
 
       const addBtn = `<button onclick="openModalPE(${hi},${di},null)"
         style="width:100%;border:1.5px dashed var(--border);border-radius:6px;background:none;
@@ -16876,18 +16941,17 @@ function renderPlanningEquipe() {
     </div>`;
   }).join('');
 
-  // Ligne taux global par jour (nb de pros total présents)
+  // Couverture de la journee : sur quelles plages de l'amplitude d'ouverture
+  // le plancher de 2 professionnels n'est pas atteint.
   const totalRow = (() => {
     const cells = Array.from({length:5}, (_,di) => {
-      const nb = (week.creneaux||[]).filter(cr => cr.jour === di).length;
-      const taux = calcTaux(nb);
-      const tc = TAUX_COLORS[taux.state];
+      const cv = peCouvertureJour(week, di, crecheId, 2);
       return `<div style="padding:6px;border-left:1px solid var(--border);text-align:center;background:var(--bg)">
-        ${nb > 0 ? `<span style="background:${tc.bg};color:${tc.color};border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">${tc.icon} ${nb} pro${nb>1?'s':''}</span>` : '<span style="color:var(--border);font-size:11px">—</span>'}
+        ${peBadgeCouverture(cv)}
       </div>`;
     }).join('');
     return `<div style="display:grid;grid-template-columns:110px repeat(5,1fr);background:var(--bg)">
-      <div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center">Total jour</div>
+      <div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center" title="Plages où moins de 2 professionnels se chevauchent, dans l'amplitude d'ouverture">Couverture</div>
       ${cells}
     </div>`;
   })();
@@ -17857,9 +17921,22 @@ function renderParamOuverture() {
       + '<b>' + fermes.join(', ') + ' : structure ferm\u00e9e.</b> Aucun besoin ne sera signal\u00e9 ces jours-l\u00e0 pour ' + plgOuvCreche + '.</div>'
     : '';
 
+  const type = getStructureType(plgOuvCreche);
+  const typeBtn = (v, label) => {
+    const on = (type === v);
+    return '<button onclick="plgOuvSetType(\'' + v + '\')" '
+      + 'style="border:' + (on ? '2px solid var(--ink)' : '1.5px solid var(--border)') + ';'
+      + 'background:' + (on ? 'var(--ink)' : 'var(--surface2)') + ';color:' + (on ? '#fff' : 'var(--ink3)') + ';'
+      + 'border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer">'
+      + (on ? '\u25cf ' : '\u25cb ') + label + '</button>';
+  };
+
   el.innerHTML =
     '<div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px">Structure</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">' + pills + '</div>'
+    + '<div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px">Type de structure</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">'
+      + typeBtn('micro', 'Micro-cr\u00e8che') + typeBtn('classique', 'Structure classique') + '</div>'
     + '<div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px">Jours d\'ouverture</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">' + jours + '</div>'
     + '<div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px">Amplitude</div>'
@@ -17894,6 +17971,15 @@ function plgOuvSetHeure(field, val) {
   if (!val) return;
   const patch = {}; patch[field] = val;
   plgOuvEcrire(patch);
+}
+
+function plgOuvSetType(v) {
+  const c = (CRECHES_DATA || []).find(x => x.nom === plgOuvCreche);
+  if (!c) return;
+  c.type = v;
+  sauverCreches();
+  renderParamOuverture();
+  showNotif('\u2705 ' + plgOuvCreche + ' : ' + (v === 'micro' ? 'micro-cr\u00e8che' : 'structure classique'));
 }
 
 // ── MODULE POINTAGE ───────────────────────────────────────────────
