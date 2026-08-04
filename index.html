@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 06:40 -->
+<!-- OREVY BUILD 2026-08-04 06:47 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -23134,6 +23134,10 @@ function dmRenderForm() {
   var m = DM_CUR, h = '';
   m.champs.forEach(function(c) {
     if (c.sec) { h += '<div class="dm-sec">'+dmEsc(c.sec)+'</div>'; return; }
+    if (c.type === 'lignes') {
+      h += '<div class="dm-f w2" id="dmr-' + c.id + '">' + dmRenderLignes(c) + '</div>';
+      return;
+    }
     var badge = c.auto ? '<span class="dm-auto" id="dma-'+c.id+'" style="display:none">⚡ auto</span>' : '';
     var req = c.requis ? '<span class="dm-req">requis</span>' : '';
     var ctl;
