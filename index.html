@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 19:16 -->
+<!-- OREVY BUILD 2026-08-04 19:20 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17251,11 +17251,11 @@ function renderPlanningGantt() {
                width:calc(${widthPct}% * ((100% - ${LABEL_W}px) / 100%));
                height:${barH}px;
                background:${c.bg};border:1.5px solid ${c.border};border-radius:8px;
-               display:flex;align-items:center;justify-content:center;overflow:hidden;
+               display:flex;align-items:center;justify-content:flex-start;overflow:hidden;
                cursor:pointer;transition:opacity 0.15s"
         onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
         ${pauseHtml}
-        <div style="color:${c.text};padding:0 8px;z-index:1;position:relative;font-size:11px;font-weight:700;white-space:nowrap">${h.debut||''}–${h.fin||''}${cr.pause ? ` <span style="font-weight:600;opacity:.75">\u23f8 ${cr.pause}</span>` : ''}</div>
+        <div style="color:${c.text};margin:0 6px;padding:1px 6px;z-index:3;position:relative;font-size:11px;font-weight:700;white-space:nowrap;background:${c.bg};border-radius:6px">${h.debut||''}–${h.fin||''}${cr.pause ? ` <span style="font-weight:600;opacity:.8">\u23f8 ${cr.pause}</span>` : ''}</div>
       </div>`;
     }).join('');
 
