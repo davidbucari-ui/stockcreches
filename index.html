@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 19:05 -->
+<!-- OREVY BUILD 2026-08-04 19:16 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17230,7 +17230,15 @@ function renderPlanningGantt() {
           const pf = parseInt(pm[3])*60+(parseInt(pm[4])||0);
           const pL = ((pd - debutMin) / (finMin - debutMin) * 100).toFixed(3);
           const pW = ((pf - pd)       / (finMin - debutMin) * 100).toFixed(3);
-          pauseHtml = `<div data-pause-debut="${pd}" data-pause-fin="${pf}" data-bar-debut="${debutMin}" data-bar-fin="${finMin}" style="position:absolute;left:${pL}%;top:0;width:${pW}%;bottom:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.5) 0,rgba(255,255,255,0.5) 3px,transparent 3px,transparent 7px);border-left:1px dashed ${c.border};border-right:1px dashed ${c.border}"></div>`;
+          const large = parseFloat(pW) > 4.5;
+          pauseHtml = `<div data-pause-debut="${pd}" data-pause-fin="${pf}" data-bar-debut="${debutMin}" data-bar-fin="${finMin}"
+            title="Pause ${cr.pause}"
+            style="position:absolute;left:${pL}%;top:0;width:${pW}%;bottom:0;z-index:2;
+              background:repeating-linear-gradient(45deg,${c.text} 0,${c.text} 2px,#fff 2px,#fff 6px);
+              border-left:2px solid ${c.text};border-right:2px solid ${c.text};
+              display:flex;align-items:center;justify-content:center;overflow:hidden">
+            ${large ? `<span style="background:#fff;border:1px solid ${c.text};border-radius:6px;padding:0 4px;font-size:9px;font-weight:700;color:${c.text};line-height:1.5;white-space:nowrap">\u23f8</span>` : ''}
+          </div>`;
         }
       }
 
@@ -17247,7 +17255,7 @@ function renderPlanningGantt() {
                cursor:pointer;transition:opacity 0.15s"
         onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
         ${pauseHtml}
-        <div style="color:${c.text};padding:0 8px;z-index:1;position:relative;font-size:11px;font-weight:700;white-space:nowrap">${h.debut||''}–${h.fin||''}</div>
+        <div style="color:${c.text};padding:0 8px;z-index:1;position:relative;font-size:11px;font-weight:700;white-space:nowrap">${h.debut||''}–${h.fin||''}${cr.pause ? ` <span style="font-weight:600;opacity:.75">\u23f8 ${cr.pause}</span>` : ''}</div>
       </div>`;
     }).join('');
 
