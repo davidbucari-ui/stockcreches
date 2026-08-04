@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 15:41 -->
+<!-- OREVY BUILD 2026-08-04 15:44 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -9011,7 +9011,7 @@ async function chargerParamsSupabase() {
         try { localStorage.setItem('orevy_coord_suivi_v2', JSON.stringify(row.data)); } catch {}
       }
       if (row.id === 'orevy_planning_horaires' && Array.isArray(row.data) && row.data.length) {
-        try { localStorage.setItem(PLG_HORAIRES_KEY, JSON.stringify(row.data)); } catch {}
+        try { localStorage.setItem('planning_horaires_config', JSON.stringify(row.data)); } catch {}
       }
     });
     // ── Réparation : si Supabase n'a jamais reçu les noms de crèches,
@@ -10035,6 +10035,7 @@ function startApp() {
   chargerSalariesSupabase();
   // Planning équipe : rapatrier les semaines partagées (et remonter les locales)
   pePlanningSyncCloud().catch(function(){});
+  peSyncHorairesCloud().catch(function(){});
   // Seconde tentative : la fiche salarié peut n'être disponible qu'après ce chargement.
   setTimeout(function() { if (!MA_CRECHE) resoudreMaCreche(true); }, 2500);
   setTimeout(checkDemandesBadge, 1500);
@@ -15950,6 +15951,37 @@ async function pePushWeekKey(key, week) {
   peRetirerAttente(key);
 }
 
+// Les horaires de reference etaient purement locaux : un appareil neuf
+// repartait sur PLG_DEFAULT_HORAIRES et affichait des heures fausses. On les
+// rapatrie, et si la base n'en a aucun on amorce depuis ce poste — mais
+// uniquement si sa configuration a ete personnalisee (sinon il n'y a rien a
+// partager, et pousser les defauts figerait un choix que personne n'a fait).
+async function peSyncHorairesCloud() {
+  if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
+  const KEY = 'planning_horaires_config';
+  try {
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/parametres?id=eq.orevy_planning_horaires&select=data', { headers: SUPA_RH_HEADERS });
+    if (!r.ok) { console.warn('[planning] horaires : parametres ' + r.status); return; }
+    const rows  = await r.json();
+    const cloud = (Array.isArray(rows) && rows[0] && Array.isArray(rows[0].data) && rows[0].data.length) ? rows[0].data : null;
+
+    if (cloud) {
+      try { localStorage.setItem(KEY, JSON.stringify(cloud)); } catch {}
+      return;
+    }
+
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch {}
+    if (!Array.isArray(local) || !local.length) return;
+    if (JSON.stringify(local) === JSON.stringify(PLG_DEFAULT_HORAIRES)) return;
+
+    await sbUpsertParametre('orevy_planning_horaires', local);
+    console.log('[planning] horaires amorces depuis ce poste (' + local.length + ' horaires)');
+  } catch (e) {
+    console.warn('[planning] horaires :', e && e.message);
+  }
+}
+
 async function pePlanningSyncCloud() {
   if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return false;
   let rows = null;
@@ -16045,6 +16077,7 @@ function showPlanningEquipePage() {
   switchPlanningTab(defaultTab);
   // Le planning peut avoir ete modifie depuis un autre poste : on rafraichit
   // puis on re-rend l'onglet actif seulement si la synchro a abouti.
+  peSyncHorairesCloud().catch(function(){});
   pePlanningSyncCloud().then(function(ok) {
     if (ok && typeof renderActiveTab === 'function') renderActiveTab();
   }).catch(function(){});
