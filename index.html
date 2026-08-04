@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 07:28 -->
+<!-- OREVY BUILD 2026-08-04 07:54 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -2592,7 +2592,7 @@ textarea { resize: vertical; min-height: 72px; }
               <label style="font-size:12px;font-weight:600;color:var(--ink2);display:block;margin-bottom:5px">Crèche assignée</label>
               <select id="admin-new-creche"
                 style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg)">
-                <option value="">— Toutes les crèches —</option>
+                <option value="">— Héritée de la fiche salarié —</option>
               </select>
             </div>
           </div>
@@ -9600,6 +9600,16 @@ const ROLE_PAGES = {
   auxiliaire:    ['dashboard','inventaire','entretien','univers','planning','familles','transmissions','demandesReseau','incidents','pointage'],
   stagiaire:     ['dashboard'],
 };
+// Pages toujours ouvertes, quel que soit le rôle (points d'entrée de la navigation)
+const ROLE_PAGES_LIBRES = ['hubStructures','dashboard','fiche-enfant','notice'];
+
+// Vrai si le rôle courant a le droit d'ouvrir cette page.
+function roleCanOpenPage(page) {
+  if (!page || ROLE_PAGES_LIBRES.indexOf(page) !== -1) return true;
+  const allowed = ROLE_PAGES[currentUserRole];
+  if (!allowed) return false;              // rôle inconnu → rien d'autre que les pages libres
+  return allowed.indexOf(page) !== -1;
+}
 
 const ROLE_LABELS = {
   admin: '👑 Admin', coordinateur: '🗓 Coordinateur',
@@ -9608,21 +9618,30 @@ const ROLE_LABELS = {
 
 async function fetchUserRole(email) {
   const VALID_ROLES = ['admin','directrice','auxiliaire','stagiaire','coordinateur'];
+  const em = (email || '').trim().toLowerCase();
+  currentUserDbId = null;
+  if (!em) return 'stagiaire';
   try {
-    const rows = await sbGet('utilisateurs', `email=eq.${encodeURIComponent(email)}&actif=eq.true&select=id,role`);
-    if (Array.isArray(rows) && rows.length > 0) {
-      currentUserDbId = rows[0].id;
-      const r = (rows[0].role || '').toLowerCase().trim();
-      return VALID_ROLES.includes(r) ? r : 'admin';
+    // `ilike` sans joker = égalité insensible à la casse (le `eq.` précédent
+    // laissait passer tout compte saisi avec une majuscule → rôle admin par défaut).
+    const rows = await sbGet('utilisateurs', `email=ilike.${encodeURIComponent(em)}&select=id,role,actif`);
+    const row = Array.isArray(rows) ? rows.find(x => x && x.actif !== false) : null;
+    if (row) {
+      currentUserDbId = row.id;
+      const r = (row.role || '').toLowerCase().trim();
+      if (VALID_ROLES.includes(r)) return r;
+      console.warn('[Role] rôle inconnu en base pour ' + em + ' : « ' + row.role +' » → accès minimal');
+      return 'stagiaire';
     }
+    console.warn('[Role] aucun compte actif pour ' + em + ' → accès minimal');
   } catch(e) { console.warn('[Role]', e.message); }
-  // Email absent de la table utilisateurs → accès complet par défaut
-  return 'admin';
+  // Compte introuvable, inactif ou erreur réseau → accès minimal, jamais complet.
+  return 'stagiaire';
 }
 
 function applyRoleAccess() {
-  // Rôle non reconnu → traiter comme admin (accès complet)
-  const role = ROLE_PAGES[currentUserRole] ? currentUserRole : 'admin';
+  // Rôle non reconnu → accès minimal (jamais admin par défaut)
+  const role = ROLE_PAGES[currentUserRole] ? currentUserRole : 'stagiaire';
   document.querySelectorAll('.nav-item[data-roles]').forEach(btn => {
     const roles = btn.getAttribute('data-roles').split(',');
     btn.style.display = roles.includes(role) ? '' : 'none';
@@ -11512,9 +11531,9 @@ document.addEventListener('webkitfullscreenchange', _syncFullscreenBtn);
 const ORV_DOMAINES = [
   { id:'inventaire', ico:'\uD83D\uDCE6', nom:'Inventaire', sub:'Stocks, commandes, fournisseurs',
     pages:[
-      {id:'inventaire',  nom:'Stocks pédagogiques'},
-      {id:'entretien',   nom:'Stocks entretien'},
-      {id:'commandes',   nom:'Commandes'},
+      {id:'inventaire',  nom:'Stocks pédagogiques', roles:['admin','directrice','coordinateur','auxiliaire']},
+      {id:'entretien',   nom:'Stocks entretien', roles:['admin','directrice','coordinateur','auxiliaire']},
+      {id:'commandes',   nom:'Commandes', roles:['admin','directrice','coordinateur']},
       {id:'fournisseurs',nom:'Fournisseurs', roles:['admin','directrice','coordinateur']},
       {id:'statistiques',nom:'Statistiques',  roles:['admin','directrice','coordinateur']},
       {id:'historique',  nom:'Historique',    roles:['admin','directrice','coordinateur']}
@@ -11522,26 +11541,26 @@ const ORV_DOMAINES = [
     aBrancher:[] },
   { id:'familles', ico:'\uD83E\uDDD2', nom:'Familles', sub:'Dossiers, transmissions, portail, facturation',
     pages:[
-      {id:'familles',     nom:'Familles'},
-      {id:'transmissions',nom:'Transmissions'}
+      {id:'familles',     nom:'Familles', roles:['admin','directrice','coordinateur','auxiliaire']},
+      {id:'transmissions',nom:'Transmissions', roles:['admin','directrice','coordinateur','auxiliaire']}
     ],
     aBrancher:['dossiers incomplets','contrats arrivant à échéance','factures prêtes à envoyer','transmissions non saisies'] },
   { id:'rh', ico:'\uD83D\uDC65', nom:'Ressources humaines', sub:'Équipe, planning, pointage, contrats',
     pages:[
       {id:'rh',      nom:'Équipe',  roles:['admin','directrice','coordinateur']},
-      {id:'planning',nom:'Planning'},
-      {id:'pointage',nom:'Pointage'}
+      {id:'planning',nom:'Planning', roles:['admin','directrice','coordinateur','auxiliaire']},
+      {id:'pointage',nom:'Pointage', roles:['admin','directrice','coordinateur','auxiliaire']}
     ],
     aBrancher:['trous d\'encadrement au planning','fins de période d\'essai','visites médicales à programmer'] },
   { id:'univers', ico:'\uD83C\uDF1F', nom:'Univers ludiques', sub:'Aménagement, rotation, projet pédagogique',
-    pages:[ {id:'univers', nom:'Univers ludiques'} ],
+    pages:[ {id:'univers', nom:'Univers ludiques', roles:['admin','directrice','coordinateur','auxiliaire']} ],
     aBrancher:['univers à renouveler','observations pédagogiques manquantes','matériel manquant pour un univers'] },
   { id:'reseau', ico:'\uD83D\uDCAC', nom:'Demandes réseau', sub:'Demandes, consignes, événements, référents',
-    pages:[ {id:'demandesReseau', nom:'Demandes réseau'} ],
+    pages:[ {id:'demandesReseau', nom:'Demandes réseau', roles:['admin','directrice','coordinateur','auxiliaire']} ],
     aBrancher:[] },
   { id:'reglementaire', ico:'\u2696\uFE0F', nom:'Conformité & documents', sub:'Documents de la structure, ressources réglementaires, incidents',
     pages:[
-      {id:'incidents',     nom:'Registre des incidents'},
+      {id:'incidents',     nom:'Registre des incidents', roles:['admin','directrice','coordinateur','auxiliaire']},
       {id:'__docsstruct',  nom:'Documents de la structure'},
       {id:'__docsref',     nom:'Ressources réglementaires'}
     ],
@@ -12129,6 +12148,14 @@ async function orvOpenPilotage(domId) {
 }
 
 function showPage(page, btn, fromPopState) {
+  // Contrôle d'accès centralisé : le hub, les menus et l'historique passent tous
+  // par ici. Actif seulement une fois l'utilisateur identifié.
+  if (typeof currentUser !== 'undefined' && currentUser && !roleCanOpenPage(page)) {
+    console.warn('[Role] accès refusé à la page « ' + page + ' » pour le rôle ' + currentUserRole);
+    if (typeof showNotif === 'function') showNotif('\u26a0 Cette rubrique n\'est pas accessible avec votre profil');
+    if (page !== 'hubStructures') showPage('hubStructures', null, fromPopState);
+    return;
+  }
   currentPage = page;
   autoOpenGroupForPage(page);
   // Historique Android : on pousse un état sauf si on revient via popstate
@@ -14228,12 +14255,99 @@ async function showAdminPage() {
   await renderConnexionLog();
 }
 
+
+/* ══ CRÈCHE EFFECTIVE D'UN COMPTE ══
+   La crèche appartient à la fiche salarié (RH), pas au compte de connexion.
+   `utilisateurs.creche_id` n'est plus qu'une SURCHARGE facultative :
+     surcharge renseignée  → elle gagne
+     sinon                 → crèche de la fiche salarié (résolue par e-mail)
+     sinon                 → non rattaché (compte réseau)
+   ── */
+let _crecheIdxSal = null;   // { email minuscule -> { creche, ambigu } }
+
+async function crecheIndexSalaries(force) {
+  if (_crecheIdxSal && !force) return _crecheIdxSal;
+  const idx = {};
+  try {
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/salaries?select=id,data', { headers: SUPA_RH_HEADERS });
+    const raw = await r.json();
+    const rows = (Array.isArray(raw) ? raw : []);
+    // Deux passes, comme _drEnsureMe : l'e-mail professionnel fait foi,
+    // l'e-mail personnel n'est qu'un repli et ne doit jamais l'écraser.
+    ['email', 'email_perso'].forEach(function(champ) {
+      rows.forEach(function(x) {
+        if (!x || !x.data) return;
+        const em = (x.data[champ] || '').trim().toLowerCase();
+        if (!em) return;
+        const cible = { creche: (x.data.creche || '').trim(), volante: !!x.data.volante,
+                        ambigu: false, via: champ, sal: x.id };
+        if (!idx[em]) { idx[em] = cible; return; }
+        if (idx[em].sal === x.id) return;                                // même fiche, pro + perso identiques
+        if (idx[em].via === 'email' && champ === 'email_perso') return;  // le pro l'emporte
+        idx[em].ambigu = true;                                           // deux fiches distinctes : on ne tranche pas
+      });
+    });
+  } catch(e) { console.warn('[creche] index salaries', e); }
+  _crecheIdxSal = idx;
+  return idx;
+}
+
+// origine : 'surcharge' | 'fiche' | 'volante' | 'ambigu' | 'aucune'
+function crecheEffective(email, override, idx) {
+  const ov = (override || '').trim();
+  if (ov && ov !== 'all' && ov !== '__all__') return { creche: ov, origine: 'surcharge' };
+  const f = idx ? idx[(email || '').trim().toLowerCase()] : null;
+  if (!f) return { creche: '', origine: 'aucune' };
+  if (f.ambigu) return { creche: '', origine: 'ambigu' };
+  if (f.volante) return { creche: f.creche, origine: 'volante' };
+  if (f.creche)  return { creche: f.creche, origine: (f.via === 'email_perso' ? 'fiche_perso' : 'fiche') };
+  return { creche: '', origine: 'aucune' };
+}
+
+// Libellé lisible sans recours à la couleur (forme + texte).
+function crecheLibelle(e) {
+  if (e.origine === 'surcharge') return '◆ ' + orvEsc(e.creche) + ' <span style="font-size:11px;color:var(--ink3)">(surcharge)</span>';
+  if (e.origine === 'fiche')     return '● ' + orvEsc(e.creche) + ' <span style="font-size:11px;color:var(--ink3)">(fiche salarié)</span>';
+  if (e.origine === 'fiche_perso') return '● ' + orvEsc(e.creche) + ' <span style="font-size:11px;color:var(--ink3)">(fiche — e-mail perso)</span>';
+  if (e.origine === 'volante')   return '○ ' + orvEsc(e.creche || 'Volante') + ' <span style="font-size:11px;color:var(--ink3)">(volante)</span>';
+  if (e.origine === 'ambigu')    return '△ <span style="font-size:12px">e-mail sur plusieurs fiches</span>';
+  return '— <span style="font-size:11px;color:var(--ink3)">non rattaché</span>';
+}
+
+// Définit ou efface la surcharge de crèche d'un compte.
+async function changeAdminUserCreche(id, email, current) {
+  const idx = await crecheIndexSalaries(true);
+  const eff = crecheEffective(email, current, idx);
+  const list = (typeof _drGetCreches === 'function') ? _drGetCreches() : [];
+  if (!list.length) { alert('Aucune cr\u00e8che disponible.'); return; }
+  const heritee = crecheEffective(email, '', idx);
+  const lignes = list.map(function(c, i) { return (i + 1) + '. ' + c; }).join('\n');
+  const msg = 'Cr\u00e8che du compte ' + email
+    + '\n\nActuellement : ' + (eff.creche || 'non rattach\u00e9')
+    + ' (' + (eff.origine === 'surcharge' ? 'surcharge manuelle' : 'h\u00e9rit\u00e9 de la fiche salari\u00e9') + ')'
+    + '\n\n0. H\u00e9riter de la fiche salari\u00e9 \u2192 '
+    + (heritee.creche || (heritee.origine === 'ambigu' ? 'e-mail ambigu' : 'aucune fiche'))
+    + '\n' + lignes
+    + '\n\nSaisissez le num\u00e9ro :';
+  const choice = prompt(msg);
+  if (choice === null) return;
+  const n = parseInt(choice, 10);
+  if (isNaN(n) || n < 0 || n > list.length) { alert('Choix invalide.'); return; }
+  const val = (n === 0) ? null : list[n - 1];
+  try {
+    await sbUpdate('utilisateurs', id, { creche_id: val });
+    showNotif(val ? ('\u2705 Surcharge : ' + val) : '\u2705 Cr\u00e8che h\u00e9rit\u00e9e de la fiche salari\u00e9');
+    await renderAdminUsers();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
 async function renderAdminUsers() {
   const el = document.getElementById('admin-users-list');
   if (!el) return;
   el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Chargement…</div>';
   try {
     const users = await sbGet('utilisateurs', 'order=id.asc');
+    const _cidx = await crecheIndexSalaries(true);
     if (!users.length) {
       el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Aucun utilisateur enregistré.</div>';
       return;
@@ -14253,7 +14367,7 @@ async function renderAdminUsers() {
         <tr style="border-bottom:1px solid var(--border);background:${i%2?'var(--bg)':'var(--surface)'}">
           <td style="padding:12px 16px;font-size:13px">${u.email}</td>
           <td style="padding:12px 16px">${roleBadge(u.role)}</td>
-          <td style="padding:12px 16px;font-size:13px;color:var(--ink2)">${u.creche_id||'—'}</td>
+          <td style="padding:12px 16px;font-size:13px;color:var(--ink2)">${crecheLibelle(crecheEffective(u.email, u.creche_id, _cidx))}</td>
           <td style="padding:12px 16px">
             <span style="background:${u.actif?'var(--green-lt)':'var(--red-lt)'};color:${u.actif?'var(--green)':'var(--red)'};font-size:12px;font-weight:600;padding:2px 8px;border-radius:20px">
               ${u.actif?'Actif':'Désactivé'}
@@ -14265,6 +14379,11 @@ async function renderAdminUsers() {
               <button class="btn btn-secondary btn-sm" style="color:var(--accent)"
                 onclick="changeAdminUserRole('${u.id}', '${u.role||''}', '${u.email||''}')">
                 ✏️ Rôle
+              </button>
+              <button class="btn btn-secondary btn-sm"
+                onclick="changeAdminUserCreche('${u.id}', '${(u.email||'').replace(/'/g,'')}', '${(u.creche_id||'').replace(/'/g,'')}')"
+                title="Hérite de la fiche salarié ; surcharge possible">
+                📍 Crèche
               </button>
               <button class="btn btn-secondary btn-sm" style="color:${u.actif?'var(--red)':'var(--green)'}"
                 onclick="toggleAdminUser('${u.id}', ${u.actif})">
@@ -14300,7 +14419,8 @@ async function createAdminUser() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'create', email, password,
-        userData: { email, role, creche_id: creche || 'all', actif: true }
+        // Vide = la crèche sera héritée de la fiche salarié (résolution par e-mail)
+        userData: { email, role, creche_id: (creche && creche !== 'all' && creche !== '__all__') ? creche : null, actif: true }
       })
     })
     .catch(e => { console.warn("[Orevy] Worker inaccessible:", e); throw new Error("Réseau indisponible"); });
@@ -16741,7 +16861,12 @@ async function openFicheSalarie(userId) {
     // Reset to QR tab
     const qrBtn = document.getElementById('fiche-tab-btn-qr');
     switchSalarieFicheTab('qr', qrBtn);
-    renderFicheQR(userId, rows[0].email, rows[0].role, rows[0].creche_id);
+    let _crEff = rows[0].creche_id;
+    try {
+      const _ix = await crecheIndexSalaries();
+      _crEff = crecheEffective(rows[0].email, rows[0].creche_id, _ix).creche || null;
+    } catch(e) {}
+    renderFicheQR(userId, rows[0].email, rows[0].role, _crEff);
     document.getElementById('modal-fiche-salarie').classList.add('open');
   } catch(e) { showNotif('⚠ ' + e.message); }
 }
