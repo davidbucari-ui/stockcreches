@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 06:54 -->
+<!-- OREVY BUILD 2026-08-04 07:08 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -11525,20 +11525,20 @@ const ORV_DOMAINES = [
       {id:'familles',     nom:'Familles'},
       {id:'transmissions',nom:'Transmissions'}
     ],
-    aBrancher:['dossiers incomplets','documents du portail à valider','contrats arrivant à échéance','factures prêtes à envoyer','transmissions non saisies'] },
+    aBrancher:['dossiers incomplets','contrats arrivant à échéance','factures prêtes à envoyer','transmissions non saisies'] },
   { id:'rh', ico:'\uD83D\uDC65', nom:'Ressources humaines', sub:'Équipe, planning, pointage, contrats',
     pages:[
       {id:'rh',      nom:'Équipe',  roles:['admin','directrice','coordinateur']},
       {id:'planning',nom:'Planning'},
       {id:'pointage',nom:'Pointage'}
     ],
-    aBrancher:['trous d\'encadrement au planning','anomalies de pointage','fins de période d\'essai','visites médicales à programmer'] },
+    aBrancher:['trous d\'encadrement au planning','fins de période d\'essai','visites médicales à programmer'] },
   { id:'univers', ico:'\uD83C\uDF1F', nom:'Univers ludiques', sub:'Aménagement, rotation, projet pédagogique',
     pages:[ {id:'univers', nom:'Univers ludiques'} ],
     aBrancher:['univers à renouveler','observations pédagogiques manquantes','matériel manquant pour un univers'] },
   { id:'reseau', ico:'\uD83D\uDCAC', nom:'Demandes réseau', sub:'Demandes, consignes, événements, référents',
     pages:[ {id:'demandesReseau', nom:'Demandes réseau'} ],
-    aBrancher:['demandes qui me sont adressées','messages non lus','consignes non lues'] },
+    aBrancher:[] },
   { id:'reglementaire', ico:'\u2696\uFE0F', nom:'Conformité & documents', sub:'Documents de la structure, ressources réglementaires, incidents',
     pages:[
       {id:'incidents',     nom:'Registre des incidents'},
@@ -11550,6 +11550,7 @@ const ORV_DOMAINES = [
 
 let ORV_CUR_DOM = null;      // domaine ouvert en vue pilotage
 let ORV_BESOINS = [];        // cache des besoins collectés
+let ORV_STATS   = {};        // compteurs bruts produits par la collecte (pour les KPI)
 const ORV_NIV = { 1:'\u25B2 Urgent', 2:'\u25A0 À faire', 3:'\u25CF Pour info' };
 
 function orvRole() { return (typeof currentUserRole !== 'undefined' && currentUserRole) ? currentUserRole.toLowerCase() : 'admin'; }
@@ -11732,6 +11733,8 @@ function orvSyncBar() {
 async function orvCollecterBesoins() {
   const out = [];
   const cf = orvCrecheActive();
+  const mesDem = [];   // demandes dont je suis auteur ou destinataire (pour les messages non lus)
+  ORV_STATS = {};
 
   // ── Inventaire : ruptures et seuils (données déjà en mémoire) ──
   try {
@@ -11762,6 +11765,7 @@ async function orvCollecterBesoins() {
                    q:'', act:'Ouvrir', page:'demandesReseau', src:'demande.urgente_ouverte' });
       });
       const autres = rows.filter(d => d.priorite !== 'urgent').length;
+      ORV_STATS.demandesOuvertes = rows.length;
       if (autres) {
         out.push({ dom:'reseau', n:2, t:autres + ' demande' + (autres > 1 ? 's' : '') + ' ouverte' + (autres > 1 ? 's' : ''),
                    c:cf || 'Réseau', q:'', act:'Traiter', page:'demandesReseau', src:'demande.ouverte' });
@@ -11790,8 +11794,179 @@ async function orvCollecterBesoins() {
     }
   } catch(e) { console.warn('[hub] source incidents', e); }
 
+  // ── Réseau : demandes qui me sont adressées ──
+  let _meSal = null;
+  try {
+    _meSal = (typeof _drEnsureMe === 'function') ? await _drEnsureMe() : null;
+    if (_meSal) {
+      const r = await fetch(SUPA_RH_URL + '/rest/v1/demandes_reseau'
+        + '?select=id,titre,creche_id,priorite,statut,created_at'
+        + '&destinataire_id=eq.' + encodeURIComponent(_meSal)
+        + '&statut=in.(ouvert,en_cours)&order=created_at.desc&limit=50',
+        { headers: SUPA_RH_HEADERS });
+      const rows = await r.json();
+      if (Array.isArray(rows)) {
+        ORV_STATS.demandesPourMoi = rows.length;
+        rows.forEach(function(d) { mesDem.push({ id:d.id, titre:d.titre }); });
+        rows.slice(0, 6).forEach(function(d) {
+          out.push({ dom:'reseau', n:(d.priorite === 'urgent' ? 1 : 2),
+                     t:'Pour vous : ' + (d.titre || 'sans titre'),
+                     c:d.creche_id || 'Réseau', q:'demande adressée',
+                     act:'Répondre', page:'demandesReseau', src:'demande.adressee_a_moi' });
+        });
+      }
+    }
+  } catch(e) { console.warn('[hub] source demandes adressées', e); }
+
+  // ── Réseau : mes demandes en tant qu'auteur (pour le suivi des messages) ──
+  try {
+    if (typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
+      const r = await fetch(SUPA_RH_URL + '/rest/v1/demandes_reseau'
+        + '?select=id,titre&auteur_id=eq.' + encodeURIComponent(currentUser.id)
+        + '&order=created_at.desc&limit=40', { headers: SUPA_RH_HEADERS });
+      const rows = await r.json();
+      if (Array.isArray(rows)) rows.forEach(function(d) {
+        if (!mesDem.some(x => x.id === d.id)) mesDem.push({ id:d.id, titre:d.titre });
+      });
+    }
+  } catch(e) { console.warn('[hub] source mes demandes', e); }
+
+  // ── Réseau : messages non lus dans mes fils ──
+  try {
+    if (mesDem.length) {
+      const ids = mesDem.map(d => '"' + String(d.id).replace(/"/g, '') + '"').join(',');
+      const r = await fetch(SUPA_RH_URL + '/rest/v1/messages_reseau'
+        + '?select=demande_id,auteur_id,auteur_nom,created_at'
+        + '&demande_id=in.(' + encodeURIComponent(ids) + ')'
+        + '&order=created_at.desc&limit=300', { headers: SUPA_RH_HEADERS });
+      const rows = await r.json();
+      if (Array.isArray(rows)) {
+        const moi = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null;
+        const parFil = {};
+        rows.forEach(function(m) {
+          if (m.auteur_id && moi && m.auteur_id === moi) return;      // mes propres messages
+          if (!_orvMsgNonLu(m.demande_id, m.created_at)) return;      // déjà consulté
+          (parFil[m.demande_id] = parFil[m.demande_id] || []).push(m);
+        });
+        const fils = Object.keys(parFil);
+        ORV_STATS.messagesNonLus = fils.reduce((s, k) => s + parFil[k].length, 0);
+        fils.slice(0, 6).forEach(function(k) {
+          const d = mesDem.find(x => x.id === k) || {};
+          const nb = parFil[k].length;
+          out.push({ dom:'reseau', n:2,
+                     t:nb + ' nouveau' + (nb > 1 ? 'x' : '') + ' message' + (nb > 1 ? 's' : '')
+                       + ' — ' + (d.titre || 'discussion'),
+                     c:(parFil[k][0].auteur_nom || 'un collègue'), q:'',
+                     act:'Lire', page:'demandesReseau', src:'message.non_lu' });
+        });
+      }
+    }
+  } catch(e) { console.warn('[hub] source messages', e); }
+
+  // ── Réseau : consignes non lues ──
+  try {
+    let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?select=id,sujet,priorite&lue=eq.false&limit=100';
+    if (cf) url += '&or=(destinataire_creche.eq.' + encodeURIComponent(cf) + ',destinataire_creche.is.null)';
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (Array.isArray(rows) && rows.length) {
+      ORV_STATS.consignesNonLues = rows.length;
+      const urg = rows.filter(c => c.priorite === 'urgent');
+      urg.slice(0, 3).forEach(function(c) {
+        out.push({ dom:'reseau', n:1, t:'Consigne urgente : ' + (c.sujet || 'sans sujet'),
+                   c:cf || 'Réseau', q:'non lue', act:'Lire', page:'demandesReseau', src:'consigne.urgente_non_lue' });
+      });
+      const reste = rows.length - urg.length;
+      if (reste > 0) {
+        out.push({ dom:'reseau', n:2, t:reste + ' consigne' + (reste > 1 ? 's' : '') + ' non lue' + (reste > 1 ? 's' : ''),
+                   c:cf || 'Réseau', q:'', act:'Ouvrir', page:'demandesReseau', src:'consigne.non_lue' });
+      }
+    }
+  } catch(e) { console.warn('[hub] source consignes', e); }
+
+  // ── Familles : documents déposés par les parents, non consultés ──
+  try {
+    const enf = (typeof getFamilles === 'function') ? (getFamilles(cf || '__all__') || []) : [];
+    ORV_STATS.enfants = enf.length;
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/portail_documents'
+      + '?select=id,enfant_id,nom,created_at&source=eq.parent&vu_par_pro=is.false'
+      + '&order=created_at.desc&limit=200', { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (Array.isArray(rows)) {
+      const set = new Set(enf.map(e => String(e.id)));
+      const mine = cf ? rows.filter(d => set.has(String(d.enfant_id))) : rows;
+      ORV_STATS.docsAValider = mine.length;
+      if (mine.length) {
+        out.push({ dom:'familles', n:2,
+                   t:mine.length + ' document' + (mine.length > 1 ? 's' : '') + ' déposé'
+                     + (mine.length > 1 ? 's' : '') + ' par les parents à consulter',
+                   c:cf || 'Réseau', q:'', act:'Ouvrir les familles', page:'familles', src:'portail.doc_non_vu' });
+      }
+    }
+  } catch(e) { console.warn('[hub] source documents portail', e); }
+
+  // ── Familles : fins d'accueil dans les 45 jours ──
+  try {
+    const enf = (typeof getFamilles === 'function') ? (getFamilles(cf || '__all__') || []) : [];
+    const auj = new Date(); auj.setHours(0,0,0,0);
+    const lim = new Date(auj.getTime() + 45 * 86400000);
+    const fins = enf.filter(function(e) {
+      if (!e.sortie) return false;
+      const d = new Date(e.sortie);
+      return !isNaN(d) && d >= auj && d <= lim;
+    });
+    if (fins.length) {
+      out.push({ dom:'familles', n:3,
+                 t:fins.length + ' fin' + (fins.length > 1 ? 's' : '') + " d'accueil dans les 45 jours",
+                 c:cf || 'Réseau', q:'places à anticiper',
+                 act:'Voir les dossiers', page:'familles', src:'famille.fin_accueil_proche' });
+    }
+  } catch(e) { console.warn('[hub] source fins d accueil', e); }
+
+  // ── RH : pointages de la veille sans sortie enregistrée ──
+  try {
+    const auj = new Date();
+    const hier = new Date(auj.getTime() - 86400000);
+    const jH = hier.toISOString().split('T')[0];
+    const jA = auj.toISOString().split('T')[0];
+    let url = SUPA_RH_URL + '/rest/v1/pointages?select=user_id,type,horodatage,creche_id'
+            + '&horodatage=gte.' + jH + 'T00:00:00&horodatage=lt.' + jA + 'T00:00:00'
+            + '&order=horodatage.asc&limit=500';
+    if (cf) url += '&creche_id=eq.' + encodeURIComponent(cf);
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (Array.isArray(rows) && rows.length) {
+      const by = {};
+      rows.forEach(function(p) { (by[p.user_id] = by[p.user_id] || []).push(p); });
+      const ko = Object.keys(by).filter(function(u) {
+        const l = by[u][by[u].length - 1];
+        return l && l.type !== 'sortie';
+      });
+      ORV_STATS.pointagesOuverts = ko.length;
+      if (ko.length) {
+        out.push({ dom:'rh', n:2,
+                   t:ko.length + ' pointage' + (ko.length > 1 ? 's' : '') + ' sans sortie enregistrée',
+                   c:cf || 'Réseau', q:'journée du ' + jH.split('-').reverse().join('/'),
+                   act:'Ouvrir le pointage', page:'pointage', src:'pointage.sortie_manquante' });
+      }
+    }
+  } catch(e) { console.warn('[hub] source pointage', e); }
+
   ORV_BESOINS = out;
   return out;
+}
+
+/* ── Suivi de lecture des fils de discussion (local au poste) ── */
+function _orvThreadLuKey(id) { return 'orv_thread_lu_' + id; }
+function _orvMsgNonLu(demandeId, createdAt) {
+  try {
+    const v = localStorage.getItem(_orvThreadLuKey(demandeId));
+    if (!v) return true;
+    return new Date(createdAt) > new Date(v);
+  } catch(e) { return true; }
+}
+function _orvMarkThreadLu(demandeId) {
+  try { localStorage.setItem(_orvThreadLuKey(demandeId), new Date().toISOString()); } catch(e) {}
 }
 
 /* ── KPI par domaine (uniquement ceux réellement calculables) ── */
@@ -11814,8 +11989,19 @@ function orvKpisOf(domId) {
       k.push({ k:'Professionnels', v:s.length, s:cf || 'réseau' });
     }
     if (domId === 'reseau') {
-      const n = ORV_BESOINS.filter(b => b.dom === 'reseau');
-      k.push({ k:'Demandes ouvertes', v:n.filter(b => b.src === 'demande.ouverte').length ? '—' : '0', s:'voir la liste' });
+      k.push({ k:'Demandes ouvertes', v:Number(ORV_STATS.demandesOuvertes || 0), s:cf || 'réseau' });
+      k.push({ k:'Adressées à vous',  v:Number(ORV_STATS.demandesPourMoi || 0), s:'à traiter' });
+      k.push({ k:'Messages non lus',  v:Number(ORV_STATS.messagesNonLus || 0), s:'dans vos fils' });
+      k.push({ k:'Consignes non lues',v:Number(ORV_STATS.consignesNonLues || 0), s:'à prendre en compte' });
+    }
+    if (domId === 'familles') {
+      const enf = (typeof getFamilles === 'function') ? (getFamilles(cf || '__all__') || []) : [];
+      const actifs = enf.filter(e => !e.sortie || new Date(e.sortie) >= new Date());
+      k.push({ k:'Enfants accueillis', v:actifs.length, s:cf || 'réseau' });
+      k.push({ k:'Documents à consulter', v:Number(ORV_STATS.docsAValider || 0), s:'dépôts des parents' });
+    }
+    if (domId === 'rh') {
+      k.push({ k:'Pointages ouverts', v:Number(ORV_STATS.pointagesOuverts || 0), s:'veille, sans sortie' });
     }
   } catch(e) {}
   return k;
@@ -18099,6 +18285,7 @@ async function drRenderThread() {
       '</div>';
     }).join('');
     box.scrollTop = box.scrollHeight;
+    if (typeof _orvMarkThreadLu === 'function') _orvMarkThreadLu(_drThreadId);
   } catch(e) { box.innerHTML = '<div style="color:var(--red);font-size:12px">Erreur : ' + e.message + '</div>'; }
 }
 async function drSendThreadMsg() {
