@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 07:08 -->
+<!-- OREVY BUILD 2026-08-04 07:28 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -11756,10 +11756,11 @@ async function orvCollecterBesoins() {
   try {
     let url = SUPA_RH_URL + '/rest/v1/demandes_reseau?select=id,titre,creche_id,statut,priorite,created_at'
             + '&statut=in.(ouvert,en_cours)&order=created_at.desc&limit=100';
-    if (cf) url += '&creche_id=eq.' + encodeURIComponent(cf);
+    if (cf) url += '&or=(creche_id.eq.' + encodeURIComponent(cf) + ',creche_id.eq.' + encodeURIComponent('Réseau') + ')';
     const r = await fetch(url, { headers: SUPA_RH_HEADERS });
     const rows = await r.json();
     if (Array.isArray(rows)) {
+      rows.forEach(function(d) { if (d.creche_id === 'all' || d.creche_id === '__all__') d.creche_id = 'Réseau'; });
       rows.filter(d => d.priorite === 'urgent').slice(0, 5).forEach(function(d) {
         out.push({ dom:'reseau', n:1, t:'Demande urgente : ' + (d.titre || 'sans titre'), c:d.creche_id || 'Réseau',
                    q:'', act:'Ouvrir', page:'demandesReseau', src:'demande.urgente_ouverte' });
@@ -17426,6 +17427,13 @@ const DR_STAT = {
 let _drTab      = 'demandes';
 let _drFilter   = 'tous';
 let _drSearch   = '';
+// Crèche réellement sélectionnée. currentCreche vaut 'all' par défaut
+// (et non '__all__') : ce helper neutralise les deux sentinelles.
+function _crecheReelle() {
+  if (typeof currentCreche === 'undefined' || !currentCreche) return null;
+  if (currentCreche === 'all' || currentCreche === '__all__') return null;
+  return currentCreche;
+}
 let _drCreche   = '';
 let _drCurrentId = null;
 let _drEvenements = [];
@@ -17599,8 +17607,8 @@ async function drLoadDemandes() {
     const role = currentUserRole;
     const isCoord = ['admin','coordinateur'].includes(role);
     let url = SUPA_RH_URL + '/rest/v1/demandes_reseau?select=*&order=created_at.desc';
-    if (!isCoord && currentCreche && currentCreche !== '__all__') url += '&creche_id=eq.' + encodeURIComponent(currentCreche);
-    else if (_drCreche) url += '&creche_id=eq.' + encodeURIComponent(_drCreche);
+    const _filtC = (!isCoord && _crecheReelle()) ? _crecheReelle() : (_drCreche || null);
+    if (_filtC) url += '&or=(creche_id.eq.' + encodeURIComponent(_filtC) + ',creche_id.eq.' + encodeURIComponent('Réseau') + ')';
 
     const r = await fetch(url, { headers: SUPA_RH_HEADERS });
     const rows = await r.json();
@@ -17968,7 +17976,7 @@ async function drLoadConsignes() {
     const isCoord = ['admin','coordinateur'].includes(currentUserRole);
     let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?select=*&order=created_at.desc';
     if (!isCoord) {
-      const c = currentCreche && currentCreche !== '__all__' ? currentCreche : _drCreche;
+      const c = _crecheReelle() || _drCreche;
       if (c) url += '&or=(destinataire_creche.eq.' + encodeURIComponent(c) + ',destinataire_creche.is.null)';
     } else if (_drCreche) {
       url += '&or=(destinataire_creche.eq.' + encodeURIComponent(_drCreche) + ',destinataire_creche.is.null)';
@@ -17999,7 +18007,7 @@ async function drLoadConsignes() {
 async function drMarkConsignesLues() {
   try {
     let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?lue=eq.false';
-    const c = currentCreche && currentCreche !== '__all__' ? currentCreche : _drCreche;
+    const c = _crecheReelle() || _drCreche;
     if (c) url += '&or=(destinataire_creche.eq.' + encodeURIComponent(c) + ',destinataire_creche.is.null)';
     await fetch(url, { method:'PATCH', headers:{ ...SUPA_RH_HEADERS,'Content-Type':'application/json','Prefer':'return=minimal' }, body: JSON.stringify({lue:true}) });
     const nb = document.getElementById('nav-demandes-badge');
@@ -18122,6 +18130,8 @@ function drPickDest(id) {
   const nom = (((s.prenom||'') + ' ' + (s.nom||'')).trim()) || '(sans nom)';
   document.getElementById('dr-dest-id').value  = s.id;
   document.getElementById('dr-dest-nom').value = nom;
+  const cEl = document.getElementById('dr-dest-creche');
+  if (cEl) cEl.value = s.creche || '';
 
   const lbl = document.getElementById('dr-dest-chosen-lbl');
   if (lbl) lbl.textContent = '\u2713 ' + nom + (s.fonction ? ' \u2014 ' + s.fonction : '') + (s.creche ? ' (' + s.creche + ')' : '');
@@ -18140,8 +18150,10 @@ function drPickDest(id) {
 function drClearDestValue() {
   const idEl = document.getElementById('dr-dest-id');
   const nmEl = document.getElementById('dr-dest-nom');
+  const ccEl = document.getElementById('dr-dest-creche');
   if (idEl) idEl.value = '';
   if (nmEl) nmEl.value = '';
+  if (ccEl) ccEl.value = '';
   const chosen = document.getElementById('dr-dest-chosen');
   if (chosen) chosen.style.display = 'none';
 }
@@ -18164,7 +18176,9 @@ async function drSaveDemande() {
   if (btn) { btn.disabled=true; btn.textContent='⏳…'; }
   try {
     const _base = {
-      creche_id:   (currentCreche && currentCreche !== '__all__') ? currentCreche : (_drCreche || 'Réseau'),
+      creche_id:   _crecheReelle() || _drCreche
+                   || (document.getElementById('dr-dest-creche')?.value || '').trim()
+                   || 'Réseau',
       auteur_id:   currentUser?.id || null,
       theme:       document.getElementById('dr-theme')?.value || 'Autre',
       priorite:    document.getElementById('dr-prio')?.value || 'normal',
@@ -18453,7 +18467,7 @@ async function incLoad() {
   if (list) list.innerHTML = '<div style="color:var(--ink3);padding:20px 0">Chargement\u2026</div>';
   try {
     let url = SUPA_RH_URL + '/rest/v1/incidents?select=*&order=created_at.desc';
-    if (!_incIsCoord() && currentCreche && currentCreche !== '__all__') {
+    if (!_incIsCoord() && _crecheReelle()) {
       url += '&creche_id=eq.' + encodeURIComponent(currentCreche);
     } else if (_incCreche) {
       url += '&creche_id=eq.' + encodeURIComponent(_incCreche);
@@ -18578,7 +18592,7 @@ function incRefreshLists() {
 
 function openIncidentModal() {
   const creches = (typeof _drGetCreches === 'function') ? _drGetCreches() : [];
-  const preselect = (!_incIsCoord() && currentCreche && currentCreche !== '__all__') ? currentCreche : '';
+  const preselect = (!_incIsCoord() && _crecheReelle()) ? _crecheReelle() : '';
   const sel = document.getElementById('inc-creche');
   if (sel) sel.innerHTML = '<option value="">-- Choisir --</option>' +
     creches.map(nom => '<option value="' + nom + '"' + (nom === preselect ? ' selected' : '') + '>' + nom + '</option>').join('');
@@ -18636,7 +18650,7 @@ async function deleteIncident(id) {
 async function checkDemandesBadge() {
   try {
     let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?select=id&lue=eq.false';
-    const c = currentCreche && currentCreche !== '__all__' ? currentCreche : null;
+    const c = _crecheReelle();
     if (c) url += '&or=(destinataire_creche.eq.' + encodeURIComponent(c) + ',destinataire_creche.is.null)';
     const r = await fetch(url, { headers: SUPA_RH_HEADERS });
     const rows = await r.json();
@@ -27154,6 +27168,7 @@ function sendSuiviEmail() {
           <div id="dr-dest-hint" style="font-size:11px;color:var(--ink3);margin-top:3px;min-height:14px"></div>
           <input type="hidden" id="dr-dest-id" value="">
           <input type="hidden" id="dr-dest-nom" value="">
+          <input type="hidden" id="dr-dest-creche" value="">
         </div>
         <div class="form-group full"><label>Titre *</label><input id="dr-titre" class="form-control" placeholder="Ex : Besoin de tapis de sol" style="width:100%"/></div>
         <div class="form-group full"><label>Description</label><textarea id="dr-desc" class="form-control" rows="3" style="width:100%;resize:vertical"></textarea></div>
