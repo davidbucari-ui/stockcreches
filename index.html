@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 17:24 -->
+<!-- OREVY BUILD 2026-08-04 17:32 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17588,7 +17588,7 @@ function renderPlanningParamHoraires() {
       + 'background:' + (on ? 'var(--ink)' : 'var(--surface2)') + ';color:' + (on ? '#fff' : 'var(--ink2)') + ';'
       + 'border-radius:10px;padding:8px 13px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;'
       + 'display:inline-flex;align-items:center;gap:7px">'
-      + '<span style="font-size:11px;line-height:1">' + mark + '</span>' + label + '</button>';
+      + '<span style="font-size:15px;font-weight:700;line-height:1">' + mark + '</span>' + label + '</button>';
   };
 
   const pills = pill('_commun', 'Communs', '\u25c7', true)
@@ -17608,8 +17608,8 @@ function renderPlanningParamHoraires() {
 
   const lignes = liste.map((hr, i) => {
     const c = PE_COLORS[i] || PE_COLORS[0];
-    return '<div style="display:grid;grid-template-columns:26px 1fr 120px 12px 120px 34px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">'
-      + '<div style="font-size:12px;font-weight:700;text-align:center;color:' + c.text + ';background:' + c.bg + ';border:1px solid ' + c.border + ';border-radius:6px;padding:3px 0">' + (i+1) + '</div>'
+    return '<div style="display:grid;grid-template-columns:32px 1fr 120px 12px 120px 34px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">'
+      + '<div style="font-size:14px;font-weight:800;font-family:\'Syne\',sans-serif;text-align:center;color:#fff;background:' + c.text + ';border-radius:8px;padding:5px 0;line-height:1.15">' + (i+1) + '</div>'
       + '<input type="text" value="' + String(hr.name || '').replace(/"/g, '&quot;') + '" onchange="plgParamSetNom(' + i + ',this.value)" '
       + 'style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:7px 9px;font-size:13px;font-weight:600;font-family:inherit;outline:none">'
       + '<input type="time" step="900" value="' + (hr.debut || '') + '" onchange="plgParamSetHeure(' + i + ',\'debut\',this.value)" '
@@ -17630,14 +17630,16 @@ function renderPlanningParamHoraires() {
   el.innerHTML =
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">' + pills + '</div>'
     + '<div style="display:flex;align-items:flex-start;gap:10px;border:1px solid var(--border);border-left:4px solid ' + (propre ? 'var(--ink)' : 'var(--ink3)') + ';border-radius:0 10px 10px 0;background:var(--surface2);padding:11px 14px;margin-bottom:16px;font-size:13px;line-height:1.5">'
-      + '<span style="font-weight:700;font-size:14px;line-height:1.35">' + glyph + '</span><div>' + texte + '</div></div>'
+      + '<span style="font-weight:700;font-size:17px;line-height:1.15;color:var(--ink)">' + glyph + '</span><div>' + texte + '</div></div>'
     + '<div>' + lignes + '</div>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">'
       + '<button onclick="plgParamAddHoraire()" style="border:1.5px dashed var(--border);background:var(--surface);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--ink2)">+ Ajouter un horaire</button>'
       + btnDetach + btnReattach
     + '</div>'
     + '<div style="font-size:12.5px;color:var(--ink3);margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">'
-      + '\u25cf horaires propres &nbsp;\u00b7&nbsp; \u25cb reprend les communs &nbsp;\u00b7&nbsp; \u25c7 jeu commun</div>';
+      + '<span style="font-size:15px;color:var(--ink)">\u25cf</span> horaires propres &nbsp;\u00b7&nbsp; '
+      + '<span style="font-size:15px;color:var(--ink)">\u25cb</span> reprend les communs &nbsp;\u00b7&nbsp; '
+      + '<span style="font-size:15px;color:var(--ink)">\u25c7</span> jeu commun</div>';
 }
 
 function plgParamSelect(k) { plgParamCreche = k; renderPlanningParamHoraires(); }
