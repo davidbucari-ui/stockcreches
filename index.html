@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 12:18 -->
+<!-- OREVY BUILD 2026-08-04 12:37 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -11755,6 +11755,40 @@ function orvGoPage(pageId) {
   orvPushRecente(pageId);
   showPage(pageId, null);
 }
+/* Une ligne de besoin peut viser un objet précis, pas seulement une page :
+   fn = nom de fonction globale, arg = identifiant. La navigation se fait
+   d'abord, l'ouverture ensuite (le conteneur doit exister). */
+function orvGoBesoin(pageId, fn, arg) {
+  orvGoPage(pageId);
+  if (!fn) return;
+  setTimeout(function() {
+    try {
+      const f = window[fn];
+      if (typeof f === 'function') f(arg || null);
+      else console.warn('[hub] cible introuvable :', fn);
+    } catch(e) { console.warn('[hub] ouverture cible', fn, e); }
+  }, 260);
+}
+
+/* Ouvertures ciblées côté RH : l'onglet d'abord, la fiche ensuite. */
+function _orvRhTab(nom) {
+  const ordre = ['recrutement','archives_recrut','contrats','conges','formations','salaries'];
+  const btn = document.querySelectorAll('#rh-tabs .tab-btn')[ordre.indexOf(nom)] || null;
+  if (typeof showRhTab === 'function') showRhTab(nom, btn);
+}
+function orvOuvrirContrat(id) {
+  _orvRhTab('contrats');
+  if (id && typeof openModalRh === 'function') setTimeout(function(){ openModalRh('contrat', id); }, 160);
+}
+function orvOuvrirConge(id) {
+  _orvRhTab('conges');
+  if (id && typeof openModalRh === 'function') setTimeout(function(){ openModalRh('conge', id); }, 160);
+}
+function orvOuvrirFormation(id) {
+  _orvRhTab('formations');
+  if (id && typeof openModalRh === 'function') setTimeout(function(){ openModalRh('formation', id); }, 160);
+}
+
 function orvRetourHubPrincipal() { orvCloseMenus(); if (typeof showHub === 'function') showHub(); }
 function orvChangeCreche(v) {
   const sel = document.getElementById('creche-select-sidebar');
@@ -12182,7 +12216,8 @@ async function orvCollecterBesoins() {
         out.push({ dom:'rh', n:2,
                    t:mine.length + ' demande' + (mine.length > 1 ? 's' : '') + " de congé en attente",
                    c:cf || 'Réseau', q:proch ? 'premier départ le ' + _orvJourFr(proch) : '',
-                   act:'Répondre', page:'rh', src:'rh.conge_a_valider' });
+                   act:'Répondre', page:'rh', fn:'orvOuvrirConge', arg:null,
+                   src:'rh.conge_a_valider' });
       }
     } catch(e) { console.warn('[hub] source congés', e); }
 
@@ -12207,7 +12242,8 @@ async function orvCollecterBesoins() {
                    t:"Fin de période d'essai : " + nomSal(x.c),
                    c:(crecheDe[x.c.salarie_id] || cf || 'Réseau'),
                    q:'échéance indicative le ' + _orvJourFr(_orvJour(x.fin)) + ' — à confirmer sur le contrat',
-                   act:'Ouvrir le contrat', page:'rh', src:'rh.fin_periode_essai' });
+                   act:'Ouvrir le contrat', page:'rh', fn:'orvOuvrirContrat', arg:x.c.id,
+                   src:'rh.fin_periode_essai' });
       });
       const lim30 = dans(30);
       const termes = mine.filter(function(c) {
@@ -12221,7 +12257,8 @@ async function orvCollecterBesoins() {
         out.push({ dom:'rh', n:2,
                    t:termes.length + ' contrat' + (termes.length > 1 ? 's' : '') + ' arrivant à terme sous 30 jours',
                    c:cf || 'Réseau', q:noms + (termes.length > 3 ? ' + ' + (termes.length - 3) + ' autre(s)' : ''),
-                   act:'Anticiper', page:'rh', src:'rh.contrat_fin_proche' });
+                   act:'Anticiper', page:'rh', fn:'orvOuvrirContrat', arg:null,
+                   src:'rh.contrat_fin_proche' });
       }
     } catch(e) { console.warn('[hub] source contrats', e); }
 
@@ -12244,12 +12281,14 @@ async function orvCollecterBesoins() {
                    t:'Recyclage échu : ' + (f.titre || 'formation obligatoire'),
                    c:(crecheDe[f.salarie_id] || cf || 'Réseau'),
                    q:(nomDe[f.salarie_id] || '') + ' — échu le ' + _orvJourFr(f.renouvellement),
-                   act:'Programmer', page:'rh', src:'rh.recyclage_echu' });
+                   act:'Programmer', page:'rh', fn:'orvOuvrirFormation', arg:f.id,
+                   src:'rh.recyclage_echu' });
       });
       if (proches.length) {
         out.push({ dom:'rh', n:2,
                    t:proches.length + ' formation' + (proches.length > 1 ? 's' : '') + ' à renouveler sous 60 jours',
-                   c:cf || 'Réseau', q:'', act:'Planifier', page:'rh', src:'rh.recyclage_proche' });
+                   c:cf || 'Réseau', q:'', act:'Planifier', page:'rh',
+                   fn:'orvOuvrirFormation', arg:null, src:'rh.recyclage_proche' });
       }
     } catch(e) { console.warn('[hub] source formations RH', e); }
   } catch(e) { console.warn('[hub] sources RH', e); }
@@ -12354,7 +12393,9 @@ function orvNeedHTML(b, showDom) {
     + '<div class="txt"><div class="t">' + orvEsc(b.t) + '</div>'
     + '<div class="m">' + orvEsc(b.c) + (b.q ? ' \u00b7 ' + orvEsc(b.q) : '')
     + (showDom && d ? ' \u00b7 ' + orvEsc(d.nom) : '') + '</div></div>'
-    + '<button class="go" onclick="orvGoPage(\'' + b.page + '\')">' + orvEsc(b.act) + '</button></div>';
+    + '<button class="go" onclick="orvGoBesoin(\'' + b.page + '\',\''
+    + (b.fn || '') + '\',\'' + String(b.arg == null ? '' : b.arg).replace(/'/g, '') + '\')">'
+    + orvEsc(b.act) + '</button></div>';
 }
 
 /* ── Hub ── */
