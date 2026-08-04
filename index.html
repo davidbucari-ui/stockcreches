@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 06:47 -->
+<!-- OREVY BUILD 2026-08-04 06:54 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -23123,6 +23123,7 @@ function dmPrefill() {
     var b = document.getElementById('dma-'+c.id);
     if (b) b.style.display = '';
   });
+  dmRenderSignataires();
   dmSyncCartouches();
   if (typeof showNotif === 'function' && DM_ENFANT) {
     showNotif(n ? '✓ ' + n + ' champ(s) pré-remplis depuis la fiche' : 'Fiche sans données exploitables');
@@ -23218,11 +23219,12 @@ function dmRenderLignes(c) {
 function dmRefreshLignes(c) {
   var box = document.getElementById('dmr-' + c.id);
   if (box) box.innerHTML = dmRenderLignes(c);
-  dmStatut();
+  dmRenderSignataires(); dmStatut();
 }
 function dmRowSet(id, i, k, el) {
   var rows = dmRows(id); if (!rows[i]) return;
-  rows[i][k] = el.value; DM_VALS[id] = rows; dmStatut();
+  rows[i][k] = el.value; DM_VALS[id] = rows;
+  dmRenderSignataires(); dmStatut();
 }
 function dmRowAdd(id) {
   var c = dmChamp(id); if (!c) return;
