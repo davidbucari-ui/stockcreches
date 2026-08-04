@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 18:42 -->
+<!-- OREVY BUILD 2026-08-04 18:56 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -2437,11 +2437,15 @@ textarea { resize: vertical; min-height: 72px; }
           <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
             <div id="pe-grid"></div>
           </div>
-          <!-- Légende -->
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11px;color:var(--ink3)">
-            <span style="background:#F0FDF4;color:#16A34A;padding:2px 8px;border-radius:12px;font-weight:600">✓ Conforme</span>
-            <span style="background:#FFFBEB;color:#D97706;padding:2px 8px;border-radius:12px;font-weight:600">! Limite</span>
-            <span style="background:#FEF2F2;color:#DC2626;padding:2px 8px;border-radius:12px;font-weight:600">✗ Non conforme</span>
+          <!-- Légende de la ligne Couverture -->
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11px;color:var(--ink3)">
+            <span><b style="color:var(--ink)">✓</b> au moins 2 professionnels sur toute l'amplitude</span>
+            <span><b style="color:var(--ink)">△</b> plages à moins de 2 professionnels</span>
+            <span><b style="color:var(--ink)">△</b> non renseigné — jour ouvré sans créneau</span>
+            <span><b style="color:var(--ink)">—</b> structure fermée</span>
+          </div>
+          <div style="margin-top:6px;font-size:11px;color:var(--ink3)">
+            Calculé sur l'amplitude d'ouverture déclarée dans les Paramètres. Le plancher de 2 professionnels ne tient pas compte des effectifs enfants.
           </div>
         </div>
 
@@ -2455,11 +2459,6 @@ textarea { resize: vertical; min-height: 72px; }
           <div id="pe-day-pills2" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap"></div>
           <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);box-shadow:var(--shadow)">
             <div id="pe-grid2"></div>
-          </div>
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11px;color:var(--ink3)">
-            <span style="background:#DCFCE7;color:#15803D;padding:2px 8px;border-radius:12px;font-weight:600">✓ Conforme</span>
-            <span style="background:#FEF3C7;color:#B45309;padding:2px 8px;border-radius:12px;font-weight:600">! Limite</span>
-            <span style="background:#FFE4E6;color:#BE123C;padding:2px 8px;border-radius:12px;font-weight:600">✗ Non conforme</span>
           </div>
         </div>
 
@@ -17528,11 +17527,6 @@ function exportPlanningPDF() {
   <h1>📅 ${title}</h1>
   <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
   ${ganttHTML}
-  ${tab === 'hebdo' ? '' : `<div class="legend">
-    <span style="background:#F0FDF4;color:#16A34A">✓ Conforme</span>
-    <span style="background:#FFFBEB;color:#D97706">! Limite</span>
-    <span style="background:#FEF2F2;color:#DC2626">✗ Non conforme</span>
-  </div>`}
   <script>
     window.onload = function() {
       const grid = document.getElementById('pe-grid');
