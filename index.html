@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 08:11 -->
+<!-- OREVY BUILD 2026-08-04 08:26 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -2610,6 +2610,22 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
           <div id="admin-users-list">
             <div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Chargement…</div>
+          </div>
+        </div>
+
+        <!-- Périmètre de visibilité -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px">
+          <div style="font-size:15px;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:4px">🔭 Périmètre de visibilité</div>
+          <div style="font-size:12px;color:var(--ink3);margin-bottom:14px">
+            Rôles autorisés à consulter l'ensemble du réseau. Les rôles non cochés sont limités à leur
+            structure de rattachement : le sélecteur de crèche ne leur propose que celle-ci.
+          </div>
+          <div id="admin-acces-roles" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+          <button class="btn btn-primary" onclick="saveAccesReseau()" id="admin-acces-btn" style="font-size:13px;padding:8px 16px">Enregistrer le périmètre</button>
+          <div id="admin-acces-msg" style="display:none;font-size:12px;margin-top:10px"></div>
+          <div style="margin-top:12px;font-size:11px;color:var(--ink3)">
+            ⚠ Un compte dont la structure de rattachement est introuvable (aucune fiche salarié
+            correspondante) reste sur le réseau complet : corrigez sa fiche pour que le cloisonnement s'applique.
           </div>
         </div>
 
@@ -8876,6 +8892,46 @@ function appliquerPrefs() {
   }
 }
 
+/* ══ PÉRIMÈTRE DE VISIBILITÉ (réglage réseau) ══
+   Quels rôles peuvent basculer sur « Toutes les crèches ».
+   Les autres sont cloisonnés à leur structure de rattachement.
+   Stocké dans parametres / orevy_acces. ── */
+const ORV_ACCES_DEFAUT = { reseauRoles: ['admin', 'coordinateur', 'directrice'] };
+let ORV_ACCES = JSON.parse(JSON.stringify(ORV_ACCES_DEFAUT));
+let MA_CRECHE = null;        // crèche effective du compte connecté
+let _maCrecheResolue = false;
+
+function accesReseauAutorise(role) {
+  const r = (role || currentUserRole || '').toLowerCase();
+  const list = (ORV_ACCES && Array.isArray(ORV_ACCES.reseauRoles)) ? ORV_ACCES.reseauRoles : ORV_ACCES_DEFAUT.reseauRoles;
+  return list.indexOf(r) !== -1;
+}
+
+// Résout la crèche du compte connecté (surcharge > fiche salarié) puis
+// rafraîchit le sélecteur. Silencieuse : ne bloque jamais l'application.
+async function resoudreMaCreche(force) {
+  if (_maCrecheResolue && !force) return MA_CRECHE;
+  _maCrecheResolue = true;
+  try {
+    const em = (currentUser && currentUser.email) ? String(currentUser.email).trim().toLowerCase() : '';
+    if (!em) return null;
+    let override = null;
+    try {
+      const u = await sbGet('utilisateurs', `email=ilike.${encodeURIComponent(em)}&select=creche_id`);
+      if (Array.isArray(u) && u.length) override = u[0].creche_id;
+    } catch(e) {}
+    const idx = await crecheIndexSalaries();
+    const eff = crecheEffective(em, override, idx);
+    MA_CRECHE = eff.creche || null;
+    if (!MA_CRECHE && !accesReseauAutorise()) {
+      console.warn('[Accès] aucune structure de rattachement trouvée pour ' + em
+        + ' : le cloisonnement ne peut pas s\'appliquer, le réseau reste visible.');
+    }
+    if (typeof renderSidebarCreches === 'function') renderSidebarCreches();
+  } catch(e) { console.warn('[Accès] resoudreMaCreche', e); }
+  return MA_CRECHE;
+}
+
 async function sbUpsertParametre(cle, valeur) {
   const url = `${SUPA_RH_URL}/rest/v1/parametres`;
   // La table parametres a la même structure que salaries : id TEXT, data JSONB, updated_at
@@ -8891,13 +8947,16 @@ async function sbUpsertParametre(cle, valeur) {
 async function chargerParamsSupabase() {
   try {
     // La table parametres a la structure id TEXT, data JSONB (comme salaries) — pas cle/valeur
-    const res = await fetch(`${SUPA_RH_URL}/rest/v1/parametres?id=in.(orevy_creches,orevy_prefs,orevy_coord_rotation_v2,orevy_coord_suivi_v2)&select=id,data`, {
+    const res = await fetch(`${SUPA_RH_URL}/rest/v1/parametres?id=in.(orevy_creches,orevy_prefs,orevy_coord_rotation_v2,orevy_coord_suivi_v2,orevy_acces)&select=id,data`, {
       headers: SUPA_RH_HEADERS
     });
     if (!res.ok) return;
     const rows = await res.json();
     let crechesRecues = false;
     rows.forEach(row => {
+      if (row.id === 'orevy_acces' && row.data && Array.isArray(row.data.reseauRoles)) {
+        ORV_ACCES = row.data;
+      }
       if (row.id === 'orevy_creches' && Array.isArray(row.data) && row.data.length) {
         crechesRecues = true;
         CRECHES_DATA = row.data;
@@ -9019,11 +9078,19 @@ function supprimerCreche(i) {
 function renderSidebarCreches() {
   const sel = document.getElementById('creche-select-sidebar');
   if (!sel) return;
-  sel.innerHTML =
-    `<option value="all" ${currentCreche === 'all' ? 'selected' : ''}>Toutes les crèches</option>` +
-    CRECHES_DATA.map(c => {
-      return `<option value="${c.nom}" ${currentCreche === c.nom ? 'selected' : ''}>${c.nom}</option>`;
-    }).join('');
+  // Cloisonnement : hors rôles autorisés, on ne propose que la structure
+  // de rattachement (si elle a pu être résolue).
+  const cloisonne = !accesReseauAutorise() && !!MA_CRECHE;
+  if (cloisonne) {
+    if (currentCreche !== MA_CRECHE) { currentCreche = MA_CRECHE; }
+    sel.innerHTML = `<option value="${MA_CRECHE}" selected>${MA_CRECHE}</option>`;
+  } else {
+    sel.innerHTML =
+      `<option value="all" ${currentCreche === 'all' ? 'selected' : ''}>Toutes les crèches</option>` +
+      CRECHES_DATA.map(c => {
+        return `<option value="${c.nom}" ${currentCreche === c.nom ? 'selected' : ''}>${c.nom}</option>`;
+      }).join('');
+  }
   if (typeof orvSyncCrecheSelect === 'function') orvSyncCrecheSelect();
 }
 // ── FIN PARAMÈTRES ────────────────────────────────────────────────
@@ -9923,8 +9990,10 @@ function startApp() {
   applyRoleAccess();
   // Afficher le hub d'accueil avant l'app
   showHub();
-  // Charger params depuis Supabase (async — met à jour si plus récent)
-  chargerParamsSupabase();
+  // Charger params depuis Supabase (async — met à jour si plus récent),
+  // puis résoudre le périmètre de visibilité du compte connecté.
+  chargerParamsSupabase().then(function() { resoudreMaCreche(true); })
+    .catch(function() { resoudreMaCreche(true); });
   // Charger salariés depuis Supabase (async — répare les nouveaux appareils)
   chargerSalariesSupabase();
   setTimeout(checkDemandesBadge, 1500);
@@ -14251,8 +14320,62 @@ async function showAdminPage() {
       sel.innerHTML += `<option value="${c.nom}">${c.nom}</option>`;
     });
   }
+  renderAccesReseau();
   await renderAdminUsers();
   await renderConnexionLog();
+}
+
+const ORV_ROLES_LISTE = [
+  { id:'admin',        lbl:'👑 Admin' },
+  { id:'coordinateur', lbl:'🗓 Coordinateur EJE' },
+  { id:'directrice',   lbl:'🌸 Directrice' },
+  { id:'auxiliaire',   lbl:'🌿 Auxiliaire' },
+  { id:'stagiaire',    lbl:'🎓 Stagiaire' }
+];
+
+function renderAccesReseau() {
+  const wrap = document.getElementById('admin-acces-roles');
+  if (!wrap) return;
+  const list = (ORV_ACCES && Array.isArray(ORV_ACCES.reseauRoles)) ? ORV_ACCES.reseauRoles : ORV_ACCES_DEFAUT.reseauRoles;
+  wrap.innerHTML = ORV_ROLES_LISTE.map(function(r) {
+    const on = list.indexOf(r.id) !== -1;
+    // Statut lisible sans dépendre de la couleur : case cochée + mention explicite
+    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--border);'
+      + 'border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg)">'
+      + '<input type="checkbox" class="acces-role-cb" value="' + r.id + '" style="width:auto;margin:0"'
+      + (on ? ' checked' : '') + '>' + r.lbl
+      + '<span style="font-weight:400;font-size:11px;color:var(--ink3)">'
+      + (on ? '· réseau complet' : '· sa structure') + '</span></label>';
+  }).join('');
+  wrap.querySelectorAll('.acces-role-cb').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      const l = cb.closest('label').querySelector('span');
+      if (l) l.textContent = cb.checked ? '· réseau complet' : '· sa structure';
+    });
+  });
+}
+
+async function saveAccesReseau() {
+  const btn = document.getElementById('admin-acces-btn');
+  const msg = document.getElementById('admin-acces-msg');
+  const roles = Array.from(document.querySelectorAll('.acces-role-cb'))
+    .filter(cb => cb.checked).map(cb => cb.value);
+  if (roles.indexOf('admin') === -1) {
+    if (!confirm('Le rôle Admin ne verra plus le réseau complet. Confirmer ?')) return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
+  try {
+    ORV_ACCES = { reseauRoles: roles };
+    await sbUpsertParametre('orevy_acces', ORV_ACCES);
+    await resoudreMaCreche(true);
+    renderSidebarCreches();
+    if (msg) { msg.style.display = 'block'; msg.style.color = 'var(--green)';
+               msg.textContent = '✅ Périmètre enregistré. Effectif à la prochaine connexion des utilisateurs concernés.'; }
+  } catch(e) {
+    if (msg) { msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = '⚠ ' + e.message; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer le périmètre'; }
+  }
 }
 
 
