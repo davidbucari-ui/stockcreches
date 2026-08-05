@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-05 19:47 -->
+<!-- OREVY BUILD 2026-08-06 00:24 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -18652,6 +18652,12 @@ function gpPlacerPauses(list, hs, o0, o1, cd, pc) {
     const tMax = Math.min(pc.fenetreFin - it.duree, it.f - (pc.avantFin || 90));
     const posees = items.filter(x => x !== it && x.c.pause).map(x => gpParsePause(x.c.pause)).filter(Boolean);
     const milieu = (pc.fenetreDebut + pc.fenetreFin - it.duree) / 2;
+    // Reference SANS cette pause : seul l'ecart lui est imputable. En
+    // retenant le total du jour, chaque pause heritait d'un deficit ne
+    // ailleurs — quinze lignes d'alerte pour un trou de 45 min a 17h,
+    // sur les seuls jours ou ce trou existait.
+    it.c.pause = '';
+    const base = gpBalayage(gpPresences(list, hs, o0, o1), o0, o1, cd).sous;
     let best = null, bestKey = null;
     for (let t = Math.ceil(tMin / 15) * 15; t <= tMax; t += 15) {
       it.c.pause = gpHmsPause(t) + '\u2013' + gpHmsPause(t + it.duree);
@@ -18666,7 +18672,7 @@ function gpPlacerPauses(list, hs, o0, o1, cd, pc) {
     }
     if (best === null) { it.c.pause = ''; it._sous = 0; return; }
     it.c.pause = gpHmsPause(best) + '\u2013' + gpHmsPause(best + it.duree);
-    it._sous = bestKey[1];
+    it._sous = Math.max(0, bestKey[1] - base);
   };
 
   items.forEach(placer);
@@ -18680,7 +18686,7 @@ function gpPlacerPauses(list, hs, o0, o1, cd, pc) {
         + it.duree + ' min ne tient avant ' + gpHms(pc.fenetreFin) });
     } else if (it._sous > 0) {
       alertes.push({ txt: it.c.pro + ' : la pause de ' + it.c.pause.split('\u2013')[0]
-        + ' fait passer la section sous le minimum d\'encadrement' });
+        + ' co\u00fbte ' + it._sous + ' min sous le minimum d\u2019encadrement' });
     }
   });
   return alertes;
@@ -18690,6 +18696,40 @@ function gpPlacerPauses(list, hs, o0, o1, cd, pc) {
 // l'amplitude d'ouverture, pas seulement aux heures de forte affluence.
 // Il ne se négocie donc pas — on peut le monter, jamais le descendre.
 const GP_PLANCHER = 2;
+
+// Capacite instantanee du jeu d'horaires : combien de postes peuvent
+// PHYSIQUEMENT etre presents a un instant donne. Aucune affectation, si
+// nombreuse soit-elle, ne depasse ce nombre. Un besoin de 3 professionnelles
+// a 17h15 alors que deux horaires seulement couvrent cette minute n'est pas
+// un echec de repartition : le jeu d'horaires ne peut pas le produire.
+// gpFaisabilite, qui ne compare que des VOLUMES d'heures, repondait
+// « suffisant » au-dessus d'une proposition non conforme.
+function gpBlocages(cfg, seuil) {
+  const o0 = gpHm(cfg.ouverture.debut), o1 = gpHm(cfg.ouverture.fin);
+  if (o0 === null || o1 === null || o1 <= o0) return [];
+  const hs = (cfg.horaires || []).map(x => ({ d: gpHm(x.debut), f: gpHm(x.fin), name: x.name }))
+    .filter(x => x.d !== null && x.f !== null && x.f > x.d);
+  const nP = (cfg.pros || []).length || hs.length;
+  const out = [];
+  (cfg.ouverture.jours || [0, 1, 2, 3, 4]).forEach(j => {
+    const cd = gpCadre(o0, o1, cfg, seuil, j);
+    // Memes bornes que gpBornes, plus les prises et fins de poste possibles :
+    // un changement de seuil qui ne coincide avec aucun horaire doit sortir.
+    const pts = new Set([o0, o1]);
+    (cd.paliers || []).forEach(p => { pts.add(p.d); pts.add(p.f); });
+    hs.forEach(x => { pts.add(x.d); pts.add(x.f); });
+    const b = Array.from(pts).filter(x => x >= o0 && x <= o1).sort((x, y) => x - y);
+    for (let k = 0; k < b.length - 1; k++) {
+      const t = b[k], s = gpSeuilA(t, cd);
+      const cap = Math.min(nP, hs.filter(x => x.d <= t && x.f > t).length);
+      if (cap >= s) continue;
+      const last = out[out.length - 1];
+      if (last && last.jour === j && last.fin === t && last.cap === cap && last.seuil === s) last.fin = b[k + 1];
+      else out.push({ jour: j, debut: t, fin: b[k + 1], seuil: s, cap: cap });
+    }
+  });
+  return out;
+}
 
 // Faisabilité, avant toute génération : le volume d'heures disponible
 // permet-il seulement de tenir le plancher ? Répondre après coup par des
@@ -18732,8 +18772,14 @@ function gpFaisabilite(cfg) {
     const m = Math.max(0, requisJour - dis);
     if (m > 0) { manque += m; joursCourts.push({ jour: j, manqueH: m / 60 }); }
   });
+  // Deux questions distinctes : « ai-je assez d'heures ? » (volume) et
+  // « mon jeu d'horaires peut-il livrer l'effectif a cet instant ? » (forme).
+  // Repondre a la premiere seule produisait un bandeau vert au-dessus d'une
+  // proposition non conforme.
+  const blocages = gpBlocages(cfg, seuil);
   return {
     seuil, requisH: requis / 60, dispoH: dispo / 60, manqueH: manque / 60, pauseMin: pause,
+    blocages: blocages, capaciteOK: blocages.length === 0,
     seuilMax: jours.reduce((mx, j) => Math.max(mx, gpCadre(o0, o1, cfg, seuil, j).seuilMax), 0),
     prepMin: cd.aD - o0, rangeMin: o1 - cd.aF, joursCourts: joursCourts,
     // Équivalent temps plein manquant, sur une base 35 h.
@@ -18751,6 +18797,99 @@ function gpFaisabilite(cfg) {
 
 // « Être en binôme » n'est pas binaire : deux pros qui se chevauchent sept
 // heures le sont davantage que deux qui se croisent une heure.
+// Cause d'un deficit d'encadrement, et levier pour le lever.
+// Cinq essais successifs le 6/08 ont montre que le deficit ne venait jamais
+// d'un echec de repartition : trois fois un REGLAGE bloquait (plafond de
+// pause, fenetre de pause), une fois le jeu d'horaires ne pouvait pas
+// produire l'effectif demande. Annoncer « meilleure repartition possible a
+// effectif constant » fermait une porte qu'un curseur rouvrait. On nomme
+// donc la cause, du levier le moins couteux au plus couteux, et on chiffre
+// chacun : c'est une decision d'organisation, elle se prend sur des nombres.
+function gpCauses(r) {
+  const out = [];
+  if (!r || r.conforme) return out;
+  const cfg = r.cfg || {}, hs = r.hs || [], o0 = r.o0, o1 = r.o1;
+  const pc = gpNormPause(cfg);
+  const f = r.faisabilite || {};
+  const hx = x => (Math.round(x * 10) / 10).toString().replace('.', ',');
+
+  // (a) Le jeu d'horaires peut-il seulement produire l'effectif requis ?
+  const bl = (f.blocages || []);
+  if (bl.length) {
+    const b = bl[0];
+    const jrs = Array.from(new Set(bl.map(x => PLG_JOURS[x.jour]))).join(', ');
+    out.push('<b>Le jeu d\u2019horaires plafonne \u00e0 ' + b.cap + ' personne'
+      + (b.cap > 1 ? 's' : '') + ' sur ' + gpHms(b.debut) + '\u2013' + gpHms(b.fin)
+      + '</b> (' + jrs + '), l\u00e0 o\u00f9 ' + b.seuil + ' sont requises. '
+      + 'Aucune r\u00e9partition ne produit une pr\u00e9sence qui n\u2019existe dans aucun horaire.');
+
+    // Prolonger l'horaire qui vient de se terminer : le plafond de pause
+    // l'autorise-t-il ? Une amplitude n'est bornee que par le travail vise
+    // augmente de la pause maximale.
+    const av = hs.filter(x => x.f <= b.debut).sort((x, y) => y.f - x.f)[0];
+    const ampMax = (pc.travailCible || 420) + (pc.mode === 'fixe' ? (pc.duree || 60) : (pc.dureeMax || 60));
+    if (av) {
+      const ampNec = b.fin - av.d;
+      if (ampNec > ampMax) {
+        out.push('Prolonger <b>' + plgenEsc(av.name || (gpHms(av.d) + '\u2013' + gpHms(av.f)))
+          + '</b> jusqu\u2019\u00e0 ' + gpHms(b.fin) + ' demande ' + hx(ampNec / 60)
+          + ' h d\u2019amplitude ; le plafond de pause actuel ('
+          + (pc.mode === 'fixe' ? (pc.duree || 60) : (pc.dureeMax || 60)) + ' min) limite un poste \u00e0 '
+          + hx(ampMax / 60) + ' h. <b>Porter la pause maximale \u00e0 '
+          + (ampNec - (pc.travailCible || 420)) + ' min</b> l\u00e8ve le blocage sans heure suppl\u00e9mentaire '
+          + '\u2014 au prix d\u2019une pause longue, \u00e0 faire tourner.');
+      } else {
+        out.push('Prolonger <b>' + plgenEsc(av.name || (gpHms(av.d) + '\u2013' + gpHms(av.f)))
+          + '</b> jusqu\u2019\u00e0 ' + gpHms(b.fin) + ' (' + hx(ampNec / 60)
+          + ' h d\u2019amplitude) tient dans les r\u00e9glages actuels.');
+      }
+    }
+    out.push('\u00c0 horaires inchang\u00e9s, le d\u00e9ficit se solde en '
+      + hx(r.minutesSous / 60) + ' h suppl\u00e9mentaires par semaine, '
+      + '\u00e0 r\u00e9mun\u00e9rer, r\u00e9cup\u00e9rer ou annualiser.');
+  }
+
+  // (b) La fenetre de pause peut-elle absorber le volume a placer ?
+  // Capacite brute = duree de fenetre x nombre de pauses simultanees
+  // tolerees. C'est un MAJORANT : il suppose la fenetre remplie bord a bord,
+  // ce que les contraintes individuelles interdisent. On alerte donc bien
+  // avant l'egalite — 345 min pour 360 de capacite s'annoncait faisable et
+  // ne l'etait pas.
+  if (pc.actif && (r.creneaux || []).length) {
+    let pire = null;
+    (r.jours || []).forEach(j => {
+      const duJour = r.creneaux.filter(c => c.jour === j);
+      if (!duJour.length) return;
+      const tot = duJour.reduce((s, c) => {
+        const x = hs.find(y => y.i === c.horaire_idx);
+        return s + (x ? gpDureePause(Math.min(x.f, o1) - Math.max(x.d, o0), pc) : 0);
+      }, 0);
+      const simult = Math.max(0, duJour.length - ((r.seuilsJour || {})[j] || r.seuil));
+      const cap = Math.max(0, pc.fenetreFin - pc.fenetreDebut) * simult;
+      const ratio = cap > 0 ? (cap - tot) / cap : -1;
+      if (tot > 0 && (pire === null || ratio < pire.ratio)) pire = { jour: j, tot, cap, simult, ratio };
+    });
+    if (pire && pire.ratio < 0.2) {
+      out.push('<b>La fen\u00eatre de pause ' + gpHms(pc.fenetreDebut) + '\u2013' + gpHms(pc.fenetreFin)
+        + ' est satur\u00e9e</b> : ' + pire.tot + ' min \u00e0 placer pour ' + pire.cap
+        + ' min de capacit\u00e9 (' + pire.simult + ' pause'
+        + (pire.simult > 1 ? 's' : '') + ' simultan\u00e9e' + (pire.simult > 1 ? 's' : '')
+        + ' au plus, ' + PLG_JOURS[pire.jour] + '). '
+        + 'Cette capacit\u00e9 suppose la fen\u00eatre remplie bord \u00e0 bord : compter un tiers de marge. '
+        + '<b>\u00c9largir la fen\u00eatre</b> ou raccourcir les pauses.');
+    }
+  }
+
+  // (c) Volume d'heures reellement insuffisant : le seul cas ou l'effectif
+  // est en cause, et le seul ou « a effectif constant » est honnete.
+  if (f && f.suffisant === false) {
+    out.push('<b>Le volume d\u2019heures ne suffit pas</b> : ' + hx(f.dispoH) + ' h disponibles pour '
+      + hx(f.requisH) + ' h \u00e0 couvrir, soit ' + hx(f.manqueH) + ' h manquantes ('
+      + hx(f.etpManquant) + ' \u00e9quivalent temps plein). Aucun r\u00e9glage ne comble cet \u00e9cart.');
+  }
+  return out;
+}
+
 function gpChevauchement(hs, ia, ib, o0, o1) {
   const a = hs.find(x => x.i === ia), b = hs.find(x => x.i === ib);
   if (!a || !b) return 0;
@@ -19428,7 +19567,15 @@ function plgenRender() {
         + (f.seuilMax > f.seuil ? ' (jusqu\u2019\u00e0 ' + f.seuilMax + ' professionnelles au plus charg\u00e9)' : '')
         + '.</b><br>'
         + h(f.dispoH) + ' h disponibles pour ' + h(f.requisH) + ' h \u00e0 couvrir'
-        + (f.prepMin || f.rangeMin ? ', pr\u00e9paration et rangement compt\u00e9s \u00e0 une pro' : '') + '.</div>'
+        + (f.prepMin || f.rangeMin ? ', pr\u00e9paration et rangement compt\u00e9s \u00e0 une pro' : '') + '.'
+        + (f.capaciteOK === false
+            ? '<br><b>\u25b3 Mais le jeu d\u2019horaires ne peut pas les placer</b> : '
+              + f.blocages.slice(0, 2).map(function (b) {
+                  return PLG_JOURS[b.jour] + ' ' + gpHms(b.debut) + '\u2013' + gpHms(b.fin)
+                    + ' plafonne \u00e0 ' + b.cap + ' pour ' + b.seuil + ' requises'; }).join(' ; ')
+              + (f.blocages.length > 2 ? ' (+' + (f.blocages.length - 2) + ')' : '')
+              + '. Les heures sont l\u00e0, c\u2019est leur r\u00e9partition dans la journ\u00e9e qui bloque.'
+            : '') + '</div>'
       : '<div style="background:var(--ink);color:#fff;border-radius:12px;padding:13px 15px;margin-top:14px;font-size:13px;line-height:1.5">'
         + '<b>\u2715 L\u2019effectif ne suffit pas \u00e0 tenir l\u2019encadrement requis pendant l\u2019accueil'
         + (f.seuilMax > f.seuil ? ' (jusqu\u2019\u00e0 ' + f.seuilMax + ' professionnelles au plus charg\u00e9)' : '')
@@ -19516,7 +19663,16 @@ function plgenRenderResultat() {
       + '<b>\u2715 Non conforme : ' + (Math.round(r.minutesSous / 6) / 10).toString().replace('.', ',')
       + ' h sous le minimum d\u2019encadrement</b>'
       + (r.minutesSeule ? ', dont ' + (Math.round(r.minutesSeule / 6) / 10).toString().replace('.', ',') + ' h avec une seule personne ou aucune' : '')
-      + '.<br>C\u2019est la meilleure r\u00e9partition possible \u00e0 effectif constant.</div>';
+      + '.'
+      + (function () {
+          const cs = gpCauses(r);
+          // Sans cause identifiee, on ne bluffe pas : la phrase d'origine
+          // reste vraie, elle ne devient trompeuse que si un levier existe.
+          return cs.length
+            ? '<ul style="margin:8px 0 0 18px;padding:0;line-height:1.55">'
+              + cs.map(t => '<li style="margin-bottom:5px">' + t + '</li>').join('') + '</ul>'
+            : '<br>C\u2019est la meilleure r\u00e9partition possible \u00e0 effectif constant.';
+        })() + '</div>';
 
   const bilan = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">'
     + '<thead><tr>' + ['Professionnelle', 'Jours', 'Ouvertures', 'Fermetures', 'Heures', '\u00c9cart contrat']
