@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-05 11:59 -->
+<!-- OREVY BUILD 2026-08-05 18:45 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -11679,7 +11679,7 @@ const ORV_DOMAINES = [
       {id:'planning',nom:'Planning', roles:['admin','directrice','coordinateur','auxiliaire']},
       {id:'pointage',nom:'Pointage', roles:['admin','directrice','coordinateur','auxiliaire']}
     ],
-    aBrancher:["trous d'encadrement au planning","visites médicales à programmer"] },
+    aBrancher:["visites médicales à programmer"] },
   { id:'univers', ico:'\uD83C\uDF1F', nom:'Univers ludiques', sub:'Aménagement, rotation, projet pédagogique',
     pages:[ {id:'univers', nom:'Univers ludiques', roles:['admin','directrice','coordinateur','auxiliaire']} ],
     aBrancher:['univers à renouveler','observations pédagogiques manquantes','matériel manquant pour un univers'] },
@@ -11948,6 +11948,51 @@ function _orvJour(d) {
 }
 function _orvJourFr(iso) { return iso ? String(iso).substring(0,10).split('-').reverse().join('/') : ''; }
 
+/* ── Encadrement au planning : briques de lecture ──────────────────
+   Trois situations se ressemblent en base et ne doivent surtout pas etre
+   confondues :
+     1. pros saisis + plancher de 2 non tenu pendant l'accueil -> sous-effectif
+     2. aucun creneau sur un jour ouvre -> planning non renseigne
+     3. pros saisis mais effectif enfant inconnu -> on ne sait pas
+   La troisieme ne remonte pas : les presences enfants sont connues par JOUR
+   (jours_presence), pas par tranche horaire. Croiser un ratio journalier avec
+   une couverture horaire signalerait toutes les structures des l'ouverture,
+   quand deux enfants sont la. Une source qui se declenche sur tout le monde
+   n'informe personne. Le plancher de 2 professionnels, lui, ne depend d'aucun
+   effectif : c'est le seul critere exploitable aujourd'hui. */
+function _orvPlgLundi(offset) {
+  const now = new Date();
+  const day = now.getDay() || 7;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - day + 1 + (offset || 0) * 7);
+  mon.setHours(0, 0, 0, 0);
+  return mon;                       // jamais peGetMonday() : peWeekOffset suit la navigation
+}
+function _orvPlgWeek(creche, offset) {
+  const mon = _orvPlgLundi(offset);
+  const key = mon.getFullYear() + '-W' + String(getISOWeekNumber(mon)).padStart(2, '0')
+            + '-' + (creche || 'all');
+  let d = {};
+  try { d = JSON.parse(localStorage.getItem('orevy_planning_equipe') || '{}'); } catch (e) {}
+  return d[key] || null;
+}
+// Couverture bornee a la plage d'accueil des enfants. Avant l'arrivee du
+// premier enfant et apres le depart du dernier, la structure se prepare ou se
+// range : une pro seule suffit et rien ne doit etre signale.
+// null = rien de calculable (jour ferme, amplitude non reglee).
+function _orvPlgTrous(week, jour, creche) {
+  const cv = peCouvertureJour(week || { pros: [], creneaux: [] }, jour, creche, 2);
+  if (!cv || cv.ferme || cv.indetermine) return null;
+  const o = getOuvertureStructure(creche);
+  const a = peHm(o.accueil_debut), b = peHm(o.accueil_fin);
+  if (a === null || b === null || b <= a) return null;
+  if (cv.vide) return { vide: true, trous: [] };
+  const trous = (cv.trous || [])
+    .map(t => ({ debut: Math.max(t.debut, a), fin: Math.min(t.fin, b), n: t.n }))
+    .filter(t => t.fin > t.debut);
+  return { vide: false, trous: trous };
+}
+
 async function orvCollecterBesoins() {
   const out = [];
   const cf = orvCrecheActive();
@@ -12177,6 +12222,83 @@ async function orvCollecterBesoins() {
       }
     }
   } catch(e) { console.warn('[hub] source pointage', e); }
+
+  // ── Planning : encadrement (plancher de 2 pendant l'accueil) ──
+  try {
+    const cibles = cf
+      ? [cf]
+      : ((typeof CRECHES_DATA !== 'undefined' ? CRECHES_DATA : []).map(c => c.nom).filter(Boolean));
+    const auj = (new Date().getDay() || 7) - 1;          // 0 = lundi ... 6 = dimanche
+    // Semaine en cours a partir d'aujourd'hui : un trou passe ne se rattrape
+    // pas, le signaler serait du bruit. La semaine suivante entre dans le
+    // champ des jeudi, moment ou elle se prepare reellement.
+    const semaines = [{ off: 0, lib: 'cette semaine' }];
+    if (auj >= 3) semaines.push({ off: 1, lib: 'semaine prochaine' });
+
+    const lgSous = [], lgVides = [];
+    let nSous = 0, nVides = 0;
+
+    cibles.forEach(function(nom) {
+      semaines.forEach(function(sem) {
+        const week = _orvPlgWeek(nom, sem.off);
+        const j0 = (sem.off === 0) ? Math.max(auj, 0) : 0;
+        const vides = [];
+        for (let j = j0; j <= 4; j++) {
+          if (!estJourOuvert(nom, j)) continue;
+          const r = _orvPlgTrous(week, j, nom);
+          if (!r) continue;
+          if (r.vide) { nVides++; vides.push(PLG_JOURS[j].toLowerCase()); continue; }
+          if (!r.trous.length) continue;
+          nSous++;
+          // Deux niveaux, jamais confondus : les minutes a ZERO pro d'abord,
+          // le sous-seuil ensuite. Annoncer le minimum global ferait dire
+          // "personne" sur une plage ou une pro est bien presente.
+          const plages = l => l.slice(0, 2).map(t => peHmStr(t.debut) + '\u2013' + peHmStr(t.fin)).join(' \u00b7 ')
+                            + (l.length > 2 ? ' \u00b7 +' + (l.length - 2) : '');
+          const zero  = r.trous.filter(t => t.n === 0);
+          const sous  = r.trous.filter(t => t.n > 0);
+          let titre, note;
+          if (zero.length) {
+            titre = 'personne \u00e0 ' + plages(zero);
+            note  = sous.length ? ' \u00b7 moins de 2 pros \u00e0 ' + plages(sous) : '';
+          } else {
+            const bas = sous.reduce((m, t) => Math.min(m, t.n), Infinity);
+            const uni = sous.every(t => t.n === bas);
+            titre = (uni ? (bas + ' pro' + (bas > 1 ? 's' : '')) : 'moins de 2 pros') + ' \u00e0 ' + plages(sous);
+            note  = '';
+          }
+          lgSous.push({ dom:'rh', n:1,
+            t: PLG_JOURS[j] + ' : ' + titre,
+            c: nom, q: sem.lib + " \u00b7 plancher de 2 pendant l'accueil" + note,
+            act:'Ouvrir le planning', page:'planning', src:'planning.sous_effectif' });
+        }
+        if (vides.length) {
+          lgVides.push({ dom:'rh', n:2,
+            t: 'Planning non saisi : ' + vides.join(', '),
+            c: nom, q: sem.lib, act:'Ouvrir le planning', page:'planning',
+            src:'planning.non_renseigne' });
+        }
+      });
+    });
+
+    ORV_STATS.planningJoursSousEffectif = nSous;
+    ORV_STATS.planningJoursNonSaisis    = nVides;
+
+    lgSous.slice(0, 5).forEach(l => out.push(l));
+    if (lgSous.length > 5) {
+      out.push({ dom:'rh', n:2, t:(lgSous.length - 5) + ' autre' + (lgSous.length - 5 > 1 ? 's' : '')
+                 + ' journ\u00e9e' + (lgSous.length - 5 > 1 ? 's' : '') + ' sous le plancher de 2',
+                 c: cf || 'R\u00e9seau', q:'', act:'Ouvrir le planning', page:'planning',
+                 src:'planning.sous_effectif' });
+    }
+    lgVides.slice(0, 3).forEach(l => out.push(l));
+    if (lgVides.length > 3) {
+      out.push({ dom:'rh', n:2, t:(lgVides.length - 3) + ' autre' + (lgVides.length - 3 > 1 ? 's' : '')
+                 + ' semaine' + (lgVides.length - 3 > 1 ? 's' : '') + ' de planning non saisie',
+                 c: cf || 'R\u00e9seau', q:'', act:'Ouvrir le planning', page:'planning',
+                 src:'planning.non_renseigne' });
+    }
+  } catch(e) { console.warn('[hub] source planning', e); }
 
   // ══ LOT 2 ══════════════════════════════════════════════════════════════
 
