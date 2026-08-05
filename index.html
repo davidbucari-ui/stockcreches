@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-05 18:52 -->
+<!-- OREVY BUILD 2026-08-05 19:23 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -4900,6 +4900,145 @@ function saveFamilles(data, crecheId) {
   localStorage.setItem('orevy_familles_' + (crecheId || 'all'), JSON.stringify(data));
   pushFamillesCloud(data, crecheId);  // write-through Supabase RH
 }
+/* ── Migration ponctuelle : jours_presence 1..5 -> 0..4 ──────────────
+   L'import CSV/Excel a longtemps ecrit 1 = lundi alors que la fiche, le
+   formulaire d'inscription et les quatre rendus lisent 0 = lundi. Resultat :
+   aucun enfant le lundi, tout le monde decale d'un jour, et le vendredi
+   invisible. La detection se fait sur le JEU COMPLET, jamais fiche par fiche :
+   [1,2,3,4] est ambigu isolement (Mar-Ven en 0-based, Lun-Jeu en 1-based),
+   alors qu'un 5 quelque part dans le reseau ne peut pas exister en 0-based.
+   Un drapeau dans les parametres empeche un second passage, qui decalerait
+   une deuxieme fois. */
+async function orvMigrerJoursPresence(opts) {
+  const dry = !opts || opts.dryRun !== false;
+  const flag = 'orevy_migr_jours_presence';
+  const creches = (CRECHES_DATA || []).map(c => c.nom);
+
+  let max = -1, aZero = 0, total = 0;
+  const vus = [];
+  creches.forEach(function(nom) {
+    (getFamilles(nom) || []).forEach(function(e) {
+      const jp = (e.jours_presence || []).map(Number).filter(x => !isNaN(x));
+      if (!jp.length) return;
+      total++;
+      jp.forEach(x => { if (x > max) max = x; if (x === 0) aZero++; });
+      vus.push({ creche: nom, id: e.id, avant: jp.slice() });
+    });
+  });
+
+  if (!total) { console.log('[migration] aucune fiche avec jours_presence'); return; }
+  if (max <= 4 && aZero > 0) {
+    console.log('[migration] deja en 0-based (max=' + max + ', ' + aZero + ' occurrence(s) de 0) - rien a faire');
+    return;
+  }
+  if (max <= 4 && aZero === 0) {
+    console.warn('[migration] AMBIGU : aucun 0 mais aucun 5 non plus sur ' + total
+      + ' fiche(s). Impossible de trancher automatiquement. Verifiez une fiche a la main.');
+    return;
+  }
+
+  console.log('[migration] signature 1-based confirmee : max=' + max + ', aucun 0 sur ' + total + ' fiche(s)');
+  console.table(vus.slice(0, 10).map(v => ({
+    creche: v.creche, id: v.id,
+    avant: v.avant.join(','), apres: v.avant.map(x => x - 1).filter(x => x >= 0 && x <= 4).join(',')
+  })));
+
+  if (dry) {
+    console.log('[migration] SIMULATION. Pour appliquer : orvMigrerJoursPresence({dryRun:false})');
+    return;
+  }
+  try {
+    const dejaFait = (typeof PARAMETRES !== 'undefined' && PARAMETRES && PARAMETRES[flag]);
+    if (dejaFait) { console.warn('[migration] deja appliquee - abandon'); return; }
+  } catch (e) {}
+
+  let n = 0;
+  creches.forEach(function(nom) {
+    const arr = getFamilles(nom) || [];
+    let touche = false;
+    arr.forEach(function(e) {
+      const jp = (e.jours_presence || []).map(Number).filter(x => !isNaN(x));
+      if (!jp.length) return;
+      e.jours_presence = jp.map(x => x - 1).filter(x => x >= 0 && x <= 4);
+      touche = true; n++;
+    });
+    if (touche) saveFamilles(arr, nom);
+  });
+  try { await sbUpsertParametre(flag, { fait: true, le: new Date().toISOString(), fiches: n }); } catch (e) {}
+  console.log('[migration] ' + n + ' fiche(s) converties et remontees. Rechargez la page.');
+}
+
+/* ── Jeu d'essai : repartition des presences enfants ─────────────────
+   DONNEES DE TEST UNIQUEMENT. Reecrit jours_presence (et, en option, les
+   horaires d'arrivee/depart) pour obtenir des effectifs plausibles : sous le
+   plafond de surnombre, et surtout DIFFERENTS d'un jour a l'autre. Un effectif
+   constant sur les cinq jours ne teste rien : le seuil d'encadrement resterait
+   fixe et on ne verrait pas si le generateur sait s'y adapter. */
+async function orvRepartirPresencesTest(opts) {
+  const o   = opts || {};
+  const dry = o.dryRun !== false;
+  const max = o.max || 14;
+  const creches = o.creches || (CRECHES_DATA || []).map(c => c.nom);
+  // Profil volontairement irregulier : mercredi creux, mardi charge.
+  const profil = o.profil || [0.86, 1.00, 0.57, 0.93, 0.71];
+
+  const recap = [];
+  for (const nom of creches) {
+    const arr = getFamilles(nom) || [];
+    const j0  = new Date(); j0.setHours(0, 0, 0, 0);
+    const act = arr.filter(e => !e.sortie || new Date(e.sortie) >= j0);
+    if (!act.length) continue;
+
+    // Cible par jour : jamais au-dessus du plafond, jamais au-dessus de
+    // l'effectif inscrit.
+    const cibles = profil.map(f => Math.min(max, act.length, Math.round(max * f)));
+
+    const compte = new Map(act.map(e => [e.id, 0]));
+    const jours  = act.map(() => []);
+    const parEnf = new Map(act.map(e => [e.id, []]));
+
+    cibles.forEach(function(cible, j) {
+      // Les moins servis d'abord : tout le monde finit avec un volume proche.
+      const ordre = act.slice().sort((a, b) => (compte.get(a.id) - compte.get(b.id)) || String(a.id).localeCompare(String(b.id)));
+      ordre.slice(0, cible).forEach(function(e) {
+        parEnf.get(e.id).push(j);
+        compte.set(e.id, compte.get(e.id) + 1);
+      });
+    });
+
+    act.forEach(function(e) {
+      const js = parEnf.get(e.id).sort((a, b) => a - b);
+      e.jours_presence = js;
+      e.jours = js.length;
+      if (o.horaires) {
+        // Arrivees et departs echelonnes : sans cela tous les enfants
+        // arrivent ensemble et la courbe d'effectif est un rectangle.
+        const seedD = ['07:30', '08:00', '08:30', '09:00'];
+        const seedF = ['16:00', '16:30', '17:30', '18:00', '18:30'];
+        const k = Math.abs(String(e.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0));
+        const hd = {};
+        js.forEach(function(j, i) {
+          hd[j] = { debut: seedD[(k + i) % seedD.length], fin: seedF[(k + i * 2) % seedF.length] };
+        });
+        e.horaires_detail = hd;
+      }
+    });
+
+    recap.push({
+      creche: nom, inscrits: act.length,
+      jours: [0,1,2,3,4].map(j => act.filter(e => e.jours_presence.includes(j)).length).join(' / '),
+      seuils: [0,1,2,3,4].map(j => Math.max(2, Math.ceil(act.filter(e => e.jours_presence.includes(j)).length / 6))).join(' / '),
+      horaires: o.horaires ? 'oui' : 'inchanges'
+    });
+    if (!dry) saveFamilles(arr, nom);
+  }
+
+  console.table(recap);
+  console.log(dry
+    ? "[jeu d'essai] SIMULATION. Pour appliquer : orvRepartirPresencesTest({dryRun:false, horaires:true})"
+    : "[jeu d'essai] applique et remonte en base. Rechargez la page.");
+}
+
 function getBerceaux(crecheId) {
   try { return JSON.parse(localStorage.getItem('orevy_berceaux_' + (crecheId||'all')) || '[]'); } catch { return []; }
 }
@@ -6234,7 +6373,12 @@ async function importExcelFamilles(event) {
   const iTarif  = idx('Tarif horaire');
   const iMensuel= idx('Mensualisation');
 
-  const JOURS_MAP = { 'Lun':1,'Mar':2,'Mer':3,'Jeu':4,'Ven':5 };
+  // 0 = lundi, comme les cases de la fiche, inscription.html et les rendus.
+  // L'ancienne table etait en 1..5 pour survivre au .filter(Boolean) qui
+  // supprimait le lundi. Le filtre teste desormais l'existence de la cle :
+  // passer la table en 0-based sans corriger le filtre effacerait tous les
+  // lundis a l'import.
+  const JOURS_MAP = { 'Lun':0,'Mar':1,'Mer':2,'Jeu':3,'Ven':4 };
 
   const enfants = getFamilles(crecheId);
   let created = 0, skipped = 0;
@@ -6255,7 +6399,7 @@ async function importExcelFamilles(event) {
 
     // Jours de présence : "Lun Mar Jeu" → [1,2,4]
     const joursStr = g(iJours);
-    const joursPresence = joursStr.split(/\s+/).map(j => JOURS_MAP[j]).filter(Boolean);
+    const joursPresence = joursStr.split(/\s+/).map(j => JOURS_MAP[j]).filter(j => j !== undefined);
 
     // Calcul tarif PSU auto si pas dans le fichier
     const qf = parseInt(g(iQF)) || 0;
