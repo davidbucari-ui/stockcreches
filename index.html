@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-04 19:28 -->
+<!-- OREVY BUILD 2026-08-05 07:12 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -2398,6 +2398,7 @@ textarea { resize: vertical; min-height: 72px; }
               style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);outline:none">
             </select>
             <button class="btn btn-primary" id="pe-add-btn" onclick="openModalPE(null,null)">+ Ajouter</button>
+            <button class="btn btn-secondary" id="pe-gen-btn" onclick="plgenOuvrir()">⚙ Générer</button>
             <button class="btn btn-secondary" onclick="exportPlanningPDF()">🖨 PDF</button>
           </div>
         </div>
@@ -15902,10 +15903,15 @@ const PLG_OUVERTURE_DEFAUT = { jours: [0,1,2,3,4], debut: '07:30', fin: '18:30' 
 function getOuvertureStructure(crecheNom) {
   const c = (typeof CRECHES_DATA !== 'undefined' ? CRECHES_DATA : []).find(x => x.nom === crecheNom);
   const o = (c && c.ouverture) ? c.ouverture : null;
+  // accueil_* : plage de presence des enfants. Avant et apres, la structure
+  // se prepare ou se range : une pro seule suffit, le plancher de deux ne
+  // s'y applique pas. Par defaut, accueil = amplitude complete.
   return {
     jours: (o && Array.isArray(o.jours)) ? o.jours.slice() : PLG_OUVERTURE_DEFAUT.jours.slice(),
     debut: (o && o.debut) || PLG_OUVERTURE_DEFAUT.debut,
-    fin:   (o && o.fin)   || PLG_OUVERTURE_DEFAUT.fin
+    fin:   (o && o.fin)   || PLG_OUVERTURE_DEFAUT.fin,
+    accueil_debut: (o && o.accueil_debut) || (o && o.debut) || PLG_OUVERTURE_DEFAUT.debut,
+    accueil_fin:   (o && o.accueil_fin)   || (o && o.fin)   || PLG_OUVERTURE_DEFAUT.fin
   };
 }
 
@@ -18028,6 +18034,1084 @@ function plgParamReattach() {
   showNotif('\u2705 ' + cur + ' reprend les horaires communs');
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Générateur de planning équipe — moteur
+   Produit exactement la structure attendue par peSaveWeek :
+     { pros:[nom], creneaux:[{id,pro,horaire_idx,horaireIdx,jour,pause}] }
+
+   Priorités, dans cet ordre (choix produit) :
+     1. couvrir l'amplitude d'ouverture au seuil demandé
+     2. équité des ouvertures / fermetures entre les pros
+     3. approcher les heures contractuelles
+   ───────────────────────────────────────────────────────────── */
+
+function gpHm(s)  { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '')); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+function gpHms(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+
+// Compare deux vecteurs de score, lexicographiquement.
+function gpCmp(a, b) {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const d = (a[i] || 0) - (b[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
+// Découvert d'une sélection d'horaires, en deux niveaux :
+//   [0] minutes où PERSONNE n'est présent  — la structure est de fait fermée
+//   [1] minutes sous le seuil d'encadrement
+// Les confondre revient à traiter « 0 pro » comme « 1 pro » : c'est le
+// vécu du 5/08, où le mercredi tombait à zéro de 16:30 à 18:30 sans que le
+// score ne bouge, parce que le total de minutes était identique.
+// Avant l'arrivée des enfants (préparation) et après leur départ (rangement),
+// le plancher de deux ne s'applique pas : une pro seule prépare la section.
+// Le seuil est donc une fonction du moment, pas une constante — sinon le
+// générateur déclare non conforme un planning parfaitement légal.
+function gpCadre(o0, o1, cfg, seuil) {
+  const a = cfg.accueil || {};
+  const d = gpHm(a.debut), f = gpHm(a.fin);
+  return {
+    seuil,
+    aD: (d === null || d < o0) ? o0 : Math.min(d, o1),
+    aF: (f === null || f > o1) ? o1 : Math.max(f, o0)
+  };
+}
+function gpSeuilA(t, cd) { return (t >= cd.aD && t < cd.aF) ? cd.seuil : 1; }
+
+function gpDecouvert(sel, hs, o0, o1, cd) {
+  const segs = sel.map(i => ({ d: Math.max(hs[i].d, o0), f: Math.min(hs[i].f, o1) })).filter(s => s.f > s.d);
+  const pts = new Set([o0, o1, cd.aD, cd.aF]);
+  segs.forEach(s => { pts.add(s.d); pts.add(s.f); });
+  const b = Array.from(pts).filter(p => p >= o0 && p <= o1).sort((x, y) => x - y);
+  let zero = 0, sous = 0;
+  for (let k = 0; k < b.length - 1; k++) {
+    const dur = b[k + 1] - b[k];
+    if (dur <= 0) continue;
+    const seuil = gpSeuilA(b[k], cd);
+    const n = segs.filter(s => s.d <= b[k] && s.f >= b[k + 1]).length;
+    if (n === 0) zero += dur;
+    if (n < seuil) sous += (seuil - n) * dur;
+  }
+  return [zero, sous];
+}
+
+// Quels horaires faire tourner ce jour-là, avec n pros disponibles.
+// Un glouton s'enferme : il prend le meilleur horaire suivant sans voir
+// qu'un doublon dès le départ ouvrait une bien meilleure combinaison
+// (vécu : 4 pros, trou de 07:30 à 08:30 alors que H1+H1+H4+H4 couvrait tout).
+// L'espace est petit — C(n+k-1, k-1) — donc on l'énumère entièrement.
+function gpNbCombis(n, k) {
+  let r = 1;
+  for (let i = 1; i < k; i++) r = r * (n + i) / i;
+  return r;
+}
+
+// `imposes` : horaires déjà fixés par des pros à horaire constant. Ils
+// entrent dans le calcul de couverture au lieu d'être plaqués après coup,
+// sinon la répartition des autres est calculée sur une journée fictive.
+function gpPostesDuJour(n, hs, o0, o1, cd, imposes) {
+  const fixes = (imposes || []).slice();
+  const libres = Math.max(0, n - fixes.length);
+  const k = hs.length;
+  let best = null, bestKey = null;
+
+  const evaluer = sel => {
+    const d = gpDecouvert(fixes.concat(sel), hs, o0, o1, cd);
+    // À couverture égale : étaler sur des horaires distincts plutôt que
+    // d'empiler l'équipe sur la même prise de poste.
+    const key = [d[0], d[1], -new Set(fixes.concat(sel)).size];
+    if (bestKey === null || gpCmp(key, bestKey) < 0) { bestKey = key; best = sel.slice(); }
+  };
+
+  if (gpNbCombis(libres, k) <= 40000) {
+    const sel = [];
+    (function rec(depart, reste) {
+      if (!reste) { evaluer(sel); return; }
+      for (let i = depart; i < k; i++) { sel.push(hs[i].i); rec(i, reste - 1); sel.pop(); }
+    })(0, libres);
+  } else {
+    const sel = [];
+    for (let c = 0; c < libres; c++) {
+      let bi = null, bk = null;
+      for (const hh of hs) {
+        const d = gpDecouvert(fixes.concat(sel).concat([hh.i]), hs, o0, o1, cd);
+        const key = [d[0], d[1], sel.filter(x => x === hh.i).length];
+        if (bk === null || gpCmp(key, bk) < 0) { bk = key; bi = hh.i; }
+      }
+      sel.push(bi);
+    }
+    best = sel;
+  }
+  return { fixes, libres: best.sort((a, b) => hs[a].d - hs[b].d || a - b) };
+}
+
+// Une pro en pause n'encadre pas. Le calcul de couverture doit donc
+// découper sa présence, sinon une journée s'affiche « 2 pros en continu »
+// alors qu'il n'en reste qu'une à midi — la surestimation la plus
+// dommageable possible pour un indicateur d'encadrement.
+function gpParsePause(s) {
+  const m = /^(\d{1,2}:\d{2})\u2013(\d{1,2}:\d{2})$/.exec(String(s || ''));
+  if (!m) return null;
+  const d = gpHm(m[1]), f = gpHm(m[2]);
+  return (d === null || f === null || f <= d) ? null : { d, f };
+}
+
+function gpPresences(list, hs, o0, o1) {
+  const out = [];
+  list.forEach(c => {
+    const h = hs.find(x => x.i === c.horaire_idx);
+    if (!h) return;
+    const d = Math.max(h.d, o0), f = Math.min(h.f, o1);
+    if (f <= d) return;
+    const p = gpParsePause(c.pause);
+    if (!p || p.f <= d || p.d >= f) { out.push({ pro: c.pro, d, f }); return; }
+    if (p.d > d) out.push({ pro: c.pro, d, f: p.d });
+    if (p.f < f) out.push({ pro: c.pro, d: p.f, f });
+  });
+  return out;
+}
+
+// Balayage par bornes, en personnes distinctes.
+function gpBalayage(pres, o0, o1, cd) {
+  const segs = pres.filter(s => s.f > s.d);
+  if (!segs.length) {
+    return { vide: true, trous: [{ debut: o0, fin: o1, n: 0, seuil: gpSeuilA(o0, cd) }],
+      min: 0, minAccueil: 0, zero: o1 - o0, sous: (o1 - o0) * cd.seuil };
+  }
+  const pts = new Set([o0, o1, cd.aD, cd.aF]);
+  segs.forEach(s => { pts.add(s.d); pts.add(s.f); });
+  const b = Array.from(pts).filter(x => x >= o0 && x <= o1).sort((x, y) => x - y);
+  const trous = [];
+  let min = Infinity, minAccueil = Infinity, zero = 0, sous = 0;
+  for (let k = 0; k < b.length - 1; k++) {
+    const a = b[k], z = b[k + 1];
+    if (z <= a) continue;
+    const seuil = gpSeuilA(a, cd);
+    const n = new Set(segs.filter(s => s.d <= a && s.f >= z).map(s => s.pro)).size;
+    if (n < min) min = n;
+    if (a >= cd.aD && z <= cd.aF && n < minAccueil) minAccueil = n;
+    if (n === 0) zero += z - a;
+    if (n < seuil) {
+      sous += (seuil - n) * (z - a);
+      const last = trous[trous.length - 1];
+      // fusion contiguë seulement à effectif ET seuil identiques
+      if (last && last.fin === a && last.n === n && last.seuil === seuil) last.fin = z;
+      else trous.push({ debut: a, fin: z, n, seuil });
+    }
+  }
+  return { trous, min: (min === Infinity ? 0 : min),
+    minAccueil: (minAccueil === Infinity ? 0 : minAccueil), zero, sous };
+}
+
+// Couverture réelle d'un jour : personnes distinctes, pause déduite.
+function gpCouverture(creneauxDuJour, hs, o0, o1, cd) {
+  return gpBalayage(gpPresences(creneauxDuJour, hs, o0, o1), o0, o1, cd);
+}
+
+// Durée de pause d'un poste. Deux modes :
+//   'cible' : la pause absorbe ce qui dépasse la durée de travail visée
+//             (7 h par défaut, soit 35 h sur cinq jours)
+//   'fixe'  : durée identique pour tous
+// Plancher légal : 20 minutes dès que le travail dépasse 6 h.
+function gpDureePause(amplitude, pc) {
+  if (!pc || !pc.actif) return 0;
+  let d = (pc.mode === 'cible')
+    ? Math.max(0, amplitude - (pc.travailCible || 420))
+    : (pc.duree || 60);
+  if (amplitude - d > 360) d = Math.max(d, 20);
+  return Math.min(d, Math.max(0, amplitude - 60));
+}
+
+// Placement des pauses : elles ne peuvent pas se chevaucher au point de
+// faire passer la section sous le seuil. On essaie chaque créneau de la
+// fenêtre au pas de 15 min et on retient celui qui dégrade le moins.
+function gpPlacerPauses(list, hs, o0, o1, cd, pc) {
+  const alertes = [];
+  if (!pc || !pc.actif) { list.forEach(c => { c.pause = ''; }); return alertes; }
+
+  const items = list.map(c => {
+    const h = hs.find(x => x.i === c.horaire_idx);
+    const d = Math.max(h.d, o0), f = Math.min(h.f, o1);
+    const duree = gpDureePause(f - d, pc);
+    const tA = Math.max(pc.fenetreDebut, d + (pc.apresPrise || 120));
+    const tB = Math.min(pc.fenetreFin - duree, f - (pc.avantFin || 90));
+    return { c, d, f, duree, marge: tB - tA };
+  })
+  // Servir d'abord celles qui ont le moins de choix. En commencant par la
+  // plus libre, elle se pose au milieu de la fenetre et bloque les autres :
+  // deux pauses se retrouvaient superposees alors qu'un placement sans
+  // chevauchement existait.
+  .sort((a, b) => a.marge - b.marge || a.d - b.d);
+
+  items.forEach(it => { it.c.pause = ''; });
+
+  const placer = it => {
+    if (!it.duree) return;
+    // fenetreFin borne la FIN de la pause : à 14:30, plus personne ne part
+    // en pause à 14:15 pour une heure.
+    const tMin = Math.max(pc.fenetreDebut, it.d + (pc.apresPrise || 120));
+    const tMax = Math.min(pc.fenetreFin - it.duree, it.f - (pc.avantFin || 90));
+    const posees = items.filter(x => x !== it && x.c.pause).map(x => gpParsePause(x.c.pause)).filter(Boolean);
+    const milieu = (pc.fenetreDebut + pc.fenetreFin - it.duree) / 2;
+    let best = null, bestKey = null;
+    for (let t = Math.ceil(tMin / 15) * 15; t <= tMax; t += 15) {
+      it.c.pause = gpHms(t) + '\u2013' + gpHms(t + it.duree);
+      const r = gpBalayage(gpPresences(list, hs, o0, o1), o0, o1, cd);
+      // Deux pros qui partent à la même minute tiennent peut-être le seuil,
+      // mais la section encaisse la transition d'un coup. À couverture
+      // égale, on étale.
+      const chev = posees.reduce((s, q) =>
+        s + Math.max(0, Math.min(t + it.duree, q.f) - Math.max(t, q.d)), 0);
+      const key = [r.zero, r.sous, chev, Math.abs(t - milieu)];
+      if (bestKey === null || gpCmp(key, bestKey) < 0) { bestKey = key; best = t; }
+    }
+    if (best === null) { it.c.pause = ''; it._sous = 0; return; }
+    it.c.pause = gpHms(best) + '\u2013' + gpHms(best + it.duree);
+    it._sous = bestKey[1];
+  };
+
+  items.forEach(placer);
+  // Seconde passe : chacune est replacee en connaissant les autres. Le
+  // premier tour decide a l'aveugle sur des creneaux encore vides.
+  items.forEach(it => { if (it.duree) { it.c.pause = ''; placer(it); } });
+
+  items.forEach(it => {
+    if (it.duree && !it.c.pause) {
+      alertes.push({ txt: it.c.pro + ' (' + gpHms(it.d) + '\u2013' + gpHms(it.f) + ') : aucune pause de '
+        + it.duree + ' min ne tient avant ' + gpHms(pc.fenetreFin) });
+    } else if (it._sous > 0) {
+      alertes.push({ txt: it.c.pro + ' : la pause de ' + it.c.pause.split('\u2013')[0]
+        + ' fait passer la section sous le minimum d\'encadrement' });
+    }
+  });
+  return alertes;
+}
+
+// Deux professionnels dès le premier enfant : le plancher vaut sur toute
+// l'amplitude d'ouverture, pas seulement aux heures de forte affluence.
+// Il ne se négocie donc pas — on peut le monter, jamais le descendre.
+const GP_PLANCHER = 2;
+
+// Faisabilité, avant toute génération : le volume d'heures disponible
+// permet-il seulement de tenir le plancher ? Répondre après coup par des
+// trous éparpillés dans la grille masque une question d'effectif.
+function gpFaisabilite(cfg) {
+  const seuil = Math.max(GP_PLANCHER, cfg.seuil || GP_PLANCHER);
+  const o0 = gpHm(cfg.ouverture.debut), o1 = gpHm(cfg.ouverture.fin);
+  const jours = (cfg.ouverture.jours || [0, 1, 2, 3, 4]);
+  if (o0 === null || o1 === null || o1 <= o0) return null;
+
+  const cd = gpCadre(o0, o1, cfg, seuil);
+  // La préparation et le rangement se couvrent à une pro : les compter au
+  // plancher de deux gonflerait le besoin d'un poste qui n'existe pas.
+  const requisJour = (cd.aF - cd.aD) * seuil + (cd.aD - o0) + (o1 - cd.aF);
+  const pc = gpNormPause(cfg);
+  // Amplitude moyenne d'un poste : sert à estimer la pause réellement retenue.
+  const amp = cfg.horaires.map(x => gpHm(x.fin) - gpHm(x.debut)).filter(x => x > 0);
+  const ampMoy = amp.length ? amp.reduce((a, b) => a + b, 0) / amp.length : (o1 - o0);
+  const pause = gpDureePause(ampMoy, pc);
+  // Le besoin se compte JOUR PAR JOUR : les heures du lundi ne couvrent
+  // pas le mercredi. Un total hebdomadaire suffisant masquait un mercredi
+  // structurellement sous-dote des qu'une pro y etait absente.
+  let requis = 0, dispo = 0, manque = 0;
+  const joursCourts = [];
+  jours.forEach(j => {
+    let dis = 0;
+    cfg.pros.forEach(p => {
+      if ((p.jours || [0, 1, 2, 3, 4]).indexOf(j) === -1) return;
+      const dj = jours.filter(x => (p.jours || [0, 1, 2, 3, 4]).indexOf(x) !== -1).length;
+      // Une pro ne couvre pas plus que l'amplitude, quel que soit son contrat.
+      const parJour = Math.min(o1 - o0, p.heures ? (p.heures * 60) / Math.max(1, dj) + pause : (o1 - o0));
+      dis += parJour - pause;
+    });
+    requis += requisJour;
+    dispo += dis;
+    const m = Math.max(0, requisJour - dis);
+    if (m > 0) { manque += m; joursCourts.push({ jour: j, manqueH: m / 60 }); }
+  });
+  return {
+    seuil, requisH: requis / 60, dispoH: dispo / 60, manqueH: manque / 60, pauseMin: pause,
+    prepMin: cd.aD - o0, rangeMin: o1 - cd.aF, joursCourts: joursCourts,
+    // Équivalent temps plein manquant, sur une base 35 h.
+    etpManquant: Math.ceil((manque / 60) / 35 * 10) / 10,
+    suffisant: manque === 0
+  };
+}
+
+// ── Rotation des binômes ─────────────────────────────────────────────
+// Un décalage circulaire fait tourner les horaires mais conserve l'ordre
+// relatif des pros : les mêmes se retrouvent ensemble cycle après cycle.
+// Sur un mois, le planning se duplique. On cherche donc, à chaque bloc,
+// la permutation qui remet le moins possible ensemble celles qui ont déjà
+// beaucoup travaillé côte à côte.
+
+// « Être en binôme » n'est pas binaire : deux pros qui se chevauchent sept
+// heures le sont davantage que deux qui se croisent une heure.
+function gpChevauchement(hs, ia, ib, o0, o1) {
+  const a = hs.find(x => x.i === ia), b = hs.find(x => x.i === ib);
+  if (!a || !b) return 0;
+  return Math.max(0, Math.min(a.f, b.f, o1) - Math.max(a.d, b.d, o0));
+}
+
+// Permutations distinctes d'un multiset de postes (les doublons d'horaire
+// ne produisent pas de variantes réelles).
+function gpPermutations(postes, cap) {
+  const out = [];
+  const tri = postes.slice().sort((a, b) => a - b);
+  const pris = tri.map(() => false);
+  const cur = [];
+  (function rec() {
+    if (out.length >= cap) return;
+    if (cur.length === tri.length) { out.push(cur.slice()); return; }
+    let dernier = null;
+    for (let i = 0; i < tri.length; i++) {
+      if (pris[i] || tri[i] === dernier) continue;
+      dernier = tri[i];
+      pris[i] = true; cur.push(tri[i]);
+      rec();
+      cur.pop(); pris[i] = false;
+      if (out.length >= cap) return;
+    }
+  })();
+  return out;
+}
+
+// Deux fréquences distinctes, et c'est tout l'enjeu :
+//   - le POSTE tourne chaque semaine (une semaine du matin, une du soir)
+//   - l'ORDRE de la rotation change au bloc, ce qui recompose les binômes
+// Figer le poste sur tout le bloc reviendrait à laisser une pro six
+// semaines d'affilée sur la fermeture : ce n'est pas une rotation.
+//
+// Dans un bloc, la pro placée en position k occupe le poste
+// base[(k + semaineDansLeBloc) % nbPostes]. L'écart entre deux positions
+// reste constant : les mêmes personnes se croisent de la même façon
+// pendant tout le bloc. Changer l'ordre au bloc suivant change les duos.
+// Faire avancer la rotation d'un cran dans la liste triée par heure fait
+// enchaîner tous les postes du matin, puis tous ceux du soir : ce n'est pas
+// une alternance, c'est une progression. On entrelace donc la première
+// moitié des postes (les plus matinaux) avec la seconde, de sorte qu'un pas
+// de rotation fasse toujours changer de versant.
+function gpSequenceAlternee(base, hs) {
+  const tri = base.slice().sort((a, b) => {
+    const ha = hs.find(x => x.i === a), hb = hs.find(x => x.i === b);
+    return (ha ? ha.d : 0) - (hb ? hb.d : 0) || a - b;
+  });
+  const k = Math.ceil(tri.length / 2);
+  const matin = tri.slice(0, k), soir = tri.slice(k);
+  const seq = [];
+  for (let i = 0; i < k; i++) {
+    seq.push(matin[i]);
+    if (i < soir.length) seq.push(soir[i]);
+  }
+  return seq;
+}
+
+function gpOrdreBlocs(nbPros, seq, hs, o0, o1, bloc, periode) {
+  const n = nbPros, base = seq, L = base.length;
+  const hist = {};
+  const cle = (i, j) => (i < j ? i + '|' + j : j + '|' + i);
+  const persoHor = [];
+  for (let i = 0; i < n; i++) persoHor.push({});
+
+  // La position 0 est fixée : décaler tout l'ordre revient à décaler le
+  // départ dans le temps, sans rien changer aux appariements.
+  const ordres = [];
+  (function rec(reste, cur) {
+    if (ordres.length >= 5000) return;
+    if (!reste.length) { ordres.push([0].concat(cur)); return; }
+    reste.forEach((x, idx) => rec(reste.filter((_, q) => q !== idx), cur.concat([x])));
+  })(Array.from({ length: n - 1 }, (_, i) => i + 1), []);
+
+  const ech = Math.max(1, (o1 - o0) * (o1 - o0));
+  const posteDe = (pos, s) => base[(pos + s) % L];
+
+  // Versant matin / soir, pour vérifier l'alternance d'une semaine à l'autre.
+  const debuts = base.map(i => { const x = hs.find(y => y.i === i); return x ? x.d : 0; })
+    .slice().sort((a, b) => a - b);
+  const med = debuts[Math.floor(debuts.length / 2)];
+  const versant = idx => { const x = hs.find(y => y.i === idx); return (x && x.d < med) ? 'M' : 'S'; };
+
+  // Poste de chacune à la dernière semaine du bloc précédent : sans ça,
+  // l'alternance est correcte dans le bloc mais se rompt à la jonction.
+  let finBloc = null;
+
+  const cout = ordre => {   // ordre[k] = position de la pro k
+    let cp = 0, ch = 0, rupture = 0;
+    if (finBloc) {
+      for (let i = 0; i < n; i++) {
+        if (versant(posteDe(ordre[i], 0)) === finBloc[i]) rupture++;
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      for (let s = 0; s < periode; s++) ch += (persoHor[i][posteDe(ordre[i], s)] || 0);
+      for (let j = i + 1; j < n; j++) {
+        const vu = hist[cle(i, j)] || 0;
+        if (!vu) continue;
+        let ov = 0;
+        for (let s = 0; s < periode; s++) {
+          ov += gpChevauchement(hs, posteDe(ordre[i], s), posteDe(ordre[j], s), o0, o1);
+        }
+        cp += vu * ov;
+      }
+    }
+    return [rupture, cp / ech + ch];
+  };
+
+  let courant = ordres[0] || Array.from({ length: n }, (_, i) => i);
+  for (let b = 0; b <= bloc; b++) {
+    let best = null, bestK = null;
+    ordres.forEach(od => {
+      const k2 = cout(od);
+      if (bestK === null || gpCmp(k2, bestK) < 0) { bestK = k2; best = od; }
+    });
+    courant = best || courant;
+    finBloc = [];
+    for (let i = 0; i < n; i++) finBloc.push(versant(posteDe(courant[i], periode - 1)));
+    for (let i = 0; i < n; i++) {
+      for (let s = 0; s < periode; s++) {
+        const pi = posteDe(courant[i], s);
+        persoHor[i][pi] = (persoHor[i][pi] || 0) + 1;
+        for (let j = i + 1; j < n; j++) {
+          const ov = gpChevauchement(hs, pi, posteDe(courant[j], s), o0, o1);
+          if (ov) hist[cle(i, j)] = (hist[cle(i, j)] || 0) + ov;
+        }
+      }
+    }
+  }
+  return courant;
+}
+
+// En horaire constant, celle qui tient l'ouverture y est les cinq jours :
+// l'équité ne peut pas être hebdomadaire, elle se joue sur le cycle. Encore
+// faut-il le montrer, sinon le tableau de la semaine donne à lire une
+// injustice là où il n'y a qu'une photo prise en cours de rotation.
+function gpCycleEquite(cfg, generer, maxSemaines) {
+  const per = Math.max(1, cfg.periodeRotation || 4);
+  const max = maxSemaines || 52;
+  const cum = {};
+  cfg.pros.forEach(p => { cum[p.nom] = { o: 0, f: 0 }; });
+  let longueur = null;
+
+  for (let b = 0; b < max; b++) {
+    // Les pauses ne changent ni les ouvertures ni les fermetures : les
+    // calculer sur cinquante semaines coûterait plusieurs secondes.
+    const r = generer(Object.assign({}, cfg, { semaine: b, pause: { actif: false } }));
+    if (!r || !r.bilan) break;
+    r.bilan.forEach(x => {
+      if (!cum[x.nom]) cum[x.nom] = { o: 0, f: 0 };
+      cum[x.nom].o += x.ouvertures;
+      cum[x.nom].f += x.fermetures;
+    });
+    const vals = Object.values(cum);
+    const egal = vals.every(v => v.o === vals[0].o && v.f === vals[0].f);
+    if (egal && b > 0) { longueur = b + 1; break; }
+  }
+  return {
+    periode: per, semaines: longueur,
+    cumul: cum, equitable: !!longueur
+  };
+}
+
+function gpNormPause(cfg) {
+  const p = cfg.pause || {};
+  return {
+    actif: p.actif !== false,
+    mode: p.mode || 'cible',
+    duree: p.duree || 60,
+    travailCible: p.travailCible || 420,      // 7 h de travail effectif
+    fenetreDebut: p.fenetreDebut != null ? p.fenetreDebut : 690,   // 11:30
+    fenetreFin: p.fenetreFin != null ? p.fenetreFin : 870,         // 14:30 : toute pause terminée
+    apresPrise: p.apresPrise != null ? p.apresPrise : 120,
+    avantFin: p.avantFin != null ? p.avantFin : 90
+  };
+}
+
+function gpGenerer(cfg) {
+  const seuil = Math.max(GP_PLANCHER, cfg.seuil || GP_PLANCHER);
+  const pc = gpNormPause(cfg);
+  const o0 = gpHm(cfg.ouverture.debut), o1 = gpHm(cfg.ouverture.fin);
+  const jours = (cfg.ouverture.jours || [0, 1, 2, 3, 4]).slice().sort((a, b) => a - b);
+
+  const hs = cfg.horaires.map((h, i) => ({ i, name: h.name, d: gpHm(h.debut), f: gpHm(h.fin) }))
+    .filter(h => h.d !== null && h.f !== null && h.f > h.d);
+
+  const alertes = [];
+  if (o0 === null || o1 === null || o1 <= o0) return { erreur: "L'amplitude d'ouverture n'est pas exploitable.", creneaux: [] };
+  if (!hs.length) return { erreur: 'Aucun horaire de référence utilisable.', creneaux: [] };
+  if (!cfg.pros.length) return { erreur: 'Aucune professionnelle à planifier.', creneaux: [] };
+
+  const cd = gpCadre(o0, o1, cfg, seuil);
+  const iOuvrant = (hs.filter(h => h.d <= o0).sort((a, b) => a.d - b.d)[0] || hs.slice().sort((a, b) => a.d - b.d)[0]).i;
+  const iFermant = (hs.filter(h => h.f >= o1).sort((a, b) => b.f - a.f)[0] || hs.slice().sort((a, b) => b.f - a.f)[0]).i;
+
+  // Nombre de jours ouvrés que chaque pro va réellement travailler : sert à
+  // normaliser l'équité. Sans ça, une pro à 3 jours encaisse autant
+  // d'ouvertures qu'une pro à 5, ce qui n'est pas la même semaine.
+  const cnt = {};
+  cfg.pros.forEach(p => {
+    const dj = jours.filter(j => (p.jours || [0, 1, 2, 3, 4]).indexOf(j) !== -1).length;
+    cnt[p.nom] = { jours: 0, ouv: 0, ferm: 0, min: 0, hor: {}, prevus: Math.max(1, dj) };
+  });
+
+  const creneaux = [];
+  let seq = 0;
+  const ajouter = (pro, idx, jour) => {
+    const c = cnt[pro];
+    c.jours++;
+    c.hor[idx] = (c.hor[idx] || 0) + 1;
+    if (idx === iOuvrant) c.ouv++;
+    if (idx === iFermant) c.ferm++;
+    const cr = { id: 'gp_' + (cfg.semaine || 0) + '_' + (seq++), pro, horaire_idx: idx, horaireIdx: idx, jour, pause: '' };
+    creneaux.push(cr);
+    return cr;
+  };
+
+  // Régime de rotation, par professionnelle. Trois cas d'usage se ramènent
+  // au même mécanisme : toutes fixes (même horaire toute la semaine),
+  // aucune fixe (rotation quotidienne), ou un mélange des deux.
+  //   'semaine' : toutes fixes, avec décalage d'une semaine à l'autre
+  //   'jour'    : aucune fixe
+  //   'mixte'   : chaque pro porte son propre régime
+  const fixeDe = {};
+  const veutFixe = p => cfg.mode === 'semaine'
+    || (cfg.mode === 'mixte' && p.regime === 'fixe');
+
+  if (cfg.mode === 'semaine') {
+    const base = gpPostesDuJour(cfg.pros.length, hs, o0, o1, cd, []).libres;
+    // Le bloc, pas la semaine : les équipes tiennent plusieurs semaines
+    // avant de se recomposer.
+    const periode = Math.max(1, cfg.periodeRotation || 4);
+    const sem = cfg.semaine || 0;
+    const bloc = Math.floor(sem / periode);
+    const dansBloc = sem % periode;
+    const seq = gpSequenceAlternee(base, hs);
+    const ordre = gpOrdreBlocs(cfg.pros.length, seq, hs, o0, o1, bloc, periode);
+    cfg.pros.forEach((p, k) => {
+      fixeDe[p.nom] = seq[(ordre[k] + dansBloc) % seq.length];
+    });
+  } else if (cfg.mode === 'mixte') {
+    cfg.pros.forEach(p => {
+      if (p.regime === 'fixe' && p.horaire != null && hs.some(x => x.i === p.horaire)) {
+        fixeDe[p.nom] = p.horaire;
+      }
+    });
+  }
+
+  jours.forEach(jour => {
+    const dispo = cfg.pros.filter(p => (p.jours || [0, 1, 2, 3, 4]).indexOf(jour) !== -1);
+    if (!dispo.length) { alertes.push({ jour, txt: 'aucune pro disponible' }); return; }
+
+    const arretees = dispo.filter(p => fixeDe[p.nom] != null);
+    const libres = dispo.filter(p => fixeDe[p.nom] == null);
+    const res = gpPostesDuJour(dispo.length, hs, o0, o1, cd, arretees.map(p => fixeDe[p.nom]));
+
+    const attrib = arretees.map(p => ({ nom: p.nom, idx: fixeDe[p.nom] }));
+
+    // Postes restants : servis d'abord les plus pénibles (ouverture, fermeture).
+    const ordre = res.libres.slice().sort((a, b) => {
+      const r = x => (x === iOuvrant ? 0 : x === iFermant ? 1 : 2);
+      return r(a) - r(b) || hs.find(x => x.i === a).d - hs.find(x => x.i === b).d;
+    });
+    const pris = new Set();
+    ordre.forEach(idx => {
+      const cands = libres.filter(p => !pris.has(p.nom));
+      if (!cands.length) return;
+      cands.sort((a, b) => {
+        const pen = s => (idx === iOuvrant ? (s.ouv / s.prevus) * 100 : 0)
+          + (idx === iFermant ? (s.ferm / s.prevus) * 100 : 0)
+          + ((s.hor[idx] || 0) / s.prevus) * 10 + s.min / 60;
+        return pen(cnt[a.nom]) - pen(cnt[b.nom]) || a.nom.localeCompare(b.nom);
+      });
+      pris.add(cands[0].nom);
+      attrib.push({ nom: cands[0].nom, idx });
+      // Une pro à horaire constant fige le sien dès sa première journée.
+      if (veutFixe(cands[0])) fixeDe[cands[0].nom] = idx;
+    });
+
+    // Quand toute l'équipe est à horaire fixe, il ne reste aucune marge :
+    // si l'ouverture ou la fermeture n'est tenue par personne ce jour-là,
+    // on bascule la pro la plus redondante plutôt que de laisser un trou.
+    [iOuvrant, iFermant].forEach(cible => {
+      if (attrib.some(a => a.idx === cible)) return;
+      const compte = {};
+      attrib.forEach(a => { compte[a.idx] = (compte[a.idx] || 0) + 1; });
+      const champ = (cible === iOuvrant) ? 'ouv' : 'ferm';
+      const cand = attrib.filter(a => compte[a.idx] > 1)
+        .sort((a, b) => (compte[b.idx] - compte[a.idx])
+          || (cnt[a.nom][champ] - cnt[b.nom][champ]))[0];
+      if (cand) {
+        cand.idx = cible;
+        alertes.push({ jour, txt: cand.nom + ' bascule sur ' + hs.find(x => x.i === cible).name
+          + ' : personne ne tient ce poste ce jour-là' });
+      }
+    });
+
+    attrib.sort((a, b) => hs.find(h => h.i === a.idx).d - hs.find(h => h.i === b.idx).d);
+    const duJour = attrib.map(a => ajouter(a.nom, a.idx, jour));
+
+    // Les pauses se placent une fois la journée constituée : leur position
+    // dépend de qui est présent, pas d'un rang théorique.
+    gpPlacerPauses(duJour, hs, o0, o1, cd, pc)
+      .forEach(a => alertes.push({ jour, txt: a.txt }));
+
+    duJour.forEach(cr => {
+      const hh = hs.find(x => x.i === cr.horaire_idx);
+      const pz = gpParsePause(cr.pause);
+      cnt[cr.pro].min += (Math.min(hh.f, o1) - Math.max(hh.d, o0)) - (pz ? pz.f - pz.d : 0);
+    });
+  });
+
+  // Contrôle a posteriori, sur le résultat réel.
+  const couvertures = {};
+  jours.forEach(j => {
+    couvertures[j] = gpCouverture(creneaux.filter(c => c.jour === j), hs, o0, o1, cd);
+  });
+
+  const bilan = cfg.pros.map(p => {
+    const c = cnt[p.nom];
+    const cible = p.heures ? p.heures * 60 : null;
+    return {
+      nom: p.nom, jours: c.jours, ouvertures: c.ouv, fermetures: c.ferm,
+      heures: Math.round(c.min / 6) / 10,
+      contrat: p.heures || null,
+      ecart: cible === null ? null : Math.round((c.min - cible) / 6) / 10
+    };
+  });
+
+  // Un planning qui laisse une minute sous deux pros n'est pas « perfectible » :
+  // il est non conforme, et l'interface doit le nommer ainsi.
+  let minutesSous = 0, minutesSeule = 0;
+  jours.forEach(j => {
+    (couvertures[j].trous || []).forEach(t => {
+      minutesSous += t.fin - t.debut;
+      if (t.n <= 1) minutesSeule += t.fin - t.debut;
+    });
+  });
+  const conforme = minutesSous === 0;
+
+  // Avec un nombre impair de postes, ou un déséquilibre entre matins et
+  // soirs, l'alternance stricte est arithmétiquement impossible : mieux
+  // vaut le dire que laisser croire à un défaut de l'outil.
+  let alternancePossible = true;
+  if (cfg.mode === 'semaine') {
+    const dd = Object.values(fixeDe);
+    const seqB = gpSequenceAlternee(gpPostesDuJour(cfg.pros.length, hs, o0, o1, cd, []).libres, hs);
+    const deb = seqB.map(i => (hs.find(x => x.i === i) || {}).d || 0).slice().sort((a, b) => a - b);
+    const md = deb[Math.floor(deb.length / 2)];
+    const nm = seqB.filter(i => ((hs.find(x => x.i === i) || {}).d || 0) < md).length;
+    alternancePossible = (seqB.length % 2 === 0) && (nm * 2 === seqB.length);
+    if (dd.length === 0) alternancePossible = true;
+  }
+
+  return {
+    creneaux, alternancePossible,
+    pros: cfg.pros.map(p => p.nom),
+    couvertures, bilan, alertes,
+    conforme, minutesSous, minutesSeule,
+    faisabilite: gpFaisabilite(cfg),
+    hs, o0, o1, seuil, jours, cadre: cd,
+    ouvrant: iOuvrant, fermant: iFermant
+  };
+}
+
+
+
+// ══════════════════════════════════════════════════════════════════
+// GENERATEUR DE PLANNING — interface
+// Le moteur (gp*) produit la structure exacte attendue par peSaveWeek.
+// Rien n'est ecrit tant que « Appliquer » n'a pas ete confirme.
+// ══════════════════════════════════════════════════════════════════
+
+const PLGEN_PARAM = 'orevy_planning_generateur';
+let PLGEN_CFG = null;      // reglages par structure
+let PLGEN_LAST = null;     // derniere proposition calculee
+
+function plgenDefaults() {
+  return {
+    mode: 'semaine', periodeRotation: 4, seuil: 2,
+    pauseActive: true, pauseMode: 'cible', pauseDuree: 60, travailCible: 7,
+    pauseDebut: '11:30', pauseFin: '14:30'
+  };
+}
+
+function plgenLoad() {
+  if (PLGEN_CFG) return PLGEN_CFG;
+  try {
+    const s = localStorage.getItem(PLGEN_PARAM);
+    PLGEN_CFG = s ? JSON.parse(s) : {};
+  } catch { PLGEN_CFG = {}; }
+  return PLGEN_CFG;
+}
+
+function plgenCfgPour(creche) {
+  const st = plgenLoad();
+  return Object.assign(plgendefaultsSafe(), st[creche || '_commun'] || st._commun || {});
+}
+function plgendefaultsSafe() { return plgenDefaults(); }
+
+function plgenSave(creche, cfg) {
+  const st = plgenLoad();
+  st[creche || '_commun'] = cfg;
+  try { localStorage.setItem(PLGEN_PARAM, JSON.stringify(st)); } catch {}
+  if (typeof IS_LOCAL === 'undefined' || !IS_LOCAL) {
+    sbUpsertParametre(PLGEN_PARAM, st).catch(e => console.warn('[generateur] push :', e && e.message));
+  }
+}
+
+// Heures contractuelles deduites du libelle de temps de travail.
+function plgenHeures(s) {
+  const t = String(s.temps || '');
+  if (/80/.test(t)) return 28;
+  if (/50/.test(t)) return 17.5;
+  if (/plein/i.test(t)) return 35;
+  return 35;
+}
+
+// L'equipe rattachee a la structure. Les jours travailles viennent de la
+// fiche salarie ; sans eux on retombe sur la semaine complete, en le disant.
+function plgenEquipe(creche) {
+  const src = (typeof SALARIES !== 'undefined' && Array.isArray(SALARIES)) ? SALARIES : [];
+  return src
+    .filter(s => s.creche === creche && (s.statut || 'actif') === 'actif')
+    .map(s => ({
+      nom: ((s.prenom || '') + ' ' + (s.nom || '')).trim(),
+      jours: Array.isArray(s.jours_travailles) && s.jours_travailles.length
+        ? s.jours_travailles.slice() : [0, 1, 2, 3, 4],
+      joursDeduits: !(Array.isArray(s.jours_travailles) && s.jours_travailles.length),
+      heures: plgenHeures(s),
+      id: s.id
+    }))
+    .filter(p => p.nom);
+}
+
+// Semaine absolue : le numero ISO repart a 1 chaque annee, ce qui casserait
+// la rotation au 1er janvier.
+function plgenNumSemaine() {
+  const mon = peGetMonday();
+  return Math.floor(mon.getTime() / 604800000);
+}
+
+// Couleur ET forme par pro : la couleur seule ne porte jamais l'information.
+// Derivee de l'identifiant, pas du rang : ajouter une collegue ne doit pas
+// redistribuer toutes les couleurs.
+const PLGEN_STYLES = [
+  { c: '#0072B2', g: '\u25cf' }, { c: '#E69F00', g: '\u25a0' },
+  { c: '#009E73', g: '\u25b2' }, { c: '#CC79A7', g: '\u25c6' },
+  { c: '#D55E00', g: '\u2605' }, { c: '#56B4E9', g: '\u25bc' },
+  { c: '#6A3D9A', g: '\u2b1f' }, { c: '#7F7F00', g: '\u2726' }
+];
+function plgenStyle(nom) {
+  const eq = (PLGEN_LAST && PLGEN_LAST.equipe) || [];
+  const p = eq.find(x => x.nom === nom);
+  const src = (p && p.id) ? String(p.id) : String(nom);
+  let hsum = 0;
+  for (let i = 0; i < src.length; i++) hsum = (hsum * 31 + src.charCodeAt(i)) >>> 0;
+  const s = PLGEN_STYLES[hsum % PLGEN_STYLES.length];
+  const r = parseInt(s.c.slice(1, 3), 16), g = parseInt(s.c.slice(3, 5), 16), b = parseInt(s.c.slice(5, 7), 16);
+  return { c: s.c, g: s.g, bg: 'rgba(' + r + ',' + g + ',' + b + ',.10)' };
+}
+function plgenTag(nom, court) {
+  const st = plgenStyle(nom);
+  const txt = court ? String(nom).split(' ')[0] : nom;
+  return '<span style="display:inline-flex;align-items:center;gap:5px">'
+    + '<span style="color:' + st.c + ';font-size:11px;line-height:1">' + st.g + '</span>'
+    + plgenEsc(txt) + '</span>';
+}
+function plgenEsc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function plgenCfgComplete(creche) {
+  const r = plgenCfgPour(creche);
+  const o = getOuvertureStructure(creche);
+  return {
+    horaires: getPlanningHoraires(creche),
+    ouverture: { debut: o.debut, fin: o.fin, jours: o.jours },
+    accueil: { debut: o.accueil_debut || o.debut, fin: o.accueil_fin || o.fin },
+    pros: plgenEquipe(creche),
+    seuil: r.seuil, mode: r.mode, periodeRotation: r.periodeRotation,
+    semaine: plgenNumSemaine(),
+    pause: {
+      actif: r.pauseActive, mode: r.pauseMode, duree: r.pauseDuree,
+      travailCible: Math.round((r.travailCible || 7) * 60),
+      fenetreDebut: gpHm(r.pauseDebut) || 690,
+      fenetreFin: gpHm(r.pauseFin) || 870
+    },
+    _reglages: r
+  };
+}
+
+// ── Ouverture de l'ecran ──────────────────────────────────────────
+function plgenOuvrir() {
+  const creche = document.getElementById('pe-creche')?.value || '';
+  if (!creche) { showNotif('\u26a0 S\u00e9lectionnez d\u2019abord une structure'); return; }
+  if (!document.getElementById('plgen-overlay')) {
+    document.body.insertAdjacentHTML('beforeend',
+      '<div id="plgen-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;'
+      + 'display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto" onclick="plgenFondClic(event)">'
+      + '<div id="plgen-box" style="background:var(--surface2);border-radius:16px;max-width:1000px;width:100%;'
+      + 'box-shadow:var(--shadow-lg);padding:24px;margin:auto"></div></div>');
+  }
+  document.getElementById('plgen-overlay').style.display = 'flex';
+  PLGEN_LAST = null;
+  plgenRender();
+}
+function plgenFondClic(e) { if (e.target && e.target.id === 'plgen-overlay') plgenFermer(); }
+function plgenFermer() {
+  const el = document.getElementById('plgen-overlay');
+  if (el) el.style.display = 'none';
+  PLGEN_LAST = null;
+}
+
+function plgenSetReglage(champ, val) {
+  const creche = document.getElementById('pe-creche')?.value || '';
+  const r = plgenCfgPour(creche);
+  if (champ === 'seuil' || champ === 'periodeRotation' || champ === 'pauseDuree') val = parseFloat(val) || 0;
+  if (champ === 'travailCible') val = parseFloat(val) || 7;
+  if (champ === 'seuil') val = Math.max(2, val);
+  r[champ] = val;
+  plgenSave(creche, r);
+  PLGEN_LAST = null;
+  plgenRender();
+}
+
+function plgenRender() {
+  const box = document.getElementById('plgen-box');
+  if (!box) return;
+  const creche = document.getElementById('pe-creche')?.value || '';
+  const cfg = plgenCfgComplete(creche);
+  const r = cfg._reglages;
+  const mon = peGetMonday();
+  const numAff = getISOWeekNumber(mon);
+
+  const btn = (actif, label, onclick) =>
+    '<button onclick="' + onclick + '" style="border:' + (actif ? '2px solid var(--ink)' : '1.5px solid var(--border)')
+    + ';background:' + (actif ? 'var(--ink)' : 'var(--surface2)') + ';color:' + (actif ? '#fff' : 'var(--ink3)')
+    + ';border-radius:10px;padding:8px 13px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer">'
+    + (actif ? '\u25cf ' : '\u25cb ') + label + '</button>';
+
+  const inp = (id, val, onch, w) =>
+    '<input id="' + id + '" value="' + plgenEsc(val) + '" onchange="' + onch + '" style="width:' + (w || '90px')
+    + ';border:1.5px solid var(--border);border-radius:8px;padding:7px 9px;font-size:13px;font-weight:600;font-family:inherit;outline:none">';
+
+  const sansJours = cfg.pros.filter(p => p.joursDeduits);
+  const avertJours = sansJours.length
+    ? '<div style="border:1px solid var(--border);border-left:4px solid var(--ink);border-radius:0 10px 10px 0;'
+      + 'background:var(--surface);padding:11px 14px;font-size:13px;margin:14px 0;line-height:1.5">'
+      + '<b>Jours travaill\u00e9s non renseign\u00e9s</b> pour ' + sansJours.map(p => plgenEsc(p.nom)).join(', ')
+      + '. La semaine compl\u00e8te est suppos\u00e9e. Compl\u00e9tez la fiche salari\u00e9 pour un r\u00e9sultat juste.</div>'
+    : '';
+
+  let corps = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:6px">'
+    + '<div><div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800">G\u00e9n\u00e9rer le planning</div>'
+    + '<div style="font-size:13px;color:var(--ink2);margin-top:3px">' + plgenEsc(creche)
+    + ' \u2014 semaine ' + numAff + '. Rien n\u2019est enregistr\u00e9 avant validation.</div></div>'
+    + '<button onclick="plgenFermer()" style="border:1px solid var(--border);background:var(--surface2);border-radius:8px;'
+    + 'padding:6px 12px;font-size:13px;font-family:inherit;cursor:pointer">Fermer</button></div>';
+
+  // Reglages
+  corps += '<div style="border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:14px;background:var(--surface)">'
+    + '<div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:8px">Rotation des horaires</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + btn(r.mode === 'jour', 'Change chaque jour', "plgenSetReglage('mode','jour')")
+    + btn(r.mode === 'semaine', 'Change chaque semaine', "plgenSetReglage('mode','semaine')")
+    + '</div>';
+
+  if (r.mode === 'semaine') {
+    corps += '<div style="font-size:12px;font-weight:700;color:var(--ink2);margin:14px 0 8px">'
+      + 'Recomposer les \u00e9quipes tous les</div><div style="display:flex;gap:8px;flex-wrap:wrap">'
+      + [2, 4, 6, 8].map(n => btn(r.periodeRotation === n, n + ' semaines', "plgenSetReglage('periodeRotation'," + n + ")")).join('')
+      + '</div>';
+  }
+
+  corps += '<div style="font-size:12px;font-weight:700;color:var(--ink2);margin:14px 0 8px">Pause d\u00e9jeuner</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    + btn(r.pauseActive, 'Planifier les pauses', "plgenSetReglage('pauseActive'," + (!r.pauseActive) + ")")
+    + (r.pauseActive
+      ? btn(r.pauseMode === 'cible', 'Cal\u00e9e sur la dur\u00e9e de travail', "plgenSetReglage('pauseMode','cible')")
+        + btn(r.pauseMode === 'fixe', 'Dur\u00e9e fixe', "plgenSetReglage('pauseMode','fixe')")
+      : '')
+    + '</div>';
+
+  if (r.pauseActive) {
+    corps += '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:13px;color:var(--ink2)">'
+      + (r.pauseMode === 'cible'
+        ? '<span>Travail effectif vis\u00e9 ' + inp('plgen-cible', r.travailCible, "plgenSetReglage('travailCible',this.value)", '70px') + ' h</span>'
+        : '<span>Dur\u00e9e ' + inp('plgen-duree', r.pauseDuree, "plgenSetReglage('pauseDuree',this.value)", '70px') + ' min</span>')
+      + '<span>Pas avant ' + inp('plgen-pdeb', r.pauseDebut, "plgenSetReglage('pauseDebut',this.value)") + '</span>'
+      + '<span>Termin\u00e9e \u00e0 ' + inp('plgen-pfin', r.pauseFin, "plgenSetReglage('pauseFin',this.value)") + '</span>'
+      + '</div>';
+  }
+  corps += '</div>' + avertJours;
+
+  // Faisabilite
+  const f = gpFaisabilite(cfg);
+  if (f) {
+    const h = x => (Math.round(x * 10) / 10).toString().replace('.', ',');
+    corps += f.suffisant
+      ? '<div style="border:1px solid var(--border);border-radius:12px;padding:13px 15px;margin-top:14px;font-size:13px;line-height:1.5">'
+        + '<b>\u2713 L\u2019effectif permet de tenir ' + f.seuil + ' professionnelles en continu.</b><br>'
+        + h(f.dispoH) + ' h disponibles pour ' + h(f.requisH) + ' h \u00e0 couvrir'
+        + (f.prepMin || f.rangeMin ? ', pr\u00e9paration et rangement compt\u00e9s \u00e0 une pro' : '') + '.</div>'
+      : '<div style="background:var(--ink);color:#fff;border-radius:12px;padding:13px 15px;margin-top:14px;font-size:13px;line-height:1.5">'
+        + '<b>\u2715 L\u2019effectif ne suffit pas \u00e0 tenir ' + f.seuil + ' professionnelles pendant l\u2019accueil.</b><br>'
+        + 'Il manque ' + h(f.manqueH) + ' h par semaine, soit environ ' + h(f.etpManquant)
+        + ' \u00e9quivalent temps plein. Aucune r\u00e9partition ne comblera cet \u00e9cart.'
+        + ((f.joursCourts && f.joursCourts.length)
+            ? '<br>Jours concern\u00e9s : ' + f.joursCourts.map(function(x) {
+                return PLG_JOURS[x.jour] + ' (' + h(x.manqueH) + ' h)'; }).join(', ') + '.'
+            : '') + '</div>';
+  }
+
+  corps += '<div style="display:flex;gap:10px;margin-top:16px">'
+    + '<button onclick="plgenCalculer()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;'
+    + 'padding:10px 20px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Proposer un planning</button>'
+    + '</div><div id="plgen-res"></div>';
+
+  box.innerHTML = corps;
+  if (PLGEN_LAST) plgenRenderResultat();
+}
+
+function plgenCalculer() {
+  const creche = document.getElementById('pe-creche')?.value || '';
+  const cfg = plgenCfgComplete(creche);
+  if (!cfg.pros.length) { showNotif('\u26a0 Aucune salari\u00e9e active rattach\u00e9e \u00e0 cette structure'); return; }
+  const r = gpGenerer(cfg);
+  if (r.erreur) { showNotif('\u26a0 ' + r.erreur); return; }
+  r.equipe = cfg.pros;
+  r.cfg = cfg;
+  PLGEN_LAST = r;
+  plgenRenderResultat();
+}
+
+function plgenBadgeCv(cv) {
+  const box = (g, t, fort, titre) =>
+    '<span title="' + plgenEsc(titre || t) + '" style="display:inline-flex;align-items:center;gap:4px;border-radius:10px;'
+    + 'padding:2px 8px;font-size:11px;font-weight:700;background:' + (fort ? 'var(--ink)' : 'var(--surface2)')
+    + ';color:' + (fort ? '#fff' : 'var(--ink3)') + ';border:1px solid ' + (fort ? 'var(--ink)' : 'var(--border)') + '">'
+    + '<span style="font-size:12px;line-height:1">' + g + '</span>' + t + '</span>';
+  if (cv.vide) return box('\u25b3', 'aucun cr\u00e9neau', true);
+  if (!cv.trous.length) return box('\u2713', cv.minAccueil + ' pros pendant l\u2019accueil', false);
+  const bas = cv.trous.reduce((m, t) => Math.min(m, t.n), Infinity);
+  const qui = bas === 0 ? 'personne' : (bas + ' pro' + (bas > 1 ? 's' : ''));
+  const pl = cv.trous.map(t => gpHms(t.debut) + '\u2013' + gpHms(t.fin)).join(' \u00b7 ');
+  const det = cv.trous.map(t => gpHms(t.debut) + '\u2013' + gpHms(t.fin) + ' : ' + t.n + ' pour ' + t.seuil + ' attendue(s)').join(' | ');
+  return box('\u25b3', qui + ' \u00e0 ' + pl, true, det);
+}
+
+function plgenRenderResultat() {
+  const el = document.getElementById('plgen-res');
+  const r = PLGEN_LAST;
+  if (!el || !r) return;
+  const J = PLG_JOURS;
+
+  let head = '<tr><th style="border:1px solid var(--border);padding:6px 8px;background:var(--surface);font-size:11px">Horaire</th>'
+    + r.jours.map(j => '<th style="border:1px solid var(--border);padding:6px 8px;background:var(--surface);font-size:11px">' + J[j] + '</th>').join('') + '</tr>';
+  let corps = '';
+  r.hs.forEach(h => {
+    const role = (h.i === r.ouvrant ? 'ouvre' : '') + (h.i === r.ouvrant && h.i === r.fermant ? ' et ' : '') + (h.i === r.fermant ? 'ferme' : '');
+    const cells = r.jours.map(j => {
+      const cs = r.creneaux.filter(c => c.jour === j && c.horaire_idx === h.i);
+      return '<td style="border:1px solid var(--border);padding:5px 7px;vertical-align:top">'
+        + (cs.length ? cs.map(c => {
+          const st = plgenStyle(c.pro);
+          return '<div style="border-left:4px solid ' + st.c + ';background:' + st.bg + ';border-radius:6px;padding:4px 7px;margin:2px 0;font-size:12px">'
+            + plgenTag(c.pro)
+            + (role ? '<span style="display:block;font-size:10px;color:var(--ink3)">' + role + '</span>' : '')
+            + (c.pause ? '<span style="display:block;font-size:10px;color:var(--ink3)">\u23f8 ' + c.pause + '</span>' : '')
+            + '</div>';
+        }).join('') : '<span style="color:var(--ink3);font-size:12px">\u2014</span>') + '</td>';
+    }).join('');
+    corps += '<tr><th style="border:1px solid var(--border);padding:6px 8px;text-align:left;font-size:12px;background:var(--surface)">'
+      + plgenEsc(h.name) + '<br><span style="font-weight:400;color:var(--ink3)">' + gpHms(h.d) + '\u2013' + gpHms(h.f) + '</span></th>' + cells + '</tr>';
+  });
+  corps += '<tr><th style="border:1px solid var(--border);padding:6px 8px;text-align:left;font-size:12px;background:var(--surface)">Couverture</th>'
+    + r.jours.map(j => '<td style="border:1px solid var(--border);padding:5px 7px">' + plgenBadgeCv(r.couvertures[j]) + '</td>').join('') + '</tr>';
+
+  const verdict = r.conforme
+    ? '<div style="border:1px solid var(--border);border-radius:12px;padding:13px 15px;margin-top:14px;font-size:13px;line-height:1.5">'
+      + '<b>\u2713 ' + r.seuil + ' professionnelles pr\u00e9sentes pendant tout l\u2019accueil.</b> Proposition applicable telle quelle.</div>'
+    : '<div style="background:var(--ink);color:#fff;border-radius:12px;padding:13px 15px;margin-top:14px;font-size:13px;line-height:1.5">'
+      + '<b>\u2715 Non conforme : ' + (Math.round(r.minutesSous / 6) / 10).toString().replace('.', ',')
+      + ' h sous le minimum d\u2019encadrement</b>'
+      + (r.minutesSeule ? ', dont ' + (Math.round(r.minutesSeule / 6) / 10).toString().replace('.', ',') + ' h avec une seule personne ou aucune' : '')
+      + '.<br>C\u2019est la meilleure r\u00e9partition possible \u00e0 effectif constant.</div>';
+
+  const bilan = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">'
+    + '<thead><tr>' + ['Professionnelle', 'Jours', 'Ouvertures', 'Fermetures', 'Heures', '\u00c9cart contrat']
+      .map(t => '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-size:11px;color:var(--ink3)">' + t + '</th>').join('')
+    + '</tr></thead><tbody>'
+    + r.bilan.map(b => {
+      const e = b.ecart === null ? '\u2014' : (b.ecart > 0 ? '+' : '') + String(b.ecart).replace('.', ',') + ' h';
+      return '<tr><td style="padding:6px 8px;border-bottom:1px solid var(--border)">' + plgenTag(b.nom) + '</td>'
+        + [b.jours, b.ouvertures, b.fermetures, String(b.heures).replace('.', ',') + ' h', e]
+          .map(v => '<td style="padding:6px 8px;border-bottom:1px solid var(--border)">' + v + '</td>').join('') + '</tr>';
+    }).join('') + '</tbody></table>';
+
+  const legende = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'
+    + r.pros.map(n => { const st = plgenStyle(n);
+      return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);border-left:4px solid '
+        + st.c + ';background:' + st.bg + ';border-radius:10px;padding:3px 9px;font-size:12px">' + plgenTag(n) + '</span>'; }).join('')
+    + '</div>';
+
+  const alertes = r.alertes.length
+    ? '<div style="margin-top:14px;font-size:13px"><b>Ajustements effectu\u00e9s</b><ul style="margin:6px 0 0 18px">'
+      + [...new Set(r.alertes.map(a => J[a.jour] + ' \u2014 ' + a.txt))].map(t => '<li>' + plgenEsc(t) + '</li>').join('')
+      + '</ul></div>' : '';
+
+  const altAvert = (r.cfg.mode === 'semaine' && r.alternancePossible === false)
+    ? '<div style="font-size:12px;color:var(--ink2);margin-top:10px;line-height:1.5">'
+      + '\u25b3 L\u2019alternance stricte matin / soir n\u2019est pas atteignable : les horaires ne se r\u00e9partissent pas '
+      + 'en deux moiti\u00e9s \u00e9gales. Certaines semaines se suivront sur le m\u00eame versant.</div>' : '';
+
+  el.innerHTML = '<div style="margin-top:18px"><div style="font-family:Syne,sans-serif;font-size:15px;font-weight:700;margin-bottom:8px">Proposition</div>'
+    + '<div style="overflow:auto"><table style="border-collapse:separate;border-spacing:0;width:100%">'
+    + '<thead>' + head + '</thead><tbody>' + corps + '</tbody></table></div>'
+    + legende
+    + '<div style="font-size:12px;color:var(--ink2);margin-top:8px;line-height:1.5">'
+    + 'Chaque professionnelle a sa couleur <b>et sa forme</b>. La couverture d\u00e9duit les pauses : une pro en pause n\u2019y est pas compt\u00e9e. '
+    + 'Le minimum ne s\u2019applique qu\u2019en pr\u00e9sence d\u2019enfants.</div>'
+    + altAvert + verdict + alertes
+    + '<div style="font-family:Syne,sans-serif;font-size:15px;font-weight:700;margin:18px 0 4px">R\u00e9partition</div>' + bilan
+    + '<div style="display:flex;gap:10px;margin-top:18px;align-items:center;flex-wrap:wrap">'
+    + '<button onclick="plgenAppliquer()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;'
+    + 'padding:10px 20px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Appliquer \u00e0 cette semaine</button>'
+    + '<button onclick="plgenCalculer()" style="border:1px solid var(--border);background:var(--surface2);border-radius:10px;'
+    + 'padding:10px 18px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer">Recalculer</button>'
+    + '<span style="font-size:12px;color:var(--ink3)">Les cr\u00e9neaux existants de cette semaine seront remplac\u00e9s.</span>'
+    + '</div></div>';
+}
+
+function plgenAppliquer() {
+  const r = PLGEN_LAST;
+  if (!r) return;
+  const creche = document.getElementById('pe-creche')?.value || '';
+  if (!creche) return;
+  const week = peGetWeek(creche);
+  const nb = (week.creneaux || []).length;
+  if (nb && !confirm('Remplacer les ' + nb + ' cr\u00e9neaux d\u00e9j\u00e0 saisis cette semaine ?')) return;
+  week.creneaux = r.creneaux.map(c => Object.assign({}, c));
+  week.pros = r.pros.slice();
+  peSaveWeek(week, creche);
+  plgenFermer();
+  if (typeof renderActiveTab === 'function') renderActiveTab();
+  showNotif('\u2705 Planning g\u00e9n\u00e9r\u00e9 (' + r.creneaux.length + ' cr\u00e9neaux)');
+}
+
+// Diagnostic console
+function orvDiagGenerateur() {
+  const creche = document.getElementById('pe-creche')?.value || currentCreche || '';
+  const cfg = plgenCfgComplete(creche);
+  console.log('[generateur] structure :', creche);
+  console.log('[generateur] ouverture :', cfg.ouverture, '| accueil :', cfg.accueil);
+  console.table(cfg.pros.map(p => ({ nom: p.nom, jours: (p.jours || []).join(''), deduits: p.joursDeduits, heures: p.heures })));
+  console.log('[generateur] faisabilite :', gpFaisabilite(cfg));
+  const r = gpGenerer(cfg);
+  console.log('[generateur] conforme :', r.conforme, '| creneaux :', r.creneaux.length);
+  return r;
+}
+
+
 // ── Parametres : jours et heures d'ouverture ────────────────────────
 let plgOuvCreche = null;
 
@@ -18086,6 +19170,16 @@ function renderParamOuverture() {
       + 'style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:7px 9px;font-size:13px;font-weight:600;font-family:inherit;outline:none">'
       + '<div style="text-align:center;color:var(--ink3)">\u2013</div>'
       + '<input type="time" step="900" value="' + o.fin + '" onchange="plgOuvSetHeure(\'fin\',this.value)" '
+      + 'style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:7px 9px;font-size:13px;font-weight:600;font-family:inherit;outline:none">'
+    + '</div>'
+    + '<div style="font-size:12px;font-weight:600;color:var(--ink2);margin:18px 0 6px">Accueil des enfants</div>'
+    + '<div style="font-size:12px;color:var(--ink3);margin-bottom:8px;line-height:1.5">Heures de pr\u00e9sence des enfants. '
+      + 'Avant et apr\u00e8s, une professionnelle seule pr\u00e9pare ou range \u2014 le minimum de deux ne s\'y applique pas.</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 12px 1fr;gap:10px;align-items:center;max-width:320px">'
+      + '<input type="time" step="900" value="' + o.accueil_debut + '" onchange="plgOuvSetHeure(\'accueil_debut\',this.value)" '
+      + 'style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:7px 9px;font-size:13px;font-weight:600;font-family:inherit;outline:none">'
+      + '<div style="text-align:center;color:var(--ink3)">\u2013</div>'
+      + '<input type="time" step="900" value="' + o.accueil_fin + '" onchange="plgOuvSetHeure(\'accueil_fin\',this.value)" '
       + 'style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:7px 9px;font-size:13px;font-weight:600;font-family:inherit;outline:none">'
     + '</div>' + avert;
 }
@@ -22445,6 +23539,22 @@ function showImportResult(type, html) {
           </select>
         </div>
         <div class="form-group">
+          <label>Jours travaill&eacute;s</label>
+          <div id="sal-jours-travailles" style="display:flex;gap:6px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:5px;border:1.5px solid var(--border);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600;cursor:pointer;margin:0">
+              <input type="checkbox" class="sal-jt" value="0" style="width:auto;margin:0"> Lun</label>
+            <label style="display:flex;align-items:center;gap:5px;border:1.5px solid var(--border);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600;cursor:pointer;margin:0">
+              <input type="checkbox" class="sal-jt" value="1" style="width:auto;margin:0"> Mar</label>
+            <label style="display:flex;align-items:center;gap:5px;border:1.5px solid var(--border);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600;cursor:pointer;margin:0">
+              <input type="checkbox" class="sal-jt" value="2" style="width:auto;margin:0"> Mer</label>
+            <label style="display:flex;align-items:center;gap:5px;border:1.5px solid var(--border);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600;cursor:pointer;margin:0">
+              <input type="checkbox" class="sal-jt" value="3" style="width:auto;margin:0"> Jeu</label>
+            <label style="display:flex;align-items:center;gap:5px;border:1.5px solid var(--border);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600;cursor:pointer;margin:0">
+              <input type="checkbox" class="sal-jt" value="4" style="width:auto;margin:0"> Ven</label>
+          </div>
+          <div style="font-size:12px;color:var(--ink3);margin-top:5px">Utilis&eacute; par le g&eacute;n&eacute;rateur de planning.</div>
+        </div>
+        <div class="form-group">
           <label>Date d'entrée</label>
           <input type="date" id="sal-entree">
         </div>
@@ -22686,6 +23796,7 @@ function openModalSalarie() {
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('sal-statut').value = 'actif';
   document.getElementById('sal-volante').checked = false;
+  document.querySelectorAll('.sal-jt').forEach(cb => { cb.checked = true; });
   document.getElementById('sal-psc1').value   = '';
   document.getElementById('sal-fonction').selectedIndex = 0;
   _salPopulateCreche();
@@ -22730,6 +23841,12 @@ function editSalarie(id) {
   _salPopulateCreche();
   document.getElementById('sal-creche').value = s.creche || '';
   document.getElementById('sal-volante').checked = !!s.volante;
+  // Fiche ancienne sans le champ : la semaine complete est le defaut le
+  // moins surprenant, et le generateur signale qu'il l'a suppose.
+  var _jt = Array.isArray(s.jours_travailles) ? s.jours_travailles.map(Number) : null;
+  document.querySelectorAll('.sal-jt').forEach(function(cb) {
+    cb.checked = _jt ? (_jt.indexOf(parseInt(cb.value, 10)) !== -1) : true;
+  });
   _salPopulateCoordStructures(s.structuresCoordonnees || []);
   _salToggleCoordStructures();
   _salPopulateDossier(s);
@@ -22790,6 +23907,7 @@ function saveSalarie() {
     formations: document.getElementById('sal-formations').value.trim(),
     notes:      document.getElementById('sal-notes').value.trim(),
     structuresCoordonnees: Array.from(document.querySelectorAll('.sal-coord-cb:checked')).map(cb => cb.value),
+    jours_travailles: Array.from(document.querySelectorAll('.sal-jt:checked')).map(cb => parseInt(cb.value, 10)),
   };
   if (salEditingId) {
     var _ex = SALARIES.find(function(x) { return x.id === salEditingId; });
