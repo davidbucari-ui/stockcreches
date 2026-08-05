@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-05 07:12 -->
+<!-- OREVY BUILD 2026-08-05 11:21 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -19059,6 +19059,31 @@ function plgenRenderResultat() {
       + [...new Set(r.alertes.map(a => J[a.jour] + ' \u2014 ' + a.txt))].map(t => '<li>' + plgenEsc(t) + '</li>').join('')
       + '</ul></div>' : '';
 
+  // Ecarter un horaire est une decision : la dire, sinon on la deduit.
+  const inutilises = r.hs.filter(hh => !r.creneaux.some(c => c.horaire_idx === hh.i));
+  const doubles = r.hs.filter(hh => {
+    const parJour = r.jours.map(j => r.creneaux.filter(c => c.jour === j && c.horaire_idx === hh.i).length);
+    return parJour.some(n => n > 1);
+  });
+  let motHoraires = '';
+  if (inutilises.length || doubles.length) {
+    const bouts = [];
+    if (inutilises.length) {
+      bouts.push('<b>Horaire' + (inutilises.length > 1 ? 's' : '') + ' non utilis\u00e9'
+        + (inutilises.length > 1 ? 's' : '') + ' : ' + inutilises.map(x => plgenEsc(x.name)).join(', ')
+        + '.</b> Les occuper n\u2019am\u00e9liorerait pas la couverture sur l\u2019amplitude r\u00e9gl\u00e9e.');
+    }
+    if (doubles.length) {
+      bouts.push('<b>Deux professionnelles sur ' + doubles.map(x => plgenEsc(x.name)).join(', ')
+        + '.</b> C\u2019est le seul horaire qui couvre ce bout de journ\u00e9e : tenir le minimum '
+        + 'd\u2019encadrement y impose deux personnes. Un second horaire commen\u00e7ant ou finissant '
+        + 'au m\u00eame moment lib\u00e9rerait cette contrainte.');
+    }
+    motHoraires = '<div style="border:1px solid var(--border);border-left:4px solid var(--ink);'
+      + 'border-radius:0 10px 10px 0;background:var(--surface);padding:11px 14px;font-size:13px;'
+      + 'margin-top:14px;line-height:1.55">' + bouts.join('<br><br>') + '</div>';
+  }
+
   const altAvert = (r.cfg.mode === 'semaine' && r.alternancePossible === false)
     ? '<div style="font-size:12px;color:var(--ink2);margin-top:10px;line-height:1.5">'
       + '\u25b3 L\u2019alternance stricte matin / soir n\u2019est pas atteignable : les horaires ne se r\u00e9partissent pas '
@@ -19071,7 +19096,7 @@ function plgenRenderResultat() {
     + '<div style="font-size:12px;color:var(--ink2);margin-top:8px;line-height:1.5">'
     + 'Chaque professionnelle a sa couleur <b>et sa forme</b>. La couverture d\u00e9duit les pauses : une pro en pause n\u2019y est pas compt\u00e9e. '
     + 'Le minimum ne s\u2019applique qu\u2019en pr\u00e9sence d\u2019enfants.</div>'
-    + altAvert + verdict + alertes
+    + motHoraires + altAvert + verdict + alertes
     + '<div style="font-family:Syne,sans-serif;font-size:15px;font-weight:700;margin:18px 0 4px">R\u00e9partition</div>' + bilan
     + '<div style="display:flex;gap:10px;margin-top:18px;align-items:center;flex-wrap:wrap">'
     + '<button onclick="plgenAppliquer()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;'
