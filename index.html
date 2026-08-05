@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-05 11:34 -->
+<!-- OREVY BUILD 2026-08-05 11:42 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -17203,7 +17203,30 @@ function renderPlanningGantt() {
   const rhNames = salaries.filter(s => !crecheId || s.creche === crecheId)
     .map(s => [s.prenom, s.nom].filter(Boolean).join(' ')).filter(Boolean);
   const crNames = (week.creneaux||[]).map(c => c.pro);
-  const allPros = [...new Set([...rhNames, ...crNames])].sort();
+
+  // Ordre chronologique de prise de poste sur le jour affiche. Par ordre
+  // alphabetique, lire un Gantt oblige a parcourir toutes les lignes pour
+  // retrouver qui ouvre et qui ferme : l'axe du temps est horizontal, les
+  // lignes doivent le suivre.
+  const _jourGantt = (peGanttDay2 >= 0 ? peGanttDay2 : 0);
+  const _priseDePoste = pro => {
+    let mini = Infinity;
+    (week.creneaux || []).forEach(cr => {
+      if (cr.pro !== pro || cr.jour !== _jourGantt) return;
+      const hh = horaires[cr.horaire_idx];
+      if (!hh || !hh.debut) return;
+      const p = String(hh.debut).split(':');
+      const v = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+      if (v < mini) mini = v;
+    });
+    return mini;
+  };
+  const allPros = [...new Set([...rhNames, ...crNames])].sort((a, b) => {
+    const da = _priseDePoste(a), db = _priseDePoste(b);
+    // Celles qui ne travaillent pas ce jour-la restent en bas, par nom.
+    if (da !== db) return da - db;
+    return a.localeCompare(b, 'fr');
+  });
 
   if (allPros.length === 0) {
     grid.innerHTML = `<div style="padding:48px;text-align:center;color:var(--ink3)">
