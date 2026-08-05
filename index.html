@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-05 19:23 -->
+<!-- OREVY BUILD 2026-08-05 19:35 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -5010,19 +5010,35 @@ async function orvRepartirPresencesTest(opts) {
       const js = parEnf.get(e.id).sort((a, b) => a - b);
       e.jours_presence = js;
       e.jours = js.length;
-      if (o.horaires) {
-        // Arrivees et departs echelonnes : sans cela tous les enfants
-        // arrivent ensemble et la courbe d'effectif est un rectangle.
-        const seedD = ['07:30', '08:00', '08:30', '09:00'];
-        const seedF = ['16:00', '16:30', '17:30', '18:00', '18:30'];
-        const k = Math.abs(String(e.id).split('').reduce((s, c) => s + c.charCodeAt(0), 0));
-        const hd = {};
-        js.forEach(function(j, i) {
-          hd[j] = { debut: seedD[(k + i) % seedD.length], fin: seedF[(k + i * 2) % seedF.length] };
-        });
-        e.horaires_detail = hd;
-      }
+      // Les horaires sont poses plus bas : ils dependent du rang de l'enfant
+      // dans l'effectif du jour, donc de la repartition complete.
     });
+
+    // Horaires d'arrivee et de depart. Le hachage precedent repartissait au
+    // hasard : la courbe d'effectif n'avait alors aucune forme reconnaissable.
+    // Profil observe en micro-creche : arrivees groupees avant 08h30, longue
+    // trainee de departs l'apres-midi, et surtout le franchissement du seuil
+    // vers 17h00-17h30 — c'est LUI qui determine jusqu'a quelle heure la
+    // professionnelle supplementaire doit rester. Un depart massif a 16h
+    // laisserait croire qu'un poste finissant a 16h30 suffit.
+    if (o.horaires) {
+      const PROF_D = o.arrivees || [[0.25,'07:30'],[0.60,'08:00'],[0.85,'08:30'],[1.00,'09:00']];
+      // Aucun depart avant 17h00 : c'est ce moment qui fait retomber l'effectif
+      // sous le palier des 13, donc qui fixe l'heure de fin de la pro d'appoint.
+      const PROF_F = o.departs  || [[0.15,'17:00'],[0.55,'17:30'],[0.85,'18:00'],[1.00,'18:30']];
+      const pioche = (prof, q) => (prof.find(x => q <= x[0]) || prof[prof.length - 1])[1];
+      [0,1,2,3,4].forEach(function(j) {
+        const duJour = act.filter(e => (e.jours_presence || []).includes(j));
+        // Rang stable d'un enfant : ses horaires ne sautent pas d'un jour a
+        // l'autre, ce qui serait invraisemblable et brouillerait la lecture.
+        const rangs = duJour.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));
+        rangs.forEach(function(e, i) {
+          const q = (i + 0.5) / rangs.length;
+          e.horaires_detail = e.horaires_detail || {};
+          e.horaires_detail[j] = { debut: pioche(PROF_D, q), fin: pioche(PROF_F, 1 - q) };
+        });
+      });
+    }
 
     recap.push({
       creche: nom, inscrits: act.length,
@@ -18365,16 +18381,78 @@ function gpCmp(a, b) {
 // le plancher de deux ne s'applique pas : une pro seule prépare la section.
 // Le seuil est donc une fonction du moment, pas une constante — sinon le
 // générateur déclare non conforme un planning parfaitement légal.
-function gpCadre(o0, o1, cfg, seuil) {
+// Encadrement requis pour un effectif donne. L'arrondi est a l'entier
+// superieur (FAQ 19/02/2026, 2.1.4 : 14 enfants -> 3 professionnels).
+function gpRequisPour(nm, m, option) {
+  const total = nm + m;
+  if (total <= 0) return 0;
+  return (option === '6') ? Math.ceil(total / 6) : (Math.ceil(nm / 5) + Math.ceil(m / 8));
+}
+
+// Courbe d'effectif enfants du jour, sous forme de paliers de SEUIL.
+// C'est le coeur du changement : le nombre de professionnelles requis n'est
+// pas une constante de la structure, c'est une fonction de l'heure. A 8h00 il
+// peut y avoir 4 enfants (2 pros suffisent) et a 10h00 quatorze (3 pros).
+// Dimensionner toute la journee sur le pic fait payer un poste qui ne sert
+// que deux heures ; la dimensionner sur la moyenne rend la structure non
+// conforme au milieu de la matinee.
+// Sans donnee d'effectif, on retombe exactement sur l'ancien comportement :
+// le plancher pendant la plage d'accueil, une pro avant et apres.
+function gpPaliers(o0, o1, aD, aF, seuilMin, inters, option) {
+  const dedans = (inters || []).filter(x => x && x.f > x.d);
+  if (!dedans.length) {
+    const l = [];
+    if (aD > o0) l.push({ d: o0, f: aD, s: 1 });
+    if (aF > aD) l.push({ d: aD, f: aF, s: seuilMin });
+    if (o1 > aF) l.push({ d: aF, f: o1, s: 1 });
+    return l;
+  }
+  const pts = new Set([o0, o1, aD, aF]);
+  dedans.forEach(x => { pts.add(Math.max(x.d, o0)); pts.add(Math.min(x.f, o1)); });
+  const b = Array.from(pts).filter(t => t >= o0 && t <= o1).sort((x, y) => x - y);
+  const out = [];
+  for (let k = 0; k < b.length - 1; k++) {
+    const d = b[k], f = b[k + 1];
+    if (f <= d) continue;
+    const pres = dedans.filter(x => x.d <= d && x.f >= f);
+    const nm = pres.filter(x => x.nm).length, m = pres.length - nm;
+    // Aucun enfant present : personne a encadrer, le plancher ne s'applique
+    // pas. Des le premier enfant, on retient le plancher de deux : la
+    // derogation a une seule professionnelle jusqu'a trois enfants suppose
+    // une qualification de categorie 1 que le planning ne connait pas.
+    const s = (pres.length === 0) ? 1 : Math.max(seuilMin, gpRequisPour(nm, m, option));
+    const last = out[out.length - 1];
+    if (last && last.f === d && last.s === s) last.f = f;
+    else out.push({ d, f, s });
+  }
+  return out;
+}
+
+function gpCadre(o0, o1, cfg, seuil, jour) {
   const a = cfg.accueil || {};
   const d = gpHm(a.debut), f = gpHm(a.fin);
+  const aD = (d === null || d < o0) ? o0 : Math.min(d, o1);
+  const aF = (f === null || f > o1) ? o1 : Math.max(f, o0);
+  const inters = (jour != null && cfg.effectifs) ? (cfg.effectifs[jour] || []) : null;
+  const pal = gpPaliers(o0, o1, aD, aF, seuil, inters, cfg.ratio);
   return {
-    seuil,
-    aD: (d === null || d < o0) ? o0 : Math.min(d, o1),
-    aF: (f === null || f > o1) ? o1 : Math.max(f, o0)
+    seuil, aD, aF,
+    jour: (jour != null ? jour : null),
+    paliers: pal,
+    // Plus haut niveau requis dans la journee : sert aux libelles, qui ne
+    // peuvent plus annoncer un chiffre unique sans mentir.
+    seuilMax: pal.reduce((mx, x) => Math.max(mx, x.s), 0)
   };
 }
-function gpSeuilA(t, cd) { return (t >= cd.aD && t < cd.aF) ? cd.seuil : 1; }
+function gpSeuilA(t, cd) {
+  if (cd.paliers && cd.paliers.length) {
+    for (let k = 0; k < cd.paliers.length; k++) {
+      if (t >= cd.paliers[k].d && t < cd.paliers[k].f) return cd.paliers[k].s;
+    }
+    return 1;
+  }
+  return (t >= cd.aD && t < cd.aF) ? cd.seuil : 1;
+}
 
 function gpDecouvert(sel, hs, o0, o1, cd) {
   const segs = sel.map(i => ({ d: Math.max(hs[i].d, o0), f: Math.min(hs[i].f, o1) })).filter(s => s.f > s.d);
@@ -18612,7 +18690,10 @@ function gpFaisabilite(cfg) {
   const cd = gpCadre(o0, o1, cfg, seuil);
   // La préparation et le rangement se couvrent à une pro : les compter au
   // plancher de deux gonflerait le besoin d'un poste qui n'existe pas.
-  const requisJour = (cd.aF - cd.aD) * seuil + (cd.aD - o0) + (o1 - cd.aF);
+  // Le besoin d'un jour se lit sur SES paliers : un mercredi a 8 enfants ne
+  // reclame pas les memes heures qu'un mardi a 14.
+  const besoinDe = j => gpCadre(o0, o1, cfg, seuil, j).paliers
+    .reduce((s, x) => s + (x.f - x.d) * x.s, 0);
   const pc = gpNormPause(cfg);
   // Amplitude moyenne d'un poste : sert à estimer la pause réellement retenue.
   const amp = cfg.horaires.map(x => gpHm(x.fin) - gpHm(x.debut)).filter(x => x > 0);
@@ -18632,6 +18713,7 @@ function gpFaisabilite(cfg) {
       const parJour = Math.min(o1 - o0, p.heures ? (p.heures * 60) / Math.max(1, dj) + pause : (o1 - o0));
       dis += parJour - pause;
     });
+    const requisJour = besoinDe(j);
     requis += requisJour;
     dispo += dis;
     const m = Math.max(0, requisJour - dis);
@@ -18639,6 +18721,7 @@ function gpFaisabilite(cfg) {
   });
   return {
     seuil, requisH: requis / 60, dispoH: dispo / 60, manqueH: manque / 60, pauseMin: pause,
+    seuilMax: jours.reduce((mx, j) => Math.max(mx, gpCadre(o0, o1, cfg, seuil, j).seuilMax), 0),
     prepMin: cd.aD - o0, rangeMin: o1 - cd.aF, joursCourts: joursCourts,
     // Équivalent temps plein manquant, sur une base 35 h.
     etpManquant: Math.ceil((manque / 60) / 35 * 10) / 10,
@@ -18913,7 +18996,8 @@ function gpGenerer(cfg) {
 
     const arretees = dispo.filter(p => fixeDe[p.nom] != null);
     const libres = dispo.filter(p => fixeDe[p.nom] == null);
-    const res = gpPostesDuJour(dispo.length, hs, o0, o1, cd, arretees.map(p => fixeDe[p.nom]));
+    const cdJ = gpCadre(o0, o1, cfg, seuil, jour);
+    const res = gpPostesDuJour(dispo.length, hs, o0, o1, cdJ, arretees.map(p => fixeDe[p.nom]));
 
     const attrib = arretees.map(p => ({ nom: p.nom, idx: fixeDe[p.nom] }));
 
@@ -18961,7 +19045,7 @@ function gpGenerer(cfg) {
 
     // Les pauses se placent une fois la journée constituée : leur position
     // dépend de qui est présent, pas d'un rang théorique.
-    gpPlacerPauses(duJour, hs, o0, o1, cd, pc)
+    gpPlacerPauses(duJour, hs, o0, o1, cdJ, pc)
       .forEach(a => alertes.push({ jour, txt: a.txt }));
 
     duJour.forEach(cr => {
@@ -18974,7 +19058,7 @@ function gpGenerer(cfg) {
   // Contrôle a posteriori, sur le résultat réel.
   const couvertures = {};
   jours.forEach(j => {
-    couvertures[j] = gpCouverture(creneaux.filter(c => c.jour === j), hs, o0, o1, cd);
+    couvertures[j] = gpCouverture(creneaux.filter(c => c.jour === j), hs, o0, o1, gpCadre(o0, o1, cfg, seuil, j));
   });
 
   const bilan = cfg.pros.map(p => {
@@ -19020,6 +19104,8 @@ function gpGenerer(cfg) {
     conforme, minutesSous, minutesSeule,
     faisabilite: gpFaisabilite(cfg),
     hs, o0, o1, seuil, jours, cadre: cd,
+    seuilMax: jours.reduce((mx, j) => Math.max(mx, gpCadre(o0, o1, cfg, seuil, j).seuilMax), 0),
+    seuilsJour: jours.reduce((o, j) => { o[j] = gpCadre(o0, o1, cfg, seuil, j).seuilMax; return o; }, {}),
     ouvrant: iOuvrant, fermant: iFermant
   };
 }
@@ -19159,13 +19245,45 @@ function plgenEsc(s) {
   return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+// Presences enfants du jour, en intervalles. horaires_detail donne l'arrivee
+// et le depart reels ; a defaut, on retombe sur la plage d'accueil entiere,
+// ce qui surestime plutot que l'inverse — une fiche mal renseignee ne doit
+// pas faire disparaitre un besoin d'encadrement.
+function plgenEffectifs(creche, ouv) {
+  const out = { 0: [], 1: [], 2: [], 3: [], 4: [] };
+  let enf = [];
+  try { enf = getFamilles(creche) || []; } catch (e) { return out; }
+  const j0 = new Date(); j0.setHours(0, 0, 0, 0);
+  const actifs = enf.filter(e => !e.sortie || new Date(e.sortie) >= j0);
+  const dA = gpHm(ouv.accueil_debut || ouv.debut), fA = gpHm(ouv.accueil_fin || ouv.fin);
+  actifs.forEach(function(e) {
+    const jp = (e.jours_presence || []).map(Number).filter(x => !isNaN(x));
+    const nm = (typeof isNonMarcheur === 'function') ? !!isNonMarcheur(e) : false;
+    jp.forEach(function(j) {
+      if (j < 0 || j > 4) return;
+      const hd = (e.horaires_detail || {})[j] || {};
+      const d = gpHm(hd.debut), f = gpHm(hd.fin);
+      out[j].push({
+        d: (d === null ? dA : d),
+        f: (f === null ? fA : f),
+        nm: nm
+      });
+    });
+  });
+  return out;
+}
+
 function plgenCfgComplete(creche) {
   const r = plgenCfgPour(creche);
   const o = getOuvertureStructure(creche);
+  let ratio = 'NM8M';
+  try { ratio = (JSON.parse(localStorage.getItem('orevy_prefs') || '{}').optionEncadrement) || 'NM8M'; } catch (e) {}
   return {
     horaires: getPlanningHoraires(creche),
     ouverture: { debut: o.debut, fin: o.fin, jours: o.jours },
     accueil: { debut: o.accueil_debut || o.debut, fin: o.accueil_fin || o.fin },
+    effectifs: plgenEffectifs(creche, o),
+    ratio: ratio,
     pros: plgenEquipe(creche),
     seuil: r.seuil, mode: r.mode, periodeRotation: r.periodeRotation,
     semaine: plgenNumSemaine(),
@@ -19293,11 +19411,15 @@ function plgenRender() {
     const h = x => (Math.round(x * 10) / 10).toString().replace('.', ',');
     corps += f.suffisant
       ? '<div style="border:1px solid var(--border);border-radius:12px;padding:13px 15px;margin-top:14px;font-size:13px;line-height:1.5">'
-        + '<b>\u2713 L\u2019effectif permet de tenir ' + f.seuil + ' professionnelles en continu.</b><br>'
+        + '<b>\u2713 L\u2019effectif permet de tenir l\u2019encadrement requis'
+        + (f.seuilMax > f.seuil ? ' (jusqu\u2019\u00e0 ' + f.seuilMax + ' professionnelles au plus charg\u00e9)' : '')
+        + '.</b><br>'
         + h(f.dispoH) + ' h disponibles pour ' + h(f.requisH) + ' h \u00e0 couvrir'
         + (f.prepMin || f.rangeMin ? ', pr\u00e9paration et rangement compt\u00e9s \u00e0 une pro' : '') + '.</div>'
       : '<div style="background:var(--ink);color:#fff;border-radius:12px;padding:13px 15px;margin-top:14px;font-size:13px;line-height:1.5">'
-        + '<b>\u2715 L\u2019effectif ne suffit pas \u00e0 tenir ' + f.seuil + ' professionnelles pendant l\u2019accueil.</b><br>'
+        + '<b>\u2715 L\u2019effectif ne suffit pas \u00e0 tenir l\u2019encadrement requis pendant l\u2019accueil'
+        + (f.seuilMax > f.seuil ? ' (jusqu\u2019\u00e0 ' + f.seuilMax + ' professionnelles au plus charg\u00e9)' : '')
+        + '.</b><br>'
         + 'Il manque ' + h(f.manqueH) + ' h par semaine, soit environ ' + h(f.etpManquant)
         + ' \u00e9quivalent temps plein. Aucune r\u00e9partition ne comblera cet \u00e9cart.'
         + ((f.joursCourts && f.joursCourts.length)
@@ -19374,7 +19496,9 @@ function plgenRenderResultat() {
 
   const verdict = r.conforme
     ? '<div style="border:1px solid var(--border);border-radius:12px;padding:13px 15px;margin-top:14px;font-size:13px;line-height:1.5">'
-      + '<b>\u2713 ' + r.seuil + ' professionnelles pr\u00e9sentes pendant tout l\u2019accueil.</b> Proposition applicable telle quelle.</div>'
+      + '<b>\u2713 Encadrement requis tenu \u00e0 chaque instant'
+      + (r.seuilsJour ? ' (' + r.jours.map(j => (r.seuilsJour[j] || r.seuil)).join(' / ') + ' pros selon le jour)' : '')
+      + '.</b> Proposition applicable telle quelle.</div>'
     : '<div style="background:var(--ink);color:#fff;border-radius:12px;padding:13px 15px;margin-top:14px;font-size:13px;line-height:1.5">'
       + '<b>\u2715 Non conforme : ' + (Math.round(r.minutesSous / 6) / 10).toString().replace('.', ',')
       + ' h sous le minimum d\u2019encadrement</b>'
