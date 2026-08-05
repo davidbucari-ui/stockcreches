@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-05 11:21 -->
+<!-- OREVY BUILD 2026-08-05 11:34 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -18047,6 +18047,8 @@ function plgParamReattach() {
 
 function gpHm(s)  { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '')); return m ? (+m[1]) * 60 + (+m[2]) : null; }
 function gpHms(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+// Format attendu par le reste de l'application pour les pauses.
+function gpHmsPause(m) { return String(Math.floor(m / 60)).padStart(2, '0') + 'h' + String(m % 60).padStart(2, '0'); }
 
 // Compare deux vecteurs de score, lexicographiquement.
 function gpCmp(a, b) {
@@ -18150,10 +18152,13 @@ function gpPostesDuJour(n, hs, o0, o1, cd, imposes) {
 // alors qu'il n'en reste qu'une à midi — la surestimation la plus
 // dommageable possible pour un indicateur d'encadrement.
 function gpParsePause(s) {
-  const m = /^(\d{1,2}:\d{2})\u2013(\d{1,2}:\d{2})$/.exec(String(s || ''));
+  // Accepte les deux ecritures : celle de l'application (12h30-13h30)
+  // et le format horaire classique, au cas ou une pause aurait ete
+  // saisie autrement.
+  const m = /(\d{1,2})[h:](\d{2})\s*[\u2013-]\s*(\d{1,2})[h:](\d{2})/.exec(String(s || ''));
   if (!m) return null;
-  const d = gpHm(m[1]), f = gpHm(m[2]);
-  return (d === null || f === null || f <= d) ? null : { d, f };
+  const d = (+m[1]) * 60 + (+m[2]), f = (+m[3]) * 60 + (+m[4]);
+  return (f <= d) ? null : { d, f };
 }
 
 function gpPresences(list, hs, o0, o1) {
@@ -18255,7 +18260,7 @@ function gpPlacerPauses(list, hs, o0, o1, cd, pc) {
     const milieu = (pc.fenetreDebut + pc.fenetreFin - it.duree) / 2;
     let best = null, bestKey = null;
     for (let t = Math.ceil(tMin / 15) * 15; t <= tMax; t += 15) {
-      it.c.pause = gpHms(t) + '\u2013' + gpHms(t + it.duree);
+      it.c.pause = gpHmsPause(t) + '\u2013' + gpHmsPause(t + it.duree);
       const r = gpBalayage(gpPresences(list, hs, o0, o1), o0, o1, cd);
       // Deux pros qui partent à la même minute tiennent peut-être le seuil,
       // mais la section encaisse la transition d'un coup. À couverture
@@ -18266,7 +18271,7 @@ function gpPlacerPauses(list, hs, o0, o1, cd, pc) {
       if (bestKey === null || gpCmp(key, bestKey) < 0) { bestKey = key; best = t; }
     }
     if (best === null) { it.c.pause = ''; it._sous = 0; return; }
-    it.c.pause = gpHms(best) + '\u2013' + gpHms(best + it.duree);
+    it.c.pause = gpHmsPause(best) + '\u2013' + gpHmsPause(best + it.duree);
     it._sous = bestKey[1];
   };
 
