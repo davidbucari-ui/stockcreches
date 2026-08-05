@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-05 19:35 -->
+<!-- OREVY BUILD 2026-08-05 19:47 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -18456,9 +18456,9 @@ function gpSeuilA(t, cd) {
 
 function gpDecouvert(sel, hs, o0, o1, cd) {
   const segs = sel.map(i => ({ d: Math.max(hs[i].d, o0), f: Math.min(hs[i].f, o1) })).filter(s => s.f > s.d);
-  const pts = new Set([o0, o1, cd.aD, cd.aF]);
-  segs.forEach(s => { pts.add(s.d); pts.add(s.f); });
-  const b = Array.from(pts).filter(p => p >= o0 && p <= o1).sort((x, y) => x - y);
+  const bornes = [];
+  segs.forEach(s => { bornes.push(s.d); bornes.push(s.f); });
+  const b = gpBornes(cd, o0, o1, bornes);
   let zero = 0, sous = 0;
   for (let k = 0; k < b.length - 1; k++) {
     const dur = b[k + 1] - b[k];
@@ -18550,6 +18550,19 @@ function gpPresences(list, hs, o0, o1) {
   return out;
 }
 
+// Bornes de decoupage d'une journee. Elles doivent inclure les changements
+// de SEUIL autant que les prises et fins de poste : sans cela, un palier qui
+// bascule a 17h15 alors qu'aucune pro ne bouge a cette heure-la est ignore, et
+// tout le bloc 17h00-18h30 est juge au seuil de 17h00. Surestimation du trou
+// dans un sens, et surtout — bien plus grave — deficit invisible dans l'autre
+// quand le seuil MONTE en milieu de segment.
+function gpBornes(cd, o0, o1, extra) {
+  const pts = new Set([o0, o1, cd.aD, cd.aF]);
+  (cd.paliers || []).forEach(x => { pts.add(x.d); pts.add(x.f); });
+  (extra || []).forEach(t => pts.add(t));
+  return Array.from(pts).filter(x => x >= o0 && x <= o1).sort((x, y) => x - y);
+}
+
 // Balayage par bornes, en personnes distinctes.
 function gpBalayage(pres, o0, o1, cd) {
   const segs = pres.filter(s => s.f > s.d);
@@ -18557,9 +18570,9 @@ function gpBalayage(pres, o0, o1, cd) {
     return { vide: true, trous: [{ debut: o0, fin: o1, n: 0, seuil: gpSeuilA(o0, cd) }],
       min: 0, minAccueil: 0, zero: o1 - o0, sous: (o1 - o0) * cd.seuil };
   }
-  const pts = new Set([o0, o1, cd.aD, cd.aF]);
-  segs.forEach(s => { pts.add(s.d); pts.add(s.f); });
-  const b = Array.from(pts).filter(x => x >= o0 && x <= o1).sort((x, y) => x - y);
+  const bornes = [];
+  segs.forEach(s => { bornes.push(s.d); bornes.push(s.f); });
+  const b = gpBornes(cd, o0, o1, bornes);
   const trous = [];
   let min = Infinity, minAccueil = Infinity, zero = 0, sous = 0;
   for (let k = 0; k < b.length - 1; k++) {
