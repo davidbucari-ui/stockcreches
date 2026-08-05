@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-05 18:45 -->
+<!-- OREVY BUILD 2026-08-05 18:52 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -12293,10 +12293,17 @@ async function orvCollecterBesoins() {
     }
     lgVides.slice(0, 3).forEach(l => out.push(l));
     if (lgVides.length > 3) {
-      out.push({ dom:'rh', n:2, t:(lgVides.length - 3) + ' autre' + (lgVides.length - 3 > 1 ? 's' : '')
-                 + ' semaine' + (lgVides.length - 3 > 1 ? 's' : '') + ' de planning non saisie',
-                 c: cf || 'R\u00e9seau', q:'', act:'Ouvrir le planning', page:'planning',
-                 src:'planning.non_renseigne' });
+      // Une ligne = une structure x une semaine. Hors jeudi/vendredi une seule
+      // semaine est dans le champ : dire "semaine" serait faux, ce sont des
+      // structures. On nomme donc ce qui est reellement compte.
+      const reste = lgVides.length - 3;
+      const multi = semaines.length > 1;
+      out.push({ dom:'rh', n:2,
+                 t: reste + (multi
+                      ? ' autre' + (reste > 1 ? 's' : '') + ' planning' + (reste > 1 ? 's' : '') + ' non saisi' + (reste > 1 ? 's' : '')
+                      : ' autre structure' + (reste > 1 ? 's' : '') + ' sans planning saisi'),
+                 c: cf || 'R\u00e9seau', q: multi ? '' : 'cette semaine',
+                 act:'Ouvrir le planning', page:'planning', src:'planning.non_renseigne' });
     }
   } catch(e) { console.warn('[hub] source planning', e); }
 
