@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-06 08:15 -->
+<!-- OREVY BUILD 2026-08-06 08:22 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -12745,6 +12745,99 @@ const ORV_NOTIF_PERIODE = 90000;   // 90 s
 
 function _orvConsigneKey(id) { return 'consigne_' + id; }
 
+/* ══ NOTIFICATIONS SYSTEME (palier intermediaire) ══════════════════
+   Portee : l'appli est OUVERTE mais en arriere-plan (autre onglet,
+   ecran verrouille). Une notification appli fermee demanderait du Web
+   Push : service worker + abonnements en base + emetteur serveur.
+
+   Cadre QVT : rien en dehors de la plage de travail. Une notification
+   sur le telephone personnel d'une pro un dimanche soir est une
+   sollicitation ajoutee, pas une friction supprimee. La plage est ici
+   une constante ; elle a vocation a passer en reglage par structure
+   (parametres / orevy_prefs) le jour ou le vrai push arrivera. ── */
+
+const ORV_NOTIF_PLAGE = { debut:'07:00', fin:'19:00', joursOuvresSeuls:true };
+let _orvNotifVues = null;        // null = pas encore amorce
+let _orvNotifSysActive = false;
+
+function orvNotifSysDispo() {
+  return (typeof Notification !== 'undefined') && location.protocol === 'https:';
+}
+
+/* Hors plage, on n'emet rien : la cloche reste la trace, sans bruit. */
+function _orvDansLaPlage() {
+  const d = new Date();
+  if (ORV_NOTIF_PLAGE.joursOuvresSeuls && (d.getDay() === 0 || d.getDay() === 6)) return false;
+  const m = d.getHours() * 60 + d.getMinutes();
+  const hm = s => parseInt(s.split(':')[0], 10) * 60 + parseInt(s.split(':')[1], 10);
+  return m >= hm(ORV_NOTIF_PLAGE.debut) && m <= hm(ORV_NOTIF_PLAGE.fin);
+}
+
+/* Demande de permission : jamais au chargement. Les navigateurs
+   refusent une demande sans geste de l'utilisateur, et une popup
+   surgie au demarrage se fait refuser une fois pour toutes. */
+async function orvNotifSysActiver() {
+  if (!orvNotifSysDispo()) {
+    if (typeof showNotif === 'function') showNotif('\u26a0 Notifications indisponibles (HTTPS requis)');
+    return;
+  }
+  let p = Notification.permission;
+  if (p === 'default') { try { p = await Notification.requestPermission(); } catch(e) { return; } }
+  if (p === 'granted') {
+    _orvNotifSysActive = true;
+    try { localStorage.setItem('orevy_notif_sys', '1'); } catch(e) {}
+    if (typeof showNotif === 'function') showNotif('\u2713 Notifications activ\u00e9es sur ce poste');
+  } else {
+    if (typeof showNotif === 'function') showNotif('\u26a0 Notifications bloqu\u00e9es dans le navigateur');
+  }
+  orvNotifRender();
+}
+
+function orvNotifSysDesactiver() {
+  _orvNotifSysActive = false;
+  try { localStorage.removeItem('orevy_notif_sys'); } catch(e) {}
+  if (typeof showNotif === 'function') showNotif('Notifications d\u00e9sactiv\u00e9es sur ce poste');
+  orvNotifRender();
+}
+
+/* Emission : uniquement les cles APPARUES depuis la derniere collecte.
+   Le premier passage amorce la reference sans rien emettre, sinon une
+   simple ouverture de l'appli declencherait une salve. */
+function _orvNotifSysEmettre(liste) {
+  const cles = liste.map(o => o.k);
+  if (_orvNotifVues === null) { _orvNotifVues = new Set(cles); return; }
+  const nouvelles = liste.filter(o => !_orvNotifVues.has(o.k));
+  _orvNotifVues = new Set(cles);
+
+  if (!nouvelles.length) return;
+  if (!_orvNotifSysActive || !orvNotifSysDispo()) return;
+  if (Notification.permission !== 'granted') return;
+  if (!document.hidden) return;          // l'onglet est visible : la cloche suffit
+  if (!_orvDansLaPlage()) return;
+
+  const ouvrir = (page, fn, arg) => function() {
+    try { window.focus(); } catch(e) {}
+    orvGoBesoin(page, fn, arg);
+  };
+
+  // Au-dela de 3, on groupe : trois bulles empilees se ferment sans etre lues.
+  if (nouvelles.length > 3) {
+    const n = new Notification('Orevy \u2014 ' + nouvelles.length + ' nouvelles notifications', {
+      body: 'Demandes et messages du r\u00e9seau', tag: 'orevy-groupe', icon: 'icons/icon-192.png'
+    });
+    n.onclick = ouvrir('demandesReseau', null, null);
+    return;
+  }
+  nouvelles.forEach(function(o) {
+    try {
+      const n = new Notification('Orevy \u2014 ' + (o.n === 1 ? 'Urgent' : 'Nouveau'), {
+        body: o.t, tag: o.k, icon: 'icons/icon-192.png'
+      });
+      n.onclick = ouvrir(o.page, o.fn, o.arg);
+    } catch(e) { console.warn('[notif] emission', e); }
+  });
+}
+
 async function orvNotifCollecte() {
   const out = [];
   const moi = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null;
@@ -12837,6 +12930,7 @@ async function orvNotifCollecte() {
   } catch(e) { console.warn('[notif] consignes', e); }
 
   out.sort(function(a, b) { return a.n - b.n; });
+  _orvNotifSysEmettre(out);
   ORV_NOTIFS = out;
   orvNotifRender();
   return out;
@@ -12853,7 +12947,8 @@ function orvNotifRender() {
   const el = document.getElementById('orv-menu-notif');
   if (!el) return;
   if (!ORV_NOTIFS.length) {
-    el.innerHTML = '<div class="orv-nvide">\u2713 Rien de nouveau</div>';
+    el.innerHTML = '<div class="orv-nvide">\u2713 Rien de nouveau</div>'
+      + '<div class="orv-hr"></div>' + orvNotifLigneSys();
     return;
   }
   let html = '<div class="orv-hd">Notifications</div>';
@@ -12863,8 +12958,29 @@ function orvNotifRender() {
       + '<div class="s">' + orvEsc(o.s || '') + '</div></button>';
   }).join('');
   html += '<div class="orv-hr"></div>'
-    + '<button class="orv-mi" onclick="orvNotifToutLu()"><span class="ic">\u2713</span>Tout marquer comme lu</button>';
+    + '<button class="orv-mi" onclick="orvNotifToutLu()"><span class="ic">\u2713</span>Tout marquer comme lu</button>'
+    + orvNotifLigneSys();
   el.innerHTML = html;
+}
+
+/* Etat encode par le glyphe et le texte, jamais par la couleur seule. */
+function orvNotifLigneSys() {
+  if (!orvNotifSysDispo()) {
+    return '<div class="orv-hd" style="text-transform:none;letter-spacing:0;font-weight:400">'
+      + 'Notifications syst\u00e8me indisponibles (HTTPS requis)</div>';
+  }
+  if (Notification.permission === 'denied') {
+    return '<div class="orv-hd" style="text-transform:none;letter-spacing:0;font-weight:400">'
+      + '\u2715 Bloqu\u00e9es dans les r\u00e9glages du navigateur</div>';
+  }
+  if (_orvNotifSysActive && Notification.permission === 'granted') {
+    return '<button class="orv-mi" onclick="orvNotifSysDesactiver()">'
+      + '<span class="ic">\u25cf</span>Alertes du poste : activ\u00e9es'
+      + '<span class="sub2">d\u00e9sactiver</span></button>';
+  }
+  return '<button class="orv-mi" onclick="orvNotifSysActiver()">'
+    + '<span class="ic">\u25cb</span>Alertes du poste : d\u00e9sactiv\u00e9es'
+    + '<span class="sub2">activer</span></button>';
 }
 
 function orvNotifTog() {
@@ -12895,6 +13011,11 @@ function orvNotifToutLu() {
    arriere-plan (inutile de sonder Supabase sur un poste inactif). */
 function orvNotifDemarrer() {
   if (ORV_NOTIF_TIMER) return;
+  // Choix deja donne sur ce poste : on le reprend sans redemander.
+  try {
+    if (localStorage.getItem('orevy_notif_sys') === '1'
+        && orvNotifSysDispo() && Notification.permission === 'granted') _orvNotifSysActive = true;
+  } catch(e) {}
   orvNotifCollecte();
   ORV_NOTIF_TIMER = setInterval(function() {
     if (!document.hidden) orvNotifCollecte();
