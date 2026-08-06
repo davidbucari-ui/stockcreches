@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-06 07:47 -->
+<!-- OREVY BUILD 2026-08-06 08:15 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -122,6 +122,21 @@ body {
 .orv-alert.calm { background:var(--surface2); color:var(--ink2); border:1px solid var(--border); font-weight:500; }
 .orv-av { width:30px; height:30px; border-radius:50%; background:#8FAF8A; color:#fff; border:none;
   font-size:11px; font-weight:700; cursor:pointer; }
+
+/* Cloche : le compte se lit sur le chiffre, pas sur la couleur.
+   Etat "des choses a lire" = fond fonce + chiffre ; etat vide = contour clair. */
+.orv-cloche { display:flex; align-items:center; gap:5px; background:var(--surface2); color:var(--ink2);
+  border:1px solid var(--border); border-radius:10px; padding:7px 11px; font-size:12.5px;
+  font-weight:500; cursor:pointer; font-family:'Instrument Sans',sans-serif; }
+.orv-cloche.plein { background:var(--ink); color:#fff; border-color:var(--ink); font-weight:700; }
+.orv-nmenu { min-width:330px; max-width:400px; }
+.orv-ni { display:block; width:100%; text-align:left; background:none; border:none; border-radius:9px;
+  padding:9px 11px; cursor:pointer; font-family:'Instrument Sans',sans-serif; }
+.orv-ni:hover { background:var(--bg); }
+.orv-ni .t { font-size:12.5px; color:var(--ink); font-weight:600; line-height:1.35; }
+.orv-ni .s { font-size:11px; color:var(--ink3); margin-top:2px; }
+.orv-ni .g { font-size:10px; font-weight:700; margin-right:5px; color:var(--ink2); }
+.orv-nvide { padding:18px 12px; text-align:center; font-size:12.5px; color:var(--ink3); }
 
 /* ── Hub Structures ── */
 .orv-wrap { max-width:1040px; margin:0 auto; padding:26px 22px 60px; }
@@ -1423,6 +1438,10 @@ textarea { resize: vertical; min-height: 72px; }
       <select id="orv-creche" onchange="orvChangeCreche(this.value)">
         <option value="all">Toutes les cr&egrave;ches</option>
       </select>
+      <div class="orv-dd" id="orv-dd-notif">
+        <button class="orv-cloche" id="orv-cloche" onclick="orvNotifTog()" title="Notifications">&#128276;</button>
+        <div class="orv-menu orv-nmenu" id="orv-menu-notif" style="left:auto;right:0"></div>
+      </div>
       <button class="orv-alert calm" id="orv-alert" onclick="orvShowHubStr()">&#8212;</button>
       <div class="orv-dd" id="orv-dd-me">
         <button class="orv-av" id="orv-av" onclick="orvTogMenu('orv-dd-me')">--</button>
@@ -11988,6 +12007,9 @@ function orvOuvrirDocument(paire) {
 function orvOuvrirDemande(id) {
   if (typeof drSwitchTab === 'function') drSwitchTab('demandes');
   if (id && typeof drOpenThread === 'function') setTimeout(function(){ drOpenThread(id); }, 200);
+  // Marquer lu ici couvre les deux entrees (hub et cloche) : sans cela,
+  // ouvrir depuis le hub laisserait la cloche allumee.
+  if (id && typeof _orvMarkThreadLu === 'function') _orvMarkThreadLu(id);
 }
 function orvOuvrirConsignes() {
   if (typeof drSwitchTab === 'function') drSwitchTab('consignes');
@@ -12101,6 +12123,7 @@ function orvSyncBar() {
     else   { btn.className = 'orv-alert calm'; btn.textContent = '\u2713 RAS'; btn.title = 'Rien d\'urgent'; }
   }
   orvSyncCrecheSelect();
+  orvNotifDemarrer();
 }
 
 /* ══ SOURCES DE BESOINS ══
@@ -12701,6 +12724,184 @@ function _orvMsgNonLu(demandeId, createdAt) {
 }
 function _orvMarkThreadLu(demandeId) {
   try { localStorage.setItem(_orvThreadLuKey(demandeId), new Date().toISOString()); } catch(e) {}
+}
+
+/* ══ NOTIFICATIONS RESEAU ══════════════════════════════════════════
+   La cloche n'est pas une seconde source de verite : elle rejoue, en
+   version legere, trois des sources deja collectees par le hub
+   (demande adressee, message non lu, consigne non lue). Le hub fait une
+   quinzaine de requetes et ne tourne qu'a son ouverture ; la cloche en
+   fait trois et peut donc se rafraichir en fond.
+
+   Extinction : une notification disparait des que l'element a ete
+   ouvert. On reutilise pour cela le marqueur de lecture des fils
+   (orv_thread_lu_<id>, local au poste), etendu aux consignes. Sans ce
+   marqueur, une demande adressee resterait affichee tant qu'elle est
+   ouverte — une cloche qui ne s'eteint jamais cesse d'etre lue. ── */
+
+let ORV_NOTIFS = [];
+let ORV_NOTIF_TIMER = null;
+const ORV_NOTIF_PERIODE = 90000;   // 90 s
+
+function _orvConsigneKey(id) { return 'consigne_' + id; }
+
+async function orvNotifCollecte() {
+  const out = [];
+  const moi = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null;
+  const mesDem = [];
+  const enAttente = [];   // demandes adressees, poussees apres la passe messages
+
+  // 1 ── Demandes qui me sont adressees et que je n'ai pas encore ouvertes
+  try {
+    const meSal = (typeof _drEnsureMe === 'function') ? await _drEnsureMe() : null;
+    if (meSal) {
+      const r = await fetch(SUPA_RH_URL + '/rest/v1/demandes_reseau'
+        + '?select=id,titre,creche_id,priorite,created_at'
+        + '&destinataire_id=eq.' + encodeURIComponent(meSal)
+        + '&statut=in.(ouvert,en_cours)&order=created_at.desc&limit=50',
+        { headers: SUPA_RH_HEADERS });
+      const rows = await r.json();
+      if (Array.isArray(rows)) rows.forEach(function(d) {
+        mesDem.push({ id:d.id, titre:d.titre });
+        if (!_orvMsgNonLu(d.id, d.created_at)) return;
+        enAttente.push({ k:'dem:' + d.id, n:(d.priorite === 'urgent' ? 1 : 2),
+                   g:(d.priorite === 'urgent' ? '\u25B2' : '\u25A0'),
+                   t:'Demande pour vous : ' + (d.titre || 'sans titre'),
+                   s:(d.creche_id || 'R\u00e9seau') + ' \u00b7 ' + _orvJourFr(d.created_at),
+                   lu:d.id, page:'demandesReseau', fn:'orvOuvrirDemande', arg:d.id });
+      });
+    }
+  } catch(e) { console.warn('[notif] demandes adress\u00e9es', e); }
+
+  // 2 ── Messages non lus dans les fils que j'ai ouverts ou recus
+  try {
+    if (moi) {
+      const r = await fetch(SUPA_RH_URL + '/rest/v1/demandes_reseau'
+        + '?select=id,titre&auteur_id=eq.' + encodeURIComponent(moi)
+        + '&order=created_at.desc&limit=40', { headers: SUPA_RH_HEADERS });
+      const rows = await r.json();
+      if (Array.isArray(rows)) rows.forEach(function(d) {
+        if (!mesDem.some(x => x.id === d.id)) mesDem.push({ id:d.id, titre:d.titre });
+      });
+    }
+    if (mesDem.length) {
+      const ids = mesDem.map(d => '"' + String(d.id).replace(/"/g, '') + '"').join(',');
+      const r = await fetch(SUPA_RH_URL + '/rest/v1/messages_reseau'
+        + '?select=demande_id,auteur_id,auteur_nom,created_at'
+        + '&demande_id=in.(' + encodeURIComponent(ids) + ')'
+        + '&order=created_at.desc&limit=300', { headers: SUPA_RH_HEADERS });
+      const rows = await r.json();
+      if (Array.isArray(rows)) {
+        const parFil = {};
+        rows.forEach(function(m) {
+          if (m.auteur_id && moi && m.auteur_id === moi) return;
+          if (!_orvMsgNonLu(m.demande_id, m.created_at)) return;
+          (parFil[m.demande_id] = parFil[m.demande_id] || []).push(m);
+        });
+        Object.keys(parFil).forEach(function(k) {
+          const d = mesDem.find(x => x.id === k) || {};
+          const nb = parFil[k].length;
+          out.push({ k:'msg:' + k, n:2, g:'\u25A0',
+                     t:nb + ' nouveau' + (nb > 1 ? 'x' : '') + ' message' + (nb > 1 ? 's' : '')
+                       + ' \u2014 ' + (d.titre || 'discussion'),
+                     s:(parFil[k][0].auteur_nom || 'un coll\u00e8gue')
+                       + ' \u00b7 ' + _orvJourFr(parFil[k][0].created_at),
+                     lu:k, page:'demandesReseau', fn:'orvOuvrirDemande', arg:k });
+        });
+      }
+    }
+  } catch(e) { console.warn('[notif] messages', e); }
+
+  // Un fil ne produit qu'une ligne. Quand une demande adressee a deja des
+  // reponses non lues, c'est le message qui porte l'information utile :
+  // annoncer "demande pour vous" ferait croire a une demande neuve.
+  enAttente.forEach(function(o) {
+    if (!out.some(x => x.k === 'msg:' + o.arg)) out.push(o);
+  });
+
+  // 3 ── Consignes non lues adressees a ma structure
+  try {
+    const cf = orvCrecheActive();
+    let url = SUPA_RH_URL + '/rest/v1/consignes_reseau?select=id,sujet,priorite,created_at&lue=eq.false&limit=100';
+    if (cf) url += '&or=(destinataire_creche.eq.' + encodeURIComponent(cf) + ',destinataire_creche.is.null)';
+    const r = await fetch(url, { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (Array.isArray(rows)) rows.forEach(function(c) {
+      if (!_orvMsgNonLu(_orvConsigneKey(c.id), c.created_at)) return;
+      out.push({ k:'cons:' + c.id, n:(c.priorite === 'urgent' ? 1 : 2),
+                 g:(c.priorite === 'urgent' ? '\u25B2' : '\u25A0'),
+                 t:'Consigne : ' + (c.sujet || 'sans sujet'),
+                 s:_orvJourFr(c.created_at),
+                 lu:_orvConsigneKey(c.id), page:'demandesReseau', fn:'orvOuvrirConsignes', arg:null });
+    });
+  } catch(e) { console.warn('[notif] consignes', e); }
+
+  out.sort(function(a, b) { return a.n - b.n; });
+  ORV_NOTIFS = out;
+  orvNotifRender();
+  return out;
+}
+
+function orvNotifRender() {
+  const btn = document.getElementById('orv-cloche');
+  if (btn) {
+    const n = ORV_NOTIFS.length;
+    btn.className = 'orv-cloche' + (n ? ' plein' : '');
+    btn.innerHTML = '\uD83D\uDD14' + (n ? ' ' + n : '');
+    btn.title = n ? n + ' notification(s) non lue(s)' : 'Aucune notification';
+  }
+  const el = document.getElementById('orv-menu-notif');
+  if (!el) return;
+  if (!ORV_NOTIFS.length) {
+    el.innerHTML = '<div class="orv-nvide">\u2713 Rien de nouveau</div>';
+    return;
+  }
+  let html = '<div class="orv-hd">Notifications</div>';
+  html += ORV_NOTIFS.map(function(o) {
+    return '<button class="orv-ni" onclick="orvNotifOuvrir(\'' + o.k.replace(/'/g, "\\'") + '\')">'
+      + '<div class="t"><span class="g">' + o.g + '</span>' + orvEsc(o.t) + '</div>'
+      + '<div class="s">' + orvEsc(o.s || '') + '</div></button>';
+  }).join('');
+  html += '<div class="orv-hr"></div>'
+    + '<button class="orv-mi" onclick="orvNotifToutLu()"><span class="ic">\u2713</span>Tout marquer comme lu</button>';
+  el.innerHTML = html;
+}
+
+function orvNotifTog() {
+  orvTogMenu('orv-dd-notif');
+  // Une cloche ouverte sur des donnees de 90 s parait cassee : on rafraichit.
+  orvNotifCollecte();
+}
+
+function orvNotifOuvrir(k) {
+  const o = ORV_NOTIFS.find(x => x.k === k);
+  orvCloseMenus();
+  if (!o) return;
+  if (o.lu) _orvMarkThreadLu(o.lu);
+  ORV_NOTIFS = ORV_NOTIFS.filter(x => x.k !== k);
+  orvNotifRender();
+  orvGoBesoin(o.page, o.fn, o.arg);
+}
+
+function orvNotifToutLu() {
+  ORV_NOTIFS.forEach(function(o) { if (o.lu) _orvMarkThreadLu(o.lu); });
+  ORV_NOTIFS = [];
+  orvNotifRender();
+  orvCloseMenus();
+  if (typeof showNotif === 'function') showNotif('\u2713 Notifications marqu\u00e9es comme lues');
+}
+
+/* Cycle de vie : un seul minuteur, suspendu quand l'onglet est en
+   arriere-plan (inutile de sonder Supabase sur un poste inactif). */
+function orvNotifDemarrer() {
+  if (ORV_NOTIF_TIMER) return;
+  orvNotifCollecte();
+  ORV_NOTIF_TIMER = setInterval(function() {
+    if (!document.hidden) orvNotifCollecte();
+  }, ORV_NOTIF_PERIODE);
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) orvNotifCollecte();
+  });
 }
 
 /* ── KPI par domaine (uniquement ceux réellement calculables) ── */
