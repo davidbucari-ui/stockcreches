@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-06 15:37 -->
+<!-- OREVY BUILD 2026-08-06 15:59 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -15015,9 +15015,14 @@ async function syncFromCloud() {
     if (Array.isArray(cmds)   && cmds.length   > 0) COMMANDES.splice(0,    COMMANDES.length,    ...cmds.map(rowToCommande));
     if (Array.isArray(fourns) && fourns.length > 0) FOURNISSEURS.splice(0, FOURNISSEURS.length, ...fourns.map(rowToFournisseur));
     if (Array.isArray(histos) && histos.length > 0) HISTORIQUE.splice(0,   HISTORIQUE.length,   ...histos.map(rowToHisto));
-    if (Array.isArray(univs)) {
+    // Garde identique aux autres collections : un cloud vide ne doit JAMAIS
+    // écraser le local (le saveData() qui suit grave l'effacement).
+    if (Array.isArray(univs) && univs.length > 0) {
       const mapped = univs.map(u => ({ ...u, desc: u.description || u.desc || '' }));
       UNIVERS.splice(0, UNIVERS.length, ...mapped);
+    } else if (Array.isArray(univs) && univs.length === 0 && UNIVERS.length > 0) {
+      console.warn('[univers] cloud vide, ' + UNIVERS.length +
+                   ' univers locaux conserv\u00e9s — utilisez ☑ Sync univers pour les remonter');
     }
     saveData();
     renderActiveInvTable(); renderStats(); renderCommandes(); renderFournisseurs(); renderHistorique(); updateCounts();
