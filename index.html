@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-06 09:04 -->
+<!-- OREVY BUILD 2026-08-06 09:38 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -11876,7 +11876,7 @@ const ORV_DOMAINES = [
       {id:'__docsstruct',  nom:'Documents de la structure'},
       {id:'__docsref',     nom:'Ressources réglementaires'}
     ],
-    aBrancher:['points de contrôle PMI','nouveaux textes (veille)'] }
+    aBrancher:['nouveaux textes (veille)'] }
 ];
 
 let ORV_CUR_DOM = null;      // domaine ouvert en vue pilotage
@@ -12248,6 +12248,68 @@ async function orvCollecterBesoins() {
       }
     }
   } catch(e) { console.warn('[hub] source incidents', e); }
+
+  // ── Conformité : contrôle PMI (auto-évaluation par structure) ──
+  try {
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/parametres'
+      + '?id=like.orevy_pmi_%25&select=id,data', { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    if (Array.isArray(rows)) {
+      const parCreche = {};
+      rows.forEach(function(x) {
+        const nom = String(x.id).replace(/^orevy_pmi_/, '');
+        if (nom.slice(-3) === '_ts') return;
+        parCreche[nom] = (x.data && x.data.data) ? x.data.data : null;
+      });
+
+      // Structures concernées : la crèche filtrée, sinon tout le réseau.
+      const structures = (CRECHES_DATA || []).map(c => c.nom).filter(n => !cf || n === cf);
+      const jamais = [], perimes = [], nonConf = [];
+
+      structures.forEach(function(nom) {
+        const d = parCreche[nom];
+        if (!d || !Object.keys(d).length) { jamais.push(nom); return; }
+        const dt = (d.meta && d.meta.date_controle) ? d.meta.date_controle : null;
+        // 12 mois : rythme d'auto-évaluation avant visite. Au-delà,
+        // les effectifs et les locaux ont bougé, la grille ne dit plus rien.
+        if (!dt || (Date.now() - new Date(dt)) > 365 * 864e5) perimes.push({ nom:nom, dt:dt });
+        const n = _orvPmiCompterNon(d);
+        if (n) nonConf.push({ nom:nom, n:n });
+      });
+
+      ORV_STATS.pmiJamaisFait = jamais.length;
+      ORV_STATS.pmiPointsNonConformes = nonConf.reduce((s, x) => s + x.n, 0);
+
+      // Un point relevé non conforme est une action à mener, pas un
+      // constat : il tient le niveau 1.
+      nonConf.slice(0, 4).forEach(function(x) {
+        out.push({ dom:'reglementaire', n:1,
+                   t:x.n + ' point' + (x.n > 1 ? 's' : '') + ' non conforme' + (x.n > 1 ? 's' : '')
+                     + ' au contr\u00f4le PMI',
+                   c:x.nom, q:'', act:'Ouvrir la grille', page:'__docsstruct',
+                   fn:'openPmiScreen', arg:null, src:'pmi.point_non_conforme' });
+      });
+      perimes.slice(0, 3).forEach(function(x) {
+        out.push({ dom:'reglementaire', n:2, t:'Auto-\u00e9valuation PMI \u00e0 refaire',
+                   c:x.nom, q:(x.dt ? 'dernier le ' + _orvJourFr(x.dt) : 'sans date'),
+                   act:'Ouvrir la grille', page:'__docsstruct',
+                   fn:'openPmiScreen', arg:null, src:'pmi.a_refaire' });
+      });
+      // Au-dela de 3, l'agregat : six lignes identiques noieraient le reste.
+      if (jamais.length && jamais.length <= 3) {
+        jamais.forEach(function(nom) {
+          out.push({ dom:'reglementaire', n:2, t:'Aucune auto-\u00e9valuation PMI',
+                     c:nom, q:'', act:'Lancer le contr\u00f4le', page:'__docsstruct',
+                     fn:'openPmiScreen', arg:null, src:'pmi.jamais_fait' });
+        });
+      } else if (jamais.length > 3) {
+        out.push({ dom:'reglementaire', n:2,
+                   t:jamais.length + ' structures sans auto-\u00e9valuation PMI',
+                   c:'R\u00e9seau', q:'', act:'Lancer le contr\u00f4le', page:'__docsstruct',
+                   fn:'openPmiScreen', arg:null, src:'pmi.jamais_fait' });
+      }
+    }
+  } catch(e) { console.warn('[hub] source PMI', e); }
 
   // ── Réseau : demandes qui me sont adressées ──
   let _meSal = null;
@@ -13034,6 +13096,24 @@ function orvNotifDemarrer() {
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden) orvNotifCollecte();
   });
+}
+
+/* Compte les points repondus "non" dans une grille PMI. L'arbre est
+   profond et sa forme evolue avec la grille : un parcours recursif
+   resiste aux ajouts de rubriques, une liste de chemins non. */
+function _orvPmiCompterNon(obj) {
+  let n = 0;
+  const vu = new Set();
+  (function marche(o) {
+    if (!o || typeof o !== 'object' || vu.has(o)) return;
+    vu.add(o);
+    Object.keys(o).forEach(function(k) {
+      const v = o[k];
+      if (v === 'non') n++;
+      else if (v && typeof v === 'object') marche(v);
+    });
+  })(obj);
+  return n;
 }
 
 /* Etat de la base documentaire : cache local, cloud, et ecart. */
@@ -29689,6 +29769,88 @@ let PMI_DATA = {};
 let PMI_CRECHE = '';
 let PMI_OPEN = new Set(['identite','encadrement']);
 
+/* ══ CONTROLE PMI — SORTIE DU LOCALSTORAGE ═════════════════════════
+   Meme schema que la base documentaire, avec deux differences :
+   - une cle PAR STRUCTURE (`orevy_pmi_<creche>`), car le controle est
+     propre a une creche ;
+   - une remontee DIFFEREE : pmiSet() est appele a chaque frappe dans
+     un champ texte ; pousser a chaque appel ferait une requete par
+     caractere.
+
+   Verrou : tant que la lecture cloud de la structure courante n'a pas
+   abouti, on n'ecrit pas. Sans lui, le pmiSet() de la date du jour
+   pose a l'ouverture ecraserait en base un controle rempli ailleurs
+   avant meme de l'avoir lu. ── */
+
+const PMI_DELAI_PUSH = 1500;
+let _pmiPushTimer = null;
+let _pmiSyncOk = false;
+let _pmiTs = {};              // { creche: horodatage adopte }
+
+function _pmiCle(creche) { return 'orevy_pmi_' + creche; }
+
+function _pmiEcrireLocal(creche, ts) {
+  try {
+    localStorage.setItem(_pmiCle(creche), JSON.stringify(PMI_DATA));
+    if (ts) localStorage.setItem(_pmiCle(creche) + '_ts', ts);
+  } catch(e) {}
+}
+function _pmiTsLocal(creche) {
+  try { return localStorage.getItem(_pmiCle(creche) + '_ts') || ''; } catch(e) { return ''; }
+}
+
+/* Remontee differee : on ne pousse qu'apres PMI_DELAI_PUSH sans
+   nouvelle modification. Une saisie continue ne produit qu'une seule
+   ecriture, a la fin. */
+function pmiPushDiffere() {
+  if (!_pmiSyncOk || !PMI_CRECHE) return;
+  clearTimeout(_pmiPushTimer);
+  _pmiPushTimer = setTimeout(function() { pmiPush(PMI_CRECHE); }, PMI_DELAI_PUSH);
+}
+
+async function pmiPush(creche) {
+  if (!creche) return;
+  const ts = new Date().toISOString();
+  _pmiTs[creche] = ts;
+  _pmiEcrireLocal(creche, ts);
+  try {
+    await sbUpsertParametre(_pmiCle(creche), { data: PMI_DATA, _ts: ts });
+  } catch(e) {
+    console.warn('[pmi] remontee impossible, conserve en local :', e.message || e);
+  }
+}
+
+/* Lecture cloud. Le plus recent fait foi ; un poste jamais synchronise
+   remonte ce qu'il porte — migration du localStorage historique. */
+async function pmiSyncCloud(creche) {
+  _pmiSyncOk = false;
+  try {
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/parametres?id=eq.'
+      + encodeURIComponent(_pmiCle(creche)) + '&select=data', { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    const cloud = (Array.isArray(rows) && rows[0] && rows[0].data) ? rows[0].data : null;
+    if (cloud && cloud.data) {
+      const tsC = cloud._ts || '', tsL = _pmiTsLocal(creche);
+      if (!tsL || tsC >= tsL) {
+        PMI_DATA = cloud.data;
+        pmiNormaliser();
+        _pmiEcrireLocal(creche, tsC);
+        _pmiTs[creche] = tsC;
+        _pmiSyncOk = true;
+        if (typeof pmiRenderBody === 'function') pmiRenderBody();
+        console.log('[pmi] ' + creche + ' : controle repris du cloud (' + (tsC || 'sans date') + ')');
+        return;
+      }
+    }
+    _pmiSyncOk = true;
+    // Rien en base, ou poste plus recent : on remonte.
+    if (Object.keys(PMI_DATA).length) await pmiPush(creche);
+  } catch(e) {
+    console.warn('[pmi] synchronisation', e);
+    _pmiSyncOk = true;   // sans reseau, on continue en local plutot que de bloquer la saisie
+  }
+}
+
 function pmiEsc(v) {
   return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -29707,7 +29869,8 @@ function pmiSet(path, val) {
     obj = obj[p];
   }
   obj[parts[parts.length-1]] = val;
-  try { localStorage.setItem('orevy_pmi_' + PMI_CRECHE, JSON.stringify(PMI_DATA)); } catch {}
+  _pmiEcrireLocal(PMI_CRECHE);
+  pmiPushDiffere();
 }
 function pmiToggle(path, val) {
   const cur = pmiGet(path);
@@ -29721,13 +29884,19 @@ function pmiToggleAcc(id) {
 function pmiNewSection(nom) {
   return { nom: nom || '', effectif:{}, salle_vie:{}, activites:{}, dortoir:{}, sanitaires:{} };
 }
-function pmiLoad(creche) {
-  try { PMI_DATA = JSON.parse(localStorage.getItem('orevy_pmi_' + creche) || 'null') || {}; }
-  catch { PMI_DATA = {}; }
+/* Complete les branches manquantes. Appelee sur la lecture locale ET
+   sur les donnees reprises du cloud, qui peuvent venir d'une version
+   anterieure de la grille. */
+function pmiNormaliser() {
   if (!PMI_DATA.meta) PMI_DATA.meta = {};
   if (!PMI_DATA.sections || !PMI_DATA.sections.length) PMI_DATA.sections = [pmiNewSection('Section unique')];
   ['encadrement','hygiene','restauration','cuisine','biberonnerie','sante','entree','affichages','bureau','repos','reunion','buanderie','menage','securite','exterieur','conclusion'].forEach(g => { if (!PMI_DATA[g]) PMI_DATA[g] = {}; });
   if (!PMI_DATA.encadrement.personnel) PMI_DATA.encadrement.personnel = {};
+}
+function pmiLoad(creche) {
+  try { PMI_DATA = JSON.parse(localStorage.getItem(_pmiCle(creche)) || 'null') || {}; }
+  catch { PMI_DATA = {}; }
+  pmiNormaliser();
 }
 function pmiCategorie(cap) {
   cap = Number(cap) || 0;
@@ -29871,7 +30040,7 @@ function pmiPrefill() {
 }
 
 // ── Ouverture / fermeture écran ──
-function openPmiScreen() {
+async function openPmiScreen() {
   document.getElementById('pmi-screen').style.display = 'block';
   document.body.style.overflow = 'hidden';
   const sel = document.getElementById('pmi-creche-sel');
@@ -29880,23 +30049,31 @@ function openPmiScreen() {
     ? currentCreche : ((CRECHES_DATA||[])[0] || {}).nom;
   sel.value = PMI_CRECHE || '';
   pmiLoad(PMI_CRECHE);
+  pmiRenderBody();                       // affichage immediat depuis le cache
+  await pmiSyncCloud(PMI_CRECHE);        // puis la reference
   if (!pmiGet('meta.date_controle')) pmiSet('meta.date_controle', new Date().toISOString().slice(0,10));
-  document.getElementById('pmi-date').value = pmiGet('meta.date_controle');
+  const dEl = document.getElementById('pmi-date');
+  if (dEl) dEl.value = pmiGet('meta.date_controle');
   pmiRenderBody();
 }
 function closePmiScreen() {
   document.getElementById('pmi-screen').style.display = 'none';
   document.body.style.overflow = '';
 }
-function pmiOnCrecheChange() {
+async function pmiOnCrecheChange() {
+  clearTimeout(_pmiPushTimer);            // ne pas ecrire la structure quittee
   PMI_CRECHE = document.getElementById('pmi-creche-sel').value;
   pmiLoad(PMI_CRECHE);
+  pmiRenderBody();
+  await pmiSyncCloud(PMI_CRECHE);
   if (!pmiGet('meta.date_controle')) pmiSet('meta.date_controle', new Date().toISOString().slice(0,10));
-  document.getElementById('pmi-date').value = pmiGet('meta.date_controle');
+  const dEl = document.getElementById('pmi-date');
+  if (dEl) dEl.value = pmiGet('meta.date_controle');
   pmiRenderBody();
 }
 function pmiSave() {
-  try { localStorage.setItem('orevy_pmi_' + PMI_CRECHE, JSON.stringify(PMI_DATA)); } catch {}
+  clearTimeout(_pmiPushTimer);
+  pmiPush(PMI_CRECHE);          // bouton Enregistrer : remontee immediate
   const idx = (CRECHES_DATA||[]).findIndex(c => c.nom === PMI_CRECHE);
   if (idx >= 0 && pmiGet('meta.capacite')) {
     CRECHES_DATA[idx].capacite = Number(pmiGet('meta.capacite'));
