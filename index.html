@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-06 08:22 -->
+<!-- OREVY BUILD 2026-08-06 08:39 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -12722,8 +12722,19 @@ function _orvMsgNonLu(demandeId, createdAt) {
     return new Date(createdAt) > new Date(v);
   } catch(e) { return true; }
 }
-function _orvMarkThreadLu(demandeId) {
-  try { localStorage.setItem(_orvThreadLuKey(demandeId), new Date().toISOString()); } catch(e) {}
+/* Borne de lecture d'un fil. `dateIso` = date du DERNIER message
+   reellement affiche. Sans elle on retombe sur l'heure d'ouverture,
+   ce qui avale les messages arrives pendant qu'on lisait. */
+function _orvMarkThreadLu(demandeId, dateIso) {
+  try {
+    const d = dateIso ? new Date(dateIso) : new Date();
+    if (isNaN(d)) return;
+    // Ne jamais reculer la borne : rouvrir un vieux fil ne doit pas
+    // faire resurgir des messages deja lus.
+    const anc = localStorage.getItem(_orvThreadLuKey(demandeId));
+    if (anc && new Date(anc) >= d) return;
+    localStorage.setItem(_orvThreadLuKey(demandeId), d.toISOString());
+  } catch(e) {}
 }
 
 /* ══ NOTIFICATIONS RESEAU ══════════════════════════════════════════
@@ -13023,6 +13034,19 @@ function orvNotifDemarrer() {
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden) orvNotifCollecte();
   });
+}
+
+/* Remet a zero les bornes de lecture de ce poste : toutes les
+   notifications reapparaissent. Utile pour tester, sans effet en base. */
+async function orvNotifReset() {
+  let n = 0;
+  try {
+    Object.keys(localStorage).filter(k => k.indexOf('orv_thread_lu_') === 0)
+      .forEach(function(k) { localStorage.removeItem(k); n++; });
+  } catch(e) {}
+  _orvNotifVues = null;
+  console.log('[notif] ' + n + ' borne(s) de lecture effacee(s)');
+  return await orvNotifCollecte();
 }
 
 /* ── KPI par domaine (uniquement ceux réellement calculables) ── */
@@ -21774,7 +21798,11 @@ async function drRenderThread() {
   try {
     const r = await fetch(SUPA_RH_URL + '/rest/v1/messages_reseau?select=*&demande_id=eq.' + encodeURIComponent(_drThreadId) + '&order=created_at.asc', { headers: SUPA_RH_HEADERS });
     const msgs = await r.json();
-    if (!Array.isArray(msgs) || !msgs.length) { box.innerHTML = '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:12px">Aucun message. Lancez la discussion 👇</div>'; return; }
+    if (!Array.isArray(msgs) || !msgs.length) {
+      box.innerHTML = '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:12px">Aucun message. Lancez la discussion 👇</div>';
+      if (typeof _orvMarkThreadLu === 'function') _orvMarkThreadLu(_drThreadId);
+      return;
+    }
     const myId = currentUser?.id;
     box.innerHTML = msgs.map(mm => {
       const mine = mm.auteur_id && mm.auteur_id === myId;
@@ -21788,7 +21816,9 @@ async function drRenderThread() {
       '</div>';
     }).join('');
     box.scrollTop = box.scrollHeight;
-    if (typeof _orvMarkThreadLu === 'function') _orvMarkThreadLu(_drThreadId);
+    if (typeof _orvMarkThreadLu === 'function') {
+      _orvMarkThreadLu(_drThreadId, msgs[msgs.length - 1].created_at);
+    }
   } catch(e) { box.innerHTML = '<div style="color:var(--red);font-size:12px">Erreur : ' + e.message + '</div>'; }
 }
 async function drSendThreadMsg() {
