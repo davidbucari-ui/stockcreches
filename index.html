@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-06 12:22 -->
+<!-- OREVY BUILD 2026-08-06 15:37 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -1970,13 +1970,7 @@ textarea { resize: vertical; min-height: 72px; }
         <div id="univers-counters" style="display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 16px"></div>
         <!-- Filtres crèches (internes à l'onglet) -->
         <div style="padding:0 20px 8px;display:flex;flex-wrap:wrap;gap:6px" id="univers-creche-filters">
-          <div class="filter-chip active" onclick="filterUniversCreche('all', this)">Toutes les crèches</div>
-          <div class="filter-chip" onclick="filterUniversCreche('Brunet', this)" style="color:#F59E0B;border-color:#F59E0B">● Brunet</div>
-          <div class="filter-chip" onclick="filterUniversCreche('Cuers', this)" style="color:#10B981;border-color:#10B981">● Cuers</div>
-          <div class="filter-chip" onclick="filterUniversCreche('Ollioules', this)" style="color:#EF4444;border-color:#EF4444">● Ollioules</div>
-          <div class="filter-chip" onclick="filterUniversCreche('St Jean', this)" style="color:#8B5CF6;border-color:#8B5CF6">● St Jean</div>
-          <div class="filter-chip" onclick="filterUniversCreche('Picot 1', this)" style="color:#0EA5E9;border-color:#0EA5E9">● Picot 1</div>
-          <div class="filter-chip" onclick="filterUniversCreche('Picot 2', this)" style="color:#F43F5E;border-color:#F43F5E">● Picot 2</div>
+          <!-- rempli par renderUniversCrecheFilters() -->
         </div>
         <div style="padding:0 20px 16px;display:flex;flex-wrap:wrap;gap:8px" id="univers-cat-filters">
           <div class="filter-chip active" onclick="filterUnivers('all', this)">Tout</div>
@@ -2962,10 +2956,7 @@ textarea { resize: vertical; min-height: 72px; }
       <div class="form-grid">
         <div class="form-group">
           <label>Crèche</label>
-          <select id="ia-creche">
-            <option>Brunet</option><option>Cuers</option><option>Ollioules</option>
-            <option>St Jean</option><option>Picot 1</option><option>Picot 2</option>
-          </select>
+          <select id="ia-creche"><!-- rempli par uRemplirSelectCreche() --></select>
         </div>
         <div class="form-group">
           <label>Catégorie souhaitée</label>
@@ -3048,10 +3039,7 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
         <div class="form-group">
           <label>Crèche *</label>
-          <select id="u-creche">
-            <option>Brunet</option><option>Cuers</option><option>Ollioules</option>
-            <option>St Jean</option><option>Picot 1</option><option>Picot 2</option>
-          </select>
+          <select id="u-creche"><!-- rempli par uRemplirSelectCreche() --></select>
         </div>
         <div class="form-group">
           <label>Catégorie principale</label>
@@ -13878,6 +13866,8 @@ function renderUnivers() {
   const list = document.getElementById('univers-list');
   if (!list) return;
 
+  renderUniversCrecheFilters();
+
   // ── Compteurs par catégorie ──
   const countersEl = document.getElementById('univers-counters');
   if (countersEl) {
@@ -13956,6 +13946,39 @@ function renderUnivers() {
 }
 
 let _universCrecheFilter = 'all';
+
+// Remplit un <select> de structures depuis CRECHES_DATA (source unique).
+// Conserve la valeur en cours si elle existe encore ; sinon prend `defaut`.
+function uRemplirSelectCreche(id, defaut) {
+  const sel = document.getElementById(id);
+  if (!sel) return null;
+  const noms = (typeof CRECHES !== 'undefined' && CRECHES.length) ? CRECHES : [];
+  const avant = sel.value;
+  sel.innerHTML = noms.map(n => '<option>' + orvEsc(n) + '</option>').join('');
+  const veut = (defaut && noms.indexOf(defaut) !== -1) ? defaut
+             : (noms.indexOf(avant) !== -1 ? avant : (noms[0] || ''));
+  sel.value = veut;
+  return sel.value;
+}
+
+// Chips de filtre par structure, reconstruits à chaque rendu.
+function renderUniversCrecheFilters() {
+  const box = document.getElementById('univers-creche-filters');
+  if (!box) return;
+  const noms = (typeof CRECHES !== 'undefined' && CRECHES.length) ? CRECHES : [];
+  const cur  = (typeof _universCrecheFilter !== 'undefined') ? _universCrecheFilter : 'all';
+  let html = '<div class="filter-chip' + (cur === 'all' ? ' active' : '') +
+             '" onclick="filterUniversCreche(\'all\', this)">Toutes les structures</div>';
+  noms.forEach(n => {
+    const nb = UNIVERS.filter(u => u.creche === n).length;
+    const on = (cur === n);
+    html += '<div class="filter-chip' + (on ? ' active' : '') +
+            '" onclick="filterUniversCreche(\'' + orvEsc(n).replace(/'/g, "\\'") + '\', this)">' +
+            (on ? '\u25cf ' : '\u25cb ') + orvEsc(n) +
+            (nb ? ' <span style="opacity:.6">(' + nb + ')</span>' : '') + '</div>';
+  });
+  box.innerHTML = html;
+}
 
 function filterUniversCreche(creche, el) {
   _universCrecheFilter = creche;
@@ -14106,7 +14129,8 @@ function openModal_univers() {
   // Pré-sélectionner la crèche active
   const crecheEl = document.getElementById('u-creche');
   if (crecheEl) {
-    crecheEl.value = (currentCreche && currentCreche !== 'all') ? currentCreche : CRECHES[0];
+    uRemplirSelectCreche('u-creche',
+      (currentCreche && currentCreche !== 'all' && currentCreche !== '__all__') ? currentCreche : CRECHES[0]);
     crecheEl.onchange = () => {
       buildArticlePicker(crecheEl.value, []);
       buildEnrichissementPicker(crecheEl.value, []);
@@ -23016,7 +23040,10 @@ function importExcel(event) {
 
       const CATS_VALID    = ['Sensoriel','Manipulation','Construction','Motricité','Imitation',
                              'Expression artistique','Mobilier','Puériculture','Bureautique'];
-      const STRUCTS_VALID = ['Brunet','Cuers','Ollioules','St Jean','Picot 1','Picot 2'];
+      // Structures valides = celles de la configuration, + anciens noms tolérés.
+      const STRUCTS_VALID = (typeof CRECHES !== 'undefined' && CRECHES.length)
+        ? CRECHES.concat(Object.keys(OLD_NAMES || {}))
+        : Object.keys(OLD_NAMES || {});
 
       let imported = 0, skipped = 0, warnings = [];
       const newArticles = [];
@@ -23099,8 +23126,8 @@ function importExcel(event) {
 // ─── SUGGESTIONS IA ──────────────────────────────────────────────────────
 
 function ouvrirSuggestionsIA() {
-  const iaCreche = document.getElementById('ia-creche');
-  if (iaCreche && currentCreche && currentCreche !== 'all') iaCreche.value = currentCreche;
+  uRemplirSelectCreche('ia-creche',
+    (currentCreche && currentCreche !== 'all' && currentCreche !== '__all__') ? currentCreche : null);
   document.getElementById('ia-result').style.display = 'none';
   document.getElementById('ia-result').innerHTML = '';
   document.getElementById('modal-ia').classList.add('open');
