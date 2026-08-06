@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-06 09:38 -->
+<!-- OREVY BUILD 2026-08-06 12:13 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -1701,6 +1701,13 @@ textarea { resize: vertical; min-height: 72px; }
           <div id="planning-horaires-config"></div>
         </div>
 
+        <!-- SECTION 5c : Planning — Encadrement -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Planning &mdash; Option d'encadrement</div>
+        <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:28px;box-shadow:var(--shadow)">
+          <div style="font-size:13px;color:var(--ink2);margin-bottom:16px;line-height:1.5">R&egrave;gle de calcul du nombre de professionnels requis (art. R.2324-43 CASF). Elle s'applique &agrave; l'ensemble du r&eacute;seau et pilote le g&eacute;n&eacute;rateur de planning ainsi que les alertes de sous-effectif.</div>
+          <div id="option-encadrement-config"></div>
+        </div>
+
         <!-- SECTION 5b : Planning — Ouverture -->
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Planning — Jours et heures d'ouverture</div>
         <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:28px;box-shadow:var(--shadow)">
@@ -2214,7 +2221,7 @@ textarea { resize: vertical; min-height: 72px; }
           </div>
           <div class="fiche-card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-              <div class="fiche-card-title" style="margin-bottom:0">Référents autorisés</div>
+              <div class="fiche-card-title" style="margin-bottom:0">Personnes autoris&eacute;es &agrave; r&eacute;cup&eacute;rer l'enfant</div>
               <button onclick="addReferent()" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--ink3);font-family:inherit">+ Ajouter</button>
             </div>
             <div id="fi-referents-list"></div>
@@ -5878,7 +5885,11 @@ function renderFamillesFinancement_inner(el, psu, paje, hPSU, hPAJE, isAll, opti
     </div>
 
     
-    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+    <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:16px;font-size:12.5px;color:var(--ink2)">
+      Calcul&eacute; avec l'<strong>option ${option==='6'?'B (1 pro / 6 enfants)':'A (1/5 non-marcheurs + 1/8 marcheurs)'}</strong>.
+      Se r&egrave;gle dans Param&egrave;tres &rsaquo; Planning &mdash; Option d'encadrement.
+    </div>
+    <div style="display:none">
       <div style="font-size:14px;font-weight:700;margin-bottom:12px">⚙️ Option d'encadrement réglementaire</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid ${option==='NM8M'?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;background:${option==='NM8M'?'var(--accent-lt)':'var(--surface2)'}">
@@ -5932,8 +5943,41 @@ function saveOptionEncadrement(val) {
   const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
   prefs.optionEncadrement = val;
   localStorage.setItem('orevy_prefs', JSON.stringify(prefs));
-  renderFamillesKPI();
-  renderFamillesFinancement();
+  // Remontee : sans elle, chaque poste calculait son propre seuil.
+  sbUpsertParametre('orevy_prefs', prefs)
+    .catch(e => console.warn('[Params] sync option encadrement:', e));
+  if (typeof renderFamillesKPI === 'function') renderFamillesKPI();
+  if (typeof renderFamillesFinancement === 'function') renderFamillesFinancement();
+  if (typeof renderOptionEncadrement === 'function') renderOptionEncadrement();
+  if (typeof showNotif === 'function') {
+    showNotif('\u2713 Option ' + (val === '6' ? 'B' : 'A') + ' \u2014 appliqu\u00e9e au r\u00e9seau');
+  }
+}
+
+/* Rendu du bloc dans Parametres. Le choix est encode par le glyphe
+   (\u25cf retenu / \u25cb non retenu) et le libelle, pas par la couleur du cadre. */
+function renderOptionEncadrement() {
+  const el = document.getElementById('option-encadrement-config');
+  if (!el) return;
+  const prefs = JSON.parse(localStorage.getItem('orevy_prefs') || '{}');
+  const option = prefs.optionEncadrement || 'NM8M';
+  const carte = (val, titre, regle, detail) => {
+    const on = option === val;
+    return '<label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;flex:1;min-width:240px;'
+      + 'border:' + (on ? '2px solid var(--ink)' : '1.5px solid var(--border)') + ';border-radius:10px;cursor:pointer;'
+      + 'background:' + (on ? 'var(--bg)' : 'var(--surface)') + '">'
+      + '<input type="radio" name="opt-enc-param" value="' + val + '"' + (on ? ' checked' : '')
+      +   ' onchange="saveOptionEncadrement(\'' + val + '\')" style="margin-top:3px">'
+      + '<div><div style="font-size:13px;font-weight:700">' + (on ? '\u25cf ' : '\u25cb ') + titre + '</div>'
+      +   '<div style="font-size:12px;color:var(--ink2);margin-top:2px">' + regle + '</div>'
+      +   '<div style="font-size:11px;color:var(--ink3);margin-top:4px">' + detail + '</div></div></label>';
+  };
+  el.innerHTML = '<div style="display:flex;gap:12px;flex-wrap:wrap">'
+    + carte('NM8M', 'Option A', '1 pro / 5 non-marcheurs + 1 pro / 8 marcheurs',
+            'Arrondi \u00e0 l\'entier sup\u00e9rieur pour chaque groupe.')
+    + carte('6', 'Option B', '1 pro / 6 enfants, tous \u00e2ges confondus',
+            'Plus simple, souvent plus exigeant quand les marcheurs dominent.')
+    + '</div>';
 }
 
 // ── Tabs familles ─────────────────────────────────────────────────
@@ -6541,6 +6585,12 @@ function openFicheEnfant(id) {
   const crecheReelle = e._creche || crecheId;
 
   ficheReferents = e.referents ? JSON.parse(JSON.stringify(e.referents)) : [];
+  // L'autorisation signee fait foi pour la liste : on la charge, puis
+  // on re-rend. Le premier rendu affiche l'etat "aucune" une fraction
+  // de seconde, ce qui vaut mieux qu'une fiche figee sur une attente.
+  chargerAutorisationRecup(e.id).then(function() {
+    if (typeof renderReferents === 'function') renderReferents();
+  });
 
   // Avatar + nom
   const initials = ((e.prenom||'')[0]||'') + ((e.nom||'')[0]||'');
@@ -7232,7 +7282,99 @@ function syncTarifCAF() {
   }
 }
 
+/* Cle de rapprochement entre une ligne du document signe et les
+   coordonnees conservees en fiche. Le document ne fournit qu'un nom
+   libre : on normalise (accents, casse, espaces) pour qu'une saisie
+   legerement differente ne cree pas un doublon. */
+function _refCle(nom) {
+  return String(nom || '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+}
+
+let ficheAutorisation = null;     // instance signee la plus recente
+
+/* Recupere la derniere autorisation "Personnes autorisees" de l'enfant.
+   On prend la plus recente toutes signatures confondues : une
+   autorisation en attente de signature doit etre visible, marquee
+   comme telle, plutot que masquee. */
+async function chargerAutorisationRecup(enfantId) {
+  ficheAutorisation = null;
+  if (!enfantId) return null;
+  try {
+    const r = await sbGet('documents_instances',
+      'enfant_id=eq.' + encodeURIComponent(enfantId)
+      + '&modele_id=eq.mod_recuperation&order=updated_at.desc&limit=1&select=*');
+    if (Array.isArray(r) && r[0]) ficheAutorisation = r[0];
+  } catch(e) { console.warn('[fiche] autorisation r\u00e9cup\u00e9ration', e); }
+  return ficheAutorisation;
+}
+
+/* Etat de l'autorisation, encode par glyphe + texte (jamais couleur seule). */
+function _refEtatAutorisation() {
+  const a = ficheAutorisation;
+  if (!a) return { g:'\u25cb', t:'Aucune autorisation enregistr\u00e9e', agir:true };
+  const sig = Array.isArray(a.signatures) ? a.signatures : [];
+  const manque = sig.filter(s => !s.signe).length;
+  if (manque) return { g:'\u25b3', t:manque + ' signature(s) en attente', agir:true };
+  if (a.valable_jusqu_au) {
+    const j = Math.round((new Date(a.valable_jusqu_au) - Date.now()) / 864e5);
+    if (j < 0)  return { g:'\u25b2', t:'Autorisation expir\u00e9e le ' + a.valable_jusqu_au, agir:true };
+    if (j < 45) return { g:'\u25b3', t:'\u00c0 renouveler \u2014 valable jusqu\'au ' + a.valable_jusqu_au, agir:true };
+    return { g:'\u25cf', t:'Sign\u00e9e \u2014 valable jusqu\'au ' + a.valable_jusqu_au, agir:false };
+  }
+  return { g:'\u25cf', t:'Sign\u00e9e', agir:false };
+}
+
 function renderReferents() {
+  const el = document.getElementById('fi-referents-list');
+  if (!el) return;
+
+  const et = _refEtatAutorisation();
+  const bouton = '<button onclick="ouvrirAutorisationRecup()" style="margin-left:auto;background:none;'
+    + 'border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11.5px;'
+    + 'cursor:pointer;color:var(--ink2);font-family:inherit;white-space:nowrap">'
+    + (ficheAutorisation ? 'Ouvrir le document' : '\u270e \u00c9tablir l\'autorisation') + '</button>';
+  const bandeau = '<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--bg);'
+    + 'border:1px solid var(--border);border-radius:9px;margin-bottom:10px;font-size:12.5px">'
+    + '<span style="font-weight:700">' + et.g + '</span>'
+    + '<span>' + et.t + '</span>' + bouton + '</div>';
+
+  // Liste issue du document : source unique, non modifiable ici.
+  const pers = (ficheAutorisation && ficheAutorisation.valeurs && Array.isArray(ficheAutorisation.valeurs.pers))
+    ? ficheAutorisation.valeurs.pers.filter(p => p && (p.nom || '').trim()) : [];
+
+  if (!pers.length) {
+    el.innerHTML = bandeau
+      + '<div style="color:var(--ink3);font-size:13px;padding:8px 0">'
+      + 'Aucune personne autoris\u00e9e. La liste se remplit depuis l\'autorisation sign\u00e9e par le parent.</div>';
+    return;
+  }
+
+  // Coordonnees conservees en fiche, rapprochees par nom normalise.
+  const parCle = {};
+  (ficheReferents || []).forEach(r => { parCle[_refCle(r.nom || ((r.prenom||'') + ' ' + (r.nom||'')))] = r; });
+
+  el.innerHTML = bandeau + pers.map(function(p, i) {
+    const cle = _refCle(p.nom);
+    const c = parCle[cle] || {};
+    return '<div class="referent-block">'
+      + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px">'
+      +   '<strong style="font-size:14px">' + orvEsc(p.nom) + '</strong>'
+      +   '<span style="font-size:12px;color:var(--ink3)">' + orvEsc(p.lien || '') + '</span>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+      +   '<div class="fi-field"><label>T\u00e9l\u00e9phone</label>'
+      +     '<input value="' + orvEsc(c.tel || '') + '" oninput="majCoordRef(\'' + cle + '\',\'tel\',this.value)"></div>'
+      +   '<div class="fi-field"><label>Pi\u00e8ce d\'identit\u00e9</label>'
+      +     '<input value="' + orvEsc(c.piece || '') + '" placeholder="Type + n\u00b0" '
+      +     'oninput="majCoordRef(\'' + cle + '\',\'piece\',this.value)"></div>'
+      + '</div></div>';
+  }).join('');
+  return;
+}
+
+/* Ancien rendu conserve pour reference historique — plus appele. */
+function renderReferentsLegacy() {
   const el = document.getElementById('fi-referents-list');
   if (!el) return;
   if (!ficheReferents.length) {
@@ -7261,9 +7403,30 @@ function renderReferents() {
     </div>`).join('');
 }
 
-function addReferent() {
-  ficheReferents.push({ prenom:'', nom:'', lien:'Autre', tel:'', piece:'' });
-  renderReferents();
+/* Ajouter une personne = etablir une nouvelle autorisation signee.
+   Conserve sous son ancien nom : le bouton du HTML l'appelle encore. */
+function addReferent() { ouvrirAutorisationRecup(); }
+
+function ouvrirAutorisationRecup() {
+  if (typeof dmOpen !== 'function') { showNotif('\u26a0 Module documents indisponible'); return; }
+  // dmOpen(modeleId, instanceId) : rouvre l'autorisation existante,
+  // ou en ouvre une vierge s'il n'y en a pas encore.
+  dmOpen('mod_recuperation', ficheAutorisation ? ficheAutorisation.id : undefined);
+}
+
+/* Ecrit les coordonnees dans ficheReferents, en creant l'entree si la
+   personne vient d'apparaitre dans le document. La cle normalisee sert
+   d'identifiant : le nom brut est conserve pour rester lisible en base. */
+function majCoordRef(cle, champ, val) {
+  if (!Array.isArray(ficheReferents)) ficheReferents = [];
+  let r = ficheReferents.find(x => _refCle(x.nom || ((x.prenom||'') + ' ' + (x.nom||''))) === cle);
+  if (!r) {
+    const src = (ficheAutorisation && ficheAutorisation.valeurs && ficheAutorisation.valeurs.pers || [])
+      .find(p => _refCle(p.nom) === cle);
+    r = { nom:(src && src.nom) || '', lien:(src && src.lien) || '', tel:'', piece:'' };
+    ficheReferents.push(r);
+  }
+  r[champ] = val;
 }
 
 function removeReferent(i) {
@@ -9043,6 +9206,7 @@ function renderParametres() {
   }).join('');
   if (typeof renderPlanningParamHoraires === 'function') renderPlanningParamHoraires();
   if (typeof renderParamOuverture === 'function') renderParamOuverture();
+  if (typeof renderOptionEncadrement === 'function') renderOptionEncadrement();
 }
 
 function setAccentColor(color) {
