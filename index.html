@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-06 08:39 -->
+<!-- OREVY BUILD 2026-08-06 09:04 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -13034,6 +13034,31 @@ function orvNotifDemarrer() {
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden) orvNotifCollecte();
   });
+}
+
+/* Etat de la base documentaire : cache local, cloud, et ecart. */
+async function orvDiagDocs() {
+  console.log('\u2500\u2500 Base documentaire \u2500\u2500');
+  console.log('cache local : ' + DS_DOCS.length + ' doc(s), '
+    + Object.keys(DS_DOC_CATS_EXTRA).length + ' cat\u00e9gorie(s) perso, _ts=' + (_dsDocTsLocal() || '(aucun)'));
+  try {
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/parametres?id=eq.'
+      + encodeURIComponent(DS_DOC_CLE) + '&select=data,updated_at', { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    const c = (Array.isArray(rows) && rows[0]) ? rows[0] : null;
+    if (!c) { console.warn('cloud       : AUCUNE entr\u00e9e \u2014 rien n a encore \u00e9t\u00e9 remont\u00e9'); return; }
+    const d = c.data || {};
+    console.log('cloud       : ' + (d.docs || []).length + ' doc(s), '
+      + Object.keys(d.cats || {}).length + ' cat\u00e9gorie(s) perso, _ts=' + (d._ts || '(aucun)'));
+    const ecart = (d.docs || []).length !== DS_DOCS.length;
+    console.log(ecart ? '\u26a0 \u00e9cart entre le poste et le cloud' : '\u2713 poste et cloud concordent');
+    // Sous-categories : verifier qu aucune ne pointe vers un parent absent
+    const all = { ...DS_DOC_CATS, ...(d.cats || {}) };
+    Object.keys(d.cats || {}).forEach(function(k) {
+      const p = d.cats[k].parent;
+      if (p && !all[p]) console.warn('\u26a0 sous-cat\u00e9gorie orpheline : ' + k + ' \u2192 parent ' + p + ' introuvable');
+    });
+  } catch(e) { console.warn('lecture cloud', e); }
 }
 
 /* Remet a zero les bornes de lecture de ce poste : toutes les
@@ -26324,8 +26349,92 @@ let DS_DOCS = JSON.parse(localStorage.getItem('orevy_docs') || 'null') || [
 ];
 let dsSearchQuery = '';
 
+/* ══ BASE DOCUMENTAIRE — SORTIE DU LOCALSTORAGE ════════════════════
+   Meme schema que le planning (4/08) : le localStorage devient un
+   cache de poste, la reference vit dans `parametres`. Une seule cle
+   (`orevy_base_documentaire`) porte docs + categories, car les deux
+   changent ensemble.
+
+   Portee : reseau, comme aujourd'hui. Le module n'a jamais eu de
+   dimension par structure ; l'introduire en meme temps que le
+   changement de stockage melangerait deux migrations. A trancher
+   plus tard : un reglement de fonctionnement est propre a une
+   creche, un protocole de change est commun au reseau.
+
+   Conflit : dernier ecrivain gagne, comme pour le planning. Deux
+   directrices qui editent la meme minute, l'une perd sa saisie —
+   acceptable ici (edition rare, volume faible). ── */
+
+const DS_DOC_CLE = 'orevy_base_documentaire';
+let _dsDocPousse = '';        // derniere charge utile poussee (anti-doublon)
+let _dsDocSynced = false;
+
+function _dsDocTsLocal() {
+  try { return localStorage.getItem('orevy_docs_ts') || ''; } catch(e) { return ''; }
+}
+function _dsDocEcrireLocal(ts) {
+  try {
+    localStorage.setItem('orevy_docs', JSON.stringify(DS_DOCS));
+    localStorage.setItem('orevy_doc_cats_extra', JSON.stringify(DS_DOC_CATS_EXTRA));
+    if (ts) localStorage.setItem('orevy_docs_ts', ts);
+  } catch(e) { console.warn('[docs] cache local', e); }
+}
+
+/* Ecriture : cache local d'abord (l'interface reste vive et le poste
+   garde une copie si le reseau tombe), puis remontee. */
 function dsSaveDocsLocal() {
-  localStorage.setItem('orevy_docs', JSON.stringify(DS_DOCS));
+  const ts = new Date().toISOString();
+  _dsDocEcrireLocal(ts);
+  dsDocPush(ts);
+}
+
+async function dsDocPush(ts) {
+  const charge = { docs: DS_DOCS, cats: DS_DOC_CATS_EXTRA, _ts: ts || new Date().toISOString() };
+  const sig = JSON.stringify({ d: charge.docs, c: charge.cats });
+  if (sig === _dsDocPousse) return;      // rien n'a change : pas d'ecriture
+  try {
+    await sbUpsertParametre(DS_DOC_CLE, charge);
+    _dsDocPousse = sig;
+  } catch(e) {
+    console.warn('[docs] remontee impossible, conserve en local :', e.message || e);
+    if (typeof showNotif === 'function') showNotif('\u26a0 Documents enregistr\u00e9s localement (pas de r\u00e9seau)');
+  }
+}
+
+/* Lecture au demarrage. Le plus recent `_ts` fait foi. Si le cloud est
+   vide alors que le poste a des donnees, on remonte : c'est la
+   migration du localStorage historique, une fois, sans intervention. */
+async function dsDocSyncCloud() {
+  if (_dsDocSynced) return;
+  _dsDocSynced = true;
+  try {
+    const r = await fetch(SUPA_RH_URL + '/rest/v1/parametres?id=eq.'
+      + encodeURIComponent(DS_DOC_CLE) + '&select=data', { headers: SUPA_RH_HEADERS });
+    const rows = await r.json();
+    const cloud = (Array.isArray(rows) && rows[0] && rows[0].data) ? rows[0].data : null;
+
+    if (cloud && Array.isArray(cloud.docs)) {
+      const tsC = cloud._ts || '', tsL = _dsDocTsLocal();
+      if (!tsL || tsC >= tsL) {
+        DS_DOCS = cloud.docs;
+        DS_DOC_CATS_EXTRA = cloud.cats || {};
+        _dsDocEcrireLocal(tsC);
+        _dsDocPousse = JSON.stringify({ d: DS_DOCS, c: DS_DOC_CATS_EXTRA });
+        console.log('[docs] ' + DS_DOCS.length + ' document(s) et '
+          + Object.keys(DS_DOC_CATS_EXTRA).length + ' cat\u00e9gorie(s) repris du cloud');
+        return;
+      }
+      // Le poste est plus recent : on remonte.
+      console.log('[docs] cache local plus r\u00e9cent que le cloud, remont\u00e9e');
+      await dsDocPush(_dsDocTsLocal());
+      return;
+    }
+    // Premiere fois : rien en base, on installe ce que porte le poste.
+    console.log('[docs] premi\u00e8re remont\u00e9e : ' + DS_DOCS.length + ' document(s)');
+    await dsDocPush(_dsDocTsLocal() || new Date().toISOString());
+  } catch(e) {
+    console.warn('[docs] synchronisation cloud', e);
+  }
 }
 
 // ── Rendu catégories + compteurs ───────────────────────────────
@@ -26627,14 +26736,15 @@ function dsDocSaveCat() {
     const pc = dsDocGetAllCats()[parent];
     DS_DOC_CATS_EXTRA[id].parent = (pc && pc.parent) ? pc.parent : parent;
   }
-  localStorage.setItem('orevy_doc_cats_extra', JSON.stringify(DS_DOC_CATS_EXTRA));
+  dsSaveDocsLocal();
   dsDocCloseCatModal();
   dsDocRenderExtraCats();
   dsDocUpdateCounts();
 }
 
 // ── Init documentaire ──────────────────────────────────────────
-function dsDocInit() {
+async function dsDocInit() {
+  await dsDocSyncCloud();
   if (typeof dmInit === 'function') dmInit();
   dsDocUpdateCounts();
   dsDocRenderExtraCats();
