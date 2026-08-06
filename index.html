@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-06 00:24 -->
+<!-- OREVY BUILD 2026-08-06 07:39 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -77,8 +77,11 @@ body {
 .orv-home { display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer;
   padding:5px 8px; border-radius:9px; flex:0 0 auto; }
 .orv-home:hover { background:var(--bg); }
-.orv-mark { width:28px; height:28px; border-radius:8px; background:#8FAF8A; display:flex;
-  align-items:center; justify-content:center; flex:0 0 28px; }
+.orv-mark { width:28px; height:28px; border-radius:8px; flex:0 0 28px; }
+/* Medaillon Orevy : recadrage du visuel de marque, conteneur carre obligatoire */
+.orv-medaillon { position:relative; overflow:hidden; border-radius:50%; background:#FFF9F2; }
+.orv-medaillon img { position:absolute; width:364.29%; height:auto; max-width:none;
+  left:-129.59%; top:-28.57%; user-select:none; pointer-events:none; }
 .orv-home .nm { font-size:15px; font-weight:800; letter-spacing:-0.4px; color:var(--ink); }
 .orv-sep { color:var(--ink3); font-size:14px; flex:0 0 auto; }
 
@@ -1401,7 +1404,7 @@ textarea { resize: vertical; min-height: 72px; }
   <!-- ══ BARRE DE NAVIGATION V2 ══ -->
   <div class="orv-bar" id="orv-bar">
     <button class="orv-home" onclick="orvRetourHubPrincipal()" title="Revenir au hub Orevy">
-      <span class="orv-mark"><svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#fff" stroke-width="1.6"/><circle cx="10" cy="10" r="2.5" fill="#fff"/></svg></span>
+      <span class="orv-mark orv-medaillon"><img src="Visuel_Orevy.png" alt="Orevy"></span>
       <span class="nm">Orevy</span>
     </button>
     <span class="orv-sep">&middot;</span>
@@ -22843,7 +22846,7 @@ function showImportResult(type, html) {
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fraunces:ital,wght@0,400;1,400&display=swap');
 .hub-s-header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px 13px;border-bottom:1px solid rgba(88,80,77,0.1);background:#FAF6F0;position:sticky;top:0;z-index:10}
 .hub-s-logo{display:flex;align-items:center;gap:10px}
-.hub-s-logomark{width:34px;height:34px;background:#8FAF8A;border-radius:9px;display:flex;align-items:center;justify-content:center}
+.hub-s-logomark{width:34px;height:34px;border-radius:50%}
 .hub-s-logotext{font-size:19px;font-weight:800;color:#58504D;letter-spacing:-0.5px}
 .hub-s-logotext span{color:#8FAF8A}
 .hub-s-avatar{display:flex;align-items:center;gap:9px}
@@ -22954,9 +22957,7 @@ function showImportResult(type, html) {
 <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:0;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="Visuel_Orevy.png" style="width:100vw;height:100vh;object-fit:cover;opacity:0.12;user-select:none;display:block" alt=""></div>
 <div class="hub-s-header" style="position:relative;z-index:1">
   <div class="hub-s-logo">
-    <div class="hub-s-logomark">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#fff" stroke-width="1.6"/><circle cx="10" cy="10" r="2.5" fill="#fff"/></svg>
-    </div>
+    <div class="hub-s-logomark orv-medaillon"><img src="Visuel_Orevy.png" alt="Orevy"></div>
     <div class="hub-s-logotext">OREVY<span> ·</span></div>
     <span style="font-size:11px;color:#8FAF8A;font-weight:500;letter-spacing:.5px">Plateforme Petite Enfance</span>
   </div>
@@ -23388,23 +23389,7 @@ function showImportResult(type, html) {
         <span class="ds-dot" style="background:#1A1208"></span>Tous les documents
         <span class="ds-count" id="ddc-all">0</span>
       </button>
-      <button class="ds-filter-btn" onclick="dsDocFilter('protocoles',this)">
-        <span class="ds-dot" style="background:#5C7A5E"></span>Protocoles
-        <span class="ds-count" id="ddc-protocoles">0</span>
-      </button>
-      <button class="ds-filter-btn" onclick="dsDocFilter('administratif',this)">
-        <span class="ds-dot" style="background:#D4891A"></span>Documents administratifs
-        <span class="ds-count" id="ddc-administratif">0</span>
-      </button>
-      <button class="ds-filter-btn" onclick="dsDocFilter('sante',this)">
-        <span class="ds-dot" style="background:#9B59B6"></span>Documents santé
-        <span class="ds-count" id="ddc-sante">0</span>
-      </button>
-      <button class="ds-filter-btn" onclick="dsDocFilter('controle_pmi',this)">
-        <span class="ds-dot" style="background:#2563EB"></span>Contrôle PMI
-        <span class="ds-count" id="ddc-controle_pmi">0</span>
-      </button>
-      <div id="ddc-extra-cats"></div>
+      <div id="ddc-cats-liste"></div>
       <button class="ds-filter-btn" id="ddc-add-cat-btn" onclick="dsDocAddCat()" style="color:#7C3AED;font-weight:600;border-top:1px dashed #E2D9CC">
         <span style="font-size:15px">+</span> Ajouter une catégorie
       </button>
@@ -23497,6 +23482,11 @@ function showImportResult(type, html) {
       <div>
         <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Nom *</label>
         <input id="dd-cat-nom" type="text" placeholder="Ex: Pédagogie & projet" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff" onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E2D9CC'">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Rattacher a</label>
+        <select id="dd-cat-parent" style="width:100%;padding:10px 14px;border:1.5px solid #E2D9CC;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff"></select>
+        <div style="font-size:11px;color:#6B4C2A;margin-top:5px">Laisser sur "Categorie principale" pour creer une categorie de premier niveau.</div>
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:#6B4C2A;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:5px">Couleur</label>
@@ -25989,31 +25979,69 @@ function dsDocGetAllCats() {
   return { ...DS_DOC_CATS, ...DS_DOC_CATS_EXTRA };
 }
 
+// ── Hierarchie des categories ──────────────────────────────────
+// Une sous-categorie est une categorie EXTRA portant un champ `parent`
+// qui reference une categorie existante (native ou extra de 1er niveau).
+// Un seul niveau de profondeur : le parent d'une categorie ne peut pas
+// lui-meme avoir un parent.
+function dsDocEstRacine(id) {
+  const c = dsDocGetAllCats()[id];
+  return !!c && !c.parent;
+}
+function dsDocRacines() {
+  const all = dsDocGetAllCats();
+  return Object.keys(all).filter(id => !all[id].parent);
+}
+function dsDocEnfantsDe(id) {
+  return Object.keys(DS_DOC_CATS_EXTRA).filter(k => DS_DOC_CATS_EXTRA[k].parent === id);
+}
+// Ids couverts par un filtre : une categorie parente englobe ses enfants.
+function dsDocIdsDe(id) {
+  return [id].concat(dsDocEnfantsDe(id));
+}
+function dsDocNbDocs(id) {
+  const ids = dsDocIdsDe(id);
+  return DS_DOCS.filter(d => ids.indexOf(d.cat) !== -1).length;
+}
+// Libelle complet, sous-categorie comprise : "Protocoles > Hygiene"
+function dsDocCatLabel(id) {
+  const all = dsDocGetAllCats();
+  const c = all[id];
+  if (!c) return id;
+  const p = c.parent && all[c.parent];
+  return p ? p.label + ' \u203a ' + c.label : c.label;
+}
+
 function dsDocUpdateCounts() {
-  const all = DS_DOCS.length;
   const el = document.getElementById('ddc-all');
-  if (el) el.textContent = all;
-  Object.keys(DS_DOC_CATS).forEach(cat => {
-    const el = document.getElementById('ddc-' + cat);
-    if (el) el.textContent = DS_DOCS.filter(d => d.cat === cat).length;
+  if (el) el.textContent = DS_DOCS.length;
+  Object.keys(dsDocGetAllCats()).forEach(cat => {
+    const c = document.getElementById('ddc-' + cat);
+    if (c) c.textContent = dsDocNbDocs(cat);
   });
-  // Catégories extras
-  Object.keys(DS_DOC_CATS_EXTRA).forEach(cat => {
-    const el = document.getElementById('ddc-extra-' + cat);
-    if (el) el.textContent = DS_DOCS.filter(d => d.cat === cat).length;
-  });
-  // Mettre à jour le select catégorie dans le formulaire
+  // Mettre a jour le select categorie dans le formulaire
   dsDocUpdateCatSelect();
 }
 
 function dsDocRenderExtraCats() {
-  const container = document.getElementById('ddc-extra-cats');
+  const container = document.getElementById('ddc-cats-liste');
   if (!container) return;
-  container.innerHTML = Object.entries(DS_DOC_CATS_EXTRA).map(([id, cat]) => `
-    <button class="ds-filter-btn${DS_DOC_FILTER === id ? ' ds-active' : ''}" onclick="dsDocFilter('${id}',this)">
-      <span class="ds-dot" style="background:${cat.color}"></span>${cat.label}
-      <span class="ds-count" id="ddc-extra-${id}">${DS_DOCS.filter(d => d.cat === id).length}</span>
-    </button>`).join('');
+  const all = dsDocGetAllCats();
+  const btn = (id, niv) => {
+    const cat = all[id];
+    if (!cat) return '';
+    // Un chevron marque la sous-categorie : le rattachement ne repose
+    // pas seulement sur l'indentation ni sur la couleur.
+    return '<button class="ds-filter-btn' + (DS_DOC_FILTER === id ? ' ds-active' : '') + '"'
+      + ' onclick="dsDocFilter(\'' + id + '\',this)"'
+      + (niv ? ' style="padding-left:26px;font-size:12.5px"' : '') + '>'
+      + (niv ? '<span style="color:#6B4C2A;margin-right:2px">\u21b3</span>' : '')
+      + '<span class="ds-dot" style="background:' + cat.color + '"></span>' + cat.label
+      + '<span class="ds-count" id="ddc-' + id + '">' + dsDocNbDocs(id) + '</span></button>';
+  };
+  container.innerHTML = dsDocRacines().map(id =>
+    btn(id, 0) + dsDocEnfantsDe(id).map(k => btn(k, 1)).join('')
+  ).join('');
 }
 
 function dsDocUpdateCatSelect() {
@@ -26021,9 +26049,11 @@ function dsDocUpdateCatSelect() {
   if (!sel) return;
   const allCats = dsDocGetAllCats();
   const current = sel.value;
-  sel.innerHTML = Object.entries(allCats)
-    .map(([id, cat]) => `<option value="${id}"${id === current ? ' selected' : ''}>${cat.label}</option>`)
-    .join('');
+  const opt = (id, niv) => '<option value="' + id + '"' + (id === current ? ' selected' : '') + '>'
+    + (niv ? '\u00a0\u00a0\u21b3 ' : '') + allCats[id].label + '</option>';
+  sel.innerHTML = dsDocRacines().map(id =>
+    opt(id, 0) + dsDocEnfantsDe(id).map(k => opt(k, 1)).join('')
+  ).join('');
 }
 
 // ── Filtre + rendu ─────────────────────────────────────────────
@@ -26031,9 +26061,8 @@ function dsDocFilter(cat, btn) {
   DS_DOC_FILTER = cat;
   document.querySelectorAll('#ds-doc-layout .ds-filter-btn').forEach(b => b.classList.remove('ds-active'));
   if (btn) btn.classList.add('ds-active');
-  const titles = { all: 'Tous les documents', ...Object.fromEntries(Object.entries(dsDocGetAllCats()).map(([k,v]) => [k, v.label])) };
   const titleEl = document.getElementById('ds-doc-title');
-  if (titleEl) titleEl.textContent = titles[cat] || cat;
+  if (titleEl) titleEl.textContent = cat === 'all' ? 'Tous les documents' : dsDocCatLabel(cat);
   dsDocRender();
 }
 
@@ -26047,7 +26076,9 @@ function dsDocSetView(v) {
 function dsDocRender(query) {
   const q = query || dsSearchQuery || '';
   const allCats = dsDocGetAllCats();
-  let data = DS_DOC_FILTER === 'all' ? DS_DOCS : DS_DOCS.filter(d => d.cat === DS_DOC_FILTER);
+  let data;
+  if (DS_DOC_FILTER === 'all') data = DS_DOCS;
+  else { const ids = dsDocIdsDe(DS_DOC_FILTER); data = DS_DOCS.filter(d => ids.indexOf(d.cat) !== -1); }
   if (q) data = data.filter(d =>
     d.name.toLowerCase().includes(q) ||
     (d.desc||'').toLowerCase().includes(q) ||
@@ -26104,11 +26135,17 @@ function dsDocRender(query) {
     container.innerHTML = data.map((d, i) => {
       const cat = allCats[d.cat] || { color:'#888', bg:'#f5f5f5', text:'#444', label: d.cat };
       const st = statutCfg[d.statut] || statutCfg.en_vigueur;
-      return `<div class="ds-list-item" style="animation-delay:${i*0.03}s">
+      // Meme action que la vue grille : modele remplissable, controle PMI,
+      // ou consultation. Sans cela, la ligne etait un cul-de-sac.
+      const act = d.modele
+        ? `dmOpen('${d.modele}')`
+        : (d.id === 'p13' ? 'openPmiScreen()' : `alert('Fichier a venir \u2014 ${d.name.replace(/'/g, "\\'")}')`);
+      const hint = d.modele ? '\u270e \u00c0 remplir en ligne' : (d.id === 'p13' ? '\uD83E\uDE7A Contr\u00f4le PMI' : 'Consulter');
+      return `<div class="ds-list-item" onclick="${act}" style="animation-delay:${i*0.03}s">
         <div class="ds-list-stripe" style="background:${cat.color}"></div>
         <div class="ds-list-info">
           <h3>${d.name}</h3>
-          <p><span style="color:${cat.text}">● ${cat.label}</span><span style="color:${st.color}">${st.label}</span>${(d.tags||[]).slice(0,3).map(t=>`<span>${t}</span>`).join('')}</p>
+          <p><span style="color:${cat.text}">● ${dsDocCatLabel(d.cat)}</span><span style="color:${st.color}">${st.label}</span><span style="font-weight:600">${hint}</span>${(d.tags||[]).slice(0,2).map(t=>`<span>${t}</span>`).join('')}</p>
         </div>
         <span style="font-size:18px;color:#ccc">›</span>
       </div>`;
@@ -26192,6 +26229,14 @@ function dsDocMsg(msg, ok) {
 // ── Ajout de catégorie ─────────────────────────────────────────
 function dsDocAddCat() {
   document.getElementById('dd-cat-nom').value = '';
+  // Seules les categories de 1er niveau peuvent accueillir une sous-categorie.
+  const selP = document.getElementById('dd-cat-parent');
+  if (selP) {
+    const all = dsDocGetAllCats();
+    selP.innerHTML = '<option value="">Categorie principale</option>'
+      + dsDocRacines().map(id => '<option value="' + id + '">' + all[id].label + '</option>').join('');
+    selP.value = (DS_DOC_FILTER !== 'all' && dsDocEstRacine(DS_DOC_FILTER)) ? DS_DOC_FILTER : '';
+  }
   document.getElementById('dd-cat-color').value = '#5C7A5E';
   // Réinitialiser sélection couleur
   document.querySelectorAll('#dd-cat-colors div').forEach(el => el.style.border = '3px solid transparent');
@@ -26219,8 +26264,15 @@ function dsDocSaveCat() {
   if (!nom) return;
   const color = document.getElementById('dd-cat-color').value;
   const id = nom.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_');
-  // Générer bg/text depuis color
+  const parent = (document.getElementById('dd-cat-parent') || {}).value || '';
+  // Generer bg/text depuis color
   DS_DOC_CATS_EXTRA[id] = { label: nom, color, bg: color + '22', text: color };
+  // Un seul niveau : si le parent choisi est deja une sous-categorie, on
+  // remonte au grand-parent plutot que de creer un 3e niveau.
+  if (parent && parent !== id) {
+    const pc = dsDocGetAllCats()[parent];
+    DS_DOC_CATS_EXTRA[id].parent = (pc && pc.parent) ? pc.parent : parent;
+  }
   localStorage.setItem('orevy_doc_cats_extra', JSON.stringify(DS_DOC_CATS_EXTRA));
   dsDocCloseCatModal();
   dsDocRenderExtraCats();
