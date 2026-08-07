@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-07 08:12 -->
+<!-- OREVY BUILD 2026-08-07 08:27 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -26969,6 +26969,7 @@ const DS_DOC_CATS = {
   administratif: { label:'Documents administratifs', color:'#D4891A', bg:'#FEF5E5', text:'#8A5700' },
   sante:         { label:'Documents santé',          color:'#9B59B6', bg:'#F5EEF8', text:'#6C3483' },
   controle_pmi:  { label:'Contrôle PMI',             color:'#2563EB', bg:'#EFF6FF', text:'#1D4ED8' },
+  securite:      { label:'Registre de sécurité',     color:'#4A6275', bg:'#EBF0F4', text:'#2D4255' },
 };
 
 // Catégories supplémentaires ajoutées par l'utilisateur
@@ -26993,6 +26994,7 @@ let DS_DOCS = JSON.parse(localStorage.getItem('orevy_docs') || 'null') || [
   { id:'p10', cat:'sante', name:'Protocole santé & éviction', desc:"Maladies infantiles, tableau d'éviction, gestion des PAI, administration médicaments.", tags:['Santé','PAI','Éviction'], statut:'en_vigueur' },
   { id:'p11', cat:'sante', name:"Plan d'accueil individualisé (PAI)", desc:"Modèle de PAI vierge. Allergies, pathologies chroniques, protocoles d'urgence spécifiques.", tags:['PAI','Handicap','Allergie'], statut:'en_vigueur' },
   { id:'p12', cat:'sante', name:'Registre des accidents / incidents', desc:"Modèle de registre obligatoire. Consignation des accidents, incidents et transmissions PMI.", tags:['Registre','PMI','Obligatoire'], statut:'en_vigueur' },
+  { id:'p14', cat:'securite', name:'Registre de sécurité', desc:"Registre de sécurité obligatoire, tenu en ligne, un par structure : vérifications techniques périodiques avec signature de l'intervenant, exercices d'évacuation et de mise en sûreté, travaux et aménagements, visites de la commission de sécurité et de la PMI, anomalies signalées par l'équipe. Journal de traçabilité chaîné et export PDF scellé.", tags:['Registre','Obligatoire','ERP','Sécurité','Incendie'], statut:'en_vigueur' },
   { id:'p13', cat:'controle_pmi', name:'Compte rendu de visite de contrôle EAJE (PMI 2026)', desc:"Grille officielle de contrôle PMI : identité de l'établissement, capacité d'accueil et taux d'occupation, effectifs et qualifications d'encadrement par section, RSAI, APP, attestations d'honorabilité, locaux (entrée, salles de vie, dortoirs, espaces de changes, cuisine/biberonnerie, bureau, buanderie), restauration, santé, sécurité (exercices, contrôles techniques), espaces extérieurs et affichages obligatoires. Sert de support d'auto-évaluation avant une visite PMI.", tags:['PMI','Contrôle','Inspection','Encadrement','Sécurité','Locaux','Affichages obligatoires'], statut:'en_vigueur' },
 ];
 let dsSearchQuery = '';
@@ -27095,6 +27097,14 @@ function dsDocGetAllCats() {
 // qui reference une categorie existante (native ou extra de 1er niveau).
 // Un seul niveau de profondeur : le parent d'une categorie ne peut pas
 // lui-meme avoir un parent.
+/* Documents qui ouvrent un outil plutot qu'un fichier. Table unique :
+   la vue grille et la vue liste y puisent toutes les deux. */
+const DS_DOC_OUTILS = {
+  p13: { act:'openPmiScreen()',      libelle:'\uD83E\uDE7A Lancer le contr\u00f4le \u2192', hint:'\uD83E\uDE7A Contr\u00f4le PMI' },
+  p14: { act:'openRegistreScreen()', libelle:'\uD83D\uDCD5 Ouvrir le registre \u2192',      hint:'\uD83D\uDCD5 Registre de s\u00e9curit\u00e9' }
+};
+function dsDocOutil(id) { return DS_DOC_OUTILS[id] || null; }
+
 function dsDocEstRacine(id) {
   const c = dsDocGetAllCats()[id];
   return !!c && !c.parent;
@@ -27236,7 +27246,7 @@ function dsDocRender(query) {
             <span style="font-size:10px;padding:3px 8px;border-radius:10px;background:${st.bg};color:${st.color};font-weight:600">${st.label}</span>
             ${d.modele
               ? `<button class="ds-expand-btn" onclick="dmOpen('${d.modele}')">✎ Remplir &amp; faire signer →</button>`
-              : `<button class="ds-expand-btn" onclick="${d.id === 'p13' ? 'openPmiScreen()' : `alert('Fichier à venir — ${d.name.replace(/'/g,"\'")}')`}">${d.id === 'p13' ? '🩺 Lancer le contrôle →' : 'Consulter →'}</button>`}
+              : `<button class="ds-expand-btn" onclick="${dsDocOutil(d.id) ? dsDocOutil(d.id).act : `alert('Fichier à venir — ${d.name.replace(/'/g,"\'")}')`}">${dsDocOutil(d.id) ? dsDocOutil(d.id).libelle : 'Consulter →'}</button>`}
           </div>
           ${adminBtns}
         </div></div>`;
@@ -27248,10 +27258,11 @@ function dsDocRender(query) {
       const st = statutCfg[d.statut] || statutCfg.en_vigueur;
       // Meme action que la vue grille : modele remplissable, controle PMI,
       // ou consultation. Sans cela, la ligne etait un cul-de-sac.
+      const _out = dsDocOutil(d.id);
       const act = d.modele
         ? `dmOpen('${d.modele}')`
-        : (d.id === 'p13' ? 'openPmiScreen()' : `alert('Fichier a venir \u2014 ${d.name.replace(/'/g, "\\'")}')`);
-      const hint = d.modele ? '\u270e \u00c0 remplir en ligne' : (d.id === 'p13' ? '\uD83E\uDE7A Contr\u00f4le PMI' : 'Consulter');
+        : (_out ? _out.act : `alert('Fichier a venir \u2014 ${d.name.replace(/'/g, "\\'")}')`);
+      const hint = d.modele ? '\u270e \u00c0 remplir en ligne' : (_out ? _out.hint : 'Consulter');
       return `<div class="ds-list-item" onclick="${act}" style="animation-delay:${i*0.03}s">
         <div class="ds-list-stripe" style="background:${cat.color}"></div>
         <div class="ds-list-info">
