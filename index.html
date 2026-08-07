@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-07 08:33 -->
+<!-- OREVY BUILD 2026-08-07 08:38 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -27094,15 +27094,10 @@ async function dsDocSyncCloud() {
       if (!tsL || tsC >= tsL) {
         DS_DOCS = cloud.docs;
         DS_DOC_CATS_EXTRA = cloud.cats || {};
-        const ajoutes = dsDocReinjecterOutils();
         _dsDocEcrireLocal(tsC);
         _dsDocPousse = JSON.stringify({ d: DS_DOCS, c: DS_DOC_CATS_EXTRA });
         console.log('[docs] ' + DS_DOCS.length + ' document(s) et '
           + Object.keys(DS_DOC_CATS_EXTRA).length + ' cat\u00e9gorie(s) repris du cloud');
-        // Un outil ajoute par une livraison remonte tout de suite : sinon
-        // il disparaitrait au prochain ecrasement par un autre poste.
-        if (ajoutes) await dsDocPush(new Date().toISOString());
-        if (typeof dsDocRender === 'function') dsDocRender(dsSearchQuery || '');
         return;
       }
       // Le poste est plus recent : on remonte.
@@ -27435,6 +27430,14 @@ function dsDocSaveCat() {
 // ── Init documentaire ──────────────────────────────────────────
 async function dsDocInit() {
   await dsDocSyncCloud();
+  /* Apres la synchro, quelle que soit la branche empruntee : cache plus
+     recent, cloud plus recent, premiere remontee ou reseau coupe. Les
+     documents-outils sont livres par Orevy, ils ne doivent dependre
+     d'aucune de ces situations. */
+  if (dsDocReinjecterOutils()) {
+    _dsDocEcrireLocal(new Date().toISOString());
+    dsDocPush(new Date().toISOString());
+  }
   if (typeof dmInit === 'function') dmInit();
   dsDocUpdateCounts();
   dsDocRenderExtraCats();
