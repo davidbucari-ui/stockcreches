@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-07 08:38 -->
+<!-- OREVY BUILD 2026-08-07 09:01 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -26945,13 +26945,41 @@ const DS_DATA = [
   {
     id: 37,
     category: "locaux",
-    tool: "registre",
-    title: "Registre de sécurité numérique",
-    ref: "CCH art. R.143-44 — Arrêté du 25 juin 1980 — Arrêté du 22 juin 1990",
-    summary: "Registre de sécurité tenu en ligne, un par structure : vérifications techniques périodiques avec signature de l'intervenant, exercices d'évacuation et de mise en sûreté, travaux et aménagements, visites de la commission de sécurité et de la PMI, anomalies signalées par l'équipe. Journal de traçabilité chaîné et export PDF scellé.",
+    title: "Registre de sécurité obligatoire",
+    ref: "Art. R.143-44 CCH — Arrêté du 25 juin 1980 — Arrêté du 22 juin 1990",
+    summary: "Tout établissement recevant du public tient un registre de sécurité, présenté à la commission de sécurité comme à la PMI. Il consigne le personnel chargé du service d'incendie, les consignes, les dates des contrôles et vérifications avec leurs observations, et les travaux réalisés.",
     source: "Code de la construction et de l'habitation",
     date: "2026",
-    isNew: true
+    isNew: true,
+    detail: {
+      description: "Le registre de sécurité est une obligation de l'exploitant, et non du propriétaire des murs. Il n'existe pas de modèle officiel : c'est son contenu qui est imposé, pas sa forme. Un registre numérique est recevable dès lors que l'auteur de chaque écriture est identifiable et que l'intégrité du document est garantie. C'est la première pièce demandée lors d'une visite de la commission de sécurité, et la sécurité est une rubrique à part entière de la grille de contrôle PMI.",
+      points: [
+        "État du personnel chargé du service d'incendie et des formations suivies",
+        "Consignes de sécurité et affichages obligatoires en place",
+        "Dates de tous les contrôles et vérifications, avec les observations auxquelles ils ont donné lieu",
+        "Suites données aux réserves et aux prescriptions : c'est ce que vérifie la visite suivante",
+        "Dates et nature des travaux, nom de l'entrepreneur et, le cas échéant, de l'architecte",
+        "Exercices d'évacuation et de mise en sûreté : un exercice non consigné n'a pas eu lieu, du point de vue du contrôle",
+        "Conservation sur toute la durée d'exploitation : aucune durée n'est fixée par le CCH"
+      ],
+      details: [
+        { label: "Fondement", value: "Art. R.143-44" },
+        { label: "Tenu par", value: "L'exploitant" },
+        { label: "Forme imposée", value: "Aucune" },
+        { label: "Un registre par", value: "Établissement" }
+      ],
+      alert: "Un registre absent, incomplet ou non tenu à jour est relevé comme tel lors d'une visite et figure au procès-verbal. Il constitue également un élément à charge en cas de sinistre ou d'accident, l'exploitant devant démontrer qu'il a satisfait à ses obligations de vérification et d'entretien. Attention : le classement retenu pour la structure (catégorie, présence de locaux réservés au sommeil) conditionne la périodicité des visites et certaines obligations de vérification — il se vérifie auprès de la commission, pas par déduction.",
+      sources: [
+        "Art. R.143-44 CCH (ex-art. R.123-51)",
+        "Art. R.143-33 à R.143-42 CCH",
+        "Arrêté du 25 juin 1980 modifié, art. GE 4 et GE 6 à GE 10",
+        "Arrêté du 22 juin 1990 modifié, art. PE 4",
+        "Décret n° 96-1136 du 18 décembre 1996 (aires de jeux)",
+        "Art. 1366 et 1367 du code civil (écrit et signature électroniques)"
+      ],
+      outil: { fn: 'openRegistreScreen', libelle: '\uD83D\uDCD5 Ouvrir le registre de la structure',
+               note: "Le registre d'Orevy tient ces rubriques en ligne : v\u00e9rifications p\u00e9riodiques avec signature de l'intervenant, exercices, travaux, visites, anomalies. Chaque \u00e9criture est horodat\u00e9e, nomm\u00e9e et cha\u00een\u00e9e \u2014 et l'export PDF porte le sceau du registre." }
+    }
   }
 ];
 
@@ -28984,8 +29012,7 @@ function dsRenderGridCard(d, i) {
   const b25 = d.tags && d.tags.includes('decret2025') ? `<span class="ds-badge-2025">⚡ Décret 2025</span>` : '';
   const bcad = d.caduque ? `<span class="ds-badge-caduque">⚠ Modifié 2026</span>` : '';
   const bnew = d.isNew ? `<span class="ds-badge-new">✦ Nouveau</span>` : '';
-  const btnLabel = d.tool === 'pmi' ? '🩺 Lancer le contrôle →'
-                 : d.tool === 'registre' ? '📕 Ouvrir le registre →' : 'Voir détails →';
+  const btnLabel = d.tool === 'pmi' ? '🩺 Lancer le contrôle →' : 'Voir détails →';
   return `<div class="ds-card" onclick="dsOpenModal(${d.id})" style="animation-delay:${i*0.04}s">
     <div class="ds-card-stripe" style="background:${d.isNew ? '#7C3AED' : cat.color}"></div>
     <div class="ds-card-body">
@@ -29010,7 +29037,6 @@ function dsRenderListItem(d, i) {
 function dsOpenModal(id) {
   const d = DS_DATA.find(x => x.id === id);
   if (d && d.tool === 'pmi') { openPmiScreen(); return; }
-  if (d && d.tool === 'registre') { openRegistreScreen(); return; }
   const cat = DS_CAT[d.category];
   const b25 = d.tags && d.tags.includes('decret2025') ? `<span class="ds-badge-2025">⚡ Décret 2025</span>` : '';
   const bcad = d.caduque ? `<span class="ds-badge-caduque">⚠ Partiellement modifié au 1er sept. 2026</span>` : '';
@@ -29020,7 +29046,13 @@ function dsOpenModal(id) {
   document.getElementById('ds-modal-ref').textContent = d.ref;
   const det = d.detail;
   const u2025 = d.update2025 ? `<div class="ds-modal-section"><div class="ds-modal-section-title" style="color:#7C3AED">⚡ Modifications — Décret 2025-304</div><div class="ds-decret-box"><div style="font-weight:700;margin-bottom:8px">Ce qui change avec le décret n° 2025-304 du 1er avril 2025 :</div><div class="ds-timeline">${d.update2025.map(u => `<div class="ds-timeline-item"><div class="ds-timeline-date">${u.date}</div><div class="ds-timeline-text">${u.text}</div></div>`).join('')}</div></div></div>` : '';
+  const outil = det.outil ? `<div class="ds-modal-section"><div class="ds-decret-box" style="border-color:#4A6275;background:#EBF0F4">
+      <div style="font-weight:700;margin-bottom:6px">Dans Orevy</div>
+      <p class="ds-modal-text" style="margin-bottom:10px">${det.outil.note || ''}</p>
+      <button class="ds-expand-btn" onclick="dsCloseModal();${det.outil.fn}()">${det.outil.libelle}</button>
+    </div></div>` : '';
   document.getElementById('ds-modal-body').innerHTML = `
+    ${outil}
     <div class="ds-modal-section"><div class="ds-modal-section-title">Description</div><p class="ds-modal-text">${det.description}</p></div>
     <div class="ds-modal-section"><div class="ds-modal-section-title">Points réglementaires clés</div><ul class="ds-req-list">${det.points.map(p => `<li>${p}</li>`).join('')}</ul></div>
     <div class="ds-modal-section"><div class="ds-modal-section-title">Chiffres & paramètres</div><div class="ds-detail-grid">${det.details.map(d => `<div class="ds-detail-item"><div class="ds-detail-label">${d.label}</div><div class="ds-detail-value">${d.value}</div></div>`).join('')}</div></div>
@@ -29036,9 +29068,18 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { dsCloseMod
 //  VEILLE RÉGLEMENTAIRE — Niveau 1
 // ══════════════════════════════════════════════════════════════
 
-const SUPA_RH_URL_V = 'https://gokfxejoffzttzvdkoll.supabase.co';
-const SUPA_RH_KEY_V = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0';
-const SUPA_HDRS_V = { 'Content-Type':'application/json', 'apikey':SUPA_RH_KEY_V, 'Authorization':'Bearer '+SUPA_RH_KEY_V, 'Prefer':'return=representation' };
+/* ⚠ Ce bloc portait sa propre clé Supabase, en service_role, publiée
+   dans index.html — donc lisible par quiconque affiche le source.
+   Elle contournait tous les GRANT du projet RH, y compris le refus de
+   DELETE qui protège le journal du registre de sécurité.
+   Aucune clé propre ici : on réutilise les constantes anon déclarées
+   plus haut. Si un jour la veille a besoin de droits élevés, cela passe
+   par une route du Worker, jamais par une clé dans la page. */
+const SUPA_RH_URL_V = SUPA_RH_URL;
+const SUPA_HDRS_V = Object.assign({}, SUPA_RH_HEADERS, {
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'      // la veille relit ce qu'elle écrit
+});
 
 let DS_VEILLE_DATA = [];
 let DS_VEILLE_EDIT_ID = null;
