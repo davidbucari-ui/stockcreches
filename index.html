@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-07 09:01 -->
+<!-- OREVY BUILD 2026-08-07 15:45 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -15266,22 +15266,35 @@ async function removeArticlePhoto(id) {
 // ── Projet Stocks (articles, commandes, fournisseurs, historique, univers, planning)
 const SUPA_URL = 'https://xqtntbsehareltsldaad.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxdG50YnNlaGFyZWx0c2xkYWFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTc0MjQsImV4cCI6MjA5NTEzMzQyNH0.2SY1CpK2BgQubIPeluWHCfCXIFtL6yzXJgWxW_9LOxw';
-let SUPA_HEADERS = {
+/* Deux formats de cles Supabase coexistent pendant la migration :
+   - heritee   : JWT commencant par « eyJ », acceptee dans apikey ET dans
+                 Authorization: Bearer
+   - nouvelle  : sb_publishable_… , qui n'est PAS un JWT et que Supabase
+                 REFUSE dans Authorization: Bearer
+   D'ou ce helper : le Bearer n'est pose que pour un JWT. Basculer d'un format
+   a l'autre ne demande alors que de remplacer la constante de cle.
+   Ne pas « simplifier » en remettant le Bearer systematique : cela casserait
+   les cles sb_publishable_.
+   Apres connexion, SUPA_HEADERS/SUPA_RH_HEADERS['Authorization'] est ecrase
+   par le jeton de session de l'utilisateur : ce chemin reste inchange. */
+function sbAuthHeaders(key, extra) {
+  var h = { 'apikey': key };
+  if (typeof key === 'string' && key.indexOf('eyJ') === 0) h['Authorization'] = 'Bearer ' + key;
+  return Object.assign(h, extra || {});
+}
+
+let SUPA_HEADERS = sbAuthHeaders(SUPA_KEY, {
   'Content-Type': 'application/json',
-  'apikey': SUPA_KEY,
-  'Authorization': 'Bearer ' + SUPA_KEY,
   'Prefer': 'return=minimal',
-};
+});
 
 // ── Projet RH (utilisateurs, recrutements, contrats, congés, formations, documents, stagiaires)
 const SUPA_RH_URL = 'https://gokfxejoffzttzvdkoll.supabase.co';
 const SUPA_RH_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTY0NDQsImV4cCI6MjA5NTg5MjQ0NH0.2oghhJNpqeh-zLUjHE0iAJLK_eJX40_ZRuQTaQFGzhw';
-let SUPA_RH_HEADERS = {
+let SUPA_RH_HEADERS = sbAuthHeaders(SUPA_RH_KEY, {
   'Content-Type': 'application/json',
-  'apikey': SUPA_RH_KEY,
-  'Authorization': 'Bearer ' + SUPA_RH_KEY,
   'Prefer': 'return=minimal',
-};
+});
 
 // Tables hébergées dans le projet RH — routage automatique dans les helpers
 const RH_TABLES = new Set([
@@ -15312,7 +15325,7 @@ async function uploadPhotoToStorage(dataUrl, filename) {
   const path = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const res = await fetch(`${SUPA_URL}/storage/v1/object/${SUPA_STORAGE_BUCKET}/${path}`, {
     method: 'POST',
-    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': blob.type || 'image/jpeg' },
+    headers: sbAuthHeaders(SUPA_KEY, { 'Content-Type': blob.type || 'image/jpeg' }),
     body: blob,
   });
   if (!res.ok) throw new Error(`Upload photo : ${res.status}`);
