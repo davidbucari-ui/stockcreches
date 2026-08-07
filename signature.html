@@ -153,8 +153,13 @@ h1{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;line-height:1.3}
 <script>
 /* ═══ Connexion directe Supabase RH (même modèle que pointage.html) ═══ */
 var SUPA_URL = 'https://gokfxejoffzttzvdkoll.supabase.co';
-var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTY0NDQsImV4cCI6MjA5NTg5MjQ0NH0.2oghhJNpqeh-zLUjHE0iAJLK_eJX40_ZRuQTaQFGzhw';
-var H = { 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY, 'Content-Type':'application/json' };
+var SUPA_KEY = 'sb_publishable_Dd0-pQNPwlv_Lv0THw9mZg_48LKzLYo';
+function sbAuthHeaders(key, extra) {
+  var h = { 'apikey': key };
+  if (typeof key === 'string' && key.indexOf('eyJ') === 0) h['Authorization'] = 'Bearer ' + key;
+  return Object.assign(h, extra || {});
+}
+var H = sbAuthHeaders(SUPA_KEY, { 'Content-Type':'application/json' });
 
 function $(i){ return document.getElementById(i); }
 function show(id){ ['v-load','v-err','v-sign','v-ok'].forEach(function(v){ $(v).classList.toggle('hide', v!==id); }); }
