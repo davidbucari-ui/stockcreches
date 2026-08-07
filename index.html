@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-07 08:27 -->
+<!-- OREVY BUILD 2026-08-07 08:33 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -26997,6 +26997,18 @@ let DS_DOCS = JSON.parse(localStorage.getItem('orevy_docs') || 'null') || [
   { id:'p14', cat:'securite', name:'Registre de sécurité', desc:"Registre de sécurité obligatoire, tenu en ligne, un par structure : vérifications techniques périodiques avec signature de l'intervenant, exercices d'évacuation et de mise en sûreté, travaux et aménagements, visites de la commission de sécurité et de la PMI, anomalies signalées par l'équipe. Journal de traçabilité chaîné et export PDF scellé.", tags:['Registre','Obligatoire','ERP','Sécurité','Incendie'], statut:'en_vigueur' },
   { id:'p13', cat:'controle_pmi', name:'Compte rendu de visite de contrôle EAJE (PMI 2026)', desc:"Grille officielle de contrôle PMI : identité de l'établissement, capacité d'accueil et taux d'occupation, effectifs et qualifications d'encadrement par section, RSAI, APP, attestations d'honorabilité, locaux (entrée, salles de vie, dortoirs, espaces de changes, cuisine/biberonnerie, bureau, buanderie), restauration, santé, sécurité (exercices, contrôles techniques), espaces extérieurs et affichages obligatoires. Sert de support d'auto-évaluation avant une visite PMI.", tags:['PMI','Contrôle','Inspection','Encadrement','Sécurité','Locaux','Affichages obligatoires'], statut:'en_vigueur' },
 ];
+/* Documents fournis par Orevy : ils ouvrent un outil integre au lieu
+   d'un fichier. Declares en dur et NON deduits de DS_DOCS — celui-ci
+   vient du localStorage, donc d'un poste qui ne les connait pas encore. */
+const DS_DOC_NATIFS = [
+  { id:'p13', cat:'controle_pmi', name:'Compte rendu de visite de contr\u00f4le EAJE (PMI 2026)',
+    desc:"Grille officielle de contr\u00f4le PMI. Support d'auto-\u00e9valuation avant une visite.",
+    tags:['PMI','Contr\u00f4le','Inspection'], statut:'en_vigueur' },
+  { id:'p14', cat:'securite', name:'Registre de s\u00e9curit\u00e9',
+    desc:"Registre de s\u00e9curit\u00e9 obligatoire, tenu en ligne, un par structure : v\u00e9rifications techniques p\u00e9riodiques avec signature de l'intervenant, exercices d'\u00e9vacuation et de mise en s\u00fbret\u00e9, travaux, visites de la commission de s\u00e9curit\u00e9 et de la PMI, anomalies signal\u00e9es par l'\u00e9quipe. Journal de tra\u00e7abilit\u00e9 cha\u00een\u00e9 et export PDF scell\u00e9.",
+    tags:['Registre','Obligatoire','ERP','S\u00e9curit\u00e9'], statut:'en_vigueur' }
+];
+
 let dsSearchQuery = '';
 
 /* ══ BASE DOCUMENTAIRE — SORTIE DU LOCALSTORAGE ════════════════════
@@ -27054,6 +27066,20 @@ async function dsDocPush(ts) {
 /* Lecture au demarrage. Le plus recent `_ts` fait foi. Si le cloud est
    vide alors que le poste a des donnees, on remonte : c'est la
    migration du localStorage historique, une fois, sans intervention. */
+/* Documents fournis par Orevy et non modifiables par le client : ils
+   ouvrent un outil integre. La liste cloud d'un reseau deja en service
+   ne les contient pas — sans cette reinjection, livrer un nouvel outil
+   ne le rendrait visible sur aucun poste. */
+function dsDocReinjecterOutils() {
+  const presents = new Set(DS_DOCS.map(d => d.id));
+  const manquants = DS_DOC_NATIFS.filter(d => !presents.has(d.id));
+  if (!manquants.length) return false;
+  // En tete : ce sont des points d'entree, pas des pieces jointes.
+  DS_DOCS = manquants.concat(DS_DOCS);
+  console.log('[docs] outil(s) r\u00e9inject\u00e9(s) : ' + manquants.map(d => d.id).join(', '));
+  return true;
+}
+
 async function dsDocSyncCloud() {
   if (_dsDocSynced) return;
   _dsDocSynced = true;
@@ -27068,10 +27094,15 @@ async function dsDocSyncCloud() {
       if (!tsL || tsC >= tsL) {
         DS_DOCS = cloud.docs;
         DS_DOC_CATS_EXTRA = cloud.cats || {};
+        const ajoutes = dsDocReinjecterOutils();
         _dsDocEcrireLocal(tsC);
         _dsDocPousse = JSON.stringify({ d: DS_DOCS, c: DS_DOC_CATS_EXTRA });
         console.log('[docs] ' + DS_DOCS.length + ' document(s) et '
           + Object.keys(DS_DOC_CATS_EXTRA).length + ' cat\u00e9gorie(s) repris du cloud');
+        // Un outil ajoute par une livraison remonte tout de suite : sinon
+        // il disparaitrait au prochain ecrasement par un autre poste.
+        if (ajoutes) await dsDocPush(new Date().toISOString());
+        if (typeof dsDocRender === 'function') dsDocRender(dsSearchQuery || '');
         return;
       }
       // Le poste est plus recent : on remonte.
