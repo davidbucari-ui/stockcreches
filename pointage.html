@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-07 16:07 -->
+<!-- OREVY BUILD 2026-08-07 18:54 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -55,23 +55,11 @@
 <script>
 const SUPA_URL = 'https://gokfxejoffzttzvdkoll.supabase.co';
 const SUPA_KEY = 'sb_publishable_Dd0-pQNPwlv_Lv0THw9mZg_48LKzLYo';
-/* Deux formats de cles Supabase coexistent pendant la migration :
-   - heritee   : JWT commencant par « eyJ », acceptee dans apikey ET dans
-                 Authorization: Bearer
-   - nouvelle  : sb_publishable_… , qui n'est PAS un JWT et que Supabase
-                 REFUSE dans Authorization: Bearer
-   D'ou ce helper : le Bearer n'est pose que pour un JWT. Basculer d'un format
-   a l'autre ne demande alors que de remplacer la constante de cle.
-   Ne pas « simplifier » en remettant le Bearer systematique : cela casserait
-   les cles sb_publishable_.
-   Apres connexion, SUPA_HEADERS/SUPA_RH_HEADERS['Authorization'] est ecrase
-   par le jeton de session de l'utilisateur : ce chemin reste inchange. */
 function sbAuthHeaders(key, extra) {
   var h = { 'apikey': key };
   if (typeof key === 'string' && key.indexOf('eyJ') === 0) h['Authorization'] = 'Bearer ' + key;
   return Object.assign(h, extra || {});
 }
-
 const H = sbAuthHeaders(SUPA_KEY, { 'Content-Type':'application/json' });
 
 async function sget(table, q) {
