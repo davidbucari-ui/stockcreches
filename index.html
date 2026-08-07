@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-07 15:45 -->
+<!-- OREVY BUILD 2026-08-07 16:07 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -15265,7 +15265,7 @@ async function removeArticlePhoto(id) {
 
 // ── Projet Stocks (articles, commandes, fournisseurs, historique, univers, planning)
 const SUPA_URL = 'https://xqtntbsehareltsldaad.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxdG50YnNlaGFyZWx0c2xkYWFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NTc0MjQsImV4cCI6MjA5NTEzMzQyNH0.2SY1CpK2BgQubIPeluWHCfCXIFtL6yzXJgWxW_9LOxw';
+const SUPA_KEY = 'sb_publishable_VBcf3aFbtHfXqhoG19l8cQ_tzKbECit';
 /* Deux formats de cles Supabase coexistent pendant la migration :
    - heritee   : JWT commencant par « eyJ », acceptee dans apikey ET dans
                  Authorization: Bearer
@@ -15290,7 +15290,7 @@ let SUPA_HEADERS = sbAuthHeaders(SUPA_KEY, {
 
 // ── Projet RH (utilisateurs, recrutements, contrats, congés, formations, documents, stagiaires)
 const SUPA_RH_URL = 'https://gokfxejoffzttzvdkoll.supabase.co';
-const SUPA_RH_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTY0NDQsImV4cCI6MjA5NTg5MjQ0NH0.2oghhJNpqeh-zLUjHE0iAJLK_eJX40_ZRuQTaQFGzhw';
+const SUPA_RH_KEY = 'sb_publishable_Dd0-pQNPwlv_Lv0THw9mZg_48LKzLYo';
 let SUPA_RH_HEADERS = sbAuthHeaders(SUPA_RH_KEY, {
   'Content-Type': 'application/json',
   'Prefer': 'return=minimal',
