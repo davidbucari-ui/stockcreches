@@ -75,6 +75,10 @@ select:focus-visible,input:focus-visible{outline:3px solid var(--accent); outlin
   border-radius:10px; padding:10px 16px; font:inherit; font-weight:600; cursor:pointer}
 .bouton-sec:focus-visible{outline:3px solid var(--encre); outline-offset:2px}
 .etat-pub{font-size:13px; font-weight:600}
+.ctx{border:1.5px dashed var(--trait); border-radius:12px; padding:14px 16px; margin:0 0 22px}
+.ctx-t{font-size:13px; font-weight:600; margin-bottom:6px}
+.ctx p{font-size:15px; color:var(--encre); white-space:pre-wrap; margin:0}
+.atelier textarea.court{min-height:88px}
 .liste-choix{display:flex; flex-direction:column; gap:10px; margin:6px 0 18px}
 .sous-titre{font-size:13px; font-weight:600; margin-bottom:6px}
 .vide{padding:22px 0; color:var(--encre3); font-size:14px}
@@ -110,6 +114,8 @@ select:focus-visible,input:focus-visible{outline:3px solid var(--accent); outlin
 
   <div class="bandeau" id="bandeau"></div>
 
+  <div class="ctx" id="ctx-mois"></div>
+
   <h2>Les trois axes</h2>
   <div id="axes"></div>
 
@@ -143,6 +149,10 @@ const ETATS = {
 let CODE = '';
 let MAPPING = [];
 let VERBATIMS = [];
+/* campagne_id -> { contexte, contexte_maj_le }. Lecture separee des vues :
+   qvt_v_alertes reprend d.* de qvt_v_scores, y glisser une colonne aurait
+   impose de recreer les deux vues. */
+let CAMPAGNES = {};
 
 const $ = id => document.getElementById(id);
 
@@ -205,6 +215,12 @@ async function rendreStructure(sid, structure){
 
   const lignes = await lire('scores', { structure_id: sid });
 
+  CAMPAGNES = {};
+  try {
+    (await lire('campagnes', { structure_id: sid }) || [])
+      .forEach(c => { CAMPAGNES[c.id] = c; });
+  } catch(e){ /* le contexte est un plus : son absence ne casse pas l'ecran */ }
+
   if (!lignes.length){
     $('bandeau').innerHTML = '<span>Aucune campagne pour cette structure.</span>';
     $('axes').innerHTML = '<div class="vide">Rien à afficher tant qu\u2019une campagne n\u2019a pas été close.</div>';
@@ -234,6 +250,23 @@ async function rendreStructure(sid, structure){
       + ', sous le seuil d\u2019anonymat de 3.</span>';
   }
   $('bandeau').innerHTML = bandeau;
+
+  /* Contexte du mois, AVANT les scores. Un 4,58 sur la charge ne se lit pas
+     de la meme facon selon qu'il y a eu deux arrets maladie ou non — et ce
+     n'est pas la meme proposition de formation. Place apres les chiffres,
+     il servirait a justifier ; place avant, il sert a lire. */
+  const ctxRef = CAMPAGNES[part.campagne_id] || {};
+  const ctxTxt = (ctxRef.contexte || '').trim();
+  $('ctx-mois').innerHTML = ctxTxt
+    ? '<div class="ctx-t">\u25cf Ce qui s\u2019est passé ce mois-ci</div>'
+      + '<p>' + echapper(ctxTxt) + '</p>'
+      + (ctxRef.contexte_maj_le
+          ? '<div class="discret" style="margin-top:8px">Recueilli le '
+            + new Date(ctxRef.contexte_maj_le).toLocaleDateString('fr-FR') + '</div>'
+          : '')
+    : '<div class="ctx-t">\u25cb Ce qui s\u2019est passé ce mois-ci</div>'
+      + '<div class="discret">Non renseigné. À demander à la direction avant de '
+      + 'lire les scores — ils ne se commentent pas sans lui.</div>';
 
   /* Cartes d'axe */
   $('axes').innerHTML = Object.keys(AXES).map(axe => {
@@ -318,10 +351,14 @@ function nb(n){
    du produit vendu, qui est justement l'interpretation humaine. */
 let RESTIT = null;
 
-function trame(structure, refMois, ref){
+function trame(structure, refMois, ref, contexte){
   const l = [];
   l.push('Restitution — ' + structure.nom + ' — campagne de ' + moisFr(refMois) + '.');
   l.push('');
+  if ((contexte || '').trim()){
+    l.push('Contexte du mois : ' + contexte.trim());
+    l.push('');
+  }
   l.push('Participation : ' + ref[0].nb_repondants + ' réponse'
     + (ref[0].nb_repondants > 1 ? 's' : '') + ' sur ' + structure.effectif_declare
     + ' (' + (ref[0].taux_reponse ?? '—') + ' %).');
@@ -368,6 +405,12 @@ async function rendreAtelier(sid, structure, refMois, ref){
     + '<p class="discret" style="margin-top:6px">Campagne de ' + moisFr(refMois)
     + '. Tant que la restitution n\u2019est pas publiée, la direction ne voit rien.</p>'
 
+    + '<div class="sous-titre" style="margin-top:20px">Ce qui s\u2019est passé ce mois-ci</div>'
+    + '<p class="discret" style="margin-bottom:8px">Recueilli auprès de la direction, '
+    + 'de préférence avant de lui montrer les scores. Arrêts, départs, travaux, '
+    + 'changement d\u2019organisation \u2014 ce qui explique un chiffre sans l\u2019excuser.</p>'
+    + '<textarea id="at-contexte" class="court"></textarea>'
+
     + '<div class="sous-titre" style="margin-top:20px">Formations retenues</div>'
     + (propose.length
         ? '<div class="liste-choix">' + propose.map(m =>
@@ -386,13 +429,18 @@ async function rendreAtelier(sid, structure, refMois, ref){
     +   '<span class="discret" id="at-msg"></span>'
     + '</div>';
 
-  $('at-synthese').value = (RESTIT && RESTIT.synthese) || trame(structure, refMois, ref);
+  const ctxCamp = (CAMPAGNES[campagneId] && CAMPAGNES[campagneId].contexte) || '';
+  $('at-contexte').value = ctxCamp;
+  $('at-synthese').value = (RESTIT && RESTIT.synthese)
+    || trame(structure, refMois, ref, ctxCamp);
   $('bt-publier').textContent = (RESTIT && RESTIT.publiee) ? 'Dépublier' : 'Publier';
 
   document.querySelectorAll('.ch-verb').forEach(c => { c.checked = dejaV.has(c.value); });
 
   $('bt-trame').addEventListener('click', () => {
-    $('at-synthese').value = trame(structure, refMois, ref);
+    /* On relit le champ, pas la valeur chargee : le consultant vient
+       souvent de le saisir sans avoir encore enregistre. */
+    $('at-synthese').value = trame(structure, refMois, ref, $('at-contexte').value);
   });
   $('bt-enregistrer').addEventListener('click', () =>
     enregistrer(sid, campagneId, RESTIT ? RESTIT.publiee : false, structure, refMois, ref));
@@ -408,6 +456,7 @@ async function enregistrer(sid, campagneId, publiee, structure, refMois, ref){
     structure_id:      sid,
     campagne_id:       campagneId,
     synthese:          $('at-synthese').value,
+    contexte:          $('at-contexte').value,
     publiee:           publiee,
     formations_ref:    [...document.querySelectorAll('.ch-form:checked')].map(c => c.value),
     verbatims_retenus: [...document.querySelectorAll('.ch-verb:checked')].map(c => c.value),
@@ -419,6 +468,7 @@ async function enregistrer(sid, campagneId, publiee, structure, refMois, ref){
     if (!res.ok) throw new Error('HTTP ' + res.status);
     await res.json();
     msg.textContent = publiee ? 'Publiée.' : 'Brouillon enregistré.';
+    if (CAMPAGNES[campagneId]) CAMPAGNES[campagneId].contexte = corps.contexte;
     await rendreAtelier(sid, structure, refMois, ref);
     $('at-msg').textContent = publiee ? 'Publiée.' : 'Brouillon enregistré.';
   } catch(e){
