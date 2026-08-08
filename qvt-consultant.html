@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Baromètre — vue consultant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --creme:#F0EDE8; --encre:#1C1917; --encre2:#57534E; --encre3:#8A827B;
+  --accent:#2563EB; --surface:#FFFFFF; --trait:#DDD8D1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--creme); color:var(--encre);
+  font-family:'Instrument Sans',system-ui,sans-serif; font-size:15px; line-height:1.5;
+}
+.page{max-width:840px; margin:0 auto; padding:28px 20px 64px}
+h1{font-family:'Syne',sans-serif; font-weight:700; font-size:26px; letter-spacing:-.015em}
+h2{font-family:'Syne',sans-serif; font-weight:600; font-size:13px; letter-spacing:.07em;
+   text-transform:uppercase; color:var(--encre3); margin:36px 0 12px}
+p{color:var(--encre2)}
+.discret{font-size:13px; color:var(--encre3)}
+.cache{display:none !important}
+
+/* En-tête */
+.barre{display:flex; flex-wrap:wrap; align-items:center; gap:12px; justify-content:space-between;
+       padding-bottom:16px; border-bottom:1px solid var(--trait)}
+.marque{font-family:'Syne',sans-serif; font-weight:700; font-size:15px}
+select,input{
+  font:inherit; background:var(--surface); color:var(--encre);
+  border:1.5px solid var(--trait); border-radius:10px; padding:10px 12px;
+}
+select:focus-visible,input:focus-visible{outline:3px solid var(--accent); outline-offset:1px}
+
+/* Bandeau de campagne */
+.bandeau{background:var(--surface); border:1.5px solid var(--trait); border-radius:12px;
+         padding:14px 16px; margin-top:20px; display:flex; flex-wrap:wrap; gap:6px 22px; align-items:baseline}
+.bandeau b{font-weight:600}
+
+/* Carte d'axe */
+.axe{background:var(--surface); border:1.5px solid var(--trait); border-radius:14px;
+     padding:18px; margin-bottom:12px; display:grid; grid-template-columns:1fr 190px; gap:18px; align-items:center}
+.axe.grave{border-color:var(--encre); border-width:2px}
+.axe-titre{font-family:'Syne',sans-serif; font-weight:600; font-size:17px}
+.chiffre{font-family:'Syne',sans-serif; font-weight:700; font-size:34px; line-height:1; letter-spacing:-.02em}
+.chiffre span{font-size:15px; font-weight:600; color:var(--encre3)}
+.etat{font-size:13px; font-weight:600; margin-top:6px}
+.meta{font-size:12px; color:var(--encre3); margin-top:4px}
+.courbe{width:190px; height:64px}
+@media(max-width:620px){ .axe{grid-template-columns:1fr} .courbe{width:100%} }
+
+/* Verbatims */
+.mot{background:var(--surface); border:1.5px solid var(--trait); border-radius:12px;
+     padding:14px 16px; margin-bottom:10px}
+.mot p{color:var(--encre); font-size:15px}
+.mot .src{font-size:12px; color:var(--encre3); margin-top:8px}
+
+/* Formations */
+.reco{border-left:2px solid var(--encre); padding:2px 0 2px 16px; margin-bottom:18px}
+.reco-titre{font-weight:600}
+.reco-arg{font-size:14px; color:var(--encre2); margin-top:5px}
+
+.vide{padding:22px 0; color:var(--encre3); font-size:14px}
+.bouton{background:var(--accent); color:#fff; border:none; border-radius:10px;
+        padding:11px 18px; font:inherit; font-weight:600; cursor:pointer}
+.bouton:focus-visible{outline:3px solid var(--encre); outline-offset:2px}
+.connexion{max-width:380px; margin:14vh auto 0}
+.connexion input{width:100%; margin-top:16px}
+.connexion .bouton{width:100%; margin-top:12px}
+.err{color:var(--encre); font-size:13px; margin-top:10px}
+</style>
+</head>
+<body>
+
+<!-- Accès -->
+<div class="page" id="ec-connexion">
+  <div class="connexion">
+    <div class="marque">Baromètre — vue consultant</div>
+    <h1 style="margin-top:10px">Accès réservé</h1>
+    <p class="discret" style="margin-top:10px">Cet écran affiche des réponses brutes et des verbatims. Il n'est pas destiné à la direction des structures.</p>
+    <input type="password" id="in-code" placeholder="Code d'accès" autocomplete="current-password">
+    <button class="bouton" id="bt-entrer">Ouvrir</button>
+    <div class="err" id="err-code"></div>
+  </div>
+</div>
+
+<!-- Console -->
+<div class="page cache" id="ec-console">
+  <div class="barre">
+    <div class="marque">Baromètre — vue consultant</div>
+    <select id="sel-structure" aria-label="Structure"></select>
+  </div>
+
+  <div class="bandeau" id="bandeau"></div>
+
+  <h2>Les trois axes</h2>
+  <div id="axes"></div>
+
+  <h2>Ce que la boucle propose</h2>
+  <div id="formations"></div>
+
+  <h2>Ce qui a été dit</h2>
+  <div id="verbatims"></div>
+</div>
+
+<script>
+'use strict';
+
+const API = 'https://api.orevy.app/qvt-console';
+
+const AXES = {
+  charge:         'Charge & rythme',
+  reconnaissance: 'Reconnaissance & management',
+  sens:           'Sens du travail',
+};
+const ETATS = {
+  stable:    { g:'●', t:'Stable' },
+  vigilance: { g:'△', t:'Vigilance' },
+  alerte:    { g:'▲', t:'Alerte' },
+  masque:    { g:'○', t:'Masqué' },
+};
+
+let CODE = '';
+let MAPPING = [];
+let VERBATIMS = [];
+
+const $ = id => document.getElementById(id);
+
+async function lire(lecture, extra){
+  const res = await fetch(API, {
+    method:  'POST',
+    headers: { 'Content-Type':'application/json' },
+    body:    JSON.stringify(Object.assign({ code: CODE, lecture }, extra || {})),
+  });
+  if (res.status === 401) throw new Error('code');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+function moisFr(iso){
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+}
+function moisCourt(iso){
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('fr-FR', { month:'short' }).replace('.','');
+}
+
+/* ── Courbe de tendance ───────────────────────────────────────
+   Un seul trait d'encre, aucune couleur porteuse de sens. Les campagnes
+   masquées ne sont pas interpolées : le trait s'interrompt, et un cercle
+   creux marque le trou. Relier par-dessus laisserait croire à une mesure. */
+function courbe(serie){
+  const L=190, H=64, m=9;
+  const pts = serie.map((r,i) => ({
+    x: m + (serie.length<2 ? (L-2*m)/2 : i*(L-2*m)/(serie.length-1)),
+    y: r.score_10 === null ? null : (H-m) - (Number(r.score_10)/10)*(H-2*m),
+    v: r.score_10,
+  }));
+  let d='', ouvert=false, marques='';
+  pts.forEach(p => {
+    if (p.y === null){
+      ouvert = false;
+      marques += '<circle cx="'+p.x.toFixed(1)+'" cy="'+(H/2)+'" r="3.2" fill="none" stroke="#8A827B" stroke-width="1.4"/>';
+    } else {
+      d += (ouvert ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + ' ';
+      ouvert = true;
+      marques += '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3.2" fill="#1C1917"/>';
+    }
+  });
+  /* Repère du seuil d'alerte à 5/10 : le lecteur voit tout de suite
+     si la courbe passe dessous. */
+  const y5 = (H-m) - 0.5*(H-2*m);
+  return '<svg class="courbe" viewBox="0 0 '+L+' '+H+'" role="img" aria-label="Tendance">'
+    + '<line x1="'+m+'" y1="'+y5.toFixed(1)+'" x2="'+(L-m)+'" y2="'+y5.toFixed(1)+'" stroke="#DDD8D1" stroke-width="1" stroke-dasharray="3 3"/>'
+    + '<path d="'+d+'" fill="none" stroke="#1C1917" stroke-width="1.8" stroke-linejoin="round"/>'
+    + marques + '</svg>';
+}
+
+/* ── Rendu d'une structure ────────────────────────────────── */
+async function rendreStructure(sid, structure){
+  $('axes').innerHTML = '<div class="vide">Chargement…</div>';
+  $('formations').innerHTML = '';
+  $('verbatims').innerHTML = '';
+
+  const lignes = await lire('scores', { structure_id: sid });
+
+  if (!lignes.length){
+    $('bandeau').innerHTML = '<span>Aucune campagne pour cette structure.</span>';
+    $('axes').innerHTML = '<div class="vide">Rien à afficher tant qu\u2019une campagne n\u2019a pas été close.</div>';
+    return;
+  }
+
+  const dates   = [...new Set(lignes.map(r => r.date_ouverture))].sort();
+  const derniere = dates[dates.length-1];
+  const auMois  = d => lignes.filter(r => r.date_ouverture === d);
+
+  /* Si la dernière campagne est masquée, on lit la dernière campagne
+     exploitable — et on le dit. Afficher trois « — » sans explication
+     ferait croire à une panne. */
+  const exploitable = [...dates].reverse().find(d => auMois(d).some(r => r.score_10 !== null));
+  const refMois = exploitable || derniere;
+  const ref     = auMois(refMois);
+  const part    = ref[0];
+
+  let bandeau = '<span><b>' + structure.nom + '</b></span>'
+    + '<span>Campagne de <b>' + moisFr(refMois) + '</b></span>'
+    + '<span>' + part.nb_repondants + ' réponse' + (part.nb_repondants>1?'s':'')
+    + ' sur ' + structure.effectif_declare + ' — <b>' + (part.taux_reponse ?? '—') + ' %</b></span>';
+  if (exploitable && exploitable !== derniere){
+    const enCours = auMois(derniere)[0];
+    bandeau += '<span class="discret">Campagne de ' + moisFr(derniere) + ' en cours : '
+      + enCours.nb_repondants + ' réponse' + (enCours.nb_repondants>1?'s':'')
+      + ', sous le seuil d\u2019anonymat de 3.</span>';
+  }
+  $('bandeau').innerHTML = bandeau;
+
+  /* Cartes d'axe */
+  $('axes').innerHTML = Object.keys(AXES).map(axe => {
+    const serie  = dates.map(d => auMois(d).find(r => r.axe === axe) || { score_10:null });
+    const actuel = ref.find(r => r.axe === axe) || { niveau:'masque', score_10:null };
+    const e      = ETATS[actuel.niveau] || ETATS.masque;
+    const grave  = (actuel.niveau === 'alerte');
+
+    const score = nb(actuel.score_10);
+    let delta = '';
+    if (actuel.delta1 !== null && actuel.delta1 !== undefined){
+      const d = Number(actuel.delta1);
+      delta = (d === 0) ? 'Stable depuis la campagne précédente'
+            : (d > 0 ? '+' : '') + nb(d) + ' pt depuis la campagne précédente';
+    }
+
+    return '<div class="axe' + (grave ? ' grave' : '') + '">'
+      + '<div>'
+      +   '<div class="axe-titre">' + AXES[axe] + '</div>'
+      +   '<div class="chiffre" style="margin-top:10px">' + score + '<span> / 10</span></div>'
+      +   '<div class="etat">' + e.g + ' ' + e.t + '</div>'
+      +   '<div class="meta">' + (delta || '&nbsp;') + '</div>'
+      + '</div>'
+      + '<div>' + courbe(serie)
+      +   '<div class="meta" style="text-align:center">' + moisCourt(dates[0]) + ' → ' + moisCourt(dates[dates.length-1]) + '</div>'
+      + '</div></div>';
+  }).join('');
+
+  /* Boucle formation (§7) — l'outil propose, il ne décide pas. */
+  const aTraiter = ref.filter(r => r.niveau === 'alerte' || r.niveau === 'vigilance');
+  if (!aTraiter.length){
+    $('formations').innerHTML = '<div class="vide">Aucun axe en vigilance. Rien à proposer ce mois-ci.</div>';
+  } else {
+    $('formations').innerHTML = aTraiter.map(r => {
+      const m = MAPPING.find(x => x.axe === r.axe && x.niveau === r.niveau);
+      if (!m) return '';
+      const e = ETATS[r.niveau];
+      return '<div class="reco">'
+        + '<div class="discret">' + AXES[r.axe] + ' — ' + e.g + ' ' + e.t + '</div>'
+        + '<div class="reco-titre">' + (m.formation_ref || 'Formation à rattacher') + '</div>'
+        + '<div class="reco-arg">' + m.argumentaire + '</div>'
+        + '</div>';
+    }).join('') || '<div class="vide">Aucune formation rattachée à ces axes.</div>';
+  }
+
+  /* Verbatims — le rattachement au site est décidé en base, pas ici. */
+  const propres = VERBATIMS.filter(v => v.structure_id_affichable === sid);
+  const reseau  = VERBATIMS.filter(v => v.structure_id_affichable === null).length;
+
+  let html = propres.map(v =>
+    '<div class="mot"><p>' + echapper(v.contenu) + '</p>'
+    + '<div class="src">' + new Date(v.created_at).toLocaleDateString('fr-FR')
+    + (v.traite ? ' — ● traité' : ' — ○ non traité') + '</div></div>').join('');
+
+  if (!propres.length){
+    html = '<div class="vide">Aucun mot rattaché à cette structure. Sous 5 répondants, les verbatims remontent au niveau réseau.</div>';
+  }
+  if (reseau){
+    html += '<div class="discret" style="margin-top:10px">' + reseau
+      + ' message' + (reseau>1?'s':'') + ' au niveau réseau, non rattaché'
+      + (reseau>1?'s':'') + ' à une structure.</div>';
+  }
+  $('verbatims').innerHTML = html;
+}
+
+/* Les scores tombent au quart de point (6,75 / 6,25). Un arrondi a une
+   decimale afficherait 6,8 a cote d'un ecart de -0,25 : deux chiffres qui
+   se contredisent. On garde la valeur exacte, zeros inutiles retires. */
+function nb(n){
+  if (n === null || n === undefined) return '\u2014';
+  return String(Math.round(Number(n) * 100) / 100).replace('.', ',');
+}
+
+function echapper(s){
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+/* ── Démarrage ────────────────────────────────────────────── */
+async function ouvrir(){
+  let structures;
+  try {
+    structures = await lire('structures');
+  } catch(e){
+    $('err-code').textContent = (e.message === 'code')
+      ? 'Code refusé.'
+      : 'Connexion impossible. Réessayez.';
+    return false;
+  }
+
+  [MAPPING, VERBATIMS] = await Promise.all([ lire('mapping'), lire('verbatims') ]);
+
+  const sel = $('sel-structure');
+  sel.innerHTML = structures.filter(s => s.actif)
+    .map(s => '<option value="' + s.id + '">' + echapper(s.nom) + '</option>').join('');
+  sel.addEventListener('change', () => {
+    const s = structures.find(x => x.id === sel.value);
+    rendreStructure(sel.value, s);
+  });
+
+  $('ec-connexion').classList.add('cache');
+  $('ec-console').classList.remove('cache');
+
+  if (structures.length) rendreStructure(sel.value, structures.find(x => x.id === sel.value));
+  return true;
+}
+
+async function tenter(){
+  CODE = $('in-code').value.trim();
+  if (!CODE) return;
+  $('err-code').textContent = 'Vérification…';
+  const ok = await ouvrir();
+  // Le code reste en mémoire d'onglet seulement : fermer l'onglet le supprime.
+  if (ok) { try { sessionStorage.setItem('qvt_code', CODE); } catch(e){} }
+}
+
+$('bt-entrer').addEventListener('click', tenter);
+$('in-code').addEventListener('keydown', e => { if (e.key === 'Enter') tenter(); });
+
+(function(){
+  let c = null;
+  try { c = sessionStorage.getItem('qvt_code'); } catch(e){}
+  if (c) { CODE = c; ouvrir(); }
+})();
+</script>
+</body>
+</html>
