@@ -64,6 +64,19 @@ select:focus-visible,input:focus-visible{outline:3px solid var(--accent); outlin
 .reco-titre{font-weight:600}
 .reco-arg{font-size:14px; color:var(--encre2); margin-top:5px}
 
+.coche{display:flex; gap:11px; align-items:flex-start; cursor:pointer}
+.coche input{width:19px; height:19px; margin-top:2px; accent-color:var(--encre); flex:none}
+.atelier{background:var(--surface); border:1.5px solid var(--trait); border-radius:14px; padding:18px}
+.atelier textarea{width:100%; min-height:190px; background:var(--creme); color:var(--encre);
+  border:1.5px solid var(--trait); border-radius:10px; padding:13px; font:inherit; resize:vertical}
+.atelier textarea:focus-visible{outline:3px solid var(--accent); outline-offset:1px}
+.actions{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px}
+.bouton-sec{background:none; color:var(--accent); border:1.5px solid var(--accent);
+  border-radius:10px; padding:10px 16px; font:inherit; font-weight:600; cursor:pointer}
+.bouton-sec:focus-visible{outline:3px solid var(--encre); outline-offset:2px}
+.etat-pub{font-size:13px; font-weight:600}
+.liste-choix{display:flex; flex-direction:column; gap:10px; margin:6px 0 18px}
+.sous-titre{font-size:13px; font-weight:600; margin-bottom:6px}
 .vide{padding:22px 0; color:var(--encre3); font-size:14px}
 .bouton{background:var(--accent); color:#fff; border:none; border-radius:10px;
         padding:11px 18px; font:inherit; font-weight:600; cursor:pointer}
@@ -105,6 +118,9 @@ select:focus-visible,input:focus-visible{outline:3px solid var(--accent); outlin
 
   <h2>Ce qui a été dit</h2>
   <div id="verbatims"></div>
+
+  <h2>Atelier de restitution</h2>
+  <div class="atelier" id="atelier"></div>
 </div>
 
 <script>
@@ -268,9 +284,12 @@ async function rendreStructure(sid, structure){
   const reseau  = VERBATIMS.filter(v => v.structure_id_affichable === null).length;
 
   let html = propres.map(v =>
-    '<div class="mot"><p>' + echapper(v.contenu) + '</p>'
-    + '<div class="src">' + new Date(v.created_at).toLocaleDateString('fr-FR')
-    + (v.traite ? ' — ● traité' : ' — ○ non traité') + '</div></div>').join('');
+    '<div class="mot"><label class="coche">'
+    + '<input type="checkbox" class="ch-verb" value="' + v.id + '">'
+    + '<span><span style="display:block">' + echapper(v.contenu) + '</span>'
+    + '<span class="src" style="display:block">' + new Date(v.created_at).toLocaleDateString('fr-FR')
+    + (v.traite ? ' — ● traité' : ' — ○ non traité') + '</span></span>'
+    + '</label></div>').join('');
 
   if (!propres.length){
     html = '<div class="vide">Aucun mot rattaché à cette structure. Sous 5 répondants, les verbatims remontent au niveau réseau.</div>';
@@ -281,6 +300,8 @@ async function rendreStructure(sid, structure){
       + (reseau>1?'s':'') + ' à une structure.</div>';
   }
   $('verbatims').innerHTML = html;
+
+  await rendreAtelier(sid, structure, refMois, ref);
 }
 
 /* Les scores tombent au quart de point (6,75 / 6,25). Un arrondi a une
@@ -289,6 +310,120 @@ async function rendreStructure(sid, structure){
 function nb(n){
   if (n === null || n === undefined) return '\u2014';
   return String(Math.round(Number(n) * 100) / 100).replace('.', ',');
+}
+
+/* ── Écran 5 — atelier de restitution ─────────────────────────
+   L'outil pre-remplit, le consultant tranche. La trame est un point de
+   depart editable, jamais un texte a publier tel quel : c'est l'inverse
+   du produit vendu, qui est justement l'interpretation humaine. */
+let RESTIT = null;
+
+function trame(structure, refMois, ref){
+  const l = [];
+  l.push('Restitution — ' + structure.nom + ' — campagne de ' + moisFr(refMois) + '.');
+  l.push('');
+  l.push('Participation : ' + ref[0].nb_repondants + ' réponse'
+    + (ref[0].nb_repondants > 1 ? 's' : '') + ' sur ' + structure.effectif_declare
+    + ' (' + (ref[0].taux_reponse ?? '—') + ' %).');
+  l.push('');
+  Object.keys(AXES).forEach(axe => {
+    const r = ref.find(x => x.axe === axe);
+    if (!r) return;
+    const e = ETATS[r.niveau] || ETATS.masque;
+    let ligne = AXES[axe] + ' : ' + nb(r.score_10) + '/10 — ' + e.t.toLowerCase();
+    if (r.delta1 !== null && r.delta1 !== undefined && Number(r.delta1) !== 0){
+      ligne += ' (' + (Number(r.delta1) > 0 ? '+' : '') + nb(r.delta1) + ' pt).';
+    } else { ligne += '.'; }
+    l.push(ligne);
+  });
+  l.push('');
+  l.push('Lecture : ');
+  l.push('');
+  l.push('Ce qui est proposé : ');
+  return l.join('\n');
+}
+
+async function rendreAtelier(sid, structure, refMois, ref){
+  const campagneId = ref[0].campagne_id;
+  const boite = $('atelier');
+  boite.innerHTML = '<div class="vide">Chargement…</div>';
+
+  let toutes = [];
+  try { toutes = await lire('restitution', { structure_id: sid }); } catch(e){}
+  RESTIT = toutes.find(r => r.campagne_id === campagneId) || null;
+
+  const propose = ref.filter(r => r.niveau === 'alerte' || r.niveau === 'vigilance')
+    .map(r => MAPPING.find(x => x.axe === r.axe && x.niveau === r.niveau))
+    .filter(Boolean);
+
+  const dejaF = new Set((RESTIT && RESTIT.formations_ref) || []);
+  const dejaV = new Set((RESTIT && RESTIT.verbatims_retenus) || []);
+
+  const etat = !RESTIT ? '○ Aucune restitution'
+    : RESTIT.publiee ? '● Publiée le ' + new Date(RESTIT.publiee_le).toLocaleDateString('fr-FR')
+    : '△ Brouillon, non visible par la direction';
+
+  boite.innerHTML =
+      '<div class="etat-pub" id="at-etat">' + etat + '</div>'
+    + '<p class="discret" style="margin-top:6px">Campagne de ' + moisFr(refMois)
+    + '. Tant que la restitution n\u2019est pas publiée, la direction ne voit rien.</p>'
+
+    + '<div class="sous-titre" style="margin-top:20px">Formations retenues</div>'
+    + (propose.length
+        ? '<div class="liste-choix">' + propose.map(m =>
+            '<label class="coche"><input type="checkbox" class="ch-form" value="'
+            + echapper(m.formation_ref) + '"' + (dejaF.has(m.formation_ref) ? ' checked' : '') + '>'
+            + '<span>' + echapper(m.formation_ref) + '</span></label>').join('') + '</div>'
+        : '<p class="discret" style="margin-bottom:18px">Aucun axe en vigilance : rien à proposer.</p>')
+
+    + '<div class="sous-titre">Synthèse</div>'
+    + '<textarea id="at-synthese"></textarea>'
+
+    + '<div class="actions">'
+    +   '<button class="bouton" id="bt-enregistrer">Enregistrer le brouillon</button>'
+    +   '<button class="bouton-sec" id="bt-publier"></button>'
+    +   '<button class="bouton-sec" id="bt-trame">Repartir de la trame</button>'
+    +   '<span class="discret" id="at-msg"></span>'
+    + '</div>';
+
+  $('at-synthese').value = (RESTIT && RESTIT.synthese) || trame(structure, refMois, ref);
+  $('bt-publier').textContent = (RESTIT && RESTIT.publiee) ? 'Dépublier' : 'Publier';
+
+  document.querySelectorAll('.ch-verb').forEach(c => { c.checked = dejaV.has(c.value); });
+
+  $('bt-trame').addEventListener('click', () => {
+    $('at-synthese').value = trame(structure, refMois, ref);
+  });
+  $('bt-enregistrer').addEventListener('click', () =>
+    enregistrer(sid, campagneId, RESTIT ? RESTIT.publiee : false, structure, refMois, ref));
+  $('bt-publier').addEventListener('click', () =>
+    enregistrer(sid, campagneId, !(RESTIT && RESTIT.publiee), structure, refMois, ref));
+}
+
+async function enregistrer(sid, campagneId, publiee, structure, refMois, ref){
+  const msg = $('at-msg');
+  msg.textContent = 'Enregistrement…';
+  const corps = {
+    code:              CODE,
+    structure_id:      sid,
+    campagne_id:       campagneId,
+    synthese:          $('at-synthese').value,
+    publiee:           publiee,
+    formations_ref:    [...document.querySelectorAll('.ch-form:checked')].map(c => c.value),
+    verbatims_retenus: [...document.querySelectorAll('.ch-verb:checked')].map(c => c.value),
+  };
+  try {
+    const res = await fetch('https://api.orevy.app/qvt-restitution', {
+      method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(corps),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    await res.json();
+    msg.textContent = publiee ? 'Publiée.' : 'Brouillon enregistré.';
+    await rendreAtelier(sid, structure, refMois, ref);
+    $('at-msg').textContent = publiee ? 'Publiée.' : 'Brouillon enregistré.';
+  } catch(e){
+    msg.textContent = 'Échec de l\u2019enregistrement. Rien n\u2019a été modifié.';
+  }
 }
 
 function echapper(s){
