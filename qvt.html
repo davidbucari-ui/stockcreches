@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Baromètre — Orevy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --creme:#F0EDE8; --encre:#1C1917; --encre2:#57534E; --encre3:#8A827B;
+  --accent:#2563EB; --surface:#FFFFFF; --trait:#DDD8D1;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--creme); color:var(--encre);
+  font-family:'Instrument Sans',system-ui,sans-serif; font-size:16px; line-height:1.5;
+  display:flex; justify-content:center;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+.appli{width:100%; max-width:520px; display:flex; flex-direction:column; min-height:100dvh; padding:24px 20px 32px}
+.ecran{display:none; flex:1; flex-direction:column}
+.ecran.actif{display:flex}
+
+/* ── En-tête ─────────────────────────────────────────────── */
+.marque{font-family:'Syne',sans-serif; font-weight:700; font-size:15px; letter-spacing:.02em}
+.sous-marque{font-size:12px; color:var(--encre3); margin-top:2px}
+.entete{margin-bottom:28px}
+
+/* ── Typographie ─────────────────────────────────────────── */
+h1{font-family:'Syne',sans-serif; font-weight:700; font-size:30px; line-height:1.15; letter-spacing:-.015em}
+.question{font-family:'Syne',sans-serif; font-weight:600; font-size:27px; line-height:1.25; letter-spacing:-.01em; margin:8px 0 28px}
+p{color:var(--encre2); margin-top:14px}
+.discret{font-size:13px; color:var(--encre3)}
+
+/* ── Progression : quantité et forme, jamais la couleur ──── */
+.progression{display:flex; align-items:baseline; gap:10px; margin-bottom:20px}
+.jauge{font-size:15px; letter-spacing:.22em; color:var(--encre2)}
+.compte{font-size:12px; color:var(--encre3); white-space:nowrap}
+
+/* ── Échelle de réponse ──────────────────────────────────── */
+.echelle{display:flex; flex-direction:column; gap:8px; margin-top:auto}
+.choix{
+  display:flex; align-items:center; gap:14px; width:100%;
+  background:var(--surface); border:1.5px solid var(--trait); border-radius:12px;
+  padding:15px 16px; font:inherit; color:var(--encre); text-align:left; cursor:pointer;
+  transition:border-color .12s, transform .12s;
+}
+.choix:hover{border-color:var(--encre3)}
+.choix:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+.choix.pris{border-color:var(--encre); border-width:2px; transform:scale(.985)}
+.barres{font-size:13px; letter-spacing:.13em; color:var(--encre); min-width:62px}
+.etiquette{font-weight:500}
+
+/* ── Boutons ─────────────────────────────────────────────── */
+.bouton{
+  display:block; width:100%; background:var(--accent); color:#fff; border:none;
+  border-radius:12px; padding:16px; font:inherit; font-weight:600; font-size:16px;
+  cursor:pointer; margin-top:20px;
+}
+.bouton:focus-visible{outline:3px solid var(--encre); outline-offset:2px}
+.bouton[disabled]{opacity:.5; cursor:default}
+.bouton-discret{background:none; color:var(--accent); border:1.5px solid var(--accent)}
+
+/* ── Encadré anonymat : le point de confiance ────────────── */
+.pacte{border-left:2px solid var(--encre); padding:2px 0 2px 16px; margin-top:26px}
+.pacte h2{font-family:'Syne',sans-serif; font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--encre)}
+.pacte ul{list-style:none; margin-top:10px}
+.pacte li{font-size:14px; color:var(--encre2); padding-left:20px; text-indent:-20px; margin-bottom:7px}
+.pacte li::before{content:"— "; color:var(--encre3)}
+
+textarea{
+  width:100%; min-height:180px; background:var(--surface); color:var(--encre);
+  border:1.5px solid var(--trait); border-radius:12px; padding:14px;
+  font:inherit; resize:vertical; margin-top:18px;
+}
+textarea:focus-visible{outline:3px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
+
+.centre{margin:auto 0; text-align:left}
+.sceau{font-size:34px; line-height:1; margin-bottom:16px}
+.pied{margin-top:28px}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="appli">
+
+  <!-- Chargement -->
+  <section id="ec-chargement" class="ecran actif">
+    <div class="centre"><p class="discret">Chargement…</p></div>
+  </section>
+
+  <!-- Écran 1a — accueil et pacte d'anonymat -->
+  <section id="ec-intro" class="ecran">
+    <div class="entete">
+      <div class="marque">Baromètre</div>
+      <div class="sous-marque" id="in-structure"></div>
+    </div>
+    <h1>Comment ça se passe pour vous, en ce moment&nbsp;?</h1>
+    <p>Six questions, moins de deux minutes. Répondez ce que vous pensez&nbsp;: c'est le seul intérêt de l'exercice.</p>
+
+    <div class="pacte">
+      <h2>Ce qui est garanti</h2>
+      <ul>
+        <li>Aucun compte, aucun nom, aucune adresse&nbsp;: rien ne relie vos réponses à vous.</li>
+        <li>Aucun résultat n'est affiché tant que trois personnes au moins n'ont pas répondu.</li>
+        <li>Votre direction ne voit jamais les réponses brutes, seulement une synthèse commentée.</li>
+        <li>La clé de cette campagne est différente de celle du mois prochain&nbsp;: personne ne peut suivre une personne dans le temps.</li>
+      </ul>
+    </div>
+
+    <button class="bouton" id="bt-commencer">Commencer</button>
+    <p class="discret pied" id="in-cloture"></p>
+  </section>
+
+  <!-- Écran 1b — une question, un écran -->
+  <section id="ec-question" class="ecran">
+    <div class="progression">
+      <span class="jauge" id="qu-jauge" aria-hidden="true"></span>
+      <span class="compte" id="qu-compte"></span>
+    </div>
+    <div class="question" id="qu-libelle"></div>
+    <div class="echelle" id="qu-echelle"></div>
+    <p class="discret pied">On ne revient pas en arrière&nbsp;: votre première réaction est la bonne.</p>
+  </section>
+
+  <!-- Envoi -->
+  <section id="ec-envoi" class="ecran">
+    <div class="centre"><p class="discret">Enregistrement…</p></div>
+  </section>
+
+  <!-- Écran 2 — confirmation -->
+  <section id="ec-merci" class="ecran">
+    <div class="centre">
+      <div class="sceau" aria-hidden="true">●</div>
+      <h1>C'est envoyé. Merci.</h1>
+      <p>Vos réponses ont rejoint celles de vos collègues. Elles ne seront lues qu'agrégées, et jamais avant que trois personnes aient répondu.</p>
+      <p>Le prochain baromètre arrive le mois prochain.</p>
+      <button class="bouton bouton-discret" id="bt-vers-expression">J'ai quelque chose à dire</button>
+      <p class="discret pied">Un mot à faire remonter en dehors des questions&nbsp;? C'est ouvert toute l'année.</p>
+    </div>
+  </section>
+
+  <!-- Canal continu (§4.2) -->
+  <section id="ec-expression" class="ecran">
+    <div class="entete"><div class="marque">J'ai quelque chose à dire</div></div>
+    <h1>Ce que vous écrivez ici n'est pas noté.</h1>
+    <p>Ce texte n'entre dans aucun calcul. Il est lu tel quel, sans savoir qui l'a écrit.</p>
+    <textarea id="ex-texte" maxlength="4000" placeholder="Écrivez ce que vous voulez faire remonter."></textarea>
+    <button class="bouton" id="bt-envoyer-expression">Envoyer</button>
+    <p class="discret pied" id="ex-erreur"></p>
+  </section>
+
+  <section id="ec-expression-merci" class="ecran">
+    <div class="centre">
+      <div class="sceau" aria-hidden="true">●</div>
+      <h1>Reçu.</h1>
+      <p>Votre message part sans votre nom et sans horodatage nominatif. Vous pouvez fermer cette page.</p>
+    </div>
+  </section>
+
+  <!-- Fins de parcours -->
+  <section id="ec-fin" class="ecran">
+    <div class="centre">
+      <div class="sceau" aria-hidden="true" id="fin-glyphe">○</div>
+      <h1 id="fin-titre"></h1>
+      <p id="fin-texte"></p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+'use strict';
+
+/* Aucune clé Supabase dans cette page. Tout passe par une route Worker qui
+   n'autorise que trois fonctions nommées. */
+const API = 'https://api.orevy.app/qvt-public';
+
+const ECHELLE = [
+  { v:5, barres:'▮▮▮▮▮', libelle:'Tout à fait' },
+  { v:4, barres:'▮▮▮▮▯', libelle:'Plutôt oui'  },
+  { v:3, barres:'▮▮▮▯▯', libelle:'Moyennement' },
+  { v:2, barres:'▮▮▯▯▯', libelle:'Plutôt non'  },
+  { v:1, barres:'▮▯▯▯▯', libelle:'Pas du tout' },
+];
+
+let CAMPAGNE = null;
+let INDEX    = 0;
+let REPONSES = [];
+let VERROU   = false;   // empêche le double-clic pendant l'avance automatique
+
+/* ── Utilitaires ──────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+
+function montrer(id){
+  document.querySelectorAll('.ecran').forEach(e => e.classList.remove('actif'));
+  $(id).classList.add('actif');
+  window.scrollTo(0, 0);
+}
+
+function fin(glyphe, titre, texte){
+  $('fin-glyphe').textContent = glyphe;
+  $('fin-titre').textContent  = titre;
+  $('fin-texte').textContent  = texte;
+  montrer('ec-fin');
+}
+
+async function appel(action, corps){
+  const res = await fetch(API, {
+    method:  'POST',
+    headers: { 'Content-Type':'application/json' },
+    body:    JSON.stringify(Object.assign({ action }, corps)),
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+/* Jeton de campagne (§5.1) : aléatoire, local, régénéré à chaque campagne.
+   Il ne sert qu'à éviter qu'une même personne réponde deux fois. */
+function jetonDeCampagne(campagneId){
+  const cle = 'qvt_jeton_' + campagneId;
+  let j;
+  try { j = localStorage.getItem(cle); } catch(e) { j = null; }
+  if (!j) {
+    const octets = new Uint8Array(16);
+    crypto.getRandomValues(octets);
+    j = Array.from(octets, o => o.toString(16).padStart(2,'0')).join('');
+    try { localStorage.setItem(cle, j); } catch(e) {}
+  }
+  return j;
+}
+
+function dejaRepondu(campagneId){
+  try { return !!localStorage.getItem('qvt_fait_' + campagneId); } catch(e) { return false; }
+}
+function marquerRepondu(campagneId){
+  try { localStorage.setItem('qvt_fait_' + campagneId, new Date().toISOString()); } catch(e) {}
+}
+
+function dateFr(iso){
+  const d = new Date(iso + 'T12:00:00');
+  return isNaN(d) ? iso : d.toLocaleDateString('fr-FR', { day:'numeric', month:'long' });
+}
+
+/* ── Écran 1b — rendu d'une question ──────────────────────── */
+function rendreQuestion(){
+  const q  = CAMPAGNE.questions[INDEX];
+  const n  = CAMPAGNE.questions.length;
+
+  /* Progression encodée par la forme : plein / en cours / à venir. */
+  let jauge = '';
+  for (let i = 0; i < n; i++) jauge += (i < INDEX ? '■' : i === INDEX ? '▣' : '□');
+  $('qu-jauge').textContent  = jauge;
+  $('qu-compte').textContent = 'Question ' + (INDEX + 1) + ' sur ' + n;
+  $('qu-libelle').textContent = q.libelle;
+
+  const boite = $('qu-echelle');
+  boite.innerHTML = '';
+  ECHELLE.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'choix';
+    b.type = 'button';
+    b.innerHTML = '<span class="barres" aria-hidden="true">' + opt.barres + '</span>'
+                + '<span class="etiquette"></span>';
+    b.querySelector('.etiquette').textContent = opt.libelle;
+    b.setAttribute('aria-label', opt.libelle);
+    b.addEventListener('click', () => repondre(b, q.id, opt.v));
+    boite.appendChild(b);
+  });
+  montrer('ec-question');
+}
+
+function repondre(bouton, questionId, valeur){
+  if (VERROU) return;
+  VERROU = true;
+  bouton.classList.add('pris');
+  REPONSES.push({ question_id: questionId, valeur_num: valeur });
+
+  const pause = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 190;
+  setTimeout(() => {
+    VERROU = false;
+    INDEX++;
+    if (INDEX < CAMPAGNE.questions.length) rendreQuestion();
+    else envoyer();
+  }, pause);
+}
+
+/* ── Envoi ────────────────────────────────────────────────── */
+async function envoyer(){
+  montrer('ec-envoi');
+  try {
+    const r = await appel('repondre', {
+      p_jeton:      CAMPAGNE.jeton,
+      p_jeton_hash: jetonDeCampagne(CAMPAGNE.campagne_id),
+      p_reponses:   REPONSES,
+    });
+    if (r && r.ok) {
+      marquerRepondu(CAMPAGNE.campagne_id);
+      montrer('ec-merci');
+    } else if (r && r.motif === 'deja_repondu') {
+      marquerRepondu(CAMPAGNE.campagne_id);
+      fin('●', 'Vous avez déjà répondu.',
+          'Une seule réponse par personne et par campagne. Rendez-vous le mois prochain.');
+    } else if (r && r.motif === 'campagne_fermee') {
+      fin('○', 'La campagne est terminée.',
+          'Les réponses sont closes. La prochaine ouvre le 1er du mois prochain.');
+    } else {
+      fin('△', 'Vos réponses n\u2019ont pas pu être enregistrées.',
+          'Rien n\u2019a été conservé. Réessayez dans un moment, ou depuis une autre connexion.');
+    }
+  } catch(e) {
+    fin('△', 'Connexion interrompue.',
+        'Vos réponses n\u2019ont pas été enregistrées. Réessayez quand le réseau revient.');
+  }
+}
+
+/* ── Canal continu (§4.2) ─────────────────────────────────── */
+function versExpression(jetonStructure){
+  $('ec-expression').dataset.jeton = jetonStructure;
+  $('ex-erreur').textContent = '';
+  montrer('ec-expression');
+  $('ex-texte').focus();
+}
+
+async function envoyerExpression(){
+  const bouton = $('bt-envoyer-expression');
+  const texte  = $('ex-texte').value.trim();
+  if (!texte) { $('ex-erreur').textContent = 'Écrivez quelque chose avant d\u2019envoyer.'; return; }
+
+  bouton.disabled = true;
+  bouton.textContent = 'Envoi…';
+  try {
+    const r = await appel('exprimer', {
+      p_jeton_structure: $('ec-expression').dataset.jeton,
+      p_contenu:         texte,
+    });
+    if (r && r.ok) { montrer('ec-expression-merci'); return; }
+    $('ex-erreur').textContent = 'Le message n\u2019est pas parti. Réessayez.';
+  } catch(e) {
+    $('ex-erreur').textContent = 'Pas de réseau. Le message n\u2019est pas parti.';
+  }
+  bouton.disabled = false;
+  bouton.textContent = 'Envoyer';
+}
+
+/* ── Démarrage ────────────────────────────────────────────── */
+async function demarrer(){
+  const p       = new URLSearchParams(location.search);
+  const jetonC  = p.get('c');   // lien de campagne
+  const jetonS  = p.get('s');   // canal continu seul
+
+  if (!jetonC && jetonS) { versExpression(jetonS); return; }
+
+  if (!jetonC) {
+    fin('○', 'Lien incomplet.',
+        'Ouvrez le lien exact qui vous a été transmis, sans le modifier.');
+    return;
+  }
+
+  let lignes;
+  try {
+    lignes = await appel('campagne', { p_jeton: jetonC });
+  } catch(e) {
+    fin('△', 'Impossible de charger le questionnaire.',
+        'Vérifiez votre connexion et rouvrez le lien.');
+    return;
+  }
+
+  if (!Array.isArray(lignes) || !lignes.length) {
+    fin('○', 'Cette campagne n\u2019est plus ouverte.',
+        'La fenêtre de réponse est passée, ou le lien n\u2019est plus valable. La prochaine campagne ouvre le 1er du mois.');
+    return;
+  }
+
+  CAMPAGNE = lignes[0];
+  CAMPAGNE.jeton = jetonC;
+
+  if (!CAMPAGNE.questions || !CAMPAGNE.questions.length) {
+    fin('△', 'Ce questionnaire est vide.',
+        'Signalez-le à la personne qui vous a transmis le lien.');
+    return;
+  }
+
+  if (dejaRepondu(CAMPAGNE.campagne_id)) {
+    fin('●', 'Vous avez déjà répondu.',
+        'Une seule réponse par personne et par campagne. Rendez-vous le mois prochain.');
+    return;
+  }
+
+  $('in-structure').textContent = CAMPAGNE.structure_nom;
+  $('in-cloture').textContent   = 'Ouvert jusqu\u2019au ' + dateFr(CAMPAGNE.date_cloture) + '.';
+  montrer('ec-intro');
+}
+
+$('bt-commencer').addEventListener('click', rendreQuestion);
+$('bt-vers-expression').addEventListener('click', () => versExpression(CAMPAGNE.jeton_expression));
+$('bt-envoyer-expression').addEventListener('click', envoyerExpression);
+
+demarrer();
+</script>
+</body>
+</html>
