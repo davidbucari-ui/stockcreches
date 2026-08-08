@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Baromètre — restitutions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --creme:#F0EDE8; --encre:#1C1917; --encre2:#57534E; --encre3:#8A827B;
+  --accent:#2563EB; --surface:#FFFFFF; --trait:#DDD8D1;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{
+  background:var(--creme); color:var(--encre);
+  font-family:'Instrument Sans',system-ui,sans-serif; font-size:15px; line-height:1.5;
+}
+.page{max-width:840px; margin:0 auto; padding:28px 20px 64px}
+h1{font-family:'Syne',sans-serif; font-weight:700; font-size:26px; letter-spacing:-.015em}
+h2{font-family:'Syne',sans-serif; font-weight:600; font-size:13px; letter-spacing:.07em;
+   text-transform:uppercase; color:var(--encre3); margin:36px 0 12px}
+p{color:var(--encre2)}
+.discret{font-size:13px; color:var(--encre3)}
+.cache{display:none !important}
+
+.barre{display:flex; flex-wrap:wrap; align-items:baseline; gap:10px 16px;
+       justify-content:space-between; padding-bottom:16px; border-bottom:1px solid var(--trait)}
+.marque{font-family:'Syne',sans-serif; font-weight:700; font-size:15px}
+
+.bandeau{background:var(--surface); border:1.5px solid var(--trait); border-radius:12px;
+         padding:14px 16px; margin-top:20px; display:flex; flex-wrap:wrap;
+         gap:6px 22px; align-items:baseline}
+.bandeau b{font-weight:600}
+
+/* Carte d'axe — identique a la vue consultant : meme mesure, meme forme. */
+.axe{background:var(--surface); border:1.5px solid var(--trait); border-radius:14px;
+     padding:18px; margin-bottom:12px; display:grid; grid-template-columns:1fr 190px;
+     gap:18px; align-items:center}
+.axe.grave{border-color:var(--encre); border-width:2px}
+.axe-titre{font-family:'Syne',sans-serif; font-weight:600; font-size:17px}
+.chiffre{font-family:'Syne',sans-serif; font-weight:700; font-size:34px; line-height:1; letter-spacing:-.02em}
+.chiffre span{font-size:15px; font-weight:600; color:var(--encre3)}
+.etat{font-size:13px; font-weight:600; margin-top:6px}
+.meta{font-size:12px; color:var(--encre3); margin-top:4px}
+.courbe{width:190px; height:64px}
+@media(max-width:620px){ .axe{grid-template-columns:1fr} .courbe{width:100%} }
+
+/* Synthese : le texte du consultant, rendu tel qu'il l'a ecrit. */
+.synthese{background:var(--surface); border:1.5px solid var(--trait); border-radius:14px;
+          padding:20px 22px; white-space:pre-wrap; color:var(--encre); font-size:15.5px; line-height:1.62}
+
+.reco{border-left:2px solid var(--encre); padding:2px 0 2px 16px; margin-bottom:14px; font-weight:600}
+.mot{background:var(--surface); border:1.5px solid var(--trait); border-radius:12px;
+     padding:14px 16px; margin-bottom:10px}
+.mot p{color:var(--encre); font-size:15px}
+.mot .src{font-size:12px; color:var(--encre3); margin-top:8px}
+
+/* Antériorité repliée */
+details.ant{background:var(--surface); border:1.5px solid var(--trait); border-radius:12px;
+            padding:0; margin-bottom:10px; overflow:hidden}
+details.ant > summary{list-style:none; cursor:pointer; padding:14px 16px; font-weight:600;
+            display:flex; flex-wrap:wrap; gap:6px 14px; align-items:baseline}
+details.ant > summary::-webkit-details-marker{display:none}
+details.ant > summary::before{content:'\25B8'; font-size:12px; color:var(--encre3)}
+details.ant[open] > summary::before{content:'\25BE'}
+details.ant > summary:focus-visible{outline:3px solid var(--accent); outline-offset:-3px}
+.ant-corps{padding:0 16px 16px}
+.ant-corps .synthese{border:none; border-top:1px solid var(--trait); border-radius:0;
+                     padding:16px 0 0; background:none}
+
+/* Ce que l'ecran ne montre pas — assume, ecrit, pas subi. */
+.cadre{border:1.5px dashed var(--trait); border-radius:12px; padding:16px 18px; margin-top:14px}
+.cadre ul{margin:8px 0 0 18px; color:var(--encre2); font-size:14px}
+.cadre li{margin-bottom:5px}
+
+.vide{padding:22px 0; color:var(--encre3); font-size:14px}
+.gros-vide{background:var(--surface); border:1.5px solid var(--trait); border-radius:14px;
+           padding:26px; margin-top:22px}
+
+@media print{
+  body{background:#fff}
+  .page{max-width:none; padding:0}
+  .nonimp{display:none !important}
+  details.ant[open] .ant-corps{display:block}
+  .axe, .synthese, .mot, details.ant{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div class="page" id="ec-chargement">
+  <div class="marque">Baromètre — restitutions</div>
+  <p class="discret" style="margin-top:14px">Chargement…</p>
+</div>
+
+<div class="page cache" id="ec-erreur">
+  <div class="marque">Baromètre — restitutions</div>
+  <h1 style="margin-top:12px" id="err-titre">Lien invalide</h1>
+  <p style="margin-top:10px" id="err-texte"></p>
+</div>
+
+<div class="page cache" id="ec-vue">
+  <div class="barre">
+    <div class="marque">Baromètre — restitutions</div>
+    <div class="discret" id="tete-structure"></div>
+  </div>
+  <div id="corps"></div>
+</div>
+
+<script>
+'use strict';
+
+const API = 'https://api.orevy.app/qvt-direction';
+
+const AXES = {
+  charge:         'Charge & rythme',
+  reconnaissance: 'Reconnaissance & management',
+  sens:           'Sens du travail',
+};
+/* Aucun etat n'est porte par la couleur : glyphe + mot, toujours les deux. */
+const ETATS = {
+  stable:    { g:'\u25CF', t:'Stable' },
+  vigilance: { g:'\u25B3', t:'Vigilance' },
+  alerte:    { g:'\u25B2', t:'Alerte' },
+  masque:    { g:'\u25CB', t:'Masqu\u00e9' },
+};
+
+const $ = id => document.getElementById(id);
+
+function echapper(s){
+  const d = document.createElement('div');
+  d.textContent = (s === null || s === undefined) ? '' : String(s);
+  return d.innerHTML;
+}
+
+/* Les scores tombent au quart de point. Un arrondi a une decimale afficherait
+   6,8 a cote d'un ecart de -0,25 : deux chiffres qui se contredisent.
+   Meme helper que la vue consultant — les deux ecrans doivent afficher le
+   meme nombre pour la meme donnee. */
+function nb(n){
+  if (n === null || n === undefined) return '\u2014';
+  return String(Math.round(Number(n) * 100) / 100).replace('.', ',');
+}
+
+function moisFr(iso){
+  const d = new Date(String(iso).slice(0,10) + 'T12:00:00');
+  return d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+}
+function moisCourt(iso){
+  const d = new Date(String(iso).slice(0,10) + 'T12:00:00');
+  return d.toLocaleDateString('fr-FR', { month:'short' }).replace('.','');
+}
+function jourFr(iso){
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleDateString('fr-FR');
+}
+
+/* ── Courbe de tendance ───────────────────────────────────────
+   Reprise a l'identique de la vue consultant. Les campagnes sans score
+   ne sont PAS interpolees : le trait s'interrompt, un cercle creux marque
+   le trou. Relier par-dessus inventerait une mesure qui n'a pas eu lieu. */
+function courbe(serie){
+  const L = 190, H = 64, m = 9;
+  const pts = serie.map((v, i) => ({
+    x: m + (serie.length < 2 ? (L - 2*m)/2 : i*(L - 2*m)/(serie.length - 1)),
+    y: (v === null || v === undefined) ? null : (H - m) - (Number(v)/10)*(H - 2*m),
+  }));
+  let d = '', ouvert = false, marques = '';
+  pts.forEach(p => {
+    if (p.y === null){
+      ouvert = false;
+      marques += '<circle cx="' + p.x.toFixed(1) + '" cy="' + (H/2)
+               + '" r="3.2" fill="none" stroke="#8A827B" stroke-width="1.4"/>';
+    } else {
+      d += (ouvert ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + ' ';
+      ouvert = true;
+      marques += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1)
+               + '" r="3.2" fill="#1C1917"/>';
+    }
+  });
+  const y5 = (H - m) - 0.5*(H - 2*m);
+  return '<svg class="courbe" viewBox="0 0 ' + L + ' ' + H + '" role="img" aria-label="Tendance">'
+    + '<line x1="' + m + '" y1="' + y5.toFixed(1) + '" x2="' + (L-m) + '" y2="' + y5.toFixed(1)
+    + '" stroke="#DDD8D1" stroke-width="1" stroke-dasharray="3 3"/>'
+    + '<path d="' + d + '" fill="none" stroke="#1C1917" stroke-width="1.8" stroke-linejoin="round"/>'
+    + marques + '</svg>';
+}
+
+/* ── Blocs ───────────────────────────────────────────────────── */
+
+function blocParticipation(r, effectif){
+  /* nb_repondants est null quand la campagne est sous le seuil d'anonymat :
+     le consultant a pu publier une restitution qualitative dessus. On dit
+     alors pourquoi il n'y a pas de chiffre, plutot que d'afficher un tiret. */
+  if (r.nb_repondants === null || r.nb_repondants === undefined){
+    return '<span class="discret">Trop peu de r\u00e9ponses pour publier des scores '
+         + '\u2014 seule la lecture qualitative est restitu\u00e9e.</span>';
+  }
+  const n = Number(r.nb_repondants);
+  return '<span>' + n + ' r\u00e9ponse' + (n > 1 ? 's' : '')
+       + (effectif ? ' sur ' + effectif : '')
+       + (r.taux_reponse !== null && r.taux_reponse !== undefined
+            ? ' \u2014 <b>' + r.taux_reponse + ' %</b>' : '')
+       + '</span>';
+}
+
+function blocAxes(r, serieParAxe, dates){
+  if (!r.axes || !r.axes.length) return '';
+  return '<h2>Les trois axes</h2>' + Object.keys(AXES).map(cle => {
+    const a = r.axes.find(x => x.axe === cle);
+    if (!a) return '';
+    const e     = ETATS[a.niveau] || ETATS.masque;
+    const grave = (a.niveau === 'alerte');
+    let delta = '&nbsp;';
+    if (a.delta !== null && a.delta !== undefined){
+      const d = Number(a.delta);
+      delta = (d === 0)
+        ? 'Stable depuis la campagne pr\u00e9c\u00e9dente'
+        : (d > 0 ? '+' : '') + nb(d) + ' pt depuis la campagne pr\u00e9c\u00e9dente';
+    }
+    const serie = serieParAxe[cle] || [];
+    const bornes = (dates.length > 1)
+      ? '<div class="meta" style="text-align:center">' + moisCourt(dates[0])
+        + ' \u2192 ' + moisCourt(dates[dates.length - 1]) + '</div>'
+      : '';
+    return '<div class="axe' + (grave ? ' grave' : '') + '">'
+      + '<div>'
+      +   '<div class="axe-titre">' + AXES[cle] + '</div>'
+      +   '<div class="chiffre" style="margin-top:10px">' + nb(a.score) + '<span> / 10</span></div>'
+      +   '<div class="etat">' + e.g + ' ' + e.t + '</div>'
+      +   '<div class="meta">' + delta + '</div>'
+      + '</div>'
+      + '<div>' + (serie.length > 1 ? courbe(serie) : '') + bornes + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function blocFormations(r){
+  if (!r.formations || !r.formations.length) return '';
+  return '<h2>Ce qui est propos\u00e9</h2>'
+    + r.formations.map(f => '<div class="reco">' + echapper(f) + '</div>').join('');
+}
+
+function blocVerbatims(r){
+  if (!r.verbatims || !r.verbatims.length) return '';
+  return '<h2>Mots retenus par le consultant</h2>'
+    + r.verbatims.map(v =>
+        '<div class="mot"><p>' + echapper(v.contenu) + '</p>'
+        + '<div class="src">D\u00e9pos\u00e9 le ' + jourFr(v.le + 'T12:00:00') + '</div></div>'
+      ).join('')
+    + '<p class="discret" style="margin-top:6px">Ces mots ont \u00e9t\u00e9 choisis pour la '
+    + 'restitution. Ils ne sont ni tous les messages d\u00e9pos\u00e9s, ni attribuables '
+    + '\u00e0 une personne.</p>';
+}
+
+function blocReserve(){
+  return '<div class="cadre nonimp">'
+    + '<div style="font-weight:600">Ce que cet \u00e9cran ne montre pas, et pourquoi</div>'
+    + '<ul>'
+    +   '<li>Les r\u00e9ponses individuelles \u2014 elles ne sont rattach\u00e9es \u00e0 '
+    +   'personne, y compris en base.</li>'
+    +   '<li>Les messages du canal continu qui n\u2019ont pas \u00e9t\u00e9 retenus pour '
+    +   'la restitution.</li>'
+    +   '<li>Les campagnes o\u00f9 moins de trois personnes ont r\u00e9pondu : '
+    +   'sous ce seuil, un score d\u00e9signerait quelqu\u2019un.</li>'
+    +   '<li>Les restitutions non encore publi\u00e9es par le consultant.</li>'
+    + '</ul>'
+    + '<p class="discret" style="margin-top:10px">Cette restriction est la condition de '
+    + 'la mesure : une \u00e9quipe qui sait sa direction capable de lire le d\u00e9tail '
+    + 'r\u00e9pond autre chose.</p>'
+    + '</div>';
+}
+
+/* ── Rendu ───────────────────────────────────────────────────── */
+function rendre(data){
+  const structure = data.structure || {};
+  const liste     = data.restitutions || [];   // deja triees, plus recente d'abord
+
+  $('tete-structure').textContent = structure.nom || '';
+
+  if (!liste.length){
+    $('corps').innerHTML =
+        '<div class="gros-vide">'
+      +   '<h1>Aucune restitution publi\u00e9e</h1>'
+      +   '<p style="margin-top:10px">Une campagne peut \u00eatre en cours, ou sa '
+      +   'restitution encore en pr\u00e9paration. Cet \u00e9cran affichera la synth\u00e8se '
+      +   'd\u00e8s qu\u2019elle sera publi\u00e9e par le consultant.</p>'
+      + '</div>'
+      + blocReserve();
+    return;
+  }
+
+  /* Series de tendance : ordre chronologique, sur les seules campagnes
+     publiees. Une campagne publiee sans score laisse un trou explicite. */
+  const chrono = liste.slice().reverse();
+  const dates  = chrono.map(r => r.mois);
+  const serieParAxe = {};
+  Object.keys(AXES).forEach(cle => {
+    serieParAxe[cle] = chrono.map(r => {
+      const a = (r.axes || []).find(x => x.axe === cle);
+      return (a && a.score !== null && a.score !== undefined) ? a.score : null;
+    });
+  });
+
+  const der = liste[0];
+
+  let html = '<div class="bandeau">'
+    + '<span>Campagne de <b>' + moisFr(der.mois) + '</b></span>'
+    + blocParticipation(der, structure.effectif)
+    + (der.publiee_le ? '<span class="discret">Publi\u00e9e le ' + jourFr(der.publiee_le) + '</span>' : '')
+    + '</div>';
+
+  html += blocAxes(der, serieParAxe, dates);
+
+  html += '<h2>Lecture du consultant</h2>'
+       +  '<div class="synthese">' + echapper(der.synthese) + '</div>';
+
+  html += blocFormations(der);
+  html += blocVerbatims(der);
+
+  if (liste.length > 1){
+    html += '<h2>Restitutions pr\u00e9c\u00e9dentes</h2>'
+      + liste.slice(1).map(r => {
+          const pires = (r.axes || []).filter(a => a.niveau === 'alerte').length;
+          const resume = (r.axes && r.axes.length)
+            ? (r.axes.map(a => (ETATS[a.niveau] || ETATS.masque).g).join(' ')
+               + (pires ? ' \u2014 ' + pires + ' axe' + (pires>1?'s':'') + ' en alerte' : ''))
+            : 'Sans score publi\u00e9';
+          return '<details class="ant"><summary>'
+            + '<span>' + moisFr(r.mois) + '</span>'
+            + '<span class="discret" style="font-weight:400">' + resume + '</span>'
+            + '</summary><div class="ant-corps">'
+            + '<div class="synthese">' + echapper(r.synthese) + '</div>'
+            + ((r.formations && r.formations.length)
+                ? '<div style="margin-top:14px">'
+                  + r.formations.map(f => '<div class="reco">' + echapper(f) + '</div>').join('')
+                  + '</div>'
+                : '')
+            + '</div></details>';
+        }).join('');
+  }
+
+  html += blocReserve();
+  $('corps').innerHTML = html;
+}
+
+function erreur(titre, texte){
+  $('ec-chargement').classList.add('cache');
+  $('ec-vue').classList.add('cache');
+  $('err-titre').textContent = titre;
+  $('err-texte').textContent = texte;
+  $('ec-erreur').classList.remove('cache');
+}
+
+async function demarrer(){
+  const jeton = new URLSearchParams(location.search).get('s');
+  if (!jeton){
+    erreur('Lien incomplet',
+      'Cette page s\u2019ouvre depuis le lien qui vous a \u00e9t\u00e9 transmis. '
+      + 'Recopiez-le en entier, jusqu\u2019\u00e0 la fin.');
+    return;
+  }
+  try {
+    const res = await fetch(API, {
+      method:  'POST',
+      headers: { 'Content-Type':'application/json' },
+      body:    JSON.stringify({ jeton }),
+    });
+    if (res.status === 404){
+      erreur('Lien invalide',
+        'Ce lien ne correspond \u00e0 aucune structure active. V\u00e9rifiez qu\u2019il a '
+        + '\u00e9t\u00e9 recopi\u00e9 en entier.');
+      return;
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    $('ec-chargement').classList.add('cache');
+    $('ec-vue').classList.remove('cache');
+    rendre(data);
+    document.title = 'Barom\u00e8tre \u2014 ' + ((data.structure && data.structure.nom) || 'restitutions');
+  } catch(e){
+    erreur('Connexion impossible',
+      'La page n\u2019a pas pu \u00eatre charg\u00e9e. R\u00e9essayez dans un instant.');
+  }
+}
+
+demarrer();
+</script>
+</body>
+</html>
