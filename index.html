@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-10 09:50 -->
+<!-- OREVY BUILD 2026-08-10 10:48 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -24744,7 +24744,8 @@ function showImportResult(type, html) {
     <div class="dmq-code" id="dmq-code"></div>
     <div class="dmq-help">Faites scanner ce code avec l&rsquo;appareil photo du t&eacute;l&eacute;phone du
     signataire. Le document s&rsquo;ouvrira sur son &eacute;cran.</div>
-    <div class="dmq-url" id="dmq-url"></div>
+    <div class="dmq-url"><a id="dmq-url" href="#" target="_blank" rel="noopener"
+      style="color:inherit"></a></div>
     <div class="dmq-exp" id="dmq-exp"></div>
     <div class="dmq-etat" id="dmq-etat"><span class="dmq-dot"></span> En attente de la signature&hellip;</div>
     <div class="dmq-btns">
@@ -28684,8 +28685,19 @@ async function dmeDelete() {
 var DM_SIG_MINUTES = 15;
 var DM_POLL = null;
 
+var DM_BASE_PUBLIQUE = 'https://app.orevy.app/';
+
 function dmSignatureUrl(token) {
-  var base = location.origin + location.pathname.replace(/[^\/]*$/, '');
+  /* Base publique fixe, comme le quiz RH et le portail famille. Deriver
+     l'URL de location.origin la rendait dependante du poste qui genere le
+     lien : en file:// l'origine vaut la chaine "null", et le QR encodait un
+     texte que le telephone ne reconnaissait pas comme un lien. On ne
+     retombe sur l'origine courante que si elle est deja en http(s) ET
+     differente du domaine public (poste de recette). */
+  var base = DM_BASE_PUBLIQUE;
+  if (/^https?:$/.test(location.protocol) && location.hostname !== 'app.orevy.app') {
+    base = location.origin + location.pathname.replace(/[^\/]*$/, '');
+  }
   return base + 'signature.html?t=' + encodeURIComponent(token);
 }
 function dmUuid() {
@@ -28741,24 +28753,50 @@ async function dmSignerADistance(sid) {
   document.getElementById('dmq-who').textContent = nom
     + (row.signataire_qualite ? ' \u00b7 ' + row.signataire_qualite : '');
   document.getElementById('dmq-role').textContent = sig.role;
-  document.getElementById('dmq-url').textContent = url;
+  var lien = document.getElementById('dmq-url');
+  lien.textContent = url;
+  lien.href = url;
   document.getElementById('dmq-exp').textContent = 'Valable ' + DM_SIG_MINUTES + ' minutes \u00b7 usage unique';
   var et = document.getElementById('dmq-etat');
   et.className = 'dmq-etat';
   et.innerHTML = '<span class="dmq-dot"></span> En attente de la signature\u2026';
 
-  var holder = document.getElementById('dmq-code');
-  holder.innerHTML = '';
-  var fallback = '<div style="font-size:11.5px;color:#A8A29E;padding:16px;line-height:1.5">QR indisponible hors ligne \u2014 utilisez le lien ci-dessous</div>';
-  if (typeof QRCode !== 'undefined') {
-    try {
-      new QRCode(holder, { text:url, width:180, height:180,
-        colorDark:'#1C1917', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M });
-    } catch (e) { holder.innerHTML = fallback; }
-  } else { holder.innerHTML = fallback; }
+  dmRendreQr(document.getElementById('dmq-code'), url);
 
   document.getElementById('dm-qr').style.display = 'flex';
   dmPollStart(token, sid);
+}
+
+/* Le script qrcodejs vient d'un CDN : un chargement rate au demarrage
+   laissait QRCode absent pour toute la session, et il ne restait que le
+   lien a recopier a la main. On retente une fois, a la demande. */
+function dmChargerQrLib() {
+  if (typeof QRCode !== 'undefined') return Promise.resolve(true);
+  if (window._dmQrLibPromesse) return window._dmQrLibPromesse;
+  window._dmQrLibPromesse = new Promise(function(resolve) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload  = function() { resolve(typeof QRCode !== 'undefined'); };
+    s.onerror = function() { resolve(false); };
+    document.head.appendChild(s);
+  });
+  return window._dmQrLibPromesse;
+}
+
+function dmRendreQr(holder, url) {
+  if (!holder) return;
+  holder.innerHTML = '<div style="font-size:11.5px;color:#A8A29E;padding:16px;'
+    + 'line-height:1.5">Code en cours de g\u00e9n\u00e9ration\u2026</div>';
+  var echec = '<div style="font-size:11.5px;color:#A8A29E;padding:16px;line-height:1.5">'
+    + 'QR indisponible \u2014 utilisez le lien ci-dessous</div>';
+  dmChargerQrLib().then(function(ok) {
+    if (!ok) { holder.innerHTML = echec; return; }
+    try {
+      holder.innerHTML = '';
+      new QRCode(holder, { text:url, width:180, height:180,
+        colorDark:'#1C1917', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M });
+    } catch (e) { holder.innerHTML = echec; console.warn('[signature] QR', e); }
+  });
 }
 
 function dmFermerQr() {
@@ -28815,7 +28853,7 @@ function dmAppliquerSignature(sid, png, signe_le) {
 }
 
 function dmCopierLien() {
-  var t = document.getElementById('dmq-url').textContent;
+  var t = document.getElementById('dmq-url').textContent;   // ancre <a>, pas <div>
   if (navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ showNotif('\u2713 Lien copié'); });
   else showNotif('Copie manuelle : ' + t);
 }
