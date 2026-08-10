@@ -314,6 +314,10 @@ async function rendreStructure(sid, structure){
 
   /* Verbatims — le rattachement au site est décidé en base, pas ici. */
   const propres = VERBATIMS.filter(v => v.structure_id_affichable === sid);
+  /* Ce compte porte sur TOUTES les structures sous le seuil, pas sur
+     celle-ci : la base masque justement leur rattachement. Le rendre
+     propre a la structure affichee reviendrait a re-rattacher ce que
+     l'anonymat vient de detacher. Le libelle doit donc le dire. */
   const reseau  = VERBATIMS.filter(v => v.structure_id_affichable === null).length;
 
   let html = propres.map(v =>
@@ -329,8 +333,8 @@ async function rendreStructure(sid, structure){
   }
   if (reseau){
     html += '<div class="discret" style="margin-top:10px">' + reseau
-      + ' message' + (reseau>1?'s':'') + ' au niveau réseau, non rattaché'
-      + (reseau>1?'s':'') + ' à une structure.</div>';
+      + ' message' + (reseau>1?'s':'') + ' au niveau réseau, toutes structures '
+      + 'confondues, non rattaché' + (reseau>1?'s':'') + ' à une structure.</div>';
   }
   $('verbatims').innerHTML = html;
 
@@ -468,7 +472,13 @@ async function enregistrer(sid, campagneId, publiee, structure, refMois, ref){
     if (!res.ok) throw new Error('HTTP ' + res.status);
     await res.json();
     msg.textContent = publiee ? 'Publiée.' : 'Brouillon enregistré.';
-    if (CAMPAGNES[campagneId]) CAMPAGNES[campagneId].contexte = corps.contexte;
+    /* Relecture plutôt que mise à jour mémoire : contexte_maj_le est posé par
+       la base, et une valeur inventée ici divergerait de l'horodatage réel
+       affiché sur l'écran 3. */
+    try {
+      (await lire('campagnes', { structure_id: sid }) || [])
+        .forEach(c => { CAMPAGNES[c.id] = c; });
+    } catch(e) { if (CAMPAGNES[campagneId]) CAMPAGNES[campagneId].contexte = corps.contexte; }
     await rendreAtelier(sid, structure, refMois, ref);
     $('at-msg').textContent = publiee ? 'Publiée.' : 'Brouillon enregistré.';
   } catch(e){
