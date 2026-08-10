@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- OREVY BUILD 2026-08-07 18:54 -->
+<!-- OREVY BUILD 2026-08-10 09:50 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -9680,7 +9680,7 @@ function changerNom(i, val) {
   ARTICLES.forEach(a => { if (a.creche === ancien) a.creche = CRECHES_DATA[i].nom; });
   UNIVERS.forEach(u => { if (u.creche === ancien) u.creche = CRECHES_DATA[i].nom; });
   sauverCreches();
-  sauverLocal();
+  saveData();               // ARTICLES et UNIVERS viennent d'etre reecrits
   renderSidebarCreches();
   showNotif('✅ Structure renommée');
 }
@@ -18112,7 +18112,9 @@ function renderPlanningIK() {
   // Pré-calculer la liste salariés — appel loadSalaries() pour s'assurer que SALARIES est à jour
   if (typeof loadSalaries === 'function') loadSalaries();
   let _ikSalaries = [];
-  try { _ikSalaries = (window.SALARIES && SALARIES.length ? SALARIES : JSON.parse(localStorage.getItem('orevy_salaries')||'[]')).filter(s=>s.statut!=='archivé'); } catch(e) {}
+  // SALARIES est declare en let : window.SALARIES vaut toujours undefined,
+  // ce qui faisait retomber ce module sur le localStorage a chaque rendu.
+  try { _ikSalaries = ((typeof SALARIES !== 'undefined' && SALARIES && SALARIES.length) ? SALARIES : JSON.parse(localStorage.getItem('orevy_salaries')||'[]')).filter(s=>s.statut!=='archivé'); } catch(e) {}
   const salOptionsHtml = _ikSalaries.map(s=>`<option value="${((s.prenom||'')+' '+(s.nom||'')).trim()}">${(s.prenom||'')} ${(s.nom||'')}</option>`).join('');
 
   el.innerHTML = `
