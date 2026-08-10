@@ -79,6 +79,12 @@ select:focus-visible,input:focus-visible{outline:3px solid var(--accent); outlin
 .ctx-t{font-size:13px; font-weight:600; margin-bottom:6px}
 .ctx p{font-size:15px; color:var(--encre); white-space:pre-wrap; margin:0}
 .atelier textarea.court{min-height:88px}
+.saisie{background:var(--surface); border:1.5px solid var(--trait); border-radius:14px;
+  padding:18px; margin:0 0 22px}
+.saisie textarea{width:100%; min-height:88px; background:var(--creme); color:var(--encre);
+  border:1.5px solid var(--trait); border-radius:10px; padding:13px; font:inherit; resize:vertical}
+.saisie textarea:focus-visible{outline:3px solid var(--accent); outline-offset:1px}
+.saisie select{margin-bottom:10px}
 .liste-choix{display:flex; flex-direction:column; gap:10px; margin:6px 0 18px}
 .sous-titre{font-size:13px; font-weight:600; margin-bottom:6px}
 .vide{padding:22px 0; color:var(--encre3); font-size:14px}
@@ -115,6 +121,9 @@ select:focus-visible,input:focus-visible{outline:3px solid var(--accent); outlin
   <div class="bandeau" id="bandeau"></div>
 
   <div class="ctx" id="ctx-mois"></div>
+
+  <h2>Recueil du contexte</h2>
+  <div class="saisie" id="ctx-saisie"></div>
 
   <h2>Les trois axes</h2>
   <div id="axes"></div>
@@ -220,6 +229,11 @@ async function rendreStructure(sid, structure){
     (await lire('campagnes', { structure_id: sid }) || [])
       .forEach(c => { CAMPAGNES[c.id] = c; });
   } catch(e){ /* le contexte est un plus : son absence ne casse pas l'ecran */ }
+
+  /* Rendu AVANT le depart anticipe ci-dessous : une campagne en cours n'a
+     pas encore de score, donc pas de ligne dans qvt_v_alertes. C'est
+     precisement celle dont on veut recueillir le contexte. */
+  rendreSaisieContexte(sid);
 
   if (!lignes.length){
     $('bandeau').innerHTML = '<span>Aucune campagne pour cette structure.</span>';
@@ -384,6 +398,71 @@ function trame(structure, refMois, ref, contexte){
   return l.join('\n');
 }
 
+/* ── Recueil du contexte ─────────────────────────────────
+   Separe de l'atelier a dessein. L'atelier travaille sur la derniere
+   campagne EXPLOITABLE ; le contexte se recueille sur la campagne EN COURS,
+   qui n'a par construction aucun score et n'apparait donc pas dans
+   qvt_v_alertes. Loger la saisie dans l'atelier la rendait inatteignable
+   au seul moment ou elle sert. */
+function rendreSaisieContexte(sid){
+  const boite = $('ctx-saisie');
+  const camps = Object.values(CAMPAGNES)
+    .sort((a,b) => String(b.date_ouverture).localeCompare(String(a.date_ouverture)));
+
+  if (!camps.length){
+    boite.innerHTML = '<p class="discret">Aucune campagne sur cette structure.</p>';
+    return;
+  }
+
+  boite.innerHTML =
+      '<div class="sous-titre">Ce qui s\u2019est pass\u00e9 ce mois-ci</div>'
+    + '<p class="discret" style="margin-bottom:10px">Recueilli aupr\u00e8s de la direction, '
+    + 'de pr\u00e9f\u00e9rence avant de lui montrer les scores. Arr\u00eats, d\u00e9parts, travaux, '
+    + 'changement d\u2019organisation \u2014 ce qui explique un chiffre sans l\u2019excuser.</p>'
+    + '<select id="ctx-camp" aria-label="Campagne">'
+    +   camps.map(c => '<option value="' + c.id + '">' + moisFr(c.date_ouverture)
+        + (c.statut === 'ouverte' ? ' \u2014 en cours' : '') + '</option>').join('')
+    + '</select>'
+    + '<textarea id="ctx-txt"></textarea>'
+    + '<div class="actions">'
+    +   '<button class="bouton" id="ctx-bt">Enregistrer le contexte</button>'
+    +   '<span class="discret" id="ctx-msg"></span>'
+    + '</div>';
+
+  const remplir = () => {
+    const c = CAMPAGNES[$('ctx-camp').value] || {};
+    $('ctx-txt').value = c.contexte || '';
+    $('ctx-msg').textContent = c.contexte_maj_le
+      ? 'Recueilli le ' + new Date(c.contexte_maj_le).toLocaleDateString('fr-FR')
+      : '';
+  };
+  remplir();
+  $('ctx-camp').addEventListener('change', remplir);
+  $('ctx-bt').addEventListener('click', () => enregistrerContexte(sid));
+}
+
+async function enregistrerContexte(sid){
+  const msg  = $('ctx-msg');
+  const cid  = $('ctx-camp').value;
+  msg.textContent = 'Enregistrement\u2026';
+  try {
+    const res = await fetch('https://api.orevy.app/qvt-contexte', {
+      method: 'POST', headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ code: CODE, structure_id: sid, campagne_id: cid,
+                             contexte: $('ctx-txt').value }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    /* On repart de ce que la base renvoie : contexte_maj_le vient du
+       trigger, l'inventer ici le ferait diverger de l'affichage. */
+    const ligne = await res.json();
+    CAMPAGNES[cid] = Object.assign(CAMPAGNES[cid] || {}, ligne);
+    msg.textContent = 'Enregistr\u00e9 le '
+      + new Date(ligne.contexte_maj_le).toLocaleDateString('fr-FR');
+  } catch(e){
+    msg.textContent = '\u00c9chec de l\u2019enregistrement. Rien n\u2019a \u00e9t\u00e9 modifi\u00e9.';
+  }
+}
+
 async function rendreAtelier(sid, structure, refMois, ref){
   const campagneId = ref[0].campagne_id;
   const boite = $('atelier');
@@ -409,12 +488,6 @@ async function rendreAtelier(sid, structure, refMois, ref){
     + '<p class="discret" style="margin-top:6px">Campagne de ' + moisFr(refMois)
     + '. Tant que la restitution n\u2019est pas publiée, la direction ne voit rien.</p>'
 
-    + '<div class="sous-titre" style="margin-top:20px">Ce qui s\u2019est passé ce mois-ci</div>'
-    + '<p class="discret" style="margin-bottom:8px">Recueilli auprès de la direction, '
-    + 'de préférence avant de lui montrer les scores. Arrêts, départs, travaux, '
-    + 'changement d\u2019organisation \u2014 ce qui explique un chiffre sans l\u2019excuser.</p>'
-    + '<textarea id="at-contexte" class="court"></textarea>'
-
     + '<div class="sous-titre" style="margin-top:20px">Formations retenues</div>'
     + (propose.length
         ? '<div class="liste-choix">' + propose.map(m =>
@@ -434,7 +507,6 @@ async function rendreAtelier(sid, structure, refMois, ref){
     + '</div>';
 
   const ctxCamp = (CAMPAGNES[campagneId] && CAMPAGNES[campagneId].contexte) || '';
-  $('at-contexte').value = ctxCamp;
   $('at-synthese').value = (RESTIT && RESTIT.synthese)
     || trame(structure, refMois, ref, ctxCamp);
   $('bt-publier').textContent = (RESTIT && RESTIT.publiee) ? 'Dépublier' : 'Publier';
@@ -442,9 +514,10 @@ async function rendreAtelier(sid, structure, refMois, ref){
   document.querySelectorAll('.ch-verb').forEach(c => { c.checked = dejaV.has(c.value); });
 
   $('bt-trame').addEventListener('click', () => {
-    /* On relit le champ, pas la valeur chargee : le consultant vient
-       souvent de le saisir sans avoir encore enregistre. */
-    $('at-synthese').value = trame(structure, refMois, ref, $('at-contexte').value);
+    /* On relit CAMPAGNES, pas une copie figee au rendu : le consultant vient
+       peut-etre d'enregistrer le contexte dans le bloc du haut. */
+    const ctx = (CAMPAGNES[campagneId] && CAMPAGNES[campagneId].contexte) || '';
+    $('at-synthese').value = trame(structure, refMois, ref, ctx);
   });
   $('bt-enregistrer').addEventListener('click', () =>
     enregistrer(sid, campagneId, RESTIT ? RESTIT.publiee : false, structure, refMois, ref));
@@ -460,7 +533,6 @@ async function enregistrer(sid, campagneId, publiee, structure, refMois, ref){
     structure_id:      sid,
     campagne_id:       campagneId,
     synthese:          $('at-synthese').value,
-    contexte:          $('at-contexte').value,
     publiee:           publiee,
     formations_ref:    [...document.querySelectorAll('.ch-form:checked')].map(c => c.value),
     verbatims_retenus: [...document.querySelectorAll('.ch-verb:checked')].map(c => c.value),
@@ -472,13 +544,6 @@ async function enregistrer(sid, campagneId, publiee, structure, refMois, ref){
     if (!res.ok) throw new Error('HTTP ' + res.status);
     await res.json();
     msg.textContent = publiee ? 'Publiée.' : 'Brouillon enregistré.';
-    /* Relecture plutôt que mise à jour mémoire : contexte_maj_le est posé par
-       la base, et une valeur inventée ici divergerait de l'horodatage réel
-       affiché sur l'écran 3. */
-    try {
-      (await lire('campagnes', { structure_id: sid }) || [])
-        .forEach(c => { CAMPAGNES[c.id] = c; });
-    } catch(e) { if (CAMPAGNES[campagneId]) CAMPAGNES[campagneId].contexte = corps.contexte; }
     await rendreAtelier(sid, structure, refMois, ref);
     $('at-msg').textContent = publiee ? 'Publiée.' : 'Brouillon enregistré.';
   } catch(e){
