@@ -467,7 +467,39 @@ body {
 .pres-row .pres-av { margin-left:0; width:28px; height:28px; border:none; }
 .pres-row .nm { font-size:13px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pres-row .sb { font-size:11px; color:var(--ink3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pres-row.cliquable { cursor:pointer; }
+.pres-row.cliquable:hover { background:var(--bg); }
+.pres-row .go { margin-left:auto; font-size:14px; color:var(--ink3); flex:0 0 auto; }
+.pres-unread { background:#D9480F; color:#fff; border-radius:999px; font-size:10px; font-weight:700;
+  padding:1px 6px; margin-left:auto; flex:0 0 auto; }
+.pres-btn .pres-unread { margin-left:0; }
 @media (max-width:600px) { .pres-count .lg { display:none; } }
+
+/* ── Messagerie instantanée ── */
+.chat-box { position:fixed; right:16px; bottom:16px; z-index:1000; width:340px; max-width:calc(100vw - 32px);
+  height:440px; max-height:calc(100vh - 32px); display:none; flex-direction:column; background:var(--surface2);
+  border:1px solid var(--border); border-radius:14px; box-shadow:0 12px 32px rgba(0,0,0,.18); overflow:hidden;
+  font-family:'Instrument Sans',sans-serif; }
+.chat-box.open { display:flex; }
+.chat-hd { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--border); }
+.chat-hd .pres-av { margin-left:0; width:30px; height:30px; border:none; }
+.chat-hd .nm { font-size:14px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chat-hd .st { font-size:11px; color:var(--ink3); }
+.chat-x { margin-left:auto; background:none; border:none; font-size:20px; line-height:1; color:var(--ink3); cursor:pointer; padding:4px 6px; }
+.chat-msgs { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:6px; background:var(--bg); }
+.chat-msg { max-width:80%; padding:7px 11px; border-radius:14px; font-size:13px; line-height:1.4;
+  white-space:pre-wrap; word-wrap:break-word; overflow-wrap:anywhere; }
+.chat-msg.moi { align-self:flex-end; background:var(--ink); color:#fff; border-bottom-right-radius:4px; }
+.chat-msg.lui { align-self:flex-start; background:var(--surface2); color:var(--ink); border:1px solid var(--border); border-bottom-left-radius:4px; }
+.chat-msg .h { display:block; font-size:10px; opacity:.6; margin-top:2px; text-align:right; }
+.chat-vide { margin:auto; text-align:center; font-size:12px; color:var(--ink3); padding:0 20px; }
+.chat-ft { display:flex; gap:8px; padding:10px; border-top:1px solid var(--border); align-items:flex-end; }
+.chat-ft textarea { flex:1; resize:none; border:1px solid var(--border); border-radius:10px; padding:8px 10px;
+  font-family:inherit; font-size:13px; max-height:96px; min-height:36px; background:var(--surface2); color:var(--ink); }
+.chat-ft button { background:var(--ink); color:#fff; border:none; border-radius:10px; padding:9px 14px; font-weight:700;
+  font-size:13px; cursor:pointer; font-family:inherit; }
+.chat-ft button:disabled { opacity:.4; cursor:default; }
+@media (max-width:600px) { .chat-box { right:8px; left:8px; bottom:8px; width:auto; max-width:none; height:70vh; } }
 
 .page-title {
   font-family: 'Syne', sans-serif;
@@ -10710,9 +10742,10 @@ async function presenceStart() {
     PRES_CLIENT = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
-    PRES_CHANNEL = PRES_CLIENT.channel('orevy-presence', { config: { presence: { key: me.email } } });
+    PRES_CHANNEL = PRES_CLIENT.channel('orevy-presence', { config: { presence: { key: me.email }, broadcast: { self: false } } });
     PRES_CHANNEL
       .on('presence', { event: 'sync' }, presSync)
+      .on('broadcast', { event: 'dm' }, msg => chatRecevoir(msg && msg.payload))
       .subscribe(status => { if (status === 'SUBSCRIBED') PRES_CHANNEL.track(presPayload()); });
     document.addEventListener('click', e => {
       const w = document.getElementById('pres-wrap');
@@ -10754,7 +10787,9 @@ function presRender() {
     '<span class="pres-av" style="background:' + presCouleur(p.email) + '" title="' + presEsc(presNom(p.email)) + '">' + presEsc(presInitiales(p.email)) + '</span>').join('');
   if (list.length > MAX) avs += '<span class="pres-av more">+' + (list.length - MAX) + '</span>';
   document.getElementById('pres-avs').innerHTML = avs;
-  document.getElementById('pres-count').innerHTML = list.length + '<span class="lg"> connecté' + (list.length > 1 ? 's' : '') + '</span>';
+  const nonLusTotal = Object.values(CHAT_NON_LUS).reduce((a, b) => a + b, 0);
+  document.getElementById('pres-count').innerHTML = list.length + '<span class="lg"> connecté' + (list.length > 1 ? 's' : '') + '</span>'
+    + (nonLusTotal ? ' <span class="pres-unread" title="Messages non lus">' + nonLusTotal + '</span>' : '');
 
   const roles = { admin:'Administrateur', directrice:'Directrice', auxiliaire:'Auxiliaire', stagiaire:'Stagiaire', coordinateur:'Coordinateur' };
   const moi = presPayload().email;
@@ -10768,12 +10803,123 @@ function presRender() {
       const d = new Date(p.since);
       if (!isNaN(d)) bits.push('depuis ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }));
     }
-    html += '<div class="pres-row"><span class="pres-av" style="background:' + presCouleur(p.email) + '">' + presEsc(presInitiales(p.email)) + '</span>'
-      + '<div style="min-width:0"><div class="nm">' + presEsc(presNom(p.email)) + (p.email === moi ? ' <span style="font-weight:500;color:var(--ink3)">(vous)</span>' : '') + '</div>'
-      + '<div class="sb">' + presEsc(bits.join(' · ')) + '</div></div></div>';
+    const estMoi = p.email === moi;
+    const nl = CHAT_NON_LUS[p.email] || 0;
+    html += '<div class="pres-row' + (estMoi ? '' : ' cliquable') + '"'
+      + (estMoi ? '' : ' data-email="' + presEsc(p.email) + '" onclick="chatOuvrir(this.dataset.email)" title="Envoyer un message"')
+      + '><span class="pres-av" style="background:' + presCouleur(p.email) + '">' + presEsc(presInitiales(p.email)) + '</span>'
+      + '<div style="min-width:0"><div class="nm">' + presEsc(presNom(p.email)) + (estMoi ? ' <span style="font-weight:500;color:var(--ink3)">(vous)</span>' : '') + '</div>'
+      + '<div class="sb">' + presEsc(bits.join(' · ')) + '</div></div>'
+      + (estMoi ? '' : (nl ? '<span class="pres-unread">' + nl + '</span>' : '<span class="go">\uD83D\uDCAC</span>'))
+      + '</div>';
   });
   document.getElementById('pres-menu').innerHTML = html;
+  chatMajStatut();
 }
+// ── MESSAGERIE INSTANTANÉE entre personnes connectées ─────────────
+// Messages envoyés en direct sur le canal temps réel (rien n'est stocké côté
+// serveur). L'historique est conservé dans ce navigateur uniquement.
+let CHAT_AVEC = null;             // email de l'interlocuteur affiché
+const CHAT_NON_LUS = {};          // email -> nb de messages non lus
+const CHAT_MAX = 200;             // messages gardés par conversation
+const chatMemoire = {};           // copie mémoire si le stockage local est indisponible
+
+function chatCle() { return 'orevy_chat_' + (presPayload().email || 'anon'); }
+function chatHisto() {
+  try { return JSON.parse(localStorage.getItem(chatCle()) || '{}') || {}; } catch (_) { return {}; }
+}
+function chatAjouter(avec, m) {
+  const h = chatHisto();
+  const l = h[avec] || (chatMemoire[avec] || []).slice();
+  if (m.id && l.some(x => x.id === m.id)) return false;
+  l.push(m);
+  if (l.length > CHAT_MAX) l.splice(0, l.length - CHAT_MAX);
+  h[avec] = l;
+  chatMemoire[avec] = l;
+  try { localStorage.setItem(chatCle(), JSON.stringify(h)); } catch (_) {}
+  return true;
+}
+function chatMessages(avec) {
+  const h = chatHisto();
+  return h[avec] || chatMemoire[avec] || [];
+}
+function chatEnLigne(email) { return PRES_STATE.some(p => p.email === email); }
+
+function chatOuvrir(email) {
+  if (!email) return;
+  CHAT_AVEC = email;
+  delete CHAT_NON_LUS[email];
+  document.getElementById('pres-menu')?.classList.remove('open');
+  const av = document.getElementById('chat-av');
+  av.textContent = presInitiales(email);
+  av.style.background = presCouleur(email);
+  document.getElementById('chat-nm').textContent = presNom(email);
+  document.getElementById('chat-box').classList.add('open');
+  chatAfficher();
+  presRender();
+  setTimeout(() => document.getElementById('chat-input')?.focus(), 50);
+}
+function chatFermer() {
+  CHAT_AVEC = null;
+  document.getElementById('chat-box')?.classList.remove('open');
+}
+function chatMajStatut() {
+  if (!CHAT_AVEC) return;
+  const ok = chatEnLigne(CHAT_AVEC);
+  const st = document.getElementById('chat-st');
+  if (st) st.innerHTML = ok ? '<span style="color:#22A35A">●</span> En ligne' : 'Hors ligne — message non distribuable';
+  const b = document.getElementById('chat-send'), t = document.getElementById('chat-input');
+  if (b) b.disabled = !ok;
+  if (t) t.disabled = !ok;
+}
+function chatAfficher() {
+  const box = document.getElementById('chat-msgs');
+  if (!box || !CHAT_AVEC) return;
+  const l = chatMessages(CHAT_AVEC);
+  if (!l.length) {
+    box.innerHTML = '<div class="chat-vide">Démarrez la discussion avec ' + presEsc(presNom(CHAT_AVEC)) + '.<br>Les messages ne sont conservés que sur cet appareil.</div>';
+  } else {
+    box.innerHTML = l.map(m => {
+      const d = new Date(m.at);
+      const h = isNaN(d) ? '' : d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+      return '<div class="chat-msg ' + (m.moi ? 'moi' : 'lui') + '">' + presEsc(m.text) + '<span class="h">' + h + '</span></div>';
+    }).join('');
+  }
+  box.scrollTop = box.scrollHeight;
+  chatMajStatut();
+}
+async function chatEnvoyer() {
+  const t = document.getElementById('chat-input');
+  const text = (t && t.value || '').trim();
+  if (!text || !CHAT_AVEC || !PRES_CHANNEL) return;
+  if (!chatEnLigne(CHAT_AVEC)) { showNotif('⚠ ' + presNom(CHAT_AVEC) + ' n\'est plus connecté(e)'); return; }
+  const me = presPayload().email;
+  const m = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), from: me, to: CHAT_AVEC, text: text.slice(0, 2000), at: new Date().toISOString() };
+  try {
+    const r = await PRES_CHANNEL.send({ type: 'broadcast', event: 'dm', payload: m });
+    if (r && r !== 'ok') throw new Error(r);
+  } catch (e) {
+    showNotif('⚠ Message non envoyé, réessayez');
+    return;
+  }
+  t.value = '';
+  chatAjouter(CHAT_AVEC, { id: m.id, moi: true, text: m.text, at: m.at });
+  chatAfficher();
+}
+function chatRecevoir(m) {
+  const me = presPayload().email;
+  if (!m || !m.from || !m.text || String(m.to || '').toLowerCase() !== me || m.from === me) return;
+  const de = String(m.from).toLowerCase();
+  if (!chatAjouter(de, { id: m.id, moi: false, text: String(m.text).slice(0, 2000), at: m.at || new Date().toISOString() })) return;
+  if (CHAT_AVEC === de) { chatAfficher(); return; }
+  if (!CHAT_AVEC) { chatOuvrir(de); }
+  else {
+    CHAT_NON_LUS[de] = (CHAT_NON_LUS[de] || 0) + 1;
+    showNotif('💬 Nouveau message de ' + presNom(de));
+    presRender();
+  }
+}
+
 function presToggleMenu(ev) {
   if (ev) ev.stopPropagation();
   document.getElementById('pres-menu')?.classList.toggle('open');
@@ -33216,6 +33362,20 @@ function sendSuiviEmail() {
       <button class="btn btn-secondary" onclick="_drEvtEditingId=null;closeModal('modal-evt-new')">Annuler</button>
       <button class="btn btn-primary" onclick="drSaveEvt()"><i class="ti ti-check"></i> Créer</button>
     </div>
+  </div>
+</div>
+<!-- Messagerie instantanée -->
+<div class="chat-box" id="chat-box" role="dialog" aria-label="Discussion">
+  <div class="chat-hd">
+    <span class="pres-av" id="chat-av"></span>
+    <div style="min-width:0"><div class="nm" id="chat-nm"></div><div class="st" id="chat-st"></div></div>
+    <button class="chat-x" onclick="chatFermer()" title="Fermer">&times;</button>
+  </div>
+  <div class="chat-msgs" id="chat-msgs"></div>
+  <div class="chat-ft">
+    <textarea id="chat-input" rows="1" placeholder="Votre message…" maxlength="2000"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatEnvoyer();}"></textarea>
+    <button id="chat-send" onclick="chatEnvoyer()">Envoyer</button>
   </div>
 </div>
 </body>
