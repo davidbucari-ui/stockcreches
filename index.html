@@ -10657,7 +10657,7 @@ function showLoginError(msg) {
 
 // ── PRÉSENCE : personnes connectées (Supabase Realtime Presence) ─────
 // Aucun stockage en base : chaque onglet ouvert annonce sa présence sur un
-// canal temps réel du projet RH ; elle disparaît dès que l'onglet se ferme.
+// canal temps réel du projet Stock crèches ; elle disparaît dès que l'onglet se ferme.
 let PRES_CLIENT = null, PRES_CHANNEL = null, PRES_STATE = [], PRES_SINCE = null;
 const PRES_PAGE_NOMS = { hubStructures:'Hub', dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks entretien',
   commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique', statistiques:'Statistiques', univers:'Univers ludiques',
@@ -10707,7 +10707,7 @@ async function presenceStart() {
   PRES_SINCE = new Date().toISOString();
   try {
     await presChargerLib();
-    PRES_CLIENT = window.supabase.createClient(SUPA_RH_URL, SUPA_RH_KEY, {
+    PRES_CLIENT = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
     PRES_CHANNEL = PRES_CLIENT.channel('orevy-presence', { config: { presence: { key: me.email } } });
