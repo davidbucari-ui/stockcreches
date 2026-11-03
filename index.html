@@ -443,6 +443,32 @@ body {
 
 .topbar-left { display: flex; align-items: center; gap: 16px; }
 
+/* ── Présence : personnes connectées ── */
+.pres-wrap { position:relative; min-width:0; }
+.pres-btn { display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:999px; padding:3px 10px 3px 8px; cursor:pointer; font-family:'Instrument Sans',sans-serif;
+  font-size:12px; color:var(--ink2); max-width:100%; }
+.pres-btn:hover { border-color:var(--ink3); }
+.pres-dot { width:7px; height:7px; border-radius:50%; background:#22A35A; flex:0 0 auto;
+  box-shadow:0 0 0 3px rgba(34,163,90,.15); }
+.pres-avs { display:flex; align-items:center; }
+.pres-av { width:24px; height:24px; border-radius:50%; color:#fff; font-size:10px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; border:2px solid var(--surface2);
+  margin-left:-7px; flex:0 0 auto; }
+.pres-av:first-child { margin-left:0; }
+.pres-av.more { background:var(--ink3); }
+.pres-count { white-space:nowrap; font-weight:600; }
+.pres-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:50; min-width:240px;
+  max-width:min(320px, calc(100vw - 32px)); max-height:60vh; overflow:auto; background:var(--surface2);
+  border:1px solid var(--border); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); padding:6px; }
+.pres-menu.open { display:block; }
+.pres-hd { font-size:11px; font-weight:700; color:var(--ink3); text-transform:uppercase; letter-spacing:.04em; padding:6px 8px; }
+.pres-row { display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:8px; }
+.pres-row .pres-av { margin-left:0; width:28px; height:28px; border:none; }
+.pres-row .nm { font-size:13px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pres-row .sb { font-size:11px; color:var(--ink3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width:600px) { .pres-count .lg { display:none; } }
+
 .page-title {
   font-family: 'Syne', sans-serif;
   font-size: 18px;
@@ -1454,7 +1480,15 @@ textarea { resize: vertical; min-height: 72px; }
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-row1">
-      <div class="page-title" id="pageTitle">Inventaire</div>
+      <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1">
+        <div class="page-title" id="pageTitle">Inventaire</div>
+        <div class="pres-wrap" id="pres-wrap" style="display:none">
+          <button class="pres-btn" id="pres-btn" onclick="presToggleMenu(event)" title="Personnes connectées">
+            <span class="pres-dot"></span><span class="pres-avs" id="pres-avs"></span><span class="pres-count" id="pres-count"></span>
+          </button>
+          <div class="pres-menu" id="pres-menu"></div>
+        </div>
+      </div>
       <span id="save-indicator" style="font-size:11px;color:var(--ink3);white-space:nowrap">⏳ Connexion…</span>
     </div>
     <div class="topbar-row2">
@@ -10621,6 +10655,130 @@ function showLoginError(msg) {
   el.textContent = '⚠ ' + msg; el.style.display = 'block';
 }
 
+// ── PRÉSENCE : personnes connectées (Supabase Realtime Presence) ─────
+// Aucun stockage en base : chaque onglet ouvert annonce sa présence sur un
+// canal temps réel du projet RH ; elle disparaît dès que l'onglet se ferme.
+let PRES_CLIENT = null, PRES_CHANNEL = null, PRES_STATE = [], PRES_SINCE = null;
+const PRES_PAGE_NOMS = { hubStructures:'Hub', dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks entretien',
+  commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique', statistiques:'Statistiques', univers:'Univers ludiques',
+  parametres:'Paramètres', admin:'Administration', rh:'RH', planning:'Planning', salarie:'Planning', familles:'Familles',
+  'fiche-enfant':'Fiche enfant', transmissions:'Transmissions', demandesReseau:'Demandes réseau', incidents:'Incidents', pointage:'Pointage' };
+const PRES_COULEURS = ['#8FAF8A','#C98B6B','#6B8FC9','#B07BB5','#C9A44B','#5FA8A0','#D07A8C','#7A86B8'];
+
+function presEsc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function presNom(email) {
+  const loc = String(email || '').split('@')[0];
+  const parts = loc.split(/[._-]+/).filter(Boolean);
+  if (!parts.length) return email || 'Utilisateur';
+  return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+}
+function presInitiales(email) {
+  const parts = String(email || '').split('@')[0].split(/[._-]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (parts[0] || '--').substring(0, 2).toUpperCase();
+}
+function presCouleur(email) {
+  let h = 0; for (const c of String(email || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return PRES_COULEURS[h % PRES_COULEURS.length];
+}
+function presPayload() {
+  const email = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) ? String(currentUser.email).toLowerCase() : '';
+  return {
+    email,
+    role: (typeof currentUserRole !== 'undefined' && currentUserRole) || '',
+    creche: (typeof currentCreche !== 'undefined' && currentCreche && currentCreche !== 'all') ? currentCreche : '',
+    page: (typeof currentPage !== 'undefined' && currentPage) || '',
+    since: PRES_SINCE,
+  };
+}
+function presChargerLib() {
+  if (window.supabase && window.supabase.createClient) return Promise.resolve();
+  return new Promise((ok, ko) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+    sc.onload = ok; sc.onerror = ko;
+    document.head.appendChild(sc);
+  });
+}
+async function presenceStart() {
+  if (PRES_CHANNEL) { presenceUpdate(); return; }
+  const me = presPayload();
+  if (!me.email) return;
+  PRES_SINCE = new Date().toISOString();
+  try {
+    await presChargerLib();
+    PRES_CLIENT = window.supabase.createClient(SUPA_RH_URL, SUPA_RH_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    PRES_CHANNEL = PRES_CLIENT.channel('orevy-presence', { config: { presence: { key: me.email } } });
+    PRES_CHANNEL
+      .on('presence', { event: 'sync' }, presSync)
+      .subscribe(status => { if (status === 'SUBSCRIBED') PRES_CHANNEL.track(presPayload()); });
+    document.addEventListener('click', e => {
+      const w = document.getElementById('pres-wrap');
+      if (w && !w.contains(e.target)) document.getElementById('pres-menu')?.classList.remove('open');
+    });
+  } catch (e) {
+    console.warn('[Présence] indisponible', e && e.message);
+  }
+}
+let PRES_TIMER = null;
+function presenceUpdate() {
+  if (!PRES_CHANNEL) return;
+  clearTimeout(PRES_TIMER);
+  PRES_TIMER = setTimeout(() => { try { PRES_CHANNEL.track(presPayload()); } catch (_) {} }, 300);
+}
+function presSync() {
+  const st = PRES_CHANNEL.presenceState();
+  const out = [];
+  Object.keys(st).forEach(email => {
+    const metas = st[email] || [];
+    if (!metas.length) return;
+    // Plusieurs onglets / appareils pour une même personne : on garde le plus récent
+    const m = metas.slice().sort((a, b) => String(b.since || '').localeCompare(String(a.since || '')))[0];
+    out.push({ email, role: m.role, creche: m.creche, page: m.page, since: m.since, onglets: metas.length });
+  });
+  const moi = presPayload().email;
+  out.sort((a, b) => (a.email === moi ? -1 : b.email === moi ? 1 : presNom(a.email).localeCompare(presNom(b.email))));
+  PRES_STATE = out;
+  presRender();
+}
+function presRender() {
+  const wrap = document.getElementById('pres-wrap');
+  if (!wrap) return;
+  const list = PRES_STATE;
+  if (!list.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const MAX = 4;
+  let avs = list.slice(0, MAX).map(p =>
+    '<span class="pres-av" style="background:' + presCouleur(p.email) + '" title="' + presEsc(presNom(p.email)) + '">' + presEsc(presInitiales(p.email)) + '</span>').join('');
+  if (list.length > MAX) avs += '<span class="pres-av more">+' + (list.length - MAX) + '</span>';
+  document.getElementById('pres-avs').innerHTML = avs;
+  document.getElementById('pres-count').innerHTML = list.length + '<span class="lg"> connecté' + (list.length > 1 ? 's' : '') + '</span>';
+
+  const roles = { admin:'Administrateur', directrice:'Directrice', auxiliaire:'Auxiliaire', stagiaire:'Stagiaire', coordinateur:'Coordinateur' };
+  const moi = presPayload().email;
+  let html = '<div class="pres-hd">En ligne maintenant (' + list.length + ')</div>';
+  list.forEach(p => {
+    const bits = [];
+    if (roles[p.role]) bits.push(roles[p.role]);
+    if (p.creche) bits.push(p.creche);
+    if (PRES_PAGE_NOMS[p.page]) bits.push(PRES_PAGE_NOMS[p.page]);
+    if (p.since) {
+      const d = new Date(p.since);
+      if (!isNaN(d)) bits.push('depuis ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }));
+    }
+    html += '<div class="pres-row"><span class="pres-av" style="background:' + presCouleur(p.email) + '">' + presEsc(presInitiales(p.email)) + '</span>'
+      + '<div style="min-width:0"><div class="nm">' + presEsc(presNom(p.email)) + (p.email === moi ? ' <span style="font-weight:500;color:var(--ink3)">(vous)</span>' : '') + '</div>'
+      + '<div class="sb">' + presEsc(bits.join(' · ')) + '</div></div></div>';
+  });
+  document.getElementById('pres-menu').innerHTML = html;
+}
+function presToggleMenu(ev) {
+  if (ev) ev.stopPropagation();
+  document.getElementById('pres-menu')?.classList.toggle('open');
+}
+
 function startApp() {
   if (IS_LOCAL) currentUserRole = 'admin';
   // Restaurer les deux tokens au démarrage
@@ -10651,6 +10809,7 @@ function startApp() {
   // Seconde tentative : la fiche salarié peut n'être disponible qu'après ce chargement.
   setTimeout(function() { if (!MA_CRECHE) resoudreMaCreche(true); }, 2500);
   setTimeout(checkDemandesBadge, 1500);
+  presenceStart();
 }
 
 function showHub() {
@@ -11189,6 +11348,7 @@ function filterCreche(creche, el) {
     creche = MA_CRECHE;
   }
   currentCreche = creche;
+  if (typeof presenceUpdate === 'function') presenceUpdate();
   const sel = document.getElementById('creche-select-sidebar');
   if (sel) sel.value = creche;
   const selTop = document.getElementById('orv-creche');
@@ -13846,6 +14006,7 @@ function showPage(page, btn, fromPopState) {
   if (btn) btn.classList.add('active');
   const titles = { hubStructures:'Orevy Structures', dashboard:'Tableau de bord', inventaire:'Inventaire', entretien:'Stocks Entretien', commandes:'Commandes', fournisseurs:'Fournisseurs', historique:'Historique des mouvements', statistiques:'Statistiques', univers:'Univers ludiques', parametres:'Paramètres', admin:'Administration', rh:'Ressources humaines', planning:'Planning', salarie:'Planning', familles:'Familles & Enfants', 'fiche-enfant':'Fiche enfant', transmissions:'Cahier de transmissions', demandesReseau:'Demandes réseau', pointage:'Pointage' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
+  if (typeof presenceUpdate === 'function') presenceUpdate();
   // Remonter en haut de page lors du changement
   try { window.scrollTo(0,0); document.querySelector('.content')?.scrollTo?.(0,0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch(_) {}
   // Re-render page content when switching to ensure fresh data
