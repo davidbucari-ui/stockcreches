@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Circuit fermé : la page ne peut charger que ses propres fichiers et ne peut
+     envoyer aucune donnée vers un autre serveur (connect-src 'self'). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Orevy — Trieur de photos (circuit fermé)</title>
+<link rel="icon" href="icons/favicon-32.png">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#FFF9F2; --ink:#1C1917; --muted:#78716C; --line:#E7E0D6; --card:#fff;
+          --accent:#8FAF8A; --accent-d:#5E7F59; --red:#B91C1C; --amber:#B45309; --green:#3B6D11; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+  header { background:var(--ink); color:#fff; padding:14px 22px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  header h1 { font-size:19px; font-weight:800; letter-spacing:-.2px; }
+  .lock { background:rgba(143,175,138,.25); color:#D9F2D4; border:1px solid rgba(143,175,138,.6); padding:4px 10px; border-radius:999px; font-size:12.5px; font-weight:600; }
+  .status { margin-left:auto; font-size:13px; opacity:.75; }
+  nav { display:flex; gap:6px; padding:14px 22px 0; flex-wrap:wrap; }
+  nav button { border:1px solid var(--line); background:#fff; padding:10px 16px; border-radius:12px 12px 0 0; font-size:14.5px; font-weight:700; cursor:pointer; color:var(--muted); }
+  nav button.on { background:var(--card); color:var(--ink); border-bottom-color:#fff; box-shadow:0 -2px 0 var(--accent) inset; }
+  nav .count { background:var(--bg); border-radius:999px; padding:1px 8px; margin-left:6px; font-size:12px; }
+  main { padding:0 22px 40px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:0 14px 14px 14px; padding:20px; display:none; }
+  .panel.on { display:block; }
+  h2 { font-size:17px; margin-bottom:6px; }
+  h3 { font-size:15px; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  p.help { color:var(--muted); font-size:13.5px; line-height:1.5; margin-bottom:14px; max-width:820px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  input[type=text] { padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:14.5px; min-width:220px; }
+  .btn { border:none; background:var(--accent); color:#fff; padding:10px 16px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .btn:hover { background:var(--accent-d); }
+  .btn.ghost { background:#fff; color:var(--ink); border:1px solid var(--line); }
+  .btn.ghost:hover { background:var(--bg); }
+  .btn.danger { background:#fff; color:var(--red); border:1px solid #F3C7C7; }
+  .btn.small { padding:6px 10px; font-size:12.5px; }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  label.file { position:relative; overflow:hidden; }
+  label.file input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .people { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; }
+  .person { border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; gap:10px; align-items:center; }
+  .person img, .avatar { width:56px; height:56px; border-radius:50%; object-fit:cover; background:var(--bg); flex:none; }
+  .person .nm { font-weight:700; font-size:14.5px; }
+  .person .sub { font-size:12px; color:var(--muted); margin:2px 0 6px; }
+  .person .acts { display:flex; gap:4px; flex-wrap:wrap; }
+  .drop { border:2px dashed var(--line); border-radius:14px; padding:30px; text-align:center; color:var(--muted); margin-bottom:14px; }
+  .drop.over { border-color:var(--accent); background:#F3F8F2; }
+  .progress { height:8px; background:var(--bg); border-radius:999px; overflow:hidden; margin:8px 0; }
+  .progress > div { height:100%; width:0; background:var(--accent); transition:width .2s; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
+  .thumb { position:relative; border-radius:10px; overflow:hidden; background:var(--bg); aspect-ratio:1/1; cursor:pointer; border:2px solid transparent; }
+  .thumb:hover { border-color:var(--accent); }
+  .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .thumb .tag { position:absolute; left:4px; bottom:4px; background:rgba(28,25,23,.75); color:#fff; font-size:11px; padding:2px 6px; border-radius:6px; }
+  .thumb .warn { position:absolute; right:4px; top:4px; background:var(--amber); color:#fff; font-size:11px; padding:1px 6px; border-radius:6px; }
+  .group { border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+  .group h3 .n { color:var(--muted); font-weight:500; font-size:13px; }
+  .group h3 .sp { margin-left:auto; display:flex; gap:6px; }
+  .faces { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
+  .face { border:1px solid var(--line); border-radius:10px; padding:6px; text-align:center; font-size:12px; }
+  .face img { width:100%; aspect-ratio:1/1; border-radius:8px; object-fit:cover; cursor:pointer; display:block; margin-bottom:6px; }
+  select { width:100%; padding:6px; border:1px solid var(--line); border-radius:8px; font-size:12.5px; background:#fff; }
+  .toolbar { display:flex; gap:14px; flex-wrap:wrap; align-items:center; padding:12px 14px; background:var(--bg); border-radius:12px; margin-bottom:14px; font-size:13.5px; }
+  .toolbar input[type=range] { width:160px; vertical-align:middle; }
+  .stat b { font-size:15px; }
+  .notice { background:#FFF4E5; border:1px solid #F6D9A8; border-radius:12px; padding:12px 14px; font-size:13px; line-height:1.55; color:#5B3A0A; margin-top:18px; }
+  .notice b { color:#3D2606; }
+  .empty { color:var(--muted); font-size:14px; padding:20px; text-align:center; }
+  .cluster { border:1px dashed var(--accent); border-radius:12px; padding:10px; margin-bottom:10px; background:#F7FBF6; }
+  .cluster .faces { grid-template-columns:repeat(auto-fill,minmax(70px,1fr)); gap:6px; }
+  .cluster .face { padding:0; border:none; }
+  .cluster .face img { margin:0; }
+  /* Modale */
+  .modal { position:fixed; inset:0; background:rgba(28,25,23,.7); display:none; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .modal.on { display:flex; }
+  .modal .box { background:#fff; border-radius:16px; max-width:1100px; width:100%; max-height:92vh; overflow:auto; padding:16px; display:grid; grid-template-columns:minmax(0,2fr) minmax(240px,1fr); gap:16px; }
+  @media (max-width:760px){ .modal .box { grid-template-columns:1fr; } }
+  .stage { position:relative; align-self:start; }
+  .stage img { width:100%; display:block; border-radius:10px; }
+  .bx { position:absolute; border:3px solid; border-radius:6px; pointer-events:none; }
+  .bx span { position:absolute; left:-3px; top:-22px; color:#fff; font-size:11.5px; font-weight:700; padding:2px 6px; border-radius:5px; white-space:nowrap; }
+  .side h3 { word-break:break-all; }
+  .side .fl { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .side .fl img { width:48px; height:48px; border-radius:8px; object-fit:cover; border:3px solid; flex:none; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 18px; border-radius:10px; font-size:14px; opacity:0; transition:opacity .25s; pointer-events:none; z-index:60; max-width:90vw; }
+  .toast.on { opacity:1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📷 Trieur de photos</h1>
+  <span class="lock" title="Les photos et les visages sont analysés uniquement dans ce navigateur. Rien n'est envoyé sur Internet.">🔒 Circuit fermé — aucune photo ne quitte cet appareil</span>
+  <span class="status" id="status">Chargement des modèles…</span>
+</header>
+
+<nav id="tabs">
+  <button data-tab="people" class="on">1. Enfants <span class="count" id="c-people">0</span></button>
+  <button data-tab="import">2. Photos à trier <span class="count" id="c-photos">0</span></button>
+  <button data-tab="results">3. Résultats &amp; export</button>
+</nav>
+
+<main>
+  <!-- 1. Référents -->
+  <section class="panel on" id="tab-people">
+    <h2>Enfants à reconnaître</h2>
+    <p class="help">Ajoutez chaque enfant avec 1 à 5 photos de référence où son visage est bien visible (de face, bien éclairé).
+      Plus il y a de photos variées, meilleure est la reconnaissance. Si une photo contient plusieurs visages, c'est le plus grand qui est retenu.
+      <br>Vous pouvez aussi commencer directement par l'onglet 2 et nommer ensuite les groupes de visages détectés.</p>
+    <div class="row">
+      <input type="text" id="new-name" placeholder="Prénom de l'enfant" maxlength="60">
+      <label class="btn file">＋ Ajouter avec photo(s)
+        <input type="file" id="new-files" accept="image/*" multiple>
+      </label>
+    </div>
+    <div class="people" id="people"></div>
+    <div class="row" style="margin-top:18px">
+      <button class="btn ghost small" id="export-refs">⬇ Sauvegarder les référents (fichier)</button>
+      <label class="btn ghost small file">⬆ Importer des référents
+        <input type="file" id="import-refs" accept=".json,application/json">
+      </label>
+      <button class="btn danger small" id="wipe">🗑 Tout effacer de cet appareil</button>
+    </div>
+    <div class="notice">
+      <b>Protection des données (RGPD).</b> Les empreintes faciales sont des données biométriques (art. 9 RGPD), particulièrement protégées pour les mineurs.
+      Cet outil fonctionne entièrement en local : les photos sont lues depuis votre ordinateur, analysées dans le navigateur et ne sont jamais envoyées sur un serveur
+      (la page bloque techniquement toute connexion sortante). Les référents sont conservés uniquement dans ce navigateur, sur cet appareil.
+      Avant usage, recueillez l'<b>accord écrit des parents</b>, n'utilisez pas l'outil sur un poste partagé, et effacez les référents lorsqu'un enfant quitte la structure.
+      Le fichier de sauvegarde des référents contient ces données : conservez-le en lieu sûr.
+    </div>
+  </section>
+
+  <!-- 2. Import -->
+  <section class="panel" id="tab-import">
+    <h2>Photos à trier</h2>
+    <p class="help">Sélectionnez des photos ou un dossier entier (JPEG, PNG, WebP). Elles sont analysées sur cet appareil, une par une.
+      Les fichiers d'origine ne sont ni modifiés ni déplacés.</p>
+    <div class="drop" id="drop">
+      Glissez-déposez vos photos ici<br><br>
+      <label class="btn file">🖼 Choisir des photos<input type="file" id="pick-files" accept="image/*" multiple></label>
+      <label class="btn ghost file">📁 Choisir un dossier<input type="file" id="pick-dir" webkitdirectory multiple></label>
+    </div>
+    <div id="proc" style="display:none">
+      <div class="row" style="margin-bottom:0"><span id="proc-txt"></span>
+        <button class="btn ghost small" id="cancel" style="margin-left:auto">Arrêter</button></div>
+      <div class="progress"><div id="proc-bar"></div></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn danger small" id="clear-photos">Vider la liste des photos</button>
+    </div>
+    <div class="grid" id="all-photos"></div>
+  </section>
+
+  <!-- 3. Résultats -->
+  <section class="panel" id="tab-results">
+    <div class="toolbar">
+      <span class="stat"><b id="s-photos">0</b> photos</span>
+      <span class="stat"><b id="s-rec">0</b> visages reconnus</span>
+      <span class="stat"><b id="s-unk">0</b> non reconnus</span>
+      <label title="Plus la valeur est basse, plus la reconnaissance est stricte (moins d'erreurs, plus de visages non reconnus).">
+        Exigence : <input type="range" id="thr" min="0.35" max="0.65" step="0.01" value="0.5"> <span id="thr-v">0,50</span></label>
+      <label><input type="checkbox" id="learn" checked> Apprendre de mes corrections</label>
+    </div>
+    <div class="row">
+      <button class="btn" id="exp-zip">⬇ Télécharger le tri (ZIP)</button>
+      <button class="btn ghost" id="exp-dir">📁 Écrire dans un dossier…</button>
+      <label style="font-size:13px"><input type="checkbox" id="exp-extra" checked> inclure « Non reconnus » et « Sans visage »</label>
+    </div>
+    <p class="help">Une photo où apparaissent plusieurs enfants est copiée dans le dossier de chacun. Cliquez sur une photo pour vérifier ou corriger.
+      Un ⚠ signale une reconnaissance incertaine.</p>
+    <div id="groups"></div>
+    <div class="group" id="unknown-box">
+      <h3>❔ Visages non reconnus <span class="n" id="unk-n"></span>
+        <span class="sp"><button class="btn small" id="cluster">Regrouper les visages similaires</button></span></h3>
+      <div id="clusters"></div>
+      <div class="faces" id="unknown"></div>
+    </div>
+    <div class="group">
+      <h3>🚫 Sans visage détecté <span class="n" id="noface-n"></span></h3>
+      <div class="grid" id="noface"></div>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal"><div class="box">
+  <div class="stage" id="m-stage"></div>
+  <div class="side">
+    <h3 id="m-title"></h3>
+    <div id="m-faces"></div>
+    <div class="row" style="margin-top:14px"><button class="btn ghost" id="m-close">Fermer</button></div>
+  </div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="vendor/face-api/face-api.js"></script>
+<script>
+'use strict';
+const MODEL_URL = 'vendor/face-api/model';
+const MAX_SIDE = 1600;           // résolution d'analyse (px, plus grand côté)
+const MAX_REFS = 20;             // empreintes conservées par enfant
+const COLORS = ['#2563EB','#DB2777','#059669','#D97706','#7C3AED','#0891B2','#DC2626','#65A30D','#C026D3','#0D9488','#EA580C','#4F46E5'];
+
+const state = { people:[], photos:[], threshold:0.5, ready:false, busy:false, cancel:false, clusters:[] };
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function toast(msg, ms) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), ms || 3200); }
+function setStatus(s) { $('status').textContent = s; }
+
+/* ---------- Stockage local (IndexedDB, uniquement sur cet appareil) ---------- */
+const DB = {
+  db:null,
+  open() { return new Promise((res, rej) => { const r = indexedDB.open('orevy-trieur-photos', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('people', { keyPath:'id' });
+    r.onsuccess = () => { this.db = r.result; res(); }; r.onerror = () => rej(r.error); }); },
+  req(mode, fn) { return new Promise((res, rej) => { const r = fn(this.db.transaction('people', mode).objectStore('people'));
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  all() { return this.req('readonly', s => s.getAll()); },
+  put(p) { return this.req('readwrite', s => s.put({ id:p.id, name:p.name, thumb:p.thumb, color:p.color, descriptors:p.descs.map(d => Array.from(d)) })); },
+  del(id) { return this.req('readwrite', s => s.delete(id)); },
+  clear() { return this.req('readwrite', s => s.clear()); },
+};
+const fromStored = p => ({ id:p.id, name:p.name, thumb:p.thumb, color:p.color, descs:(p.descriptors || []).map(d => new Float32Array(d)) });
+const personById = id => state.people.find(p => p.id === id);
+const nextColor = () => COLORS[state.people.length % COLORS.length];
+
+/* ---------- Images ---------- */
+async function loadCanvas(file) {
+  let src;
+  try { src = await createImageBitmap(file, { imageOrientation:'from-image' }); }
+  catch (e) {
+    src = await new Promise((res, rej) => { const u = URL.createObjectURL(file), img = new Image();
+      img.onload = () => { URL.revokeObjectURL(u); res(img); };
+      img.onerror = () => { URL.revokeObjectURL(u); rej(new Error('format non pris en charge')); };
+      img.src = u; });
+  }
+  const w = src.width, h = src.height, s = Math.min(1, MAX_SIDE / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w * s); c.height = Math.round(h * s);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  if (src.close) src.close();
+  return c;
+}
+function thumbOf(c, size) {
+  const s = Math.min(1, size / Math.max(c.width, c.height)), t = document.createElement('canvas');
+  t.width = Math.round(c.width * s); t.height = Math.round(c.height * s);
+  t.getContext('2d').drawImage(c, 0, 0, t.width, t.height);
+  return t.toDataURL('image/jpeg', 0.8);
+}
+function cropFace(c, b, size) {
+  const m = Math.max(b.width, b.height) * 0.35, side = Math.max(b.width, b.height) + 2 * m;
+  const x = b.x + b.width / 2 - side / 2, y = b.y + b.height / 2 - side / 2, t = document.createElement('canvas');
+  t.width = t.height = size || 128;
+  const g = t.getContext('2d'); g.fillStyle = '#eee'; g.fillRect(0, 0, t.width, t.height);
+  g.drawImage(c, x, y, side, side, 0, 0, t.width, t.height);
+  return t.toDataURL('image/jpeg', 0.85);
+}
+async function runDetector(c) {
+  const res = await faceapi.detectAllFaces(c, new faceapi.SsdMobilenetv1Options({ minConfidence:0.5, maxResults:50 }))
+    .withFaceLandmarks().withFaceDescriptors();
+  return res.map(r => ({ box:r.detection.box, desc:r.descriptor, score:r.detection.score }));
+}
+async function detectFaces(c, forceRetry) {
+  const faces = await runDetector(c);
+  if (faces.length || !(forceRetry || Math.max(c.width, c.height) < 900)) return faces;
+  // Photo très recadrée (type photo d'identité) ou petite : le détecteur rate
+  // les visages qui remplissent toute l'image. On ajoute une marge et on agrandit.
+  const pad = Math.round(Math.max(c.width, c.height) * 0.5);
+  const W = c.width + 2 * pad, H = c.height + 2 * pad, k = Math.min(3, 800 / Math.max(W, H)) || 1;
+  const t = document.createElement('canvas'); t.width = Math.round(W * k); t.height = Math.round(H * k);
+  const g = t.getContext('2d'); g.fillStyle = '#808080'; g.fillRect(0, 0, t.width, t.height);
+  g.drawImage(c, pad * k, pad * k, c.width * k, c.height * k);
+  return (await runDetector(t)).map(f => {
+    const x = f.box.x / k - pad, y = f.box.y / k - pad;
+    const x2 = Math.min(c.width, x + f.box.width / k), y2 = Math.min(c.height, y + f.box.height / k);
+    const bx = Math.max(0, x), by = Math.max(0, y);
+    return { ...f, box:{ x:bx, y:by, width:x2 - bx, height:y2 - by, area:(x2 - bx) * (y2 - by) } };
+  }).filter(f => f.box.width > 0 && f.box.height > 0);
+}
+
+/* ---------- Reconnaissance ---------- */
+function distTo(person, desc) {
+  let d = Infinity;
+  for (const r of person.descs) { const x = faceapi.euclideanDistance(desc, r); if (x < d) d = x; }
+  return d;
+}
+function rematchPhoto(ph) {
+  // Chaque visage est comparé à tous les enfants ; un même enfant ne peut
+  // apparaître qu'une fois par photo (on garde le visage le plus proche).
+  const auto = [];
+  for (const f of ph.faces) {
+    if (f.manual) continue;
+    const ranked = state.people.map(p => ({ p, d:distTo(p, f.desc) })).filter(x => isFinite(x.d)).sort((a, b) => a.d - b.d);
+    f.ranked = ranked; f.personId = null; f.dist = ranked.length ? ranked[0].d : null; f.uncertain = false;
+    auto.push(f);
+  }
+  const taken = new Set(ph.faces.filter(f => f.manual && f.personId).map(f => f.personId));
+  const cands = [];
+  auto.forEach(f => f.ranked.forEach((r, i) => { if (r.d <= state.threshold) cands.push({ f, r, i }); }));
+  cands.sort((a, b) => a.r.d - b.r.d);
+  for (const c of cands) {
+    if (c.f.personId || taken.has(c.r.p.id)) continue;
+    c.f.personId = c.r.p.id; c.f.dist = c.r.d; taken.add(c.r.p.id);
+    const other = c.f.ranked.find(x => x.p !== c.r.p);
+    c.f.uncertain = c.r.d > state.threshold - 0.04 || (other && other.d - c.r.d < 0.03);
+  }
+  auto.forEach(f => delete f.ranked);
+}
+const rematchAll = () => state.photos.forEach(rematchPhoto);
+
+async function learn(person, desc) {
+  if (!$('learn').checked) return;
+  if (person.descs.some(d => faceapi.euclideanDistance(d, desc) < 0.25)) return; // déjà très proche
+  person.descs.push(desc);
+  if (person.descs.length > MAX_REFS) person.descs.splice(1, 1); // garde la 1re référence
+  await DB.put(person);
+}
+
+/* ---------- Onglet 1 : enfants ---------- */
+async function addPersonFromFiles(name, files) {
+  if (!state.ready) return toast('Modèles en cours de chargement, patientez…');
+  name = name.trim();
+  if (!name) return toast("Indiquez d'abord le prénom de l'enfant.");
+  let person = state.people.find(p => p.name.toLowerCase() === name.toLowerCase());
+  const isNew = !person;
+  if (isNew) person = { id:uid(), name, thumb:null, color:nextColor(), descs:[] };
+  let ok = 0, skipped = [];
+  for (const file of files) {
+    setStatus('Analyse de ' + file.name + '…');
+    try {
+      const c = await loadCanvas(file), faces = await detectFaces(c, true);
+      if (!faces.length) { skipped.push(file.name); continue; }
+      const f = faces.sort((a, b) => b.box.area - a.box.area)[0];
+      person.descs.push(f.desc); ok++;
+      if (!person.thumb) person.thumb = cropFace(c, f.box, 128);
+    } catch (e) { skipped.push(file.name); }
+  }
+  setStatus('Prêt');
+  if (!ok) return toast('Aucun visage trouvé dans ' + (files.length > 1 ? 'ces photos' : 'cette photo') + '.');
+  if (isNew) state.people.push(person);
+  await DB.put(person);
+  rematchAll(); renderAll();
+  toast(person.name + ' : ' + ok + ' photo(s) de référence ajoutée(s)' + (skipped.length ? ' — sans visage : ' + skipped.join(', ') : '') + '.', 5000);
+}
+
+function renderPeople() {
+  $('c-people').textContent = state.people.length;
+  const el = $('people');
+  if (!state.people.length) { el.innerHTML = '<div class="empty">Aucun enfant enregistré pour le moment.</div>'; return; }
+  el.innerHTML = state.people.slice().sort((a, b) => a.name.localeCompare(b.name, 'fr')).map(p => `
+    <div class="person">
+      ${p.thumb ? `<img src="${p.thumb}" alt="" style="border:3px solid ${p.color}">` : `<div class="avatar" style="border:3px solid ${p.color}"></div>`}
+      <div style="min-width:0">
+        <div class="nm">${esc(p.name)}</div>
+        <div class="sub">${p.descs.length} empreinte(s)</div>
+        <div class="acts">
+          <label class="btn ghost small file" title="Ajouter des photos de référence">＋ photo<input type="file" accept="image/*" multiple data-add="${p.id}"></label>
+          <button class="btn ghost small" data-ren="${p.id}" title="Renommer">✎</button>
+          <button class="btn danger small" data-del="${p.id}" title="Supprimer">🗑</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+$('people').addEventListener('change', e => {
+  const id = e.target.dataset.add; if (!id) return;
+  const p = personById(id); addPersonFromFiles(p.name, Array.from(e.target.files)); e.target.value = '';
+});
+$('people').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.ren) {
+    const p = personById(b.dataset.ren), n = prompt('Nouveau prénom :', p.name);
+    if (n && n.trim()) { p.name = n.trim(); await DB.put(p); renderAll(); }
+  } else if (b.dataset.del) {
+    const p = personById(b.dataset.del);
+    if (!confirm('Supprimer ' + p.name + ' et ses empreintes faciales de cet appareil ?')) return;
+    await DB.del(p.id);
+    state.people = state.people.filter(x => x !== p);
+    state.photos.forEach(ph => ph.faces.forEach(f => { if (f.personId === p.id) { f.personId = null; f.manual = false; } }));
+    rematchAll(); renderAll();
+  }
+});
+$('new-files').addEventListener('change', async e => {
+  const files = Array.from(e.target.files); e.target.value = '';
+  await addPersonFromFiles($('new-name').value, files);
+  $('new-name').value = '';
+});
+$('export-refs').addEventListener('click', () => {
+  if (!state.people.length) return toast('Aucun référent à sauvegarder.');
+  if (!confirm('Ce fichier contient les empreintes faciales des enfants (données biométriques). Conservez-le en lieu sûr et ne le partagez pas. Continuer ?')) return;
+  const data = { format:'orevy-trieur-photos', version:1, date:new Date().toISOString(),
+    people:state.people.map(p => ({ name:p.name, color:p.color, thumb:p.thumb, descriptors:p.descs.map(d => Array.from(d, v => +v.toFixed(5))) })) };
+  download(new Blob([JSON.stringify(data)], { type:'application/json' }), 'referents-visages-' + new Date().toISOString().slice(0, 10) + '.json');
+});
+$('import-refs').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (data.format !== 'orevy-trieur-photos' || !Array.isArray(data.people)) throw new Error();
+    let n = 0;
+    for (const q of data.people) {
+      const descs = (q.descriptors || []).filter(d => Array.isArray(d) && d.length === 128).map(d => new Float32Array(d));
+      if (!q.name || !descs.length) continue;
+      let p = state.people.find(x => x.name.toLowerCase() === String(q.name).toLowerCase());
+      if (p) p.descs = p.descs.concat(descs).slice(-MAX_REFS);
+      else { p = { id:uid(), name:String(q.name).slice(0, 60), color:q.color || nextColor(), thumb:typeof q.thumb === 'string' && q.thumb.startsWith('data:image/') ? q.thumb : null, descs }; state.people.push(p); }
+      await DB.put(p); n++;
+    }
+    rematchAll(); renderAll(); toast(n + ' enfant(s) importé(s).');
+  } catch (err) { toast("Fichier invalide : ce n'est pas une sauvegarde du trieur de photos."); }
+});
+$('wipe').addEventListener('click', async () => {
+  if (!confirm('Effacer tous les enfants, leurs empreintes faciales et la liste des photos de cet appareil ? Cette action est définitive.')) return;
+  await DB.clear(); state.people = []; state.photos = []; state.clusters = [];
+  renderAll(); toast('Toutes les données ont été effacées de cet appareil.');
+});
+
+/* ---------- Onglet 2 : import & analyse ---------- */
+const IMG_RX = /\.(jpe?g|png|webp|gif|bmp|avif)$/i;
+async function addPhotos(files) {
+  if (!state.ready) return toast('Modèles en cours de chargement, patientez…');
+  const known = new Set(state.photos.map(p => p.key));
+  const fresh = files.filter(f => (f.type.startsWith('image/') || IMG_RX.test(f.name)) && !known.has(f.name + '|' + f.size + '|' + f.lastModified))
+    .map(f => ({ id:uid(), key:f.name + '|' + f.size + '|' + f.lastModified, file:f, name:f.name, thumb:null, faces:[], status:'pending' }));
+  const ignored = files.length - fresh.length;
+  if (!fresh.length) return toast(ignored ? 'Aucune nouvelle image (doublons ou fichiers non image ignorés).' : 'Aucune image sélectionnée.');
+  state.photos.push(...fresh);
+  renderAll();
+  if (!state.busy) processQueue();
+}
+async function processQueue() {
+  state.busy = true; state.cancel = false; $('proc').style.display = '';
+  const t0 = performance.now(); let done = 0;
+  for (;;) {
+    const ph = state.photos.find(p => p.status === 'pending');
+    if (!ph || state.cancel) break;
+    const total = state.photos.filter(p => p.status === 'pending').length + done;
+    $('proc-txt').textContent = 'Analyse ' + (done + 1) + ' / ' + total + ' — ' + ph.name +
+      (done > 2 ? ' (≈ ' + Math.ceil((performance.now() - t0) / done * (total - done) / 1000) + ' s restantes)' : '');
+    $('proc-bar').style.width = (done / total * 100) + '%';
+    try {
+      const c = await loadCanvas(ph.file);
+      ph.thumb = thumbOf(c, 320);
+      ph.faces = (await detectFaces(c)).map(f => ({
+        id:uid(), desc:f.desc, crop:cropFace(c, f.box, 128), personId:null, manual:false,
+        box:{ x:f.box.x / c.width, y:f.box.y / c.height, w:f.box.width / c.width, h:f.box.height / c.height } }));
+      rematchPhoto(ph); ph.status = 'done';
+    } catch (e) { ph.status = 'error'; ph.error = e.message; }
+    done++;
+    if (done % 5 === 0) renderAll();
+    await new Promise(r => setTimeout(r, 0));
+  }
+  state.busy = false; $('proc').style.display = 'none';
+  state.photos.filter(p => p.status === 'pending').forEach(p => { if (state.cancel) state.photos.splice(state.photos.indexOf(p), 1); });
+  renderAll(); setStatus('Prêt');
+  if (done) toast(done + ' photo(s) analysée(s). Résultats dans l’onglet 3.');
+}
+$('cancel').addEventListener('click', () => { state.cancel = true; });
+$('pick-files').addEventListener('change', e => { addPhotos(Array.from(e.target.files)); e.target.value = ''; });
+$('pick-dir').addEventListener('change', e => { addPhotos(Array.from(e.target.files)); e.target.value = ''; });
+const drop = $('drop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', async e => {
+  const items = Array.from(e.dataTransfer.items || []).map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (!items.length) return addPhotos(Array.from(e.dataTransfer.files));
+  const files = [];
+  const walk = async entry => {
+    if (entry.isFile) files.push(await new Promise((res, rej) => entry.file(res, rej)));
+    else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      for (;;) { const batch = await new Promise((res, rej) => reader.readEntries(res, rej)); if (!batch.length) break; for (const x of batch) await walk(x); }
+    }
+  };
+  for (const it of items) await walk(it);
+  addPhotos(files);
+});
+$('clear-photos').addEventListener('click', () => {
+  if (state.busy) return toast("Arrêtez d'abord l'analyse en cours.");
+  if (state.photos.length && !confirm('Retirer toutes les photos de la liste ? (les fichiers ne sont pas supprimés)')) return;
+  state.photos = []; state.clusters = []; renderAll();
+});
+
+/* ---------- Onglet 3 : résultats ---------- */
+function photoThumb(ph, extra) {
+  const warn = ph.faces.some(f => f.personId && f.uncertain && !f.manual);
+  return `<div class="thumb" data-photo="${ph.id}" title="${esc(ph.name)}">
+    ${ph.thumb ? `<img src="${ph.thumb}" alt="" loading="lazy">` : ''}
+    ${extra ? `<span class="tag">${esc(extra)}</span>` : ''}${warn ? '<span class="warn">⚠</span>' : ''}</div>`;
+}
+function personOptions(sel) {
+  return '<option value="">— Non reconnu —</option>' +
+    state.people.slice().sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+      .map(p => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>${esc(p.name)}</option>`).join('') +
+    '<option value="__new">＋ Nouvel enfant…</option>';
+}
+function unknownFaces() {
+  const out = [];
+  state.photos.forEach(ph => ph.faces.forEach(f => { if (!f.personId) out.push({ ph, f }); }));
+  return out;
+}
+function renderResults() {
+  const done = state.photos.filter(p => p.status === 'done');
+  let rec = 0;
+  const groups = state.people.map(p => ({ p, photos:[] }));
+  const gi = new Map(groups.map(g => [g.p.id, g]));
+  done.forEach(ph => {
+    const ids = new Set();
+    ph.faces.forEach(f => { if (f.personId) { rec++; ids.add(f.personId); } });
+    ids.forEach(id => gi.get(id) && gi.get(id).photos.push(ph));
+  });
+  const unk = unknownFaces();
+  $('s-photos').textContent = done.length; $('s-rec').textContent = rec; $('s-unk').textContent = unk.length;
+
+  $('groups').innerHTML = groups.filter(g => g.photos.length).sort((a, b) => a.p.name.localeCompare(b.p.name, 'fr')).map(g => `
+    <div class="group">
+      <h3>${g.p.thumb ? `<img src="${g.p.thumb}" class="avatar" style="width:32px;height:32px;border:2px solid ${g.p.color}">` : ''}
+        ${esc(g.p.name)} <span class="n">${g.photos.length} photo(s)</span>
+        <span class="sp"><button class="btn ghost small" data-zip="${g.p.id}">⬇ ZIP</button></span></h3>
+      <div class="grid">${g.photos.map(ph => photoThumb(ph, ph.faces.filter(f => f.personId).length > 1 ? ph.faces.filter(f => f.personId).length + ' enfants' : '')).join('')}</div>
+    </div>`).join('') || (done.length ? '' : '<div class="empty">Ajoutez des photos dans l’onglet 2 pour voir le tri ici.</div>');
+
+  $('unknown-box').style.display = unk.length || state.clusters.length ? '' : 'none';
+  $('unk-n').textContent = unk.length ? unk.length + ' visage(s)' : '';
+  const inCluster = new Set(state.clusters.flatMap(c => c.faces.map(x => x.f.id)));
+  $('clusters').innerHTML = state.clusters.map((c, i) => `
+    <div class="cluster">
+      <div class="row" style="margin-bottom:8px">
+        <b>Groupe ${i + 1}</b> <span style="color:var(--muted);font-size:13px">${c.faces.length} visage(s)</span>
+        <input type="text" placeholder="Prénom de cet enfant" data-cname="${i}" style="min-width:160px;padding:6px 10px">
+        <select data-cpick="${i}" style="width:auto">${personOptions('').replace('— Non reconnu —', '… ou enfant existant')}</select>
+        <button class="btn small" data-cok="${i}">Valider</button>
+        <button class="btn ghost small" data-cno="${i}">Ignorer</button>
+      </div>
+      <div class="faces">${c.faces.map(x => `<div class="face"><img src="${x.f.crop}" data-photo="${x.ph.id}" alt=""></div>`).join('')}</div>
+    </div>`).join('');
+  $('unknown').innerHTML = unk.filter(x => !inCluster.has(x.f.id)).map(({ ph, f }) => `
+    <div class="face"><img src="${f.crop}" data-photo="${ph.id}" alt="" title="${esc(ph.name)}">
+      <select data-face="${ph.id}:${f.id}">${personOptions(null)}</select></div>`).join('');
+
+  const nf = done.filter(p => !p.faces.length), err = state.photos.filter(p => p.status === 'error');
+  $('noface-n').textContent = nf.length + ' photo(s)' + (err.length ? ' — ' + err.length + ' illisible(s) : ' + err.map(p => p.name).join(', ') : '');
+  $('noface').innerHTML = nf.map(ph => photoThumb(ph)).join('');
+}
+function renderImport() {
+  $('c-photos').textContent = state.photos.length;
+  $('all-photos').innerHTML = state.photos.map(ph => ph.status === 'done' ? photoThumb(ph, ph.faces.length + ' visage(s)')
+    : `<div class="thumb"><span class="tag">${ph.status === 'error' ? '✖ ' + esc(ph.name) : '⏳ ' + esc(ph.name)}</span></div>`).join('');
+}
+function renderAll() { renderPeople(); renderImport(); renderResults(); }
+
+async function askNewPerson(desc, crop) {
+  const name = (prompt('Prénom du nouvel enfant :') || '').trim();
+  if (!name) return null;
+  let p = state.people.find(x => x.name.toLowerCase() === name.toLowerCase());
+  if (!p) { p = { id:uid(), name, color:nextColor(), thumb:crop, descs:[desc] }; state.people.push(p); await DB.put(p); }
+  else await learn(p, desc);
+  return p;
+}
+async function assignFace(ph, f, value) {
+  let p = null;
+  if (value === '__new') { p = await askNewPerson(f.desc, f.crop); if (!p) return renderAll(); }
+  else if (value) p = personById(value);
+  // Un enfant ne peut être qu'une fois sur une photo : libère l'autre visage.
+  if (p) ph.faces.forEach(o => { if (o !== f && o.personId === p.id) { o.personId = null; o.manual = true; } });
+  f.personId = p ? p.id : null; f.manual = true; f.uncertain = false;
+  if (p && value !== '__new') await learn(p, f.desc);
+  state.clusters.forEach(c => c.faces = c.faces.filter(x => x.f !== f));
+  state.clusters = state.clusters.filter(c => c.faces.length);
+  rematchAll(); renderAll();
+}
+function findFace(key) { const [pid, fid] = key.split(':'); const ph = state.photos.find(p => p.id === pid); return { ph, f:ph && ph.faces.find(x => x.id === fid) }; }
+
+$('tab-results').addEventListener('change', async e => {
+  const t = e.target;
+  if (t.dataset.face) { const { ph, f } = findFace(t.dataset.face); if (f) await assignFace(ph, f, t.value); }
+  if (t.dataset.cpick !== undefined && t.value === '__new') { t.value = ''; t.closest('.cluster').querySelector('input').focus(); }
+});
+$('tab-results').addEventListener('click', async e => {
+  const t = e.target.closest('[data-photo],[data-zip],[data-cok],[data-cno]'); if (!t) return;
+  if (t.dataset.zip) return exportZip(t.dataset.zip);
+  if (t.dataset.cno !== undefined) { state.clusters.splice(+t.dataset.cno, 1); return renderResults(); }
+  if (t.dataset.cok !== undefined) {
+    const i = +t.dataset.cok, c = state.clusters[i], box = t.closest('.cluster');
+    const name = box.querySelector('input').value.trim(), pick = box.querySelector('select').value;
+    let p = pick && pick !== '__new' ? personById(pick) : null;
+    if (!p && !name) return toast('Indiquez un prénom ou choisissez un enfant existant.');
+    if (!p) {
+      p = state.people.find(x => x.name.toLowerCase() === name.toLowerCase());
+      if (!p) { p = { id:uid(), name, color:nextColor(), thumb:c.faces[0].f.crop, descs:[] }; state.people.push(p); }
+    }
+    for (const { ph, f } of c.faces) {
+      ph.faces.forEach(o => { if (o !== f && o.personId === p.id) { o.personId = null; o.manual = true; } });
+      f.personId = p.id; f.manual = true;
+      if (p.descs.length < MAX_REFS && !p.descs.some(d => faceapi.euclideanDistance(d, f.desc) < 0.25)) p.descs.push(f.desc);
+    }
+    await DB.put(p);
+    state.clusters.splice(i, 1);
+    rematchAll(); renderAll(); toast(c.faces.length + ' visage(s) attribué(s) à ' + p.name + '.');
+    return;
+  }
+  if (t.dataset.photo && t.tagName !== 'SELECT') openPhoto(t.dataset.photo);
+});
+$('all-photos').addEventListener('click', e => { const t = e.target.closest('[data-photo]'); if (t) openPhoto(t.dataset.photo); });
+
+$('cluster').addEventListener('click', () => {
+  // Regroupement glouton des visages inconnus par similarité.
+  const LIM = Math.min(state.threshold, 0.5), clusters = [];
+  for (const x of unknownFaces()) {
+    let best = null, bd = Infinity;
+    for (const c of clusters) {
+      const d = Math.min(...c.faces.slice(0, 12).map(y => faceapi.euclideanDistance(y.f.desc, x.f.desc)));
+      if (d < bd && !c.faces.some(y => y.ph === x.ph)) { bd = d; best = c; }
+    }
+    if (best && bd <= LIM) best.faces.push(x); else clusters.push({ faces:[x] });
+  }
+  state.clusters = clusters.filter(c => c.faces.length >= 2).sort((a, b) => b.faces.length - a.faces.length);
+  renderResults();
+  toast(state.clusters.length ? state.clusters.length + ' groupe(s) trouvé(s) : nommez-les pour trier leurs photos.' : 'Pas de visages suffisamment semblables à regrouper.');
+});
+$('thr').addEventListener('input', e => {
+  state.threshold = +e.target.value; $('thr-v').textContent = state.threshold.toFixed(2).replace('.', ',');
+  localStorage.setItem('orevy-trieur-seuil', state.threshold);
+  rematchAll(); renderResults();
+});
+
+/* ---------- Modale photo ---------- */
+let modalUrl = null;
+function openPhoto(id) {
+  const ph = state.photos.find(p => p.id === id); if (!ph || ph.status !== 'done') return;
+  if (modalUrl) URL.revokeObjectURL(modalUrl);
+  modalUrl = URL.createObjectURL(ph.file);
+  const col = f => f.personId ? (personById(f.personId) || {}).color || '#666' : '#9CA3AF';
+  $('m-title').textContent = ph.name;
+  $('m-stage').innerHTML = `<img src="${modalUrl}" alt="">` + ph.faces.map((f, i) => {
+    const p = f.personId && personById(f.personId);
+    return `<div class="bx" style="left:${f.box.x * 100}%;top:${f.box.y * 100}%;width:${f.box.w * 100}%;height:${f.box.h * 100}%;border-color:${col(f)}">
+      <span style="background:${col(f)}">${i + 1}. ${p ? esc(p.name) : '?'}${f.uncertain && !f.manual ? ' ⚠' : ''}</span></div>`;
+  }).join('');
+  $('m-faces').innerHTML = ph.faces.length ? ph.faces.map((f, i) => `
+    <div class="fl"><img src="${f.crop}" style="border-color:${col(f)}" alt="">
+      <div style="flex:1"><div style="font-size:12px;color:var(--muted);margin-bottom:3px">Visage ${i + 1}${f.dist != null && !f.manual ? ' · écart ' + f.dist.toFixed(2) : f.manual ? ' · corrigé' : ''}</div>
+      <select data-mface="${ph.id}:${f.id}">${personOptions(f.personId)}</select></div></div>`).join('')
+    : '<p class="help">Aucun visage détecté sur cette photo.</p>';
+  $('modal').classList.add('on');
+}
+function closeModal() { $('modal').classList.remove('on'); if (modalUrl) { URL.revokeObjectURL(modalUrl); modalUrl = null; } $('m-stage').innerHTML = ''; }
+$('m-close').addEventListener('click', closeModal);
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+$('m-faces').addEventListener('change', async e => {
+  const k = e.target.dataset.mface; if (!k) return;
+  const { ph, f } = findFace(k); await assignFace(ph, f, e.target.value); openPhoto(ph.id);
+});
+
+/* ---------- Export ---------- */
+const safe = s => String(s).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').replace(/^\.+/, '_').trim() || 'sans_nom';
+function exportEntries(onlyPersonId) {
+  const entries = [], used = new Map();
+  const add = (folder, ph) => {
+    folder = safe(folder);
+    const set = used.get(folder) || new Set(); used.set(folder, set);
+    let name = safe(ph.name), n = 1;
+    while (set.has(name.toLowerCase())) name = safe(ph.name).replace(/(\.[^.]*)?$/, m => ' (' + (++n) + ')' + m);
+    set.add(name.toLowerCase());
+    entries.push({ folder, name, path:folder + '/' + name, file:ph.file });
+  };
+  const extra = !onlyPersonId && $('exp-extra').checked;
+  for (const ph of state.photos.filter(p => p.status === 'done')) {
+    const ids = [...new Set(ph.faces.map(f => f.personId).filter(Boolean))];
+    ids.forEach(id => { const p = personById(id); if (p && (!onlyPersonId || id === onlyPersonId)) add(p.name, ph); });
+    if (extra && ph.faces.some(f => !f.personId)) add('_Non reconnus', ph);
+    if (extra && !ph.faces.length) add('_Sans visage', ph);
+  }
+  return entries;
+}
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+async function makeZip(entries, onProgress) {
+  // Archive ZIP « stockée » (sans recompression : les JPEG sont déjà compressés).
+  const enc = new TextEncoder(), parts = [], central = [], d = new Date();
+  const time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  let offset = 0;
+  for (let i = 0; i < entries.length; i++) {
+    const { path, file } = entries[i], name = enc.encode(path);
+    const crc = crc32(new Uint8Array(await file.arrayBuffer())), size = file.size;
+    if (offset + 30 + name.length + size > 0xFFFFFFFF) throw new Error('Archive supérieure à 4 Go : exportez enfant par enfant ou utilisez « Écrire dans un dossier ».');
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+    lh.setUint16(10, time, true); lh.setUint16(12, date, true); lh.setUint32(14, crc, true);
+    lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true);
+    parts.push(lh.buffer, name, file);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(12, time, true); ch.setUint16(14, date, true); ch.setUint32(16, crc, true);
+    ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+    central.push(ch.buffer, name);
+    offset += 30 + name.length + size;
+    if (onProgress) onProgress(i + 1, entries.length);
+  }
+  const cdSize = central.reduce((s, p) => s + p.byteLength, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, end.buffer], { type:'application/zip' });
+}
+function download(blob, name) {
+  const a = document.createElement('a'), u = URL.createObjectURL(blob);
+  a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 60000);
+}
+async function exportZip(personId) {
+  const entries = exportEntries(personId);
+  if (!entries.length) return toast('Rien à exporter pour le moment.');
+  try {
+    const blob = await makeZip(entries, (i, n) => setStatus('Préparation du ZIP ' + i + ' / ' + n + '…'));
+    const p = personId && personById(personId);
+    download(blob, 'photos-' + (p ? safe(p.name) : 'triees') + '-' + new Date().toISOString().slice(0, 10) + '.zip');
+    toast(entries.length + ' fichier(s) placés dans le ZIP.');
+  } catch (e) { toast(e.message, 6000); }
+  setStatus('Prêt');
+}
+$('exp-zip').addEventListener('click', () => exportZip(null));
+$('exp-dir').addEventListener('click', async () => {
+  if (!window.showDirectoryPicker) return toast('Votre navigateur ne permet pas d’écrire dans un dossier : utilisez le ZIP (ou Chrome / Edge).', 5000);
+  const entries = exportEntries(null);
+  if (!entries.length) return toast('Rien à exporter pour le moment.');
+  let root;
+  try { root = await window.showDirectoryPicker({ mode:'readwrite' }); } catch (e) { return; }
+  try {
+    const dirs = new Map();
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i];
+      if (!dirs.has(e.folder)) dirs.set(e.folder, await root.getDirectoryHandle(e.folder, { create:true }));
+      const fh = await dirs.get(e.folder).getFileHandle(e.name, { create:true }), w = await fh.createWritable();
+      await w.write(e.file); await w.close();
+      setStatus('Copie ' + (i + 1) + ' / ' + entries.length + '…');
+    }
+    toast(entries.length + ' fichier(s) copiés dans ' + dirs.size + ' dossier(s).');
+  } catch (e) { toast('Erreur pendant la copie : ' + e.message, 6000); }
+  setStatus('Prêt');
+});
+
+/* ---------- Onglets & démarrage ---------- */
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tab]'); if (!b) return;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'tab-' + b.dataset.tab));
+});
+window.addEventListener('beforeunload', e => { if (state.photos.length) { e.preventDefault(); e.returnValue = ''; } });
+
+(async function init() {
+  const saved = parseFloat(localStorage.getItem('orevy-trieur-seuil'));
+  if (saved >= 0.35 && saved <= 0.65) { state.threshold = saved; $('thr').value = saved; $('thr-v').textContent = saved.toFixed(2).replace('.', ','); }
+  try {
+    await DB.open();
+    state.people = (await DB.all()).map(fromStored);
+  } catch (e) { toast('Stockage local indisponible (navigation privée ?) : les enfants ne seront pas mémorisés.', 6000); DB.put = DB.del = DB.clear = async () => {}; }
+  renderAll();
+  try {
+    if (typeof faceapi === 'undefined') throw new Error('bibliothèque introuvable');
+    if (!(await faceapi.tf.setBackend('webgl'))) await faceapi.tf.setBackend('cpu');
+    await faceapi.tf.ready();
+    await Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    ]);
+    state.ready = true;
+    setStatus('Prêt · moteur ' + faceapi.tf.getBackend().toUpperCase());
+  } catch (e) {
+    setStatus('Erreur de chargement');
+    toast('Impossible de charger les modèles de reconnaissance (' + e.message + '). Ouvrez la page via un serveur web, pas en double-cliquant sur le fichier.', 9000);
+  }
+})();
+</script>
+</body>
+</html>

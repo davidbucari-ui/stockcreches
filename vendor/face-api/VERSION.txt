@@ -1,0 +1,2 @@
+@vladmandic/face-api 1.7.15 (MIT) — copie locale pour fonctionnement en circuit fermé.
+Modèles : ssd_mobilenetv1, face_landmark_68, face_recognition.
