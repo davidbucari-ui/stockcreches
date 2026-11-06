@@ -12580,7 +12580,8 @@ const ORV_DOMAINES = [
   { id:'familles', ico:'\uD83E\uDDD2', nom:'Familles', sub:'Dossiers, transmissions, portail, facturation',
     pages:[
       {id:'familles',     nom:'Familles', roles:['admin','directrice','coordinateur','auxiliaire']},
-      {id:'transmissions',nom:'Transmissions', roles:['admin','directrice','coordinateur','auxiliaire']}
+      {id:'transmissions',nom:'Transmissions', roles:['admin','directrice','coordinateur','auxiliaire']},
+      {id:'__trieurphotos',nom:'Trieur de photos \u2197', roles:['admin','directrice','coordinateur','auxiliaire']}
     ],
     aBrancher:['factures prêtes à envoyer','places disponibles à pourvoir'] },
   { id:'rh', ico:'\uD83D\uDC65', nom:'Ressources humaines', sub:'Équipe, planning, pointage, contrats',
@@ -12669,6 +12670,10 @@ function orvGoPage(pageId) {
   orvCloseMenus();
   if (pageId === '__docsstruct') {
     if (typeof openHubDocs === 'function') openHubDocs('documentaire');
+    return;
+  }
+  if (pageId === '__trieurphotos') {
+    window.open('trieur-photos.html', '_blank');
     return;
   }
   if (pageId === '__docsref') {
@@ -24221,6 +24226,11 @@ function showImportResult(type, html) {
 .hub-s-card.frm .hub-s-cta:hover{background:rgba(201,123,90,.28)}
 .hub-s-card.sol .hub-s-cta{color:#444441;background:rgba(88,80,77,.1)}
 .hub-s-card.sol .hub-s-cta:hover{background:rgba(88,80,77,.18)}
+.hub-s-card.pho{background:#EDF2F8;border:1px solid rgba(91,127,166,0.28)}
+.hub-s-card.pho .hub-s-icon{background:#5B7FA6}
+.hub-s-card.pho .hub-s-tag{background:rgba(91,127,166,.18);color:#2F4E70}
+.hub-s-card.pho .hub-s-cta{color:#2F4E70;background:rgba(91,127,166,.15)}
+.hub-s-card.pho .hub-s-cta:hover{background:rgba(91,127,166,.28)}
 .hub-s-extbadge{position:absolute;top:14px;right:14px;font-size:11px;color:#58504D;opacity:.3}
 .hub-s-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:18px}
 .hub-s-kpi{background:#fff;border-radius:13px;padding:13px 15px;border:1px solid rgba(88,80,77,.09)}
@@ -24341,6 +24351,14 @@ function showImportResult(type, html) {
         <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span><span class="hub-s-tag">Attestations</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
+      <a class="hub-s-card pho" href="trieur-photos.html" target="_blank">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="6" width="18" height="13" rx="3" fill="#fff"/><path d="M8 6l1.5-2.5h3L14 6" fill="#fff"/><circle cx="11" cy="12.5" r="3.6" fill="#5B7FA6"/><circle cx="11" cy="12.5" r="1.8" fill="#fff" opacity=".8"/></svg></div>
+        <div class="hub-s-name">Trieur de photos</div>
+        <div class="hub-s-desc">Tri automatique des photos par enfant, sans rien envoyer sur Internet</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Reconnaissance faciale</span><span class="hub-s-tag">🔒 Circuit fermé</span></div>
+        <div class="hub-s-cta">Ouvrir →</div>
+      </a>
       <div class="hub-s-card doc" style="display:none" onclick="openHubDocs()">
         <div class="hub-docs-badge-count" id="hub-docs-badge-admin"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
@@ -24386,6 +24404,14 @@ function showImportResult(type, html) {
         <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Émotions</span></div>
         <div class="hub-s-cta">Accéder →</div>
       </a>
+      <a class="hub-s-card pho" href="trieur-photos.html" target="_blank">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="6" width="18" height="13" rx="3" fill="#fff"/><path d="M8 6l1.5-2.5h3L14 6" fill="#fff"/><circle cx="11" cy="12.5" r="3.6" fill="#5B7FA6"/><circle cx="11" cy="12.5" r="1.8" fill="#fff" opacity=".8"/></svg></div>
+        <div class="hub-s-name">Trieur de photos</div>
+        <div class="hub-s-desc">Tri automatique des photos par enfant, sans rien envoyer sur Internet</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Reconnaissance faciale</span><span class="hub-s-tag">🔒 Circuit fermé</span></div>
+        <div class="hub-s-cta">Ouvrir →</div>
+      </a>
       <div class="hub-s-card doc" style="display:none" onclick="openHubDocs()">
         <div class="hub-docs-badge-count" id="hub-docs-badge-dir"></div>
         <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M6 2h7l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1z" fill="#fff" opacity=".9"/><path d="M13 2v5h5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10h6M9 13h6M9 16h4" stroke="#7C3AED" stroke-width="1.4" stroke-linecap="round"/></svg></div>
@@ -24426,6 +24452,14 @@ function showImportResult(type, html) {
         <div class="hub-s-desc">Mes formations en cours</div>
         <div class="hub-s-tags"><span class="hub-s-tag">Jeu libre</span><span class="hub-s-tag">Attestations</span></div>
         <div class="hub-s-cta">Accéder →</div>
+      </a>
+      <a class="hub-s-card pho" href="trieur-photos.html" target="_blank">
+        <div class="hub-s-extbadge">↗</div>
+        <div class="hub-s-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="6" width="18" height="13" rx="3" fill="#fff"/><path d="M8 6l1.5-2.5h3L14 6" fill="#fff"/><circle cx="11" cy="12.5" r="3.6" fill="#5B7FA6"/><circle cx="11" cy="12.5" r="1.8" fill="#fff" opacity=".8"/></svg></div>
+        <div class="hub-s-name">Trieur de photos</div>
+        <div class="hub-s-desc">Tri automatique des photos par enfant, sans rien envoyer sur Internet</div>
+        <div class="hub-s-tags"><span class="hub-s-tag">Reconnaissance faciale</span><span class="hub-s-tag">🔒 Circuit fermé</span></div>
+        <div class="hub-s-cta">Ouvrir →</div>
       </a>
       <div class="hub-s-card doc" onclick="openHubDocs()" style="grid-column:1/-1;display:none">
         <div class="hub-docs-badge-count" id="hub-docs-badge-aux"></div>
